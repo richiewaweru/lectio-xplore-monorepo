@@ -1,0 +1,51 @@
+"""Generic persistence contracts for artifact-producing generation work."""
+
+from infra.generation_runtime.contracts import (
+    BuildAdmission,
+    BuildContract,
+    ErrorClass,
+    EventContract,
+    RunAdmission,
+    RunContract,
+    RunStatus,
+    RunType,
+    WorkItemAdmission,
+    WorkItemContract,
+    WorkItemStatus,
+)
+from infra.generation_runtime.repository import (
+    AdmissionResult,
+    GenerationRuntimeError,
+    RunAdmissionConflict,
+    RunNotFound,
+    WorkItemConflict,
+    add_work_item,
+    admit_run,
+    append_event,
+    create_build,
+    get_run_status,
+)
+
+__all__ = [
+    "AdmissionResult",
+    "BuildAdmission",
+    "BuildContract",
+    "ErrorClass",
+    "EventContract",
+    "GenerationRuntimeError",
+    "RunAdmission",
+    "RunAdmissionConflict",
+    "RunContract",
+    "RunNotFound",
+    "RunStatus",
+    "RunType",
+    "WorkItemAdmission",
+    "WorkItemConflict",
+    "WorkItemContract",
+    "WorkItemStatus",
+    "add_work_item",
+    "admit_run",
+    "append_event",
+    "create_build",
+    "get_run_status",
+]

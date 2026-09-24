@@ -6,6 +6,7 @@ from typing import ClassVar
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     Float,
@@ -15,6 +16,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
+    select,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -1099,3 +1102,229 @@ class CallerEffectKeyModel(Base):
     payload_hash = Column(String, nullable=False)
     outcome_json = Column(JSON_DOCUMENT_TYPE, nullable=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+# --- Generic generation runtime (Shared Document overhaul Phase 1A) ---
+
+
+class GenerationBuildModel(Base):
+    """Correlation record grouping artifact-producing runs for one lesson."""
+
+    __tablename__ = "generation_builds"
+    __table_args__ = (
+        Index("ix_generation_builds_owner_created", "owner_user_id", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    path_lesson_id = Column(
+        String, ForeignKey("path_lessons.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    owner_user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    owner = relationship("UserModel")
+    runs = relationship("GenerationRunModel", back_populates="build")
+
+
+class GenerationRunModel(Base):
+    """Current state for one durable artifact-producing operation."""
+
+    __tablename__ = "generation_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "run_type IN ('preparation', 'shared_document', 'learn', 'print', 'publish', 'pdf')",
+            name="ck_generation_runs_run_type",
+        ),
+        CheckConstraint(
+            "status IN ('queued', 'running', 'awaiting_review', 'ready', "
+            "'failed_recoverable', 'failed_terminal', 'cancelled')",
+            name="ck_generation_runs_status",
+        ),
+        CheckConstraint("attempt >= 1", name="ck_generation_runs_attempt_positive"),
+        CheckConstraint("source_revision >= 1", name="ck_generation_runs_source_revision_positive"),
+        CheckConstraint(
+            "output_revision IS NULL OR output_revision >= 1",
+            name="ck_generation_runs_output_revision_positive",
+        ),
+        CheckConstraint(
+            "status != 'ready' OR (output_artifact_type IS NOT NULL AND "
+            "output_artifact_id IS NOT NULL AND output_revision IS NOT NULL AND output_hash IS NOT NULL)",
+            name="ck_generation_runs_ready_has_output",
+        ),
+        UniqueConstraint(
+            "owner_user_id", "request_key", name="uq_generation_runs_request"
+        ),
+        Index("ix_generation_runs_build_created", "build_id", "created_at"),
+        Index("ix_generation_runs_owner_status_updated", "owner_user_id", "status", "updated_at"),
+        Index("ix_generation_runs_status_created", "status", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    build_id = Column(
+        String, ForeignKey("generation_builds.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    run_type = Column(String, nullable=False)
+    owner_user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String, nullable=False, default="queued", server_default="queued", index=True)
+    stage = Column(String, nullable=False)
+    attempt = Column(Integer, nullable=False, default=1, server_default="1")
+    source_artifact_type = Column(String, nullable=False)
+    source_artifact_id = Column(String, nullable=False)
+    source_revision = Column(Integer, nullable=False)
+    source_hash = Column(String, nullable=False)
+    output_artifact_type = Column(String, nullable=True)
+    output_artifact_id = Column(String, nullable=True)
+    output_revision = Column(Integer, nullable=True)
+    output_hash = Column(String, nullable=True)
+    request_key = Column(String, nullable=False)
+    error_code = Column(String, nullable=True)
+    error_class = Column(String, nullable=True)
+    error_summary = Column(Text, nullable=True)
+    recovery_action = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+    build = relationship("GenerationBuildModel", back_populates="runs")
+    owner = relationship("UserModel")
+    work_items = relationship(
+        "GenerationWorkItemModel",
+        back_populates="run",
+        order_by="GenerationWorkItemModel.item_key",
+        passive_deletes=True,
+    )
+    events = relationship(
+        "GenerationEventModel",
+        back_populates="run",
+        order_by="GenerationEventModel.seq",
+        passive_deletes=True,
+    )
+
+
+class GenerationWorkItemModel(Base):
+    """Current state of one stable, independently recoverable unit of work."""
+
+    __tablename__ = "generation_work_items"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('queued', 'running', 'ready', 'failed_recoverable', "
+            "'failed_terminal', 'cancelled')",
+            name="ck_generation_work_items_status",
+        ),
+        CheckConstraint("attempt >= 1", name="ck_generation_work_items_attempt_positive"),
+        CheckConstraint("max_attempts >= 1", name="ck_generation_work_items_max_attempts_positive"),
+        CheckConstraint("attempt <= max_attempts", name="ck_generation_work_items_attempt_lte_max"),
+        CheckConstraint(
+            "lease_token IS NULL OR lease_token >= 1",
+            name="ck_generation_work_items_lease_token_positive",
+        ),
+        CheckConstraint(
+            "status != 'ready' OR (output_json IS NOT NULL AND output_hash IS NOT NULL)",
+            name="ck_generation_work_items_ready_has_output",
+        ),
+        UniqueConstraint("run_id", "item_key", name="uq_generation_work_items_run_key"),
+        Index("ix_generation_work_items_run_status", "run_id", "status"),
+        Index("ix_generation_work_items_status_lease", "status", "lease_expires_at"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    run_id = Column(
+        String, ForeignKey("generation_runs.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    item_key = Column(String, nullable=False)
+    stage = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="queued", server_default="queued", index=True)
+    attempt = Column(Integer, nullable=False, default=1, server_default="1")
+    max_attempts = Column(Integer, nullable=False, default=3, server_default="3")
+    input_hash = Column(String, nullable=False)
+    definition_hash = Column(String, nullable=False)
+    composition_identity = Column(String, nullable=True)
+    lease_owner = Column(String, nullable=True)
+    lease_token = Column(Integer, nullable=True)
+    lease_expires_at = Column(DateTime, nullable=True)
+    checkpoint_json = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    output_json = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    output_hash = Column(String, nullable=True)
+    error_code = Column(String, nullable=True)
+    error_class = Column(String, nullable=True)
+    error_summary = Column(Text, nullable=True)
+    recovery_action = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+    run = relationship("GenerationRunModel", back_populates="work_items")
+    events = relationship("GenerationEventModel", back_populates="work_item")
+
+
+class GenerationEventModel(Base):
+    """Append-only, sequenced runtime history; current state stays on run/item rows."""
+
+    __tablename__ = "generation_events"
+    __table_args__ = (
+        UniqueConstraint("run_id", "seq", name="uq_generation_events_run_seq"),
+        CheckConstraint("seq >= 1", name="ck_generation_events_seq_positive"),
+        CheckConstraint("attempt >= 1", name="ck_generation_events_attempt_positive"),
+        CheckConstraint(
+            "status IN ('queued', 'running', 'awaiting_review', 'ready', "
+            "'failed_recoverable', 'failed_terminal', 'cancelled')",
+            name="ck_generation_events_status",
+        ),
+        Index("ix_generation_events_run_created", "run_id", "created_at"),
+        Index("ix_generation_events_work_item", "work_item_id", "seq"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    run_id = Column(
+        String, ForeignKey("generation_runs.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    work_item_id = Column(
+        String, ForeignKey("generation_work_items.id", ondelete="RESTRICT"), nullable=True
+    )
+    seq = Column(Integer, nullable=False)
+    event_type = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    stage = Column(String, nullable=False)
+    attempt = Column(Integer, nullable=False)
+    error_code = Column(String, nullable=True)
+    safe_payload_json = Column(JSON_DOCUMENT_TYPE, nullable=False, default=dict)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    run = relationship("GenerationRunModel", back_populates="events")
+    work_item = relationship("GenerationWorkItemModel", back_populates="events")
+
+
+def _reject_ready_update(mapper, connection, target) -> None:
+    if not target.id:
+        return
+    table = target.__table__
+    persisted_status = connection.execute(
+        select(table.c.status).where(table.c.id == target.id)
+    ).scalar_one_or_none()
+    if persisted_status == "ready":
+        raise ValueError("ready generation outputs are immutable")
+
+
+def _reject_ready_delete(mapper, connection, target) -> None:
+    if not target.id:
+        return
+    table = target.__table__
+    persisted_status = connection.execute(
+        select(table.c.status).where(table.c.id == target.id)
+    ).scalar_one_or_none()
+    if persisted_status == "ready":
+        raise ValueError("ready generation outputs are immutable")
+
+
+def _immutable_generation_event(*_args, **_kwargs) -> None:
+    raise ValueError("generation events are append-only")
+
+
+event.listen(GenerationRunModel, "before_update", _reject_ready_update)
+event.listen(GenerationWorkItemModel, "before_update", _reject_ready_update)
+event.listen(GenerationRunModel, "before_delete", _reject_ready_delete)
+event.listen(GenerationWorkItemModel, "before_delete", _reject_ready_delete)
+event.listen(GenerationEventModel, "before_update", _immutable_generation_event)
+event.listen(GenerationEventModel, "before_delete", _immutable_generation_event)

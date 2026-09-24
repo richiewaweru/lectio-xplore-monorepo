@@ -4,8 +4,10 @@
 
 - Branch: `codex/shared-document-overhaul`
 - Starting `main` SHA: `d75d19125dfd6c849c5363b63f0269074faf53d1`
+- Phase 0 baseline correction commit: `f8f99b5a`.
 - Migration-code head: `20260913_0042`
 - Applied local PostgreSQL migration head: `20260913_0042` (`uv run alembic current`)
+- Applied local PostgreSQL migration head after Phase 1A: `20260924_0043` (`uv run alembic upgrade head`; `uv run alembic current`). The 0043 migration is additive; no probe rows persisted.
 - Target: local/staging proof; production rollout is separate.
 - Repository state at start: clean.
 - Baseline validation: `scripts/verify-phase.ps1 -Phase full` ran. Page tests 64/64 PASS; page check PASS; backend 1 failed, 1358 passed, 5 skipped, 2 deselected; frontend check PASS with 5 existing warnings; frontend tests and build PASS; page PDF fixture gate PASS. The wrapper hung after the PDF gate and was interrupted, so its final clean-tree step was run separately (`git diff --check`, PASS).
@@ -16,7 +18,16 @@
 - Local UI access: frontend dev server was down; restarted on `127.0.0.1:5173`. Its ignored local `.env` pointed `PUBLIC_API_URL` at `localhost:8001` while the backend listens on `127.0.0.1:8000`; corrected to `http://127.0.0.1:8000`. Same-origin proxy now returns the same authenticated `401` as the backend, instead of a proxy error. The in-app `/units` page now redirects to login rather than showing the 500. Google sign-in reports the local origin is not authorized for the configured client in an isolated browser.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS; Phases 1–16 NOT STARTED.
+- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phase 1 IN PROGRESS (additive persistence work only); Phases 2–16 NOT STARTED. Phase 1 additive work proceeds while the external OAuth-origin setup remains open; no phase is marked PASS without its own gate.
+
+## Phase 1A — generic runtime persistence
+
+- Starting SHA: `f8f99b5a`.
+- Implementation: added Build/Run/WorkItem/Event ORM, closed status contracts, owner-scoped Build admission and Run reads, idempotent Run admission, stable WorkItem keys, sequenced append-only events, ready immutability, and migration `20260924_0043`. No product cutover or deletion.
+- Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (11); `pnpm program:domain-guards` PASS (8 guard tests); scoped Ruff check/format and `git diff --check` PASS; `uv run alembic heads` reports `20260924_0043`.
+- Failure proof: duplicate admission, conflicting source identity/hash, WorkItem key conflict, cross-owner Build rejection, invalid status, incomplete ready output, direct SQL ready-row update/delete, Event update/delete, lineage deletion rejection, and post-ready Event append.
+- PostgreSQL proof: `uv run alembic current` changed from `20260913_0042` to `20260924_0043`; four tables, 29 constraints, six triggers observed. In a rolled-back transaction, queued-to-ready succeeded and ready Run/WorkItem UPDATE/DELETE and Event UPDATE/DELETE were rejected.
+- Status: package PASS; Phase 1 remains IN PROGRESS pending fenced execution, retries/checkpoints, APIs, and its full phase gate.
 
 ## Baseline
 - [x] branch recorded
@@ -30,7 +41,7 @@
 
 ## Phases
 - [ ] 0 Baseline
-- [ ] 1 Generic runtime
+- [ ] 1 Generic runtime (IN PROGRESS: additive persistence)
 - [ ] 2 Teaching Plan
 - [ ] 3 SharedDocument contract
 - [ ] 4 Shared tasks
