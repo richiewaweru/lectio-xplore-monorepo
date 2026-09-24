@@ -1,5 +1,11 @@
 """Path-neutral shared lesson artifact contract."""
 
+from document.shared_lesson.assembly import (
+    AssemblyIssue,
+    SharedLessonAssemblyError,
+    SharedLessonAssemblyResult,
+    assemble_shared_lesson_document,
+)
 from document.shared_lesson.composer import (
     CompositionChoice,
     CompositionItem,
@@ -60,6 +66,7 @@ from document.shared_lesson.writer import (
 
 __all__ = [
     "MAX_CONCURRENT_SECTION_WRITERS",
+    "AssemblyIssue",
     "CalloutNode",
     "CompositionChoice",
     "CompositionItem",
@@ -81,6 +88,8 @@ __all__ = [
     "SectionWriterOutcome",
     "SectionWriterRequest",
     "SharedLessonDocument",
+    "SharedLessonAssemblyError",
+    "SharedLessonAssemblyResult",
     "SharedProvenance",
     "SharedSection",
     "TableNode",
@@ -90,6 +99,7 @@ __all__ = [
     "admit_writer_work_item",
     "build_shared_lesson_document",
     "cancel_section_run",
+    "assemble_shared_lesson_document",
     "canonical_shared_lesson_payload",
     "compose_section",
     "compose_section_work_item",
