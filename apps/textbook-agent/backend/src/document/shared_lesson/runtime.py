@@ -11,6 +11,7 @@ import asyncio
 import hashlib
 import json
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -72,6 +73,30 @@ class TeachingPlanSource(BaseModel):
     id: str = Field(min_length=1)
     revision: int = Field(ge=1)
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+@dataclass(frozen=True)
+class SectionWriterJob:
+    """Inputs for one already-admitted section writer work item."""
+
+    session: Any
+    work_item_id: str
+    worker_id: str
+    source: TeachingPlanSource
+    request: SectionWriterRequest
+    status: str
+    provider: Callable[[dict[str, Any]], Awaitable[Any]] | None = None
+    lease_seconds: int = 300
+
+
+@dataclass(frozen=True)
+class SectionWriterOutcome:
+    """Independent result for one section; failures do not cancel ready siblings."""
+
+    work_item_id: str
+    result: SectionWriteResult | None = None
+    error: Exception | None = None
+    preserved_ready: bool = False
 
 
 def verify_teaching_plan_source(source: TeachingPlanSource) -> SourceIdentity:
@@ -373,7 +398,7 @@ async def admit_writer_work_item(
     return result.record
 
 
-async def write_section_work_item(
+async def _write_section_work_item(
     session: Any,
     *,
     work_item_id: str,
@@ -428,7 +453,7 @@ async def write_section_work_item(
         provider_dispatch = _default_provider
     else:
         provider_dispatch = provider
-    bounded_provider = bounded_section_provider(provider_dispatch, provider_semaphore)
+    bounded_provider = _bounded_section_provider(provider_dispatch, provider_semaphore)
 
     try:
         result = await write_section(request=request, provider=bounded_provider)
@@ -454,12 +479,52 @@ async def write_section_work_item(
     return result
 
 
-def make_writer_provider_semaphore() -> asyncio.Semaphore:
-    """Create a shared semaphore for a run; pass it to every section worker."""
-    return asyncio.Semaphore(MAX_CONCURRENT_SECTION_WRITERS)
+async def write_section_work_items(
+    jobs: Sequence[SectionWriterJob],
+) -> tuple[SectionWriterOutcome, ...]:
+    """Run selected queued writer items with one internal four-provider cap.
+
+    Each job owns its AsyncSession. Already-ready siblings are returned as
+    preserved outcomes without claiming or changing them. Failed/recoverable
+    work is not implicitly reset: callers retry one item first, then submit that
+    queued item here. Per-item errors are collected so a failing section does
+    not cancel healthy siblings in the same batch.
+    """
+    selected = tuple(jobs)
+    ids = [job.work_item_id for job in selected]
+    if len(ids) != len(set(ids)):
+        raise SectionRuntimeError("writer batch contains duplicate work item IDs")
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT_SECTION_WRITERS)
+
+    async def run_one(job: SectionWriterJob) -> SectionWriterOutcome:
+        if job.status == "ready":
+            return SectionWriterOutcome(work_item_id=job.work_item_id, preserved_ready=True)
+        if job.status != "queued":
+            return SectionWriterOutcome(
+                work_item_id=job.work_item_id,
+                error=SectionRuntimeError(
+                    "writer batch accepts queued items only; retry a failed section explicitly"
+                ),
+            )
+        try:
+            result = await _write_section_work_item(
+                job.session,
+                work_item_id=job.work_item_id,
+                worker_id=job.worker_id,
+                source=job.source,
+                request=job.request,
+                provider=job.provider,
+                provider_semaphore=semaphore,
+                lease_seconds=job.lease_seconds,
+            )
+        except Exception as exc:  # noqa: BLE001 - isolate section failures and finish siblings.
+            return SectionWriterOutcome(work_item_id=job.work_item_id, error=exc)
+        return SectionWriterOutcome(work_item_id=job.work_item_id, result=result)
+
+    return tuple(await asyncio.gather(*(run_one(job) for job in selected)))
 
 
-def bounded_section_provider(
+def _bounded_section_provider(
     provider: Callable[[dict[str, Any]], Awaitable[Any]],
     semaphore: asyncio.Semaphore,
 ) -> Callable[[dict[str, Any]], Awaitable[Any]]:
@@ -559,18 +624,18 @@ async def fail_section_work_item(
 __all__ = [
     "MAX_CONCURRENT_SECTION_WRITERS",
     "SectionRuntimeError",
+    "SectionWriterJob",
+    "SectionWriterOutcome",
     "TeachingPlanSource",
     "admit_section_run",
     "admit_writer_work_item",
-    "bounded_section_provider",
     "cancel_section_run",
     "compose_section_work_item",
     "fail_section_work_item",
     "make_section_writer_request",
-    "make_writer_provider_semaphore",
     "restart_section_run",
     "retry_failed_section",
     "verify_teaching_plan_source",
     "verify_writer_checkpoint_payload",
-    "write_section_work_item",
+    "write_section_work_items",
 ]

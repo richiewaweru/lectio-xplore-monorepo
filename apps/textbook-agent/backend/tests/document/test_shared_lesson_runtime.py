@@ -12,17 +12,17 @@ from document.shared_lesson.models import ParagraphDisplay, ParagraphNode
 from document.shared_lesson.runtime import (
     MAX_CONCURRENT_SECTION_WRITERS,
     SectionRuntimeError,
+    SectionWriterJob,
     TeachingPlanSource,
+    _write_section_work_item,
     admit_section_run,
     admit_writer_work_item,
-    bounded_section_provider,
     cancel_section_run,
-    make_writer_provider_semaphore,
     restart_section_run,
     retry_failed_section,
     verify_teaching_plan_source,
     verify_writer_checkpoint_payload,
-    write_section_work_item,
+    write_section_work_items,
 )
 from document.shared_lesson.writer import SectionWriteResult, SectionWriterRequest
 from infra.generation_runtime import LeaseLostError
@@ -148,23 +148,122 @@ def test_source_identity_requires_exact_id_revision_and_recomputed_hash() -> Non
 
 
 @pytest.mark.asyncio
-async def test_provider_dispatches_are_capped_at_four_across_sections() -> None:
+async def test_public_writer_batch_enforces_four_and_skips_ready_sibling(monkeypatch) -> None:
+    section = TeachingPlanSection(
+        slot_id="orient",
+        display_title="Start here",
+        entry_state=["Learner recognizes the material"],
+        must_establish=["Learner can identify the material"],
+        avoid_repeating=["Do not repeat prior work"],
+        bridge_from_previous=None,
+        exit_state=["Learner identifies the material"],
+        blocks=[
+            TeachingPlanBlock(
+                id="block-1",
+                position=0,
+                intent="identify the material",
+                brief="name the material",
+                evidence="Learner names the material",
+            )
+        ],
+    )
+    plan = TeachingPlan(
+        arc="Teach a simple idea",
+        contract_version=2,
+        learner_title="A simple lesson",
+        starting_state=["Learner recognizes the material"],
+        target_state=["Learner identifies the material"],
+        teaching_plan_id="tp-approved-1",
+        revision=3,
+        sections=[section],
+    )
+    source = TeachingPlanSource(
+        plan=plan,
+        id="tp-approved-1",
+        revision=3,
+        content_hash=teaching_plan_content_hash(plan),
+    )
+    composition = SectionCompositionPlan(
+        section_slot_id="orient",
+        items=(
+            CompositionItem(
+                id="node-1",
+                kind="paragraph",
+                teaching_block_id="block-1",
+                semantic_role="explanation",
+            ),
+        ),
+    )
+    request = SectionWriterRequest(section=section, composition_plan=composition)
     active = 0
     peak = 0
+    claim_count = 0
 
-    async def fake_provider(_payload: dict[str, object]) -> dict[str, object]:
+    async def fake_claim(*_args, **_kwargs):
+        nonlocal claim_count
+        claim_count += 1
+        return SimpleNamespace(lease_token=claim_count)
+
+    async def fake_no_checkpoint(*_args, **_kwargs):
+        return None
+
+    async def fake_write(*, request, provider):
+        await provider({"draft": True})
+        return SectionWriteResult(
+            section_slot_id=request.section.slot_id,
+            title="Start here",
+            nodes=(
+                ParagraphNode(
+                    id="node-1",
+                    teaching_block_id="block-1",
+                    display=ParagraphDisplay(text="A material can be identified by its properties."),
+                ),
+            ),
+        )
+
+    async def slow_provider(_payload):
         nonlocal active, peak
         active += 1
         peak = max(peak, active)
         await asyncio.sleep(0.005)
         active -= 1
-        return {"ok": True}
+        return {"nodes": []}
 
-    provider = bounded_section_provider(fake_provider, make_writer_provider_semaphore())
-    await asyncio.gather(*(provider({"section": index}) for index in range(12)))
+    monkeypatch.setattr("document.shared_lesson.runtime.claim_work_item", fake_claim)
+    monkeypatch.setattr("document.shared_lesson.runtime.load_compatible_checkpoint", fake_no_checkpoint)
+    monkeypatch.setattr("document.shared_lesson.runtime.persist_checkpoint", fake_no_checkpoint)
+    monkeypatch.setattr("document.shared_lesson.runtime.complete_work_item", fake_no_checkpoint)
+    monkeypatch.setattr("document.shared_lesson.runtime.write_section", fake_write)
+    jobs = tuple(
+        SectionWriterJob(
+            session=object(),
+            work_item_id=f"write:{index}",
+            worker_id=f"worker:{index}",
+            source=source,
+            request=request,
+            status="queued",
+            provider=slow_provider,
+        )
+        for index in range(8)
+    ) + (
+        SectionWriterJob(
+            session=object(),
+            work_item_id="write:ready-sibling",
+            worker_id="worker-ready",
+            source=source,
+            request=request,
+            status="ready",
+            provider=slow_provider,
+        ),
+    )
 
-    assert MAX_CONCURRENT_SECTION_WRITERS == 4
+    outcomes = await write_section_work_items(jobs)
+
+    assert len(outcomes) == 9
+    assert all(outcome.result is not None for outcome in outcomes[:8])
+    assert outcomes[-1].preserved_ready
     assert peak == MAX_CONCURRENT_SECTION_WRITERS
+    assert claim_count == 8
 
 
 def test_writer_checkpoint_must_match_exact_composition_identity() -> None:
@@ -322,13 +421,13 @@ async def test_late_provider_result_cannot_complete_after_lease_is_lost(monkeypa
     monkeypatch.setattr("document.shared_lesson.runtime.complete_work_item", late_fenced_complete)
 
     with pytest.raises(LeaseLostError, match="live lease"):
-        await write_section_work_item(
+        await _write_section_work_item(
             "session",
             work_item_id="write:orient",
             worker_id="worker-1",
             source=source,
             request=request,
             provider=provider,
-            provider_semaphore=make_writer_provider_semaphore(),
+            provider_semaphore=asyncio.Semaphore(MAX_CONCURRENT_SECTION_WRITERS),
         )
     assert calls == ["fenced"]
