@@ -128,6 +128,12 @@ prompts:
     editable: false
     version: 1
 
+  - id: teaching-plan-semantic-reviewer
+    file: teaching-plan-semantic-reviewer.md
+    stage_label: Reviews Teaching Plan progression
+    editable: false
+    version: 1
+
   - id: targeted-lesson-repair
     file: targeted-lesson-repair.md
     stage_label: Repairs one named lesson target

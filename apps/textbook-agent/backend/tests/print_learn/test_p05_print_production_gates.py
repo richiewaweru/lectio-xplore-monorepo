@@ -36,6 +36,7 @@ from core.database.session import async_session_factory
 from core.entities.user import User
 from curriculum.path_models import PrepareLessonRequest
 from curriculum.service import approve_path, create_unit, persist_path_plan
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import (
     AnchorUsageEntry,
     TeachingPlanDraft,
@@ -43,6 +44,7 @@ from curriculum.teaching_plan.models import (
     TeachingPlanDraftSection,
     TeachingPlanDraftV2,
 )
+from curriculum.teaching_plan.semantic_review import TeachingPlanSemanticReviewResult
 from print.contracts.lectio_page import validate_document
 from print.generation.whole_lesson.executor import execute_after_teaching_approval
 from print.generation.whole_lesson.failure_injection import (
@@ -101,6 +103,19 @@ def _reset_injection():
     reset_failure_injection()
     yield
     reset_failure_injection()
+
+
+@pytest.fixture(autouse=True)
+def _fake_clean_teaching_plan_semantic_review(monkeypatch):
+    async def _review(*, plan, **_kwargs):
+        return TeachingPlanSemanticReviewResult(
+            content_hash=teaching_plan_content_hash(plan), findings=[]
+        )
+
+    monkeypatch.setattr(
+        "print.generation.whole_lesson.teaching_agent.review_teaching_plan_draft",
+        _review,
+    )
 
 
 def _pdf_text(path: Path) -> str:

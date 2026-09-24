@@ -17,6 +17,7 @@ from curriculum.lesson_sourcebook.models import LessonSourcebook
 from curriculum.llm_contract_errors import structured_output_errors
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import TeachingPlanDraftV2
+from curriculum.teaching_plan.semantic_review import TeachingPlanSemanticReviewResult
 from print.generation.catalogue_projections import build_form_candidate_map, project_form_guidance
 from print.generation.whole_lesson.executor import execute_after_teaching_approval
 from print.generation.whole_lesson.failure_policy import classify_failure
@@ -101,6 +102,19 @@ def _make_snapshot(**overrides: Any) -> LessonLegalitySnapshot:
     }
     data["catalogue_hash"] = legality_hash(data)
     return LessonLegalitySnapshot.model_validate(data)
+
+
+@pytest.fixture(autouse=True)
+def _fake_clean_semantic_review(monkeypatch):
+    async def _review(*, plan, **_kwargs):
+        return TeachingPlanSemanticReviewResult(
+            content_hash=teaching_plan_content_hash(plan), findings=[]
+        )
+
+    monkeypatch.setattr(
+        "print.generation.whole_lesson.teaching_agent.review_teaching_plan_draft",
+        _review,
+    )
 
 
 def test_missing_candidate_map_entry_fails() -> None:

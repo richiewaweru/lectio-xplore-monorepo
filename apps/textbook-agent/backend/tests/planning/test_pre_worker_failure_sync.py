@@ -11,6 +11,8 @@ from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+from curriculum.teaching_plan.semantic_review import TeachingPlanSemanticReviewResult
 from curriculum.workspace_projection import project_lesson_workspace
 from print.generation.whole_lesson.native_status import project_native_status
 from print.generation.whole_lesson.packet import (
@@ -32,6 +34,19 @@ from v3_blueprint.planning.models import (
     SectionPlan,
     StructuralPlan,
 )
+
+
+@pytest.fixture(autouse=True)
+def _fake_clean_teaching_plan_semantic_review(monkeypatch):
+    async def _review(*, plan, **_kwargs):
+        return TeachingPlanSemanticReviewResult(
+            content_hash=teaching_plan_content_hash(plan), findings=[]
+        )
+
+    monkeypatch.setattr(
+        "print.generation.whole_lesson.teaching_agent.review_teaching_plan_draft",
+        _review,
+    )
 
 
 def _teaching_packet() -> ImmutableLessonPacket:

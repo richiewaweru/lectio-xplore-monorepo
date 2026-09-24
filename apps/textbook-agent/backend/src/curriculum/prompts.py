@@ -154,6 +154,12 @@ def whole_lesson_coherence_reviewer_prompt() -> str:
     return effective_prompt_text("whole-lesson-coherence-reviewer")
 
 
+def teaching_plan_semantic_reviewer_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("teaching-plan-semantic-reviewer")
+
+
 def targeted_lesson_repair_prompt() -> str:
     from core.prompts import effective_prompt_text
 

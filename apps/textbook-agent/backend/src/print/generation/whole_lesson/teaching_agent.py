@@ -18,7 +18,13 @@ from curriculum.teaching_plan.compatibility import (
     allowed_actions_for_source_item,
     response_bearing_action,
 )
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import TeachingPlanDraftV2
+from curriculum.teaching_plan.semantic_review import (
+    TeachingPlanSemanticReviewError,
+    TeachingPlanSemanticReviewResult,
+    review_teaching_plan_draft,
+)
 from infra.authoring.model_policy import (
     V2_LESSON_APPROACH_PLANNER,
     get_v3_model_settings,
@@ -64,6 +70,7 @@ class TeachingPlanAttempt:
     qc: list[dict[str, Any]]
     attempt: int
     error: str | None = None
+    semantic_review: TeachingPlanSemanticReviewResult | None = None
 
 
 @dataclass
@@ -79,6 +86,7 @@ class TeachingPlanResult:
     permitted_intents: set[str]
     excluded_intents: set[str]
     legality: LessonLegalitySnapshot
+    semantic_review: TeachingPlanSemanticReviewResult
 
 
 def _assessment_forms_for_intent(intent: str) -> set[str]:
@@ -840,6 +848,27 @@ async def run_lesson_approach_planner(
                     assessment_source_policy["eligible_intents"]
                 ),
             )
+            semantic_review: TeachingPlanSemanticReviewResult | None = None
+            if validation.ok and not ownership_errors:
+                semantic_review = await review_teaching_plan_draft(
+                    draft=draft,
+                    plan=plan,
+                    lesson_context=packet.planner_payload(),
+                    trace_id=f"{tid}:semantic-review:attempt{attempt}",
+                )
+                if semantic_review.content_hash != teaching_plan_content_hash(plan):
+                    raise TeachingPlanSemanticReviewError(
+                        "TEACHING_SEMANTIC_REVIEW_INVALID",
+                        "Teaching Plan semantic review is not bound to this candidate",
+                    )
+                ownership_errors.extend(
+                    (
+                        f"SEMANTIC_{finding.code.upper()} "
+                        f"sections={finding.section_ids} blocks={finding.block_ids}: "
+                        f"{finding.repair_instruction}"
+                    )
+                    for finding in semantic_review.findings
+                )
             qc = [finding.to_dict() for finding in advisory_teaching_qc(plan)]
             attempts.append(
                 TeachingPlanAttempt(
@@ -849,9 +878,16 @@ async def run_lesson_approach_planner(
                     validation=validation,
                     qc=qc,
                     attempt=attempt,
+                    semantic_review=semantic_review,
                 )
             )
-            if validation.ok and not ownership_errors:
+            if validation.ok and not ownership_errors and semantic_review is not None:
+                qc.append(
+                    {
+                        "code": "TEACHING_PLAN_SEMANTIC_REVIEW_PASS",
+                        "content_hash": semantic_review.content_hash,
+                    }
+                )
                 return TeachingPlanResult(
                     plan=plan,
                     validation=validation,
@@ -864,6 +900,7 @@ async def run_lesson_approach_planner(
                     permitted_intents=permitted,
                     excluded_intents=excluded,
                     legality=snapshot,
+                    semantic_review=semantic_review,
                 )
             last_error = "validation_failed"
             repair_errors = [
@@ -871,6 +908,8 @@ async def run_lesson_approach_planner(
             ] + ownership_errors
             output_invalid_details = repair_errors
         except Exception as exc:
+            if isinstance(exc, TeachingPlanSemanticReviewError):
+                raise
             last_exception = exc
             last_error = str(exc)
             attempts.append(

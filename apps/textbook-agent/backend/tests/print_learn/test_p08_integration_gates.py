@@ -39,6 +39,9 @@ from core.database.models import (
 from core.database.session import async_session_factory
 from curriculum.path_models import PrepareLessonRequest
 from curriculum.service import approve_path, create_unit, persist_path_plan
+from curriculum.teaching_plan.content_hash import (
+    teaching_plan_content_hash as curriculum_teaching_plan_content_hash,
+)
 from curriculum.teaching_plan.coverage import (
     assert_learn_covers_instruction,
     assert_print_covers_instruction,
@@ -56,6 +59,7 @@ from curriculum.teaching_plan.projections import (
     assert_sentinels_absent,
     with_excluded_sentinels,
 )
+from curriculum.teaching_plan.semantic_review import TeachingPlanSemanticReviewResult
 from infra.authoring import AuthoringProviderCall
 from infra.authoring.capability_selector import CapabilitySelection
 from learn.generation.native_execution import produce_learn_from_approved_teaching
@@ -346,6 +350,19 @@ def _reset_injection():
     reset_failure_injection()
     yield
     reset_failure_injection()
+
+
+@pytest.fixture(autouse=True)
+def _fake_clean_teaching_plan_semantic_review(monkeypatch):
+    async def _review(*, plan, **_kwargs):
+        return TeachingPlanSemanticReviewResult(
+            content_hash=curriculum_teaching_plan_content_hash(plan), findings=[]
+        )
+
+    monkeypatch.setattr(
+        "print.generation.whole_lesson.teaching_agent.review_teaching_plan_draft",
+        _review,
+    )
 
 
 def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
