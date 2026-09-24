@@ -48,9 +48,7 @@ class SectionCompositionDraft(_ClosedModel):
 
 class CompositionItem(_ClosedModel):
     id: str = Field(min_length=1)
-    kind: Literal[
-        "paragraph", "heading", "list", "figure", "table", "callout", "task_anchor"
-    ]
+    kind: Literal["paragraph", "heading", "list", "figure", "table", "callout", "task_anchor"]
     teaching_block_id: str = Field(min_length=1)
     semantic_role: SemanticRole | None = None
     task_spec_id: str | None = None
@@ -90,8 +88,14 @@ Provider = Callable[[dict[str, Any]], Awaitable[Any]]
 
 _KIND_ROLES: dict[str, set[str]] = {
     "paragraph": {
-        "bridge", "explanation", "worked_example", "interpretation", "summary",
-        "evidence", "misconception", "safety_guidance",
+        "bridge",
+        "explanation",
+        "worked_example",
+        "interpretation",
+        "summary",
+        "evidence",
+        "misconception",
+        "safety_guidance",
     },
     "heading": {"subsection"},
     "list": {"sequence", "evidence"},
@@ -102,7 +106,16 @@ _KIND_ROLES: dict[str, set[str]] = {
 _SUBSECTION_CUES = ("subsection", "subtopic", "case study", "phase", "stage", "category")
 _KIND_CUES: dict[str, tuple[str, ...]] = {
     "figure": (
-        "visual", "diagram", "figure", "show", "model", "structure", "part", "flow", "map", "image"
+        "visual",
+        "diagram",
+        "figure",
+        "show",
+        "model",
+        "structure",
+        "part",
+        "flow",
+        "map",
+        "image",
     ),
     "table": ("compare", "contrast", "relationship", "data", "evidence"),
     "list": ("sequence", "step", "stage", "set", "category", "example", "evidence"),
@@ -115,7 +128,7 @@ def _stable_id(prefix: str, value: str) -> str:
 
 
 def _block_text(block: TeachingPlanBlock) -> str:
-    return " ".join((block.intent, block.brief, block.evidence)).casefold()
+    return f"{block.intent} {block.brief} {block.evidence}".casefold()
 
 
 def _has_genuine_subsection_cue(block: TeachingPlanBlock) -> bool:
@@ -128,9 +141,10 @@ def validate_and_build_composition(
     section: TeachingPlanSection,
     choices: Sequence[CompositionChoice] | SectionCompositionDraft,
     tasks: Sequence[SharedTaskSpec],
-    policy: CompositionPolicy = CompositionPolicy(),
+    policy: CompositionPolicy | None = None,
 ) -> SectionCompositionPlan:
     """Validate model-selected form and build stable IDs plus fixed task anchors."""
+    policy = policy or CompositionPolicy()
     draft_items = choices.items if isinstance(choices, SectionCompositionDraft) else tuple(choices)
     errors: list[str] = []
     blocks = list(section.blocks)
@@ -171,16 +185,12 @@ def validate_and_build_composition(
         if choice.kind == "callout":
             callout_count += 1
         if choice.semantic_role not in _KIND_ROLES[choice.kind]:
-            errors.append(
-                f"{choice.kind} is unsuitable for semantic role {choice.semantic_role!r}"
-            )
+            errors.append(f"{choice.kind} is unsuitable for semantic role {choice.semantic_role!r}")
         if choice.kind == "heading" and not _has_genuine_subsection_cue(block):
             errors.append(f"heading for block {block.id!r} lacks a genuine subsection cue")
         kind_cues = _KIND_CUES.get(choice.kind)
         if kind_cues and not any(cue in _block_text(block) for cue in kind_cues):
-            errors.append(
-                f"{choice.kind} for block {block.id!r} lacks suitable semantic cues"
-            )
+            errors.append(f"{choice.kind} for block {block.id!r} lacks suitable semantic cues")
         if choice.kind == "callout":
             text = _block_text(block)
             cues = ("misconception", "mistake", "warning", "safety", "caution")
@@ -236,7 +246,7 @@ def validate_composition_plan(
     plan: SectionCompositionPlan,
     section: TeachingPlanSection,
     tasks: Sequence[SharedTaskSpec],
-    policy: CompositionPolicy = CompositionPolicy(),
+    policy: CompositionPolicy | None = None,
 ) -> None:
     """Reject mutated plans, including moved, duplicated, or invented anchors."""
     choices: list[CompositionChoice] = []
@@ -260,7 +270,9 @@ def validate_composition_plan(
             raise CompositionValidationError(
                 ["TaskAnchors are missing, invented, reordered, or moved from their owning block"]
             )
-        raise CompositionValidationError(["composition plan differs from deterministic composition"])
+        raise CompositionValidationError(
+            ["composition plan differs from deterministic composition"]
+        )
 
 
 def _section_prompt_payload(
@@ -286,6 +298,7 @@ def _section_prompt_payload(
 
 async def _default_provider(payload: dict[str, Any]) -> Any:
     from core.llm.runner import RetryPolicy
+
     from core.prompts import effective_prompt_text
     from infra.authoring.structured_provider import run_structured_agent
 
@@ -307,7 +320,7 @@ async def compose_section(
     section: TeachingPlanSection,
     tasks: Sequence[SharedTaskSpec],
     provider: Provider | None = None,
-    policy: CompositionPolicy = CompositionPolicy(),
+    policy: CompositionPolicy | None = None,
 ) -> SectionCompositionPlan:
     """Compose with one initial call and at most one validation-directed repair."""
     dispatch = provider or _default_provider
@@ -315,13 +328,19 @@ async def compose_section(
     for attempt in range(2):
         raw = await dispatch(_section_prompt_payload(section, tasks, previous_errors))
         try:
-            draft = raw if isinstance(raw, SectionCompositionDraft) else SectionCompositionDraft.model_validate(raw)
+            draft = (
+                raw
+                if isinstance(raw, SectionCompositionDraft)
+                else SectionCompositionDraft.model_validate(raw)
+            )
             return validate_and_build_composition(
                 section=section, choices=draft, tasks=tasks, policy=policy
             )
         except (ValidationError, CompositionValidationError) as exc:
             previous_errors = (
-                exc.errors if isinstance(exc, CompositionValidationError) else ("invalid closed schema",)
+                exc.errors
+                if isinstance(exc, CompositionValidationError)
+                else ("invalid closed schema",)
             )
             if attempt == 1:
                 raise CompositionValidationError(previous_errors) from exc

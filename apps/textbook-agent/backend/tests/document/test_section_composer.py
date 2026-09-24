@@ -7,7 +7,6 @@ from pydantic import ValidationError
 
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
-from infra.authoring.model_policy import SECTION_COMPOSER, get_v3_slot
 from document.shared_lesson.composer import (
     CompositionChoice,
     CompositionValidationError,
@@ -17,6 +16,7 @@ from document.shared_lesson.composer import (
     validate_and_build_composition,
     validate_composition_plan,
 )
+from infra.authoring.model_policy import SECTION_COMPOSER, get_v3_slot
 
 
 def _block(block_id: str, intent: str, brief: str | None = None) -> TeachingPlanBlock:
@@ -81,7 +81,12 @@ async def test_composes_diverse_section_with_fixed_order_and_stable_ids() -> Non
     assert len(calls) == 2
     assert first == second
     assert [item.kind for item in first.items] == [
-        "paragraph", "figure", "table", "list", "heading", "callout"
+        "paragraph",
+        "figure",
+        "table",
+        "list",
+        "heading",
+        "callout",
     ]
     assert len({item.id for item in first.items}) == len(first.items)
     assert all(item.id.startswith("shared-node-") for item in first.items)
@@ -93,7 +98,9 @@ def test_code_inserts_adjacent_task_anchors_after_owning_block_nodes() -> None:
     plan = validate_and_build_composition(
         section=section,
         choices=[
-            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+            CompositionChoice(
+                teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+            ),
             CompositionChoice(teaching_block_id="b1", kind="table", semantic_role="comparison"),
         ],
         tasks=tasks,
@@ -131,9 +138,11 @@ def test_rejects_missing_block_unknown_kind_and_unknown_block(items, message: st
             SectionCompositionDraft.model_validate({"items": items})
         return
     with pytest.raises(CompositionValidationError, match=message):
-        validate_and_build_composition(section=section, choices=[
-            CompositionChoice.model_validate(item) for item in items
-        ], tasks=[])
+        validate_and_build_composition(
+            section=section,
+            choices=[CompositionChoice.model_validate(item) for item in items],
+            tasks=[],
+        )
 
 
 def test_rejects_too_many_consecutive_paragraphs_and_unsuitable_forms() -> None:
@@ -148,7 +157,9 @@ def test_rejects_too_many_consecutive_paragraphs_and_unsuitable_forms() -> None:
     with pytest.raises(CompositionValidationError, match="unsuitable"):
         validate_and_build_composition(
             section=section,
-            choices=[CompositionChoice(teaching_block_id="b0", kind="figure", semantic_role="summary")],
+            choices=[
+                CompositionChoice(teaching_block_id="b0", kind="figure", semantic_role="summary")
+            ],
             tasks=[],
         )
     with pytest.raises(CompositionValidationError, match="suitable semantic cues"):
@@ -169,7 +180,9 @@ def test_rejects_block_node_ceiling_callout_ceiling_and_false_subsection() -> No
         validate_and_build_composition(
             section=section,
             choices=[
-                CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+                CompositionChoice(
+                    teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+                ),
                 CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison"),
                 CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence"),
             ],
@@ -178,7 +191,11 @@ def test_rejects_block_node_ceiling_callout_ceiling_and_false_subsection() -> No
     with pytest.raises(CompositionValidationError, match="genuine subsection"):
         validate_and_build_composition(
             section=section,
-            choices=[CompositionChoice(teaching_block_id="b0", kind="heading", semantic_role="subsection")],
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="heading", semantic_role="subsection"
+                )
+            ],
             tasks=[],
         )
 
@@ -190,8 +207,12 @@ def test_rejects_block_node_ceiling_callout_ceiling_and_false_subsection() -> No
         validate_and_build_composition(
             section=warning_section,
             choices=[
-                CompositionChoice(teaching_block_id="b0", kind="callout", semantic_role="misconception"),
-                CompositionChoice(teaching_block_id="b1", kind="callout", semantic_role="safety_guidance"),
+                CompositionChoice(
+                    teaching_block_id="b0", kind="callout", semantic_role="misconception"
+                ),
+                CompositionChoice(
+                    teaching_block_id="b1", kind="callout", semantic_role="safety_guidance"
+                ),
             ],
             tasks=[],
         )
@@ -203,8 +224,12 @@ def test_rejects_more_than_ten_ordinary_nodes_even_when_block_caps_hold() -> Non
         choice
         for index in range(6)
         for choice in (
-            CompositionChoice(teaching_block_id=f"b{index}", kind="paragraph", semantic_role="explanation"),
-            CompositionChoice(teaching_block_id=f"b{index}", kind="table", semantic_role="comparison"),
+            CompositionChoice(
+                teaching_block_id=f"b{index}", kind="paragraph", semantic_role="explanation"
+            ),
+            CompositionChoice(
+                teaching_block_id=f"b{index}", kind="table", semantic_role="comparison"
+            ),
         )
     ]
     with pytest.raises(CompositionValidationError, match="exceeds 10 ordinary nodes"):
@@ -217,7 +242,9 @@ def test_rejects_anchor_removal_invention_and_reordering() -> None:
     valid = validate_and_build_composition(
         section=section,
         choices=[
-            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+            CompositionChoice(
+                teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+            ),
             CompositionChoice(teaching_block_id="b1", kind="table", semantic_role="comparison"),
         ],
         tasks=tasks,
