@@ -18,17 +18,20 @@
 - Local UI access: frontend dev server was down; restarted on `127.0.0.1:5173`. Its ignored local `.env` pointed `PUBLIC_API_URL` at `localhost:8001` while the backend listens on `127.0.0.1:8000`; corrected to `http://127.0.0.1:8000`. Same-origin proxy now returns the same authenticated `401` as the backend, instead of a proxy error. The in-app `/units` page now redirects to login rather than showing the 500. Google sign-in reports the local origin is not authorized for the configured client in an isolated browser.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–3 PASS; Phase 4 task meaning and Phase 5 composer are in isolated worktrees (not integrated or PASS); Phase 6A section writer and Phase 7A continuity/QA are in isolated implementation (not integrated or PASS); Phases 8–16 NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
+- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–3 PASS; Phase 4 task meaning integrated with full gate running; Phase 5 composer, Phase 6A writer and Phase 7A continuity/QA are committed in isolated worktrees (not integrated or PASS); Phase 6B durable section execution, Phase 10A Learn adapter and Phase 11A Print adapter are in isolated implementation; Phase 8–9 and remaining Phase 10–16 cutovers NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
 
 ## Parallel work allocation
 
 | Stream | Owner | Isolated scope | Handoff gate |
 | --- | --- | --- | --- |
 | Phase 3 full verifier | Luna | Main worktree, read-only verification of integrated contract | Full script exits 0; Sol records phase decision. |
-| Phase 4A shared task meaning | Luna | `shared-task-contract` worktree; `curriculum/shared_tasks/` and focused tests | Closed response/evaluation and action-coverage tests; Sol integrates after Phase 3 gate. |
+| Phase 4A shared task meaning | Luna | `shared-task-contract` worktree; `curriculum/shared_tasks/` and focused tests | Closed response/evaluation and action-coverage tests; integrated after Phase 3 gate, full Phase 4 verifier running. |
 | Phase 5 Section Composer | Luna | `section-composer` worktree; new shared section composition/validation and focused tests | Closed node shape and deterministic invalid-state tests; Sol integrates after Phase 4 contract review. |
 | Phase 6A Section Writer contract | Luna | `section-composer` worktree after composer commit; generic ordinary-content writer and focused tests | Fixed shape, bounded repair and fail-closed semantic validation; Sol integrates after Phase 5 gate. |
+| Phase 6B Durable section execution | Luna | `shared-document-runtime` worktree based on composer/writer commits; new document runtime adapter and focused tests | Four-call concurrency cap, fenced section work, targeted retry and sibling preservation; Sol integrates after Phase 6A review. |
 | Phase 7A Continuity and document QA | Luna | `continuity-qa` worktree; new pure validation modules and focused tests | Typed issues, boundary checks and targeted repair contract; Sol integrates after writer contract review. |
+| Phase 10A Learn realization adapter | Luna | `learn-shared-realizer` worktree; new adapter and focused tests | Exact SharedDocument/source verification and Learn interactions; no route cutover until Phase 9. |
+| Phase 11A Print realization adapter | Luna | `print-shared-realizer` worktree; new adapter and focused tests | Exact SharedDocument/source verification and Print treatments/answer key; no route cutover until Phase 9. |
 
 The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer fields and do not edit each other's modules. Durable writer execution and Learn/Print cutovers wait for integrated contracts. Sol owns the main runbook, cross-stream review, merge order, and phase PASS decisions.
 
@@ -160,6 +163,15 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 - Full gate on integrated `8c45598a`: `scripts/verify-phase.ps1 -Phase full` PASS (`Verification passed for phase: full`, exit 0). Backend pytest: 1,494 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings; frontend tests 57 files/227 tests; frontend build PASS with existing Svelte/optional-dependency warnings; page fixture PDF 5 outputs at 6/6/5/5/5 pages. The verifier also ran its page tests/check and diff gate successfully.
 - Post-gate: `pnpm program:domain-guards` PASS (0 violations, 8 guard tests); `uv run python ../tools/agent/check_architecture.py` PASS (0 violations); applied local Alembic head `20260924_0044`; `git diff --check` PASS, with only this runbook modified.
 - Phase 3 status: PASS. Phase 4 nested task semantics remain in a separate worktree; its strict finalization gate is staged separately from current Learn/Print validation.
+
+## Phase 4A — finalized shared task semantics
+
+- Starting SHA: `050aa127` after Phase 3 gate record.
+- Integrated commits: `2da6cf03` (canonical action/response/evaluation matrix, strict task and plan/source finalizer), `df618c92` (preserve permissive active-path validation during staged cutover), `d22a3539` (enforce strict per-task semantics at immutable SharedLessonDocument boundary).
+- Focused integrated evidence: document/task tests 35 PASS; active Print/Learn compatibility selection 43 PASS (10 existing warnings); Ruff PASS on touched task/document modules; `git diff --check` PASS.
+- Failure proof includes incomplete choice options, incompatible action/response or evaluation, unknown answer key, stale Teaching Plan lineage, mismatched binding/source, and legacy aliases accepted only by old validators until cutover.
+- Full gate attempt on `d22a3539`: page tests 64 PASS, page check 0 errors/warnings, then backend pytest failed due host `ENOSPC` (C: reached 0 bytes free) around 80–90% execution. The run reported 1,440 passed, 5 skipped, 2 deselected, 4 failed and 63 errors after logging/temp SQLite writes failed; it cannot establish a Phase 4 regression result. Focused 35/43-test checks above passed before disk exhaustion. Automatic review blocked removal of old test temp databases; user action to free storage is pending. Phase 4 remains IN PROGRESS, not PASS.
+- Status: IN PROGRESS pending a clean full phase verification. Phase 5/6 implementation remains isolated until this gate passes.
 
 ## Baseline
 - [x] branch recorded
