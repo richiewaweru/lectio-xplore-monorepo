@@ -373,14 +373,38 @@ async def _generate_shared_pack_items(
         to_write = batch + pending
         if not to_write and not new_failed:
             return
-        await append_item_attempt_records(
-            generation_id,
-            attempts=to_write,
-            failed_cards=new_failed,
-            pack_id=pack_id,
-            worker_id=worker_id,
-            lease_token=lease_token,
-        )
+        leased = worker_id is not None or lease_token is not None
+        if leased and (worker_id is None or lease_token is None):
+            raise ValueError("worker_id and lease_token are required for leased item journals")
+        if leased:
+            from print.generation.whole_lesson.repository import (
+                PageDocumentRepository,
+                _page_state_lock,
+            )
+
+            async with async_session_factory() as session:
+                lock = await _page_state_lock(generation_id)
+                async with lock:
+                    repo = PageDocumentRepository(session, generation_id)
+                    await repo.require_execution_lease(
+                        worker_id=str(worker_id),
+                        lease_token=int(lease_token),
+                    )
+                    await append_item_attempt_records(
+                        generation_id,
+                        attempts=to_write,
+                        failed_cards=new_failed,
+                        pack_id=pack_id,
+                        session=session,
+                    )
+                    await session.commit()
+        else:
+            await append_item_attempt_records(
+                generation_id,
+                attempts=to_write,
+                failed_cards=new_failed,
+                pack_id=pack_id,
+            )
         for row in to_write:
             flushed_attempt_keys.add(
                 (

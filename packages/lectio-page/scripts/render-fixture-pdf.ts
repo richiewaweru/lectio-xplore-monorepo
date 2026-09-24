@@ -87,12 +87,43 @@ async function startPreview(): Promise<ChildProcess> {
 			cwd: root,
 			stdio: 'pipe',
 			shell: true,
+			detached: process.platform !== 'win32',
 			env: process.env
 		}
 	);
 	child.stderr?.on('data', (chunk) => process.stderr.write(chunk));
-	await waitForServer(`${BASE}/`);
-	return child;
+	try {
+		await waitForServer(`${BASE}/`);
+		return child;
+	} catch (error) {
+		await stopPreview(child);
+		throw error;
+	}
+}
+
+async function stopPreview(preview: ChildProcess): Promise<void> {
+	if (preview.pid === undefined || preview.exitCode !== null) return;
+
+	if (process.platform === 'win32') {
+		// `shell: true` runs pnpm.cmd via cmd.exe; killing only the pnpm wrapper
+		// leaves Vite serving on the preview port. Terminate just this spawned
+		// process tree so no unrelated preview or dev server is touched.
+		await new Promise<void>((resolve) => {
+			const killer = spawn('taskkill', ['/PID', String(preview.pid), '/T', '/F'], {
+				stdio: 'ignore',
+				windowsHide: true
+			});
+			killer.once('error', () => resolve());
+			killer.once('exit', () => resolve());
+		});
+		return;
+	}
+
+	try {
+		process.kill(-preview.pid, 'SIGTERM');
+	} catch {
+		preview.kill('SIGTERM');
+	}
 }
 
 function pdfPageCount(pdfPath: string): number {
@@ -224,8 +255,11 @@ async function main(): Promise<void> {
 		console.log('PDF gate OK — all fixtures rendered');
 		console.log(JSON.stringify(report));
 	} finally {
-		await browser.close();
-		preview.kill('SIGTERM');
+		try {
+			await browser.close();
+		} finally {
+			await stopPreview(preview);
+		}
 	}
 }
 

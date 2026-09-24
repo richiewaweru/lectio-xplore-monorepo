@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
+from infra.execution.error_policy import classify_provider_error
 
 OutcomeClass = Literal["OK", "TRANSPORT", "TIMEOUT", "RATE_LIMIT", "CONTRACT", "SEMANTIC", "UNKNOWN"]
 
@@ -33,14 +34,15 @@ def classify_item_failure(exc: BaseException) -> tuple[OutcomeClass, bool]:
         )
     ):
         return "SEMANTIC", True
-    from print.generation.whole_lesson.failure_policy import classify_failure
-
-    classification = classify_failure(exc)
-    if classification.code == "TIMEOUT":
+    classification = classify_provider_error(
+        exc,
+        status_code=getattr(exc, "status_code", None),
+    )
+    if isinstance(exc, TimeoutError) or "timeout" in type(exc).__name__.lower():
         return "TIMEOUT", True
-    if classification.code == "RATE_LIMIT":
+    if classification.error_class == "retryable_rate_limit":
         return "RATE_LIMIT", True
-    if classification.code == "TRANSPORT" or is_transport_error(exc):
+    if classification.retryable or is_transport_error(exc):
         return "TRANSPORT", True
     extracted = structured_output_errors(exc)
     # Structured-output failures are often wrapped by UnexpectedModelBehavior.
@@ -54,9 +56,7 @@ def classify_item_failure(exc: BaseException) -> tuple[OutcomeClass, bool]:
         )
         if not only_fallback:
             return "CONTRACT", True
-    if classification.code in {"VALIDATION", "CONTRACT"}:
-        return "CONTRACT", classification.retryable
-    return "UNKNOWN", classification.retryable
+    return "UNKNOWN", False
 
 
 def new_item_correlation_id(*, generation_id: str | None, card_id: str) -> str:

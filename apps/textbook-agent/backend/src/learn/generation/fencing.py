@@ -10,7 +10,7 @@ from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, NativeRealizationModel
@@ -120,6 +120,14 @@ async def claim_learn_execution(
     worker_id: str,
     lease_seconds: int = LEARN_LEASE_SECONDS,
 ) -> ExecutionLease | None:
+    if session.bind is not None and session.bind.dialect.name == "sqlite":
+        # SQLite ignores SELECT ... FOR UPDATE. Acquire its write lock before
+        # reading the lease so concurrent local/test claimants cannot both
+        # observe the same queued state. The caller holds it through commit.
+        await session.execute(
+            text("UPDATE generations SET id = id WHERE id = :generation_id"),
+            {"generation_id": generation_id},
+        )
     result = await session.execute(
         select(GenerationModel)
         .where(GenerationModel.id == generation_id)

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TargetTeachingPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "learner_title",
+    "arc",
+    "starting_state",
+    "target_state",
+    "sections"
+  ],
+  "properties": {
+    "learner_title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "arc": {
+      "type": "string",
+      "minLength": 1
+    },
+    "starting_state": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "target_state": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slot_id",
+          "display_title",
+          "specific_purpose",
+          "entry_state",
+          "must_establish",
+          "avoid_repeating",
+          "exit_state",
+          "blocks"
+        ],
+        "properties": {
+          "slot_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "display_title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "specific_purpose": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entry_state": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "must_establish": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "avoid_repeating": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "bridge_from_previous": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "exit_state": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}

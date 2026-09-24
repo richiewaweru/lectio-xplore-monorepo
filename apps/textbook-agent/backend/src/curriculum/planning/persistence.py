@@ -8,10 +8,10 @@ from typing import Any
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
 from core.database.models import ConceptCardModel, GenerationModel, GenerationStepModel
 from core.database.session import async_session_factory
-from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
 from curriculum.planning.models import (
     ConceptCard,
     Misconception,
@@ -294,44 +294,14 @@ async def append_item_attempt_records(
     failed_cards: list[dict[str, Any]] | None = None,
     pack_id: str | None = None,
     session: AsyncSession | None = None,
-    worker_id: str | None = None,
-    lease_token: int | None = None,
 ) -> dict[str, Any]:
     """Append-only merge of item-generation attempt journals into chunked state.
 
     Never wipes prior attempts. Dedupes by (correlation_id, card_id, attempt).
-    When worker_id/lease_token are provided, lease verification and journal write
-    share one row-locked transaction.
+    The application layer owns any path-specific lease verification and passes
+    its locked session here so verification and journal write share a transaction.
     """
-    leased = worker_id is not None or lease_token is not None
-    if leased and (worker_id is None or lease_token is None):
-        raise ValueError("worker_id and lease_token must both be provided for leased writes")
-
     async with _session_scope(session) as (db, should_commit):
-        if leased:
-            from print.generation.whole_lesson.repository import (
-                PageDocumentRepository,
-                _page_state_lock,
-            )
-
-            lock = await _page_state_lock(generation_id)
-            async with lock:
-                repo = PageDocumentRepository(db, generation_id)
-                await repo.require_execution_lease(
-                    worker_id=str(worker_id),
-                    lease_token=int(lease_token),
-                )
-                item_gen = await _merge_item_attempt_journal(
-                    generation_id,
-                    db,
-                    attempts=attempts,
-                    failed_cards=failed_cards,
-                    pack_id=pack_id,
-                )
-                if should_commit:
-                    await db.commit()
-                return item_gen
-
         item_gen = await _merge_item_attempt_journal(
             generation_id,
             db,
@@ -389,8 +359,8 @@ async def persist_structural_plan(
     plan: StructuralPlan,
     session: AsyncSession | None = None,
     *,
-    signals: V3SignalSummary | None = None,
-    form: V3InputForm | None = None,
+    signals: BaseModel | None = None,
+    form: BaseModel | None = None,
     resource_spec: dict | None = None,
 ) -> None:
     async with _session_scope(session) as (db, should_commit):
