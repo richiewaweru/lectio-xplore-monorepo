@@ -18,7 +18,7 @@
 - Local UI access: frontend dev server was down; restarted on `127.0.0.1:5173`. Its ignored local `.env` pointed `PUBLIC_API_URL` at `localhost:8001` while the backend listens on `127.0.0.1:8000`; corrected to `http://127.0.0.1:8000`. Same-origin proxy now returns the same authenticated `401` as the backend, instead of a proxy error. The in-app `/units` page now redirects to login rather than showing the 500. Google sign-in reports the local origin is not authorized for the configured client in an isolated browser.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–4 PASS; Phase 5 composer integrated with full gate interrupted by low disk space; Phase 6A writer, Phase 6B durable section execution, Phase 7A continuity/QA, Phase 8A media adapter, Phase 10A Learn adapter and Phase 11A Print adapter are committed in isolated worktrees (not integrated or PASS); Phase 9 and remaining Phase 10–16 cutovers NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
+- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–5 PASS; Phase 6A writer and Phase 6B durable section execution are committed in isolated worktrees, but Phase 6 is blocked by a demonstrated pending-plan approval admission gap. Phase 7A continuity/QA, Phase 7B assembly, Phase 8A media adapter, Phase 10A Learn adapter and Phase 11A Print adapter are committed in isolated worktrees (not integrated or PASS); Phase 9 and remaining Phase 10–16 cutovers NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
 
 ## Parallel work allocation
 
@@ -182,7 +182,14 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 - Integrated commits: `f670df2b` (closed provider-selected section shape, deterministic IDs and code-owned TaskAnchors), `b9428886` (policy default/lint/format correction).
 - Focused integrated evidence: composer/document/task selection 38 PASS; composer-only rerun 12 PASS; scoped Ruff and architecture guard PASS; `git diff --check` PASS.
 - Full gate attempt: page tests 64 PASS and page check 0 errors/warnings; backend run was stopped after C: fell to about 205 MB free. The prior full gate had left about 2 GB free; this phase attempt began with about 2.3 GB and dropped below a safe threshold before backend progress. No Phase 5 full-gate result is claimed. User request to free more disk space is pending.
-- Status: IN PROGRESS. No Phase 6A integration or Phase 5 PASS until a clean full rerun and post-gate guards.
+- Clean full rerun after user freed disk: `powershell -ExecutionPolicy Bypass -File scripts/verify-phase.ps1 -Phase full` exited 0. Page tests 64 PASS; page check 0 errors/warnings; backend 1,519 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings; frontend tests 57 files/227 tests; frontend build PASS; PDF gate 5 files at 6/6/5/5/5 pages; script clean-worktree gate PASS. The run began at `29c96ab0`; a Learn cutover audit documentation-only commit `26b4ba5f` landed during the run. Source and tests were unchanged, and the worktree remained clean at the final gate.
+- Post-gate: `pnpm program:domain-guards` PASS (0 violations, 8 guard tests); `uv run python ../tools/agent/check_architecture.py` PASS (0 violations); applied local Alembic head `20260924_0044`; `git diff --check` PASS and main worktree clean. C: remained above 10 GB free at completion.
+- Status: PASS. Phase 6 package remains isolated pending its approval-boundary correction and own full gate.
+
+## Phase 6 — Section Writer and durable execution
+
+- Isolated writer commit `5c17a42a`, runtime commits `22f97b93` and `e929fdb0`, and real SQLite integration-test commit `f4cd41f8` are not integrated. Writer focused tests 14 PASS; runtime focused tests 35 PASS before the database package; database/runtime regression subset 60 PASS with the deliberate pending-plan failure excluded. Ruff and architecture guard PASS in the isolated worktree.
+- Approval-boundary failure: `test_shared_document_admission_rejects_hashed_pending_teaching_revision` fails with `DID NOT RAISE SectionRuntimeError`. A correctly hashed pending `TeachingRevisionRecord` currently admits a queued shared-document run because `TeachingPlanSource` checks ID/revision/hash but carries no approval record or status. Sol assigned a bounded runtime/source correction; Phase 6 cannot PASS until this test and the full gate pass.
 
 ## Baseline
 - [x] branch recorded
