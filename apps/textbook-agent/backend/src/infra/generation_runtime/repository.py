@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from pydantic import ValidationError
+from pydantic import JsonValue, TypeAdapter, ValidationError
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,11 +28,13 @@ from infra.execution.checkpoints import content_hash
 from infra.execution.leases import DEFAULT_LEASE_SECONDS, LeaseLostError
 from infra.generation_runtime.contracts import (
     BuildAdmission,
+    RecoveryAction,
     RunAdmission,
     RuntimeCheckpoint,
     RuntimeCheckpointCompatibility,
     SourceIdentity,
     WorkItemAdmission,
+    WorkItemFailure,
 )
 
 
@@ -75,6 +78,18 @@ class CheckpointIntegrityError(GenerationRuntimeError):
     """Persisted checkpoint data is malformed or its payload hash changed."""
 
 
+class OutputValidationError(GenerationRuntimeError):
+    """A work-item output is not a canonical JSON value."""
+
+
+class OutputHashMismatch(GenerationRuntimeError):
+    """The claimed output digest does not match the canonical output value."""
+
+
+class InvalidWorkItemTransition(GenerationRuntimeError):
+    """A work item cannot move from its current state to the requested state."""
+
+
 @dataclass(frozen=True)
 class AdmissionResult:
     record: GenerationRunModel | GenerationWorkItemModel
@@ -94,6 +109,40 @@ def _lease_deadline(now: datetime, lease_seconds: int) -> datetime:
     return now + timedelta(seconds=lease_seconds)
 
 
+_JSON_VALUE_ADAPTER = TypeAdapter(JsonValue)
+
+
+def _canonical_json_value(value: Any) -> tuple[JsonValue, str]:
+    try:
+        validated = _JSON_VALUE_ADAPTER.validate_python(value, strict=True)
+        json.dumps(validated, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    except (ValidationError, TypeError, ValueError) as exc:
+        raise OutputValidationError("work-item output must be strict JSON") from exc
+    return validated, content_hash(validated)
+
+
+async def _lock_run_for_item(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    allow_failed_terminal: bool = False,
+    allow_failed_recoverable: bool = False,
+) -> GenerationRunModel:
+    run = await session.scalar(
+        select(GenerationRunModel).where(GenerationRunModel.id == run_id).with_for_update()
+    )
+    if run is None:
+        raise RunNotFound("generation run does not exist")
+    allowed = {"queued", "running"}
+    if allow_failed_terminal:
+        allowed.add("failed_terminal")
+    if allow_failed_recoverable:
+        allowed.add("failed_recoverable")
+    if run.status not in allowed:
+        raise LeaseLostError("parent generation run is no longer active")
+    return run
+
+
 async def _execute_fenced_update(session: AsyncSession, statement: Any) -> Any:
     try:
         async with session.begin_nested():
@@ -102,6 +151,39 @@ async def _execute_fenced_update(session: AsyncSession, statement: Any) -> Any:
         if "locked" in str(exc).lower():
             raise LeaseLostError("work-item lease changed during a fenced update") from exc
         raise
+
+
+def _live_item_update(
+    *,
+    item: GenerationWorkItemModel,
+    worker_id: str,
+    lease_token: int,
+    now: datetime,
+    values: dict[str, Any],
+) -> Any:
+    active_run = (
+        select(GenerationRunModel.id)
+        .where(
+            GenerationRunModel.id == item.run_id,
+            GenerationRunModel.status.in_({"queued", "running"}),
+        )
+        .exists()
+    )
+    return (
+        update(GenerationWorkItemModel)
+        .where(
+            GenerationWorkItemModel.id == item.id,
+            GenerationWorkItemModel.run_id == item.run_id,
+            GenerationWorkItemModel.status == "running",
+            GenerationWorkItemModel.attempt == item.attempt,
+            GenerationWorkItemModel.lease_owner == worker_id,
+            GenerationWorkItemModel.lease_token == lease_token,
+            GenerationWorkItemModel.lease_expires_at > now,
+            active_run,
+        )
+        .values(**values)
+        .execution_options(synchronize_session=False)
+    )
 
 
 def _assert_source_identity(run: GenerationRunModel, source: SourceIdentity) -> None:
@@ -130,7 +212,7 @@ async def claim_work_item(
     lease_seconds: int = DEFAULT_LEASE_SECONDS,
     now: datetime | None = None,
 ) -> GenerationWorkItemModel:
-    """Claim a queued or expired item under a new monotonically increasing fence."""
+    """Claim work; reconcile an expired, exhausted item instead of leaving it running."""
     if not worker_id.strip():
         raise ValueError("worker_id must be non-empty")
     current_time = _utcnow(now)
@@ -168,7 +250,11 @@ async def claim_work_item(
         and _utcnow(prior_expiry) <= current_time
     ):
         if prior_attempt >= item.max_attempts:
-            raise AttemptLimitExceeded("expired work item exhausted max_attempts")
+            return await reconcile_expired_work_item(
+                session,
+                work_item_id=work_item_id,
+                now=current_time,
+            )
         next_attempt = prior_attempt + 1
     else:
         raise WorkItemUnavailable("generation work item is not queued or expired")
@@ -269,6 +355,7 @@ async def _require_live_lease(
         or _utcnow(item.lease_expires_at) <= now
     ):
         raise LeaseLostError("worker no longer holds a live work-item lease")
+    await _lock_run_for_item(session, run_id=item.run_id)
     return item
 
 
@@ -284,18 +371,22 @@ async def heartbeat_work_item(
     """Extend a live lease only while its owner and fence still match."""
     current_time = _utcnow(now)
     new_expiry = _lease_deadline(current_time, lease_seconds)
+    item = await _require_live_lease(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=lease_token,
+        now=current_time,
+    )
     result = await _execute_fenced_update(
         session,
-        update(GenerationWorkItemModel)
-        .where(
-            GenerationWorkItemModel.id == work_item_id,
-            GenerationWorkItemModel.status == "running",
-            GenerationWorkItemModel.lease_owner == worker_id,
-            GenerationWorkItemModel.lease_token == lease_token,
-            GenerationWorkItemModel.lease_expires_at > current_time,
-        )
-        .values(lease_expires_at=new_expiry, updated_at=current_time)
-        .execution_options(synchronize_session=False),
+        _live_item_update(
+            item=item,
+            worker_id=worker_id,
+            lease_token=lease_token,
+            now=current_time,
+            values={"lease_expires_at": new_expiry, "updated_at": current_time},
+        ),
     )
     if result.rowcount != 1:
         raise LeaseLostError("worker no longer holds a live work-item lease")
@@ -381,6 +472,7 @@ async def persist_checkpoint(
             GenerationRunModel.id == GenerationWorkItemModel.run_id,
             GenerationRunModel.source_revision == compatibility.source_revision,
             GenerationRunModel.source_hash == compatibility.source_hash,
+            GenerationRunModel.status.in_({"queued", "running"}),
         )
         .exists()
     )
@@ -437,6 +529,451 @@ async def load_compatible_checkpoint(
     if checkpoint.compatibility != compatibility:
         raise CheckpointCompatibilityError("persisted checkpoint compatibility differs")
     return checkpoint
+
+
+async def _refresh_run_lifecycle(
+    session: AsyncSession,
+    *,
+    run: GenerationRunModel,
+    now: datetime,
+) -> None:
+    """Aggregate item outcomes while holding the Run lock after the item lock."""
+    locked_run = await session.scalar(
+        select(GenerationRunModel).where(GenerationRunModel.id == run.id).with_for_update()
+    )
+    if locked_run is None:
+        raise RunNotFound("generation run does not exist")
+    run = locked_run
+    await session.flush()
+    statuses = list(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel.status).where(
+                    GenerationWorkItemModel.run_id == run.id
+                )
+            )
+        ).all()
+    )
+    if "failed_terminal" in statuses:
+        run.status = "failed_terminal"
+    elif "running" in statuses:
+        run.status = "running"
+    elif "queued" in statuses:
+        run.status = "queued"
+    elif "failed_recoverable" in statuses:
+        run.status = "failed_recoverable"
+    elif run.status not in {"ready", "cancelled"}:
+        # Whole-run validation and ready commit belong to the following phase.
+        run.status = "running"
+
+    latest_failure = await session.scalar(
+        select(GenerationWorkItemModel)
+        .where(
+            GenerationWorkItemModel.run_id == run.id,
+            GenerationWorkItemModel.status.in_({"failed_recoverable", "failed_terminal"}),
+            GenerationWorkItemModel.error_code.is_not(None),
+        )
+        .order_by(
+            GenerationWorkItemModel.updated_at.desc(),
+            GenerationWorkItemModel.id.desc(),
+        )
+        .limit(1)
+    )
+    if latest_failure is None:
+        run.error_code = None
+        run.error_class = None
+        run.error_summary = None
+        run.recovery_action = None
+    else:
+        run.error_code = latest_failure.error_code
+        run.error_class = latest_failure.error_class
+        run.error_summary = latest_failure.error_summary
+        run.recovery_action = latest_failure.recovery_action
+    run.updated_at = now
+    await session.flush()
+
+
+async def complete_work_item(
+    session: AsyncSession,
+    *,
+    work_item_id: str,
+    worker_id: str,
+    lease_token: int,
+    output_json: Any,
+    output_hash: str,
+    now: datetime | None = None,
+) -> GenerationWorkItemModel:
+    """Commit one canonical output under its live fence and append one event."""
+    current_time = _utcnow(now)
+    canonical_output, computed_hash = _canonical_json_value(output_json)
+    if canonical_output is None:
+        raise OutputValidationError("ready work-item output must not be SQL NULL")
+    if output_hash != computed_hash:
+        raise OutputHashMismatch("output_hash does not match canonical output JSON")
+
+    item = await session.scalar(
+        select(GenerationWorkItemModel)
+        .where(GenerationWorkItemModel.id == work_item_id)
+        .with_for_update(skip_locked=True)
+    )
+    if item is None:
+        if await session.get(GenerationWorkItemModel, work_item_id) is None:
+            raise WorkItemNotFound("generation work item does not exist")
+        raise LeaseLostError("work-item row is locked by another transaction")
+
+    if item.status == "ready":
+        if item.lease_owner != worker_id or item.lease_token != lease_token:
+            raise LeaseLostError("worker no longer holds the completed item's fence")
+        try:
+            _stored_output, stored_hash = _canonical_json_value(item.output_json)
+        except OutputValidationError as exc:
+            raise OutputValidationError("persisted ready output is not canonical JSON") from exc
+        if item.output_hash != stored_hash or stored_hash != computed_hash:
+            raise OutputHashMismatch("completed output differs from the immutable ready output")
+        return item
+
+    item = await _require_live_lease(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=lease_token,
+        now=current_time,
+    )
+    run = await session.get(GenerationRunModel, item.run_id)
+    if run is None:
+        raise RunNotFound("generation run does not exist")
+
+    async with session.begin_nested():
+        result = await _execute_fenced_update(
+            session,
+            _live_item_update(
+                item=item,
+                worker_id=worker_id,
+                lease_token=lease_token,
+                now=current_time,
+                values={
+                    "status": "ready",
+                    "output_json": canonical_output,
+                    "output_hash": computed_hash,
+                    "error_code": None,
+                    "error_class": None,
+                    "error_summary": None,
+                    "recovery_action": None,
+                    "completed_at": current_time,
+                    "updated_at": current_time,
+                },
+            ),
+        )
+        if result.rowcount != 1:
+            raise LeaseLostError("work-item lease or parent run changed before completion")
+        await session.refresh(item)
+        await session.refresh(run)
+        await _refresh_run_lifecycle(session, run=run, now=current_time)
+        await append_event(
+            session,
+            run_id=run.id,
+            work_item_id=item.id,
+            event_type="work_item_ready",
+            safe_payload={"output_hash": computed_hash},
+        )
+    await session.refresh(item)
+    return item
+
+
+async def fail_work_item(
+    session: AsyncSession,
+    *,
+    work_item_id: str,
+    worker_id: str,
+    lease_token: int,
+    failure: WorkItemFailure,
+    now: datetime | None = None,
+) -> GenerationWorkItemModel:
+    """Persist a typed, safe failure and choose recoverability within the attempt budget."""
+    if not isinstance(failure, WorkItemFailure):
+        failure = WorkItemFailure.model_validate(failure)
+    current_time = _utcnow(now)
+    item = await _require_live_lease(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=lease_token,
+        now=current_time,
+    )
+    run = await session.get(GenerationRunModel, item.run_id)
+    if run is None:
+        raise RunNotFound("generation run does not exist")
+
+    can_retry = (
+        failure.retryable
+        and failure.recovery_action == RecoveryAction.RETRY.value
+        and item.attempt < item.max_attempts
+    )
+    next_status = "failed_recoverable" if can_retry else "failed_terminal"
+    recovery_action = str(failure.recovery_action)
+    if not can_retry and recovery_action == RecoveryAction.RETRY.value:
+        recovery_action = RecoveryAction.REGENERATE.value
+
+    async with session.begin_nested():
+        result = await _execute_fenced_update(
+            session,
+            _live_item_update(
+                item=item,
+                worker_id=worker_id,
+                lease_token=lease_token,
+                now=current_time,
+                values={
+                    "status": next_status,
+                    "lease_owner": None,
+                    "lease_expires_at": None,
+                    "output_json": None,
+                    "output_hash": None,
+                    "error_code": failure.error_code,
+                    "error_class": str(failure.error_class),
+                    "error_summary": failure.safe_summary,
+                    "recovery_action": recovery_action,
+                    "completed_at": current_time,
+                    "updated_at": current_time,
+                },
+            ),
+        )
+        if result.rowcount != 1:
+            raise LeaseLostError("work-item lease or parent run changed before failure commit")
+        await session.refresh(item)
+        await session.refresh(run)
+        await _refresh_run_lifecycle(session, run=run, now=current_time)
+        await append_event(
+            session,
+            run_id=run.id,
+            work_item_id=item.id,
+            event_type="work_item_failed",
+            error_code=failure.error_code,
+            safe_payload={
+                "error_class": str(failure.error_class),
+                "retryable": can_retry,
+                "safe_summary": failure.safe_summary,
+                "recovery_action": recovery_action,
+            },
+        )
+    await session.refresh(item)
+    return item
+
+
+async def retry_work_item(
+    session: AsyncSession,
+    *,
+    work_item_id: str,
+    owner_user_id: str,
+    now: datetime | None = None,
+) -> GenerationWorkItemModel:
+    """Queue one failed-recoverable item without changing healthy siblings/checkpoints."""
+    current_time = _utcnow(now)
+    item = await session.scalar(
+        select(GenerationWorkItemModel)
+        .where(GenerationWorkItemModel.id == work_item_id)
+        .with_for_update(skip_locked=True)
+    )
+    if item is None:
+        if await session.get(GenerationWorkItemModel, work_item_id) is None:
+            raise WorkItemNotFound("generation work item does not exist")
+        raise WorkItemUnavailable("work-item row is locked by another transaction")
+    if item.status != "failed_recoverable":
+        raise InvalidWorkItemTransition("only failed_recoverable work items can be retried")
+    if item.error_class not in {
+        "validation",
+        "provider_transport",
+        "provider_output",
+    }:
+        raise InvalidWorkItemTransition("this failure class is not eligible for targeted retry")
+    if item.recovery_action != RecoveryAction.RETRY.value:
+        raise InvalidWorkItemTransition("work item recovery action does not allow targeted retry")
+    if item.attempt >= item.max_attempts:
+        raise AttemptLimitExceeded("work item has no remaining retry attempts")
+
+    run = await _lock_run_for_item(
+        session,
+        run_id=item.run_id,
+        allow_failed_recoverable=True,
+    )
+    if run.owner_user_id != owner_user_id:
+        raise RunNotFound("generation work item is unavailable to this owner")
+    if run.status not in {"queued", "running", "failed_recoverable"}:
+        raise InvalidWorkItemTransition("parent generation run cannot be retried")
+
+    prior_attempt = item.attempt
+    prior_token = item.lease_token or 0
+    retryable_run = (
+        select(GenerationRunModel.id)
+        .where(
+            GenerationRunModel.id == item.run_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+            GenerationRunModel.status.in_({"queued", "running", "failed_recoverable"}),
+        )
+        .exists()
+    )
+    async with session.begin_nested():
+        result = await _execute_fenced_update(
+            session,
+            update(GenerationWorkItemModel)
+            .where(
+                GenerationWorkItemModel.id == item.id,
+                GenerationWorkItemModel.run_id == item.run_id,
+                GenerationWorkItemModel.status == "failed_recoverable",
+                GenerationWorkItemModel.attempt == prior_attempt,
+                GenerationWorkItemModel.attempt < GenerationWorkItemModel.max_attempts,
+                GenerationWorkItemModel.error_class.in_(
+                    {"validation", "provider_transport", "provider_output"}
+                ),
+                GenerationWorkItemModel.recovery_action == RecoveryAction.RETRY.value,
+                (
+                    GenerationWorkItemModel.lease_token.is_(None)
+                    if item.lease_token is None
+                    else GenerationWorkItemModel.lease_token == item.lease_token
+                ),
+                retryable_run,
+            )
+            .values(
+                status="queued",
+                attempt=prior_attempt + 1,
+                lease_owner=None,
+                lease_token=prior_token + 1,
+                lease_expires_at=None,
+                error_code=None,
+                error_class=None,
+                error_summary=None,
+                recovery_action=None,
+                output_json=None,
+                output_hash=None,
+                completed_at=None,
+                updated_at=current_time,
+            )
+            .execution_options(synchronize_session=False),
+        )
+        if result.rowcount != 1:
+            raise InvalidWorkItemTransition("work-item or parent run changed before retry")
+        await session.refresh(item)
+        await session.refresh(run)
+        await _refresh_run_lifecycle(session, run=run, now=current_time)
+        await append_event(
+            session,
+            run_id=run.id,
+            work_item_id=item.id,
+            event_type="work_item_retry_queued",
+            safe_payload={
+                "from_attempt": prior_attempt,
+                "attempt": item.attempt,
+                "recovery_action": RecoveryAction.RETRY.value,
+            },
+        )
+    await session.refresh(item)
+    return item
+
+
+async def reconcile_expired_work_item(
+    session: AsyncSession,
+    *,
+    work_item_id: str,
+    now: datetime | None = None,
+) -> GenerationWorkItemModel:
+    """Close an expired running item whose bounded attempt budget is exhausted."""
+    current_time = _utcnow(now)
+    item = await session.scalar(
+        select(GenerationWorkItemModel)
+        .where(GenerationWorkItemModel.id == work_item_id)
+        .with_for_update(skip_locked=True)
+    )
+    if item is None:
+        if await session.get(GenerationWorkItemModel, work_item_id) is None:
+            raise WorkItemNotFound("generation work item does not exist")
+        raise WorkItemUnavailable("work-item row is locked by another transaction")
+
+    if (
+        item.status == "failed_terminal"
+        and item.error_class == "budget_exhausted"
+        and item.error_code == "budget_exhausted"
+    ):
+        return item
+    if (
+        item.status != "running"
+        or item.lease_expires_at is None
+        or _utcnow(item.lease_expires_at) > current_time
+    ):
+        raise InvalidWorkItemTransition("only expired running work items can be reconciled")
+    if item.attempt < item.max_attempts:
+        raise InvalidWorkItemTransition("work item still has a claim attempt available")
+
+    run = await _lock_run_for_item(
+        session,
+        run_id=item.run_id,
+        allow_failed_terminal=True,
+    )
+    async with session.begin_nested():
+        run_may_reconcile = (
+            select(GenerationRunModel.id)
+            .where(
+                GenerationRunModel.id == run.id,
+                GenerationRunModel.status.in_({"queued", "running", "failed_terminal"}),
+            )
+            .exists()
+        )
+        result = await _execute_fenced_update(
+            session,
+            update(GenerationWorkItemModel)
+            .where(
+                GenerationWorkItemModel.id == item.id,
+                GenerationWorkItemModel.run_id == item.run_id,
+                GenerationWorkItemModel.status == "running",
+                GenerationWorkItemModel.attempt == item.attempt,
+                GenerationWorkItemModel.attempt >= GenerationWorkItemModel.max_attempts,
+                GenerationWorkItemModel.lease_expires_at.is_not(None),
+                GenerationWorkItemModel.lease_expires_at <= current_time,
+                (
+                    GenerationWorkItemModel.lease_token.is_(None)
+                    if item.lease_token is None
+                    else GenerationWorkItemModel.lease_token == item.lease_token
+                ),
+                (
+                    GenerationWorkItemModel.lease_owner.is_(None)
+                    if item.lease_owner is None
+                    else GenerationWorkItemModel.lease_owner == item.lease_owner
+                ),
+                run_may_reconcile,
+            )
+            .values(
+                status="failed_terminal",
+                lease_owner=None,
+                lease_expires_at=None,
+                error_code="budget_exhausted",
+                error_class="budget_exhausted",
+                error_summary="Work item lease expired after all attempts were used.",
+                recovery_action=RecoveryAction.REGENERATE.value,
+                output_json=None,
+                output_hash=None,
+                completed_at=current_time,
+                updated_at=current_time,
+            )
+            .execution_options(synchronize_session=False),
+        )
+        if result.rowcount != 1:
+            raise WorkItemUnavailable("work item changed before exhausted-attempt reconciliation")
+        await session.refresh(item)
+        await session.refresh(run)
+        await _refresh_run_lifecycle(session, run=run, now=current_time)
+        await append_event(
+            session,
+            run_id=run.id,
+            work_item_id=item.id,
+            event_type="work_item_attempts_exhausted",
+            error_code="budget_exhausted",
+            safe_payload={
+                "error_class": "budget_exhausted",
+                "retryable": False,
+                "safe_summary": item.error_summary,
+                "recovery_action": item.recovery_action,
+            },
+        )
+    await session.refresh(item)
+    return item
 
 
 async def create_build(

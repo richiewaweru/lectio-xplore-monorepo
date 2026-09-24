@@ -7,7 +7,15 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 
 class RunStatus(StrEnum):
@@ -48,6 +56,18 @@ class ErrorClass(StrEnum):
     UNSUPPORTED_CONTRACT = "unsupported_contract"
     INTERNAL_PROGRAMMING = "internal_programming"
     CANCELLED = "cancelled"
+
+
+class RecoveryAction(StrEnum):
+    RETRY = "retry"
+    REVIEW = "review"
+    REGENERATE = "regenerate"
+    NONE = "none"
+
+
+_RETRYABLE_ERROR_CLASSES = frozenset(
+    {ErrorClass.VALIDATION, ErrorClass.PROVIDER_TRANSPORT, ErrorClass.PROVIDER_OUTPUT}
+)
 
 
 class Contract(BaseModel):
@@ -175,6 +195,32 @@ class WorkItemAdmission(Contract):
     definition_hash: str = Field(min_length=1)
     composition_identity: str | None = None
     max_attempts: int = Field(default=3, ge=1)
+
+
+class WorkItemFailure(Contract):
+    """Safe, closed failure input; only bounded output/transport classes retry."""
+
+    error_code: str = Field(min_length=1, max_length=128)
+    error_class: ErrorClass
+    safe_summary: str = Field(min_length=1, max_length=512)
+    recovery_action: RecoveryAction
+
+    @model_validator(mode="after")
+    def retry_action_requires_retryable_class(self) -> WorkItemFailure:
+        if self.error_class == ErrorClass.CANCELLED:
+            raise ValueError("cancellation uses the dedicated cancellation lifecycle")
+        if (
+            self.recovery_action == RecoveryAction.RETRY
+            and self.error_class not in _RETRYABLE_ERROR_CLASSES
+        ):
+            raise ValueError("this error class cannot request a work-item retry")
+        return self
+
+    @computed_field
+    @property
+    def retryable(self) -> bool:
+        """Whether this failure class is eligible for bounded work-item retry."""
+        return self.error_class in _RETRYABLE_ERROR_CLASSES
 
 
 class BuildAdmission(Contract):

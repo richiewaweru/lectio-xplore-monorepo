@@ -5,11 +5,13 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 import infra.generation_runtime.repository as generation_runtime_repository
 from infra.database.models import (
     ConceptModel,
+    GenerationEventModel,
     GenerationRunModel,
     GenerationWorkItemModel,
     PathLessonModel,
@@ -19,10 +21,13 @@ from infra.database.models import (
 )
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (
-    AttemptLimitExceeded,
     BuildAdmission,
     CheckpointCompatibilityError,
+    InvalidWorkItemTransition,
     LeaseLostError,
+    OutputHashMismatch,
+    OutputValidationError,
+    RecoveryAction,
     RunAdmission,
     RunAdmissionConflict,
     RunContract,
@@ -34,16 +39,21 @@ from infra.generation_runtime import (
     WorkItemAdmission,
     WorkItemConflict,
     WorkItemContract,
+    WorkItemFailure,
     WorkItemUnavailable,
     add_work_item,
     admit_run,
     append_event,
     claim_work_item,
+    complete_work_item,
     create_build,
+    fail_work_item,
     get_run_status,
     heartbeat_work_item,
     load_compatible_checkpoint,
     persist_checkpoint,
+    reconcile_expired_work_item,
+    retry_work_item,
 )
 
 
@@ -818,21 +828,812 @@ async def test_expired_lease_cannot_be_reclaimed_beyond_attempt_budget(db_sessio
         now=start,
     )
 
-    with pytest.raises(AttemptLimitExceeded, match="max_attempts"):
-        await claim_work_item(
+    reconciled = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-b",
+        source=_source_identity(),
+        lease_seconds=10,
+        now=start + timedelta(seconds=10),
+    )
+
+    await db_session.refresh(item.record)
+    assert reconciled.status == "failed_terminal"
+    assert item.record.status == "failed_terminal"
+    assert item.record.attempt == 1
+    assert item.record.lease_token == first.lease_token
+    assert item.record.lease_owner is None
+    assert item.record.error_code == "budget_exhausted"
+    assert item.record.error_class == "budget_exhausted"
+    run = await db_session.get(GenerationRunModel, item.record.run_id)
+    assert run is not None
+    assert run.status == "failed_terminal"
+    assert (
+        await db_session.scalar(
+            select(func.count())
+            .select_from(GenerationEventModel)
+            .where(GenerationEventModel.work_item_id == item.record.id)
+        )
+        == 1
+    )
+
+
+def _failure(
+    *,
+    error_class="provider_output",
+    recovery_action=RecoveryAction.RETRY,
+    error_code="invalid_output",
+    safe_summary="Generated output did not pass validation.",
+) -> WorkItemFailure:
+    return WorkItemFailure(
+        error_code=error_code,
+        error_class=error_class,
+        safe_summary=safe_summary,
+        recovery_action=recovery_action,
+    )
+
+
+@pytest.mark.asyncio
+async def test_work_item_completion_hash_and_duplicate_are_idempotent(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:complete-once",
+            stage="section_writing",
+            input_hash="input-complete",
+            definition_hash="definition-complete",
+        ),
+    )
+    now = datetime(2026, 9, 5, tzinfo=UTC)
+    claim = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-complete",
+        source=_source_identity(),
+        lease_seconds=60,
+        now=now,
+    )
+    output = [{"type": "paragraph", "text": "A canonical output."}, "complete"]
+    output_hash = content_hash(output)
+
+    with pytest.raises(OutputHashMismatch):
+        await complete_work_item(
             db_session,
             work_item_id=item.record.id,
-            worker_id="worker-b",
-            source=_source_identity(),
-            lease_seconds=10,
-            now=start + timedelta(seconds=10),
+            worker_id="worker-complete",
+            lease_token=claim.lease_token,
+            output_json=output,
+            output_hash="wrong-hash",
+            now=now + timedelta(seconds=1),
+        )
+
+    completed = await complete_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-complete",
+        lease_token=claim.lease_token,
+        output_json=output,
+        output_hash=output_hash,
+        now=now + timedelta(seconds=2),
+    )
+    duplicate = await complete_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-complete",
+        lease_token=claim.lease_token,
+        output_json=output,
+        output_hash=output_hash,
+        now=now + timedelta(seconds=3),
+    )
+    duplicate_after_expiry = await complete_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-complete",
+        lease_token=claim.lease_token,
+        output_json=output,
+        output_hash=output_hash,
+        now=now + timedelta(seconds=61),
+    )
+
+    assert completed.status == duplicate.status == "ready"
+    assert duplicate_after_expiry.output_json == output
+    assert duplicate_after_expiry.output_hash == output_hash
+    assert (
+        await db_session.scalar(
+            select(func.count())
+            .select_from(GenerationEventModel)
+            .where(GenerationEventModel.work_item_id == item.record.id)
+        )
+        == 1
+    )
+
+    with pytest.raises(OutputHashMismatch):
+        await complete_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-complete",
+            lease_token=claim.lease_token,
+            output_json={"different": True},
+            output_hash=content_hash({"different": True}),
+            now=now + timedelta(seconds=4),
+        )
+
+    with pytest.raises(OutputValidationError):
+        await complete_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-complete",
+            lease_token=claim.lease_token,
+            output_json=object(),
+            output_hash="invalid",
+            now=now + timedelta(seconds=4),
+        )
+
+
+@pytest.mark.asyncio
+async def test_stale_fence_cannot_complete_or_fail_work_item(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:stale-outcome",
+            stage="section_writing",
+            input_hash="input-stale",
+            definition_hash="definition-stale",
+            max_attempts=2,
+        ),
+    )
+    start = datetime(2026, 9, 6, tzinfo=UTC)
+    first = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-old",
+        source=_source_identity(),
+        lease_seconds=5,
+        now=start,
+    )
+    second = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-new",
+        source=_source_identity(),
+        lease_seconds=30,
+        now=start + timedelta(seconds=5),
+    )
+
+    with pytest.raises(LeaseLostError):
+        await complete_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-old",
+            lease_token=first.lease_token,
+            output_json={"stale": True},
+            output_hash=content_hash({"stale": True}),
+            now=start + timedelta(seconds=6),
+        )
+    with pytest.raises(LeaseLostError):
+        await fail_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-old",
+            lease_token=first.lease_token,
+            failure=_failure(),
+            now=start + timedelta(seconds=6),
         )
 
     await db_session.refresh(item.record)
     assert item.record.status == "running"
-    assert item.record.attempt == 1
-    assert item.record.lease_token == first.lease_token
-    assert item.record.lease_owner == "worker-a"
+    assert item.record.lease_owner == "worker-new"
+    assert item.record.lease_token == second.lease_token
+
+
+@pytest.mark.asyncio
+async def test_targeted_retry_preserves_ready_sibling_and_checkpoint(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    target = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:retry-target",
+            stage="section_writing",
+            input_hash="input-checkpoint",
+            definition_hash="definition-checkpoint",
+            composition_identity="section:checkpoint:v1",
+            max_attempts=3,
+        ),
+    )
+    sibling = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:healthy-sibling",
+            stage="section_writing",
+            input_hash="input-sibling",
+            definition_hash="definition-sibling",
+        ),
+    )
+    now = datetime(2026, 9, 7, tzinfo=UTC)
+    target_claim = await claim_work_item(
+        db_session,
+        work_item_id=target.record.id,
+        worker_id="worker-first",
+        source=_source_identity(),
+        now=now,
+    )
+    target_initial_token = target_claim.lease_token
+    compatibility = _checkpoint_compatibility()
+    checkpoint = await persist_checkpoint(
+        db_session,
+        work_item_id=target.record.id,
+        worker_id="worker-first",
+        lease_token=target_claim.lease_token,
+        compatibility=compatibility,
+        payload={"saved_section": "orient"},
+        now=now + timedelta(seconds=1),
+    )
+    sibling_claim = await claim_work_item(
+        db_session,
+        work_item_id=sibling.record.id,
+        worker_id="worker-sibling",
+        source=_source_identity(),
+        now=now + timedelta(seconds=2),
+    )
+    sibling_output = {"section": "healthy", "content": ["kept"]}
+    await complete_work_item(
+        db_session,
+        work_item_id=sibling.record.id,
+        worker_id="worker-sibling",
+        lease_token=sibling_claim.lease_token,
+        output_json=sibling_output,
+        output_hash=content_hash(sibling_output),
+        now=now + timedelta(seconds=3),
+    )
+    failed = await fail_work_item(
+        db_session,
+        work_item_id=target.record.id,
+        worker_id="worker-first",
+        lease_token=target_claim.lease_token,
+        failure=_failure(),
+        now=now + timedelta(seconds=4),
+    )
+    run = await db_session.get(GenerationRunModel, admitted.record.id)
+    assert run is not None
+    assert failed.status == "failed_recoverable"
+    assert run.status == "failed_recoverable"
+
+    retried = await retry_work_item(
+        db_session,
+        work_item_id=target.record.id,
+        owner_user_id=owner_id,
+        now=now + timedelta(seconds=5),
+    )
+    await db_session.refresh(sibling.record)
+    assert retried.status == "queued"
+    assert retried.attempt == 2
+    assert retried.lease_token == target_initial_token + 1
+    retried_token = retried.lease_token
+    assert retried.checkpoint_json == checkpoint.model_dump(mode="json")
+    assert retried.error_code is None
+    assert run.status == "queued"
+    assert sibling.record.status == "ready"
+    assert sibling.record.output_json == sibling_output
+    assert sibling.record.output_hash == content_hash(sibling_output)
+
+    next_claim = await claim_work_item(
+        db_session,
+        work_item_id=target.record.id,
+        worker_id="worker-second",
+        source=_source_identity(),
+        now=now + timedelta(seconds=6),
+    )
+    assert next_claim.attempt == 2
+    assert next_claim.lease_token == retried_token + 1
+    resumed = await load_compatible_checkpoint(
+        db_session,
+        work_item_id=target.record.id,
+        worker_id="worker-second",
+        lease_token=next_claim.lease_token,
+        compatibility=compatibility,
+        now=now + timedelta(seconds=7),
+    )
+    assert resumed == checkpoint
+    with pytest.raises(LeaseLostError):
+        await complete_work_item(
+            db_session,
+            work_item_id=target.record.id,
+            worker_id="worker-first",
+            lease_token=target_initial_token,
+            output_json={"late": True},
+            output_hash=content_hash({"late": True}),
+            now=now + timedelta(seconds=7),
+        )
+
+
+@pytest.mark.asyncio
+async def test_retry_exhaustion_and_nonretryable_failure_are_terminal(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:no-retries-left",
+            stage="section_writing",
+            input_hash="input-terminal",
+            definition_hash="definition-terminal",
+            max_attempts=1,
+        ),
+    )
+    now = datetime(2026, 9, 8, tzinfo=UTC)
+    claim = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-only-attempt",
+        source=_source_identity(),
+        now=now,
+    )
+    terminal = await fail_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-only-attempt",
+        lease_token=claim.lease_token,
+        failure=_failure(error_class="provider_transport", error_code="timeout"),
+        now=now + timedelta(seconds=1),
+    )
+    run = await db_session.get(GenerationRunModel, admitted.record.id)
+    assert run is not None
+    assert terminal.status == "failed_terminal"
+    assert terminal.recovery_action == RecoveryAction.REGENERATE.value
+    assert run.status == "failed_terminal"
+    with pytest.raises(InvalidWorkItemTransition):
+        await retry_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            owner_user_id=owner_id,
+            now=now + timedelta(seconds=2),
+        )
+
+    with pytest.raises(ValidationError, match="cannot request a work-item retry"):
+        _failure(error_class="internal_programming")
+
+
+@pytest.mark.asyncio
+async def test_invalid_recovery_action_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="recovery_action"):
+        WorkItemFailure(
+            error_code="provider_error",
+            error_class="provider_output",
+            safe_summary="Safe summary.",
+            recovery_action="invented_action",
+        )
+
+
+@pytest.mark.asyncio
+async def test_failure_action_none_cannot_be_target_retried(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:no-action-retry",
+            stage="section_writing",
+            input_hash="input-no-retry",
+            definition_hash="definition-no-retry",
+        ),
+    )
+    now = datetime(2026, 9, 8, tzinfo=UTC)
+    claim = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-no-action",
+        source=_source_identity(),
+        now=now,
+    )
+    failed = await fail_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-no-action",
+        lease_token=claim.lease_token,
+        failure=_failure(recovery_action=RecoveryAction.NONE),
+        now=now + timedelta(seconds=1),
+    )
+    assert failed.status == "failed_terminal"
+    with pytest.raises(InvalidWorkItemTransition, match="failed_recoverable"):
+        await retry_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            owner_user_id=owner_id,
+            now=now + timedelta(seconds=2),
+        )
+
+
+@pytest.mark.asyncio
+async def test_terminal_failure_blocks_live_sibling_worker(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    fatal = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:fatal",
+            stage="section_writing",
+            input_hash="input-fatal",
+            definition_hash="definition-fatal",
+        ),
+    )
+    sibling = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:still-running",
+            stage="section_writing",
+            input_hash="input-still-running",
+            definition_hash="definition-still-running",
+        ),
+    )
+    now = datetime(2026, 9, 8, tzinfo=UTC)
+    fatal_claim = await claim_work_item(
+        db_session,
+        work_item_id=fatal.record.id,
+        worker_id="worker-fatal",
+        source=_source_identity(),
+        now=now,
+    )
+    sibling_claim = await claim_work_item(
+        db_session,
+        work_item_id=sibling.record.id,
+        worker_id="worker-sibling",
+        source=_source_identity(),
+        now=now + timedelta(seconds=1),
+    )
+    failed = await fail_work_item(
+        db_session,
+        work_item_id=fatal.record.id,
+        worker_id="worker-fatal",
+        lease_token=fatal_claim.lease_token,
+        failure=_failure(
+            error_class="internal_programming",
+            recovery_action=RecoveryAction.REVIEW,
+            error_code="unexpected_state",
+        ),
+        now=now + timedelta(seconds=2),
+    )
+    run = await db_session.get(GenerationRunModel, admitted.record.id)
+    assert run is not None
+    assert failed.status == "failed_terminal"
+    assert run.status == "failed_terminal"
+
+    with pytest.raises(LeaseLostError):
+        await complete_work_item(
+            db_session,
+            work_item_id=sibling.record.id,
+            worker_id="worker-sibling",
+            lease_token=sibling_claim.lease_token,
+            output_json={"late": True},
+            output_hash=content_hash({"late": True}),
+            now=now + timedelta(seconds=3),
+        )
+    with pytest.raises(LeaseLostError):
+        await persist_checkpoint(
+            db_session,
+            work_item_id=sibling.record.id,
+            worker_id="worker-sibling",
+            lease_token=sibling_claim.lease_token,
+            compatibility=_checkpoint_compatibility(),
+            payload={"late": True},
+            now=now + timedelta(seconds=3),
+        )
+
+    await db_session.refresh(sibling.record)
+    assert sibling.record.status == "running"
+    assert sibling.record.output_json is None
+
+
+@pytest.mark.asyncio
+async def test_sibling_completion_settles_drained_recoverable_run(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    failing = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:fail-first",
+            stage="section_writing",
+            input_hash="input-fail-first",
+            definition_hash="definition-fail-first",
+        ),
+    )
+    sibling = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:complete-after-failure",
+            stage="section_writing",
+            input_hash="input-complete-after",
+            definition_hash="definition-complete-after",
+        ),
+    )
+    now = datetime(2026, 9, 8, tzinfo=UTC)
+    failing_claim = await claim_work_item(
+        db_session,
+        work_item_id=failing.record.id,
+        worker_id="worker-failing",
+        source=_source_identity(),
+        now=now,
+    )
+    sibling_claim = await claim_work_item(
+        db_session,
+        work_item_id=sibling.record.id,
+        worker_id="worker-sibling",
+        source=_source_identity(),
+        now=now + timedelta(seconds=1),
+    )
+    await fail_work_item(
+        db_session,
+        work_item_id=failing.record.id,
+        worker_id="worker-failing",
+        lease_token=failing_claim.lease_token,
+        failure=_failure(),
+        now=now + timedelta(seconds=2),
+    )
+    run = await db_session.get(GenerationRunModel, admitted.record.id)
+    assert run is not None
+    assert run.status == "running"
+
+    sibling_output = {"section": "still-valid"}
+    await complete_work_item(
+        db_session,
+        work_item_id=sibling.record.id,
+        worker_id="worker-sibling",
+        lease_token=sibling_claim.lease_token,
+        output_json=sibling_output,
+        output_hash=content_hash(sibling_output),
+        now=now + timedelta(seconds=3),
+    )
+    assert sibling.record.status == "ready"
+    assert run.status == "failed_recoverable"
+    assert run.error_code == "invalid_output"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("outcome", ["complete", "fail"])
+async def test_outcome_cas_rejects_takeover_between_lease_read_and_write(
+    db_session, db_session_factory, monkeypatch, outcome: str
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key=f"section:outcome-race-{outcome}",
+            stage="section_writing",
+            input_hash="input-race",
+            definition_hash="definition-race",
+            max_attempts=2,
+        ),
+    )
+    started = datetime(2026, 9, 10, tzinfo=UTC)
+    old_claim = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-old",
+        source=_source_identity(),
+        lease_seconds=5,
+        now=started,
+    )
+    await db_session.commit()
+
+    original_require = generation_runtime_repository._require_live_lease
+    takeover_done = False
+
+    async def claim_after_old_read(session, **kwargs):
+        nonlocal takeover_done
+        checked = await original_require(session, **kwargs)
+        if session is db_session and not takeover_done:
+            takeover_done = True
+            async with db_session_factory() as takeover_session:
+                replacement = await claim_work_item(
+                    takeover_session,
+                    work_item_id=item.record.id,
+                    worker_id="worker-new",
+                    source=_source_identity(),
+                    lease_seconds=30,
+                    now=started + timedelta(seconds=5),
+                )
+                await takeover_session.commit()
+                assert replacement.lease_token == old_claim.lease_token + 1
+        return checked
+
+    monkeypatch.setattr(generation_runtime_repository, "_require_live_lease", claim_after_old_read)
+    if outcome == "complete":
+        operation = complete_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-old",
+            lease_token=old_claim.lease_token,
+            output_json={"race": "old"},
+            output_hash=content_hash({"race": "old"}),
+            now=started + timedelta(seconds=4),
+        )
+    else:
+        operation = fail_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-old",
+            lease_token=old_claim.lease_token,
+            failure=_failure(),
+            now=started + timedelta(seconds=4),
+        )
+    with pytest.raises(LeaseLostError):
+        await operation
+
+    async with db_session_factory() as verify_session:
+        current = await verify_session.get(GenerationWorkItemModel, item.record.id)
+        assert current is not None
+        assert current.status == "running"
+        assert current.lease_owner == "worker-new"
+        assert current.lease_token == old_claim.lease_token + 1
+        assert current.output_json is None
+        assert current.error_code is None
+        assert (
+            await verify_session.scalar(
+                select(func.count())
+                .select_from(GenerationEventModel)
+                .where(GenerationEventModel.work_item_id == item.record.id)
+            )
+            == 0
+        )
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_cas_rejects_racing_reconciler_without_duplicate_event(
+    db_session, db_session_factory, monkeypatch
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:reconcile-race",
+            stage="section_writing",
+            input_hash="input-reconcile-race",
+            definition_hash="definition-reconcile-race",
+            max_attempts=1,
+        ),
+    )
+    started = datetime(2026, 9, 11, tzinfo=UTC)
+    await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-lost",
+        source=_source_identity(),
+        lease_seconds=5,
+        now=started,
+    )
+    await db_session.commit()
+
+    original_execute = generation_runtime_repository._execute_fenced_update
+    winner_done = False
+
+    async def winner_reconciles_first(session, statement):
+        nonlocal winner_done
+        if session is db_session and not winner_done:
+            winner_done = True
+            async with db_session_factory() as winner_session:
+                winning_item = await reconcile_expired_work_item(
+                    winner_session,
+                    work_item_id=item.record.id,
+                    now=started + timedelta(seconds=5),
+                )
+                assert winning_item.status == "failed_terminal"
+                await winner_session.commit()
+        return await original_execute(session, statement)
+
+    monkeypatch.setattr(
+        generation_runtime_repository,
+        "_execute_fenced_update",
+        winner_reconciles_first,
+    )
+    with pytest.raises(WorkItemUnavailable, match="changed before exhausted-attempt"):
+        await reconcile_expired_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            now=started + timedelta(seconds=5),
+        )
+
+    async with db_session_factory() as verify_session:
+        current = await verify_session.get(GenerationWorkItemModel, item.record.id)
+        assert current is not None
+        assert current.status == "failed_terminal"
+        assert current.error_code == "budget_exhausted"
+        assert (
+            await verify_session.scalar(
+                select(func.count())
+                .select_from(GenerationEventModel)
+                .where(GenerationEventModel.work_item_id == item.record.id)
+            )
+            == 1
+        )
+
+
+@pytest.mark.asyncio
+async def test_expired_attempt_reconciliation_survives_restart(
+    db_session, db_session_factory
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:reconcile-after-restart",
+            stage="section_writing",
+            input_hash="input-reconcile",
+            definition_hash="definition-reconcile",
+            max_attempts=1,
+        ),
+    )
+    started = datetime(2026, 9, 9, tzinfo=UTC)
+    first_claim = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-lost",
+        source=_source_identity(),
+        lease_seconds=10,
+        now=started,
+    )
+    await db_session.commit()
+
+    async with db_session_factory() as restarted_session:
+        reconciled = await reconcile_expired_work_item(
+            restarted_session,
+            work_item_id=item.record.id,
+            now=started + timedelta(seconds=10),
+        )
+        await restarted_session.commit()
+        assert reconciled.status == "failed_terminal"
+        assert reconciled.error_class == "budget_exhausted"
+        assert reconciled.lease_owner is None
+        assert reconciled.lease_token == first_claim.lease_token
+        assert (
+            await restarted_session.scalar(
+                select(func.count())
+                .select_from(GenerationEventModel)
+                .where(
+                    GenerationEventModel.work_item_id == item.record.id,
+                    GenerationEventModel.event_type == "work_item_attempts_exhausted",
+                )
+            )
+            == 1
+        )
+        run = await restarted_session.get(GenerationRunModel, admitted.record.id)
+        assert run is not None
+        assert run.status == "failed_terminal"
+
+    async with db_session_factory() as restarted_session:
+        repeated = await reconcile_expired_work_item(
+            restarted_session,
+            work_item_id=item.record.id,
+            now=started + timedelta(seconds=20),
+        )
+        assert repeated.status == "failed_terminal"
+        assert (
+            await restarted_session.scalar(
+                select(func.count())
+                .select_from(GenerationEventModel)
+                .where(GenerationEventModel.work_item_id == item.record.id)
+            )
+            == 1
+        )
 
 
 @pytest.mark.asyncio

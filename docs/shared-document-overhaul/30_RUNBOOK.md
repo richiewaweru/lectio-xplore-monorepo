@@ -33,11 +33,20 @@
 ## Phase 1B — work-item execution core
 
 - Starting SHA: `d72fbf5f`.
+- Ending SHA for package 1B: `15e1f378`.
 - Implementation: source-verified WorkItem claim, PostgreSQL `FOR UPDATE SKIP LOCKED` plus SQLite conditional claim, monotonic lease fencing, bounded attempt accounting, heartbeat, and fenced checkpoint read/write with exact schema/source/input/definition/composition compatibility. First claim starts the Run atomically; inactive Run races roll back the item claim. No product cutover, provider calls, migration, or deletion.
 - Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (29); scoped Ruff check/format, `pnpm program:domain-guards` (8 tests), architecture guard (0 violations), and `git diff --check` PASS.
 - Failure proof: competing claims, stale heartbeat/checkpoint writes, source-hash conflict, expired-lease recovery, bounded attempts, checkpoint compatibility and integrity rejection, and Run terminal-state race. Ready siblings remain unchanged.
 - PostgreSQL proof: a disposable two-session probe at DB head `20260924_0043` passed 10 checks: SKIP LOCKED contention, pre-expiry rejection, source conflict before mutation, expired takeover at attempt/token 2, stale worker rejection, and compatible checkpoint persistence. Both probe attempts cleaned up their exact fixture rows; zero fixture Build/Run/WorkItem/Event rows remained. The first attempt had a temporary probe timestamp-conversion error, corrected before the passing rerun.
-- Status: package PASS. Phase 1 remains IN PROGRESS; Phase 1C must reconcile expired max-attempt items to truthful failure state and add retry/cancel/final completion. HTTP and full phase verification follow.
+- Status: package PASS. Phase 1 remains IN PROGRESS; later packages cover outcomes, finalization, cancellation, HTTP, and the full phase gate.
+
+## Phase 1C — work-item outcomes and recovery
+
+- Starting SHA: `15e1f378`.
+- Implementation: fenced completion with canonical output hash and read-only duplicate acceptance; typed safe failure with explicit recovery action; targeted retry that preserves healthy siblings and compatible checkpoints; expired max-attempt reconciliation; serialized Run aggregation under the parent Run lock. No migration or product cutover.
+- Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (41 in 83.55s); scoped Ruff check/format PASS; `pnpm program:domain-guards` PASS (8 tests); `uv run python ../tools/agent/check_architecture.py --format text` PASS (0 violations); `git diff --check` PASS.
+- Failure proof: wrong output hash, stale completion/failure after takeover, inactive parent Run, invalid recovery action, exhausted and nonretryable failure, targeted retry race, expired-lease reconciliation race/restart, and mixed sibling status. Ready sibling output remains immutable.
+- Status: package PASS. Phase 1 remains IN PROGRESS; whole-Run validation/finalization, cancellation, status/retry/cancel HTTP, and the full phase gate remain pending.
 
 ## Baseline
 - [x] branch recorded
