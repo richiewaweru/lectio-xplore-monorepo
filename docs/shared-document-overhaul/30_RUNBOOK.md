@@ -18,7 +18,7 @@
 - Local UI access: frontend dev server was down; restarted on `127.0.0.1:5173`. Its ignored local `.env` pointed `PUBLIC_API_URL` at `localhost:8001` while the backend listens on `127.0.0.1:8000`; corrected to `http://127.0.0.1:8000`. Same-origin proxy now returns the same authenticated `401` as the backend, instead of a proxy error. The in-app `/units` page now redirects to login rather than showing the 500. Google sign-in reports the local origin is not authorized for the configured client in an isolated browser.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–3 PASS; Phase 4 task meaning integrated with full gate running; Phase 5 composer, Phase 6A writer and Phase 7A continuity/QA are committed in isolated worktrees (not integrated or PASS); Phase 6B durable section execution, Phase 10A Learn adapter and Phase 11A Print adapter are in isolated implementation; Phase 8–9 and remaining Phase 10–16 cutovers NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
+- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–4 PASS; Phase 5 composer, Phase 6A writer, Phase 6B durable section execution, Phase 7A continuity/QA, Phase 8A media adapter, Phase 10A Learn adapter and Phase 11A Print adapter are committed in isolated worktrees (not integrated or PASS); Phase 9 and remaining Phase 10–16 cutovers NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
 
 ## Parallel work allocation
 
@@ -32,6 +32,7 @@
 | Phase 7A Continuity and document QA | Luna | `continuity-qa` worktree; new pure validation modules and focused tests | Typed issues, boundary checks and targeted repair contract; Sol integrates after writer contract review. |
 | Phase 10A Learn realization adapter | Luna | `learn-shared-realizer` worktree; new adapter and focused tests | Exact SharedDocument/source verification and Learn interactions; no route cutover until Phase 9. |
 | Phase 11A Print realization adapter | Luna | `print-shared-realizer` worktree; new adapter and focused tests | Exact SharedDocument/source verification and Print treatments/answer key; no route cutover until Phase 9. |
+| Phase 8A Media adapter | Luna | `continuity-qa` worktree after QA commit; new figure media adapter and focused tests | Required media failure blocks READY; generated assets bind to exact frozen figure semantics. |
 
 The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer fields and do not edit each other's modules. Durable writer execution and Learn/Print cutovers wait for integrated contracts. Sol owns the main runbook, cross-stream review, merge order, and phase PASS decisions.
 
@@ -171,7 +172,9 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 - Focused integrated evidence: document/task tests 35 PASS; active Print/Learn compatibility selection 43 PASS (10 existing warnings); Ruff PASS on touched task/document modules; `git diff --check` PASS.
 - Failure proof includes incomplete choice options, incompatible action/response or evaluation, unknown answer key, stale Teaching Plan lineage, mismatched binding/source, and legacy aliases accepted only by old validators until cutover.
 - Full gate attempt on `d22a3539`: page tests 64 PASS, page check 0 errors/warnings, then backend pytest failed due host `ENOSPC` (C: reached 0 bytes free) around 80–90% execution. The run reported 1,440 passed, 5 skipped, 2 deselected, 4 failed and 63 errors after logging/temp SQLite writes failed; it cannot establish a Phase 4 regression result. Focused 35/43-test checks above passed before disk exhaustion. Automatic review blocked removal of old test temp databases; user action to free storage is pending. Phase 4 remains IN PROGRESS, not PASS.
-- Status: IN PROGRESS pending a clean full phase verification. Phase 5/6 implementation remains isolated until this gate passes.
+- Clean rerun on `d22a3539`/`68d6b9e5`: `scripts/verify-phase.ps1 -Phase full` PASS (`Verification passed for phase: full`, exit 0). Page tests 64 PASS; page check 0 errors/warnings; backend pytest 1,507 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings; frontend tests 57 files/227 tests; frontend build PASS; PDF fixture gate 5 files at 6/6/5/5/5 pages; diff gate PASS.
+- Post-gate: `pnpm program:domain-guards` PASS (0 violations, 8 guard tests); `uv run python ../tools/agent/check_architecture.py` PASS (0 violations); applied local Alembic head `20260924_0044`; clean main worktree and `git diff --check` PASS. C: remained above 2 GB free through completion.
+- Phase 4 status: PASS. Strict final task meaning is enforced at the immutable SharedLessonDocument boundary; active Learn/Print legacy validators retain compatibility until their cutovers. Phase 5/6 implementation remains isolated until its own gate.
 
 ## Baseline
 - [x] branch recorded
