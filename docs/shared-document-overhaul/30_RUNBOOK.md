@@ -18,7 +18,7 @@
 - Local UI access: frontend dev server was down; restarted on `127.0.0.1:5173`. Its ignored local `.env` pointed `PUBLIC_API_URL` at `localhost:8001` while the backend listens on `127.0.0.1:8000`; corrected to `http://127.0.0.1:8000`. Same-origin proxy now returns the same authenticated `401` as the backend, instead of a proxy error. The in-app `/units` page now redirects to login rather than showing the 500. Google sign-in reports the local origin is not authorized for the configured client in an isolated browser.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–4 PASS; Phase 5 composer, Phase 6A writer, Phase 6B durable section execution, Phase 7A continuity/QA, Phase 8A media adapter, Phase 10A Learn adapter and Phase 11A Print adapter are committed in isolated worktrees (not integrated or PASS); Phase 9 and remaining Phase 10–16 cutovers NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
+- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–4 PASS; Phase 5 composer integrated with full gate interrupted by low disk space; Phase 6A writer, Phase 6B durable section execution, Phase 7A continuity/QA, Phase 8A media adapter, Phase 10A Learn adapter and Phase 11A Print adapter are committed in isolated worktrees (not integrated or PASS); Phase 9 and remaining Phase 10–16 cutovers NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
 
 ## Parallel work allocation
 
@@ -175,6 +175,14 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 - Clean rerun on `d22a3539`/`68d6b9e5`: `scripts/verify-phase.ps1 -Phase full` PASS (`Verification passed for phase: full`, exit 0). Page tests 64 PASS; page check 0 errors/warnings; backend pytest 1,507 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings; frontend tests 57 files/227 tests; frontend build PASS; PDF fixture gate 5 files at 6/6/5/5/5 pages; diff gate PASS.
 - Post-gate: `pnpm program:domain-guards` PASS (0 violations, 8 guard tests); `uv run python ../tools/agent/check_architecture.py` PASS (0 violations); applied local Alembic head `20260924_0044`; clean main worktree and `git diff --check` PASS. C: remained above 2 GB free through completion.
 - Phase 4 status: PASS. Strict final task meaning is enforced at the immutable SharedLessonDocument boundary; active Learn/Print legacy validators retain compatibility until their cutovers. Phase 5/6 implementation remains isolated until its own gate.
+
+## Phase 5A — Section Composer
+
+- Starting SHA: `531c31f8` after Phase 4 PASS record.
+- Integrated commits: `f670df2b` (closed provider-selected section shape, deterministic IDs and code-owned TaskAnchors), `b9428886` (policy default/lint/format correction).
+- Focused integrated evidence: composer/document/task selection 38 PASS; composer-only rerun 12 PASS; scoped Ruff and architecture guard PASS; `git diff --check` PASS.
+- Full gate attempt: page tests 64 PASS and page check 0 errors/warnings; backend run was stopped after C: fell to about 205 MB free. The prior full gate had left about 2 GB free; this phase attempt began with about 2.3 GB and dropped below a safe threshold before backend progress. No Phase 5 full-gate result is claimed. User request to free more disk space is pending.
+- Status: IN PROGRESS. No Phase 6A integration or Phase 5 PASS until a clean full rerun and post-gate guards.
 
 ## Baseline
 - [x] branch recorded
