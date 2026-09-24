@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
 
 class RunStatus(StrEnum):
@@ -179,3 +180,38 @@ class WorkItemAdmission(Contract):
 class BuildAdmission(Contract):
     owner_user_id: str
     path_lesson_id: str
+
+
+class SourceIdentity(Contract):
+    """Freshly recomputed identity required before generic work can start."""
+
+    source_artifact_type: str = Field(min_length=1)
+    source_artifact_id: str = Field(min_length=1)
+    source_revision: int = Field(ge=1)
+    source_hash: str = Field(min_length=1)
+
+
+class RuntimeCheckpointCompatibility(Contract):
+    """All source and definition inputs that authorize checkpoint reuse."""
+
+    schema_version: int = Field(ge=1)
+    source_revision: int = Field(ge=1)
+    source_hash: str = Field(min_length=1)
+    input_hash: str = Field(min_length=1)
+    definition_hash: str = Field(min_length=1)
+    composition_identity: str | None = None
+
+
+class RuntimeCheckpoint(Contract):
+    compatibility: RuntimeCheckpointCompatibility
+    payload: JsonValue
+    payload_hash: str = Field(min_length=1)
+
+    @field_validator("payload")
+    @classmethod
+    def payload_is_strict_json(cls, value: JsonValue) -> JsonValue:
+        try:
+            json.dumps(value, allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("checkpoint payload must be strict JSON") from exc
+        return value

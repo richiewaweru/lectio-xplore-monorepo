@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import asyncio
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 
+import infra.generation_runtime.repository as generation_runtime_repository
 from infra.database.models import (
     ConceptModel,
     GenerationRunModel,
@@ -15,20 +17,33 @@ from infra.database.models import (
     UnitModel,
     UserModel,
 )
+from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (
+    AttemptLimitExceeded,
     BuildAdmission,
+    CheckpointCompatibilityError,
+    LeaseLostError,
     RunAdmission,
     RunAdmissionConflict,
     RunContract,
+    RuntimeCheckpoint,
+    RuntimeCheckpointCompatibility,
     RunType,
+    SourceIdentity,
+    SourceIdentityConflict,
     WorkItemAdmission,
     WorkItemConflict,
     WorkItemContract,
+    WorkItemUnavailable,
     add_work_item,
     admit_run,
     append_event,
+    claim_work_item,
     create_build,
     get_run_status,
+    heartbeat_work_item,
+    load_compatible_checkpoint,
+    persist_checkpoint,
 )
 
 
@@ -96,6 +111,28 @@ async def _admit(session, *, owner_id: str, lesson_id: str, request_key: str = "
     return build, result
 
 
+def _source_identity() -> SourceIdentity:
+    return SourceIdentity(
+        source_artifact_type="teaching_plan",
+        source_artifact_id="plan-1",
+        source_revision=3,
+        source_hash="sha256:plan-a",
+    )
+
+
+def _checkpoint_compatibility(**updates) -> RuntimeCheckpointCompatibility:
+    fields = {
+        "schema_version": 1,
+        "source_revision": 3,
+        "source_hash": "sha256:plan-a",
+        "input_hash": "input-checkpoint",
+        "definition_hash": "definition-checkpoint",
+        "composition_identity": "section:checkpoint:v1",
+    }
+    fields.update(updates)
+    return RuntimeCheckpointCompatibility.model_validate(fields)
+
+
 def test_contracts_keep_closed_status_separate_from_stage() -> None:
     now = datetime.now(UTC)
     run_fields = {
@@ -157,6 +194,22 @@ def test_contracts_keep_closed_status_separate_from_stage() -> None:
     )
     assert list_output.checkpoint_json == ["checkpoint-a", 2]
     assert list_output.output_json == [{"example": 1}, "complete"]
+    with pytest.raises(ValidationError):
+        RuntimeCheckpoint.model_validate(
+            {
+                "compatibility": _checkpoint_compatibility().model_dump(),
+                "payload": object(),
+                "payload_hash": "not-json",
+            }
+        )
+    with pytest.raises(ValidationError, match="strict JSON"):
+        RuntimeCheckpoint.model_validate(
+            {
+                "compatibility": _checkpoint_compatibility().model_dump(),
+                "payload": float("nan"),
+                "payload_hash": "not-json",
+            }
+        )
 
 
 @pytest.mark.asyncio
@@ -224,6 +277,562 @@ async def test_work_item_key_is_idempotent_only_for_same_identity(db_session) ->
     assert duplicate.record.id == first.record.id
     with pytest.raises(WorkItemConflict):
         await add_work_item(db_session, request.model_copy(update={"input_hash": "input-b"}))
+
+
+@pytest.mark.asyncio
+async def test_claim_competition_grants_one_lease_and_preserves_siblings(
+    db_session, db_session_factory
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:claimed",
+            stage="section_writing",
+            input_hash="input-claimed",
+            definition_hash="definition-claimed",
+        ),
+    )
+    sibling = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:sibling",
+            stage="section_writing",
+            input_hash="input-sibling",
+            definition_hash="definition-sibling",
+        ),
+    )
+    await db_session.commit()
+
+    async def attempt_claim(worker_id: str):
+        async with db_session_factory() as session:
+            try:
+                claimed = await claim_work_item(
+                    session,
+                    work_item_id=item.record.id,
+                    worker_id=worker_id,
+                    source=_source_identity(),
+                )
+                await session.commit()
+                return claimed
+            except WorkItemUnavailable:
+                await session.rollback()
+                return None
+
+    winners = [
+        result
+        for result in await asyncio.gather(attempt_claim("worker-a"), attempt_claim("worker-b"))
+        if result is not None
+    ]
+
+    assert len(winners) == 1
+    assert winners[0].status == "running"
+    assert winners[0].attempt == 1
+    assert winners[0].lease_token == 1
+    assert winners[0].lease_owner in {"worker-a", "worker-b"}
+    await db_session.refresh(admitted.record)
+    assert admitted.record.status == "running"
+    await db_session.refresh(sibling.record)
+    assert sibling.record.status == "queued"
+    assert sibling.record.lease_owner is None
+    assert sibling.record.lease_token is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("source_artifact_type", "different_type"),
+        ("source_artifact_id", "different-id"),
+        ("source_revision", 4),
+        ("source_hash", "sha256:changed"),
+    ],
+)
+async def test_claim_rejects_fresh_source_identity_conflict_without_mutation(
+    db_session, field: str, value: object
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:source-check",
+            stage="section_writing",
+            input_hash="input",
+            definition_hash="definition",
+        ),
+    )
+
+    with pytest.raises(SourceIdentityConflict, match="fresh source identity"):
+        await claim_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-a",
+            source=_source_identity().model_copy(update={field: value}),
+        )
+
+    await db_session.refresh(item.record)
+    assert item.record.status == "queued"
+    assert item.record.lease_owner is None
+    assert item.record.lease_token is None
+
+
+@pytest.mark.asyncio
+async def test_claim_rejects_item_when_run_is_not_active(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:terminal-run",
+            stage="section_writing",
+            input_hash="input",
+            definition_hash="definition",
+        ),
+    )
+    admitted.record.status = "cancelled"
+    await db_session.flush()
+
+    with pytest.raises(WorkItemUnavailable, match="active"):
+        await claim_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-a",
+            source=_source_identity(),
+        )
+
+    await db_session.refresh(item.record)
+    assert item.record.status == "queued"
+    assert item.record.lease_owner is None
+    assert item.record.lease_token is None
+
+
+@pytest.mark.asyncio
+async def test_claim_rolls_back_when_run_turns_terminal_during_claim(
+    db_session, db_session_factory, monkeypatch
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:run-race",
+            stage="section_writing",
+            input_hash="input",
+            definition_hash="definition",
+        ),
+    )
+    await db_session.commit()
+
+    original_execute = db_session.execute
+    injected_terminal_transition = False
+
+    async def terminate_run_before_item_update(statement, *args, **kwargs):
+        nonlocal injected_terminal_transition
+        target_table = getattr(statement, "table", None)
+        if (
+            not injected_terminal_transition
+            and getattr(target_table, "name", None) == "generation_work_items"
+        ):
+            injected_terminal_transition = True
+            async with db_session_factory() as concurrent_session:
+                concurrent_run = await concurrent_session.get(
+                    GenerationRunModel, admitted.record.id
+                )
+                assert concurrent_run is not None
+                concurrent_run.status = "cancelled"
+                await concurrent_session.commit()
+        return await original_execute(statement, *args, **kwargs)
+
+    monkeypatch.setattr(db_session, "execute", terminate_run_before_item_update)
+    with pytest.raises(WorkItemUnavailable, match="run changed"):
+        await claim_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-a",
+            source=_source_identity(),
+        )
+
+    assert injected_terminal_transition is True
+    await db_session.refresh(item.record)
+    assert item.record.status == "queued"
+    assert item.record.lease_owner is None
+    assert item.record.lease_token is None
+
+
+@pytest.mark.asyncio
+async def test_expired_lease_recovery_increments_attempt_and_fence(
+    db_session, db_session_factory
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:recover",
+            stage="section_writing",
+            input_hash="input",
+            definition_hash="definition",
+            max_attempts=2,
+        ),
+    )
+    start = datetime(2026, 9, 1, tzinfo=UTC)
+    first = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-old",
+        source=_source_identity(),
+        lease_seconds=20,
+        now=start,
+    )
+    assert first.attempt == 1
+    assert first.lease_token == 1
+    assert first.lease_expires_at == (start + timedelta(seconds=20)).replace(tzinfo=None)
+
+    await db_session.commit()
+    async with db_session_factory() as restarted_session:
+        recovered = await claim_work_item(
+            restarted_session,
+            work_item_id=item.record.id,
+            worker_id="worker-new",
+            source=_source_identity(),
+            lease_seconds=20,
+            now=start + timedelta(seconds=20),
+        )
+        await restarted_session.commit()
+    assert recovered.attempt == 2
+    assert recovered.lease_token == 2
+    assert recovered.lease_owner == "worker-new"
+
+
+@pytest.mark.asyncio
+async def test_heartbeat_and_checkpoint_are_fenced_across_expired_reclaim(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:checkpoint",
+            stage="section_writing",
+            input_hash="input-checkpoint",
+            definition_hash="definition-checkpoint",
+            composition_identity="section:checkpoint:v1",
+            max_attempts=2,
+        ),
+    )
+    start = datetime(2026, 9, 2, tzinfo=UTC)
+    first = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-old",
+        source=_source_identity(),
+        lease_seconds=20,
+        now=start,
+    )
+    first_token = first.lease_token
+    compatibility = _checkpoint_compatibility()
+    saved = await persist_checkpoint(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-old",
+        lease_token=first_token,
+        compatibility=compatibility,
+        payload=[{"section": "orient"}, "draft"],
+        now=start + timedelta(seconds=2),
+    )
+    assert saved.payload == [{"section": "orient"}, "draft"]
+
+    heartbeat = await heartbeat_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-old",
+        lease_token=first_token,
+        lease_seconds=20,
+        now=start + timedelta(seconds=10),
+    )
+    assert heartbeat.lease_expires_at == (start + timedelta(seconds=30)).replace(tzinfo=None)
+
+    recovered = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-new",
+        source=_source_identity(),
+        lease_seconds=30,
+        now=start + timedelta(seconds=30),
+    )
+    assert recovered.lease_token == 2
+    assert recovered.attempt == 2
+
+    with pytest.raises(LeaseLostError):
+        await heartbeat_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-old",
+            lease_token=first_token,
+            now=start + timedelta(seconds=31),
+        )
+    with pytest.raises(LeaseLostError):
+        await persist_checkpoint(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-old",
+            lease_token=first_token,
+            compatibility=compatibility,
+            payload={"stale": True},
+            now=start + timedelta(seconds=31),
+        )
+
+    resumed = await load_compatible_checkpoint(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-new",
+        lease_token=recovered.lease_token,
+        compatibility=compatibility,
+        now=start + timedelta(seconds=31),
+    )
+    assert resumed == saved
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_cas_rejects_worker_overtaken_after_lease_read(
+    db_session, db_session_factory, monkeypatch
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:interleaved-checkpoint",
+            stage="section_writing",
+            input_hash="input-checkpoint",
+            definition_hash="definition-checkpoint",
+            composition_identity="section:checkpoint:v1",
+            max_attempts=2,
+        ),
+    )
+    start = datetime(2026, 9, 5, tzinfo=UTC)
+    first = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-old",
+        source=_source_identity(),
+        lease_seconds=10,
+        now=start,
+    )
+    stale_token = first.lease_token
+    await db_session.commit()
+
+    source_read = asyncio.Event()
+    allow_checkpoint_write = asyncio.Event()
+    original_require_lease = generation_runtime_repository._require_live_lease
+
+    async def pause_after_lease_read(*args, **kwargs):
+        claimed_item = await original_require_lease(*args, **kwargs)
+        if kwargs.get("worker_id") == "worker-old":
+            source_read.set()
+            await allow_checkpoint_write.wait()
+        return claimed_item
+
+    monkeypatch.setattr(
+        generation_runtime_repository, "_require_live_lease", pause_after_lease_read
+    )
+    compatibility = _checkpoint_compatibility()
+
+    async with (
+        db_session_factory() as old_worker_session,
+        db_session_factory() as new_worker_session,
+    ):
+        pending_checkpoint = asyncio.create_task(
+            persist_checkpoint(
+                old_worker_session,
+                work_item_id=item.record.id,
+                worker_id="worker-old",
+                lease_token=stale_token,
+                compatibility=compatibility,
+                payload={"owner": "old-worker"},
+                now=start + timedelta(seconds=1),
+            )
+        )
+        try:
+            await asyncio.wait_for(source_read.wait(), timeout=5)
+            new_claim = await claim_work_item(
+                new_worker_session,
+                work_item_id=item.record.id,
+                worker_id="worker-new",
+                source=_source_identity(),
+                lease_seconds=30,
+                now=start + timedelta(seconds=10),
+            )
+            await new_worker_session.commit()
+        finally:
+            allow_checkpoint_write.set()
+
+        with pytest.raises(LeaseLostError, match="before checkpoint persistence"):
+            await pending_checkpoint
+        await old_worker_session.rollback()
+
+    assert new_claim.lease_token == 2
+    await db_session.refresh(item.record)
+    assert item.record.lease_owner == "worker-new"
+    assert item.record.lease_token == 2
+    assert item.record.checkpoint_json is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("schema_version", 2),
+        ("source_revision", 4),
+        ("source_hash", "sha256:changed"),
+        ("input_hash", "input-changed"),
+        ("definition_hash", "definition-changed"),
+        ("composition_identity", "section:checkpoint:v2"),
+    ],
+)
+async def test_checkpoint_reuse_rejects_each_incompatible_identity_field(
+    db_session, field: str, value: object
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:checkpoint-mismatch",
+            stage="section_writing",
+            input_hash="input-checkpoint",
+            definition_hash="definition-checkpoint",
+            composition_identity="section:checkpoint:v1",
+        ),
+    )
+    now = datetime(2026, 9, 3, tzinfo=UTC)
+    claim = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-a",
+        source=_source_identity(),
+        now=now,
+    )
+    compatibility = _checkpoint_compatibility()
+    await persist_checkpoint(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-a",
+        lease_token=claim.lease_token,
+        compatibility=compatibility,
+        payload={"draft": "safe to resume"},
+        now=now + timedelta(seconds=1),
+    )
+
+    with pytest.raises(CheckpointCompatibilityError):
+        await load_compatible_checkpoint(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-a",
+            lease_token=claim.lease_token,
+            compatibility=compatibility.model_copy(update={field: value}),
+            now=now + timedelta(seconds=2),
+        )
+
+
+@pytest.mark.asyncio
+async def test_persist_checkpoint_refuses_to_replace_incompatible_checkpoint(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:preserve-checkpoint",
+            stage="section_writing",
+            input_hash="input-checkpoint",
+            definition_hash="definition-checkpoint",
+            composition_identity="section:checkpoint:v1",
+        ),
+    )
+    now = datetime(2026, 9, 3, tzinfo=UTC)
+    claim = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-a",
+        source=_source_identity(),
+        now=now,
+    )
+    compatible = _checkpoint_compatibility()
+    incompatible = _checkpoint_compatibility(source_hash="sha256:old-source")
+    existing = RuntimeCheckpoint(
+        compatibility=incompatible,
+        payload={"saved": "prior source"},
+        payload_hash=content_hash({"saved": "prior source"}),
+    )
+    item.record.checkpoint_json = existing.model_dump(mode="json")
+    await db_session.flush()
+
+    with pytest.raises(CheckpointCompatibilityError, match="existing checkpoint"):
+        await persist_checkpoint(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-a",
+            lease_token=claim.lease_token,
+            compatibility=compatible,
+            payload={"saved": "new source"},
+            now=now + timedelta(seconds=1),
+        )
+
+    await db_session.refresh(item.record)
+    assert item.record.checkpoint_json["compatibility"]["source_hash"] == "sha256:old-source"
+
+
+@pytest.mark.asyncio
+async def test_expired_lease_cannot_be_reclaimed_beyond_attempt_budget(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:bounded",
+            stage="section_writing",
+            input_hash="input",
+            definition_hash="definition",
+            max_attempts=1,
+        ),
+    )
+    start = datetime(2026, 9, 4, tzinfo=UTC)
+    first = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="worker-a",
+        source=_source_identity(),
+        lease_seconds=10,
+        now=start,
+    )
+
+    with pytest.raises(AttemptLimitExceeded, match="max_attempts"):
+        await claim_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            worker_id="worker-b",
+            source=_source_identity(),
+            lease_seconds=10,
+            now=start + timedelta(seconds=10),
+        )
+
+    await db_session.refresh(item.record)
+    assert item.record.status == "running"
+    assert item.record.attempt == 1
+    assert item.record.lease_token == first.lease_token
+    assert item.record.lease_owner == "worker-a"
 
 
 @pytest.mark.asyncio
