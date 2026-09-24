@@ -18,7 +18,7 @@
 - Local UI access: frontend dev server was down; restarted on `127.0.0.1:5173`. Its ignored local `.env` pointed `PUBLIC_API_URL` at `localhost:8001` while the backend listens on `127.0.0.1:8000`; corrected to `http://127.0.0.1:8000`. Same-origin proxy now returns the same authenticated `401` as the backend, instead of a proxy error. The in-app `/units` page now redirects to login rather than showing the 500. Google sign-in reports the local origin is not authorized for the configured client in an isolated browser.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phase 1 IN PROGRESS (additive persistence work only); Phases 2–16 NOT STARTED. Phase 1 additive work proceeds while the external OAuth-origin setup remains open; no phase is marked PASS without its own gate.
+- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phase 1 PASS (additive generic runtime); Phases 2–16 NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
 
 ## Phase 1A — generic runtime persistence
 
@@ -71,10 +71,17 @@
 ## Phase 1F — generic status and legal action HTTP
 
 - Starting SHA: `dbb615b2`.
+- Ending SHA for package 1F: `28e87455`.
 - Implementation: owner-scoped `/api/v1/generation` Build and Run status, targeted WorkItem retry, and Run cancellation. Status projects authoritative persisted state, active stages, ready-only completion, failed/cancelled counts, safe errors, allowed actions, and source/output identity and hashes. No generic creation endpoint is exposed before product source authorization/materialization is wired. Retry checks ownership before disclosing item state.
 - Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (60 in 178.22s); HTTP module 7 PASS; Ruff check/format PASS; `pnpm program:domain-guards` PASS (8 tests); architecture guard PASS (0 violations); `git diff --check` PASS.
 - Failure proof: unauthenticated calls, cross-owner/unknown indistinguishable 404, illegal transitions 409, targeted retry preserving ready sibling, cancellation idempotency and ready rejection, empty and mixed Build projection. Response excludes output payloads, checkpoints, and leases.
-- Status: package PASS. Phase 1 remains IN PROGRESS pending the repository's full phase verification script.
+- Status: package PASS.
+
+## Phase 1 full gate
+
+- Starting SHA: `f8f99b5a`; implementation ending SHA: `28e87455`.
+- `scripts/verify-phase.ps1 -Phase full`: PASS, exit 0. Page tests 64/64 and page check 0 errors/warnings; backend 1419 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings, frontend tests 225/225, frontend build PASS; PDF fixture 6/5/5 pages PASS; diff check PASS.
+- Phase 1 status: PASS. Generic persistence, fenced WorkItems, finalization/cancellation, database integrity guards, and owner-scoped status/actions are additive; no product creation path has cut over yet.
 
 ## Baseline
 - [x] branch recorded
@@ -88,7 +95,7 @@
 
 ## Phases
 - [ ] 0 Baseline
-- [ ] 1 Generic runtime (IN PROGRESS: additive persistence)
+- [x] 1 Generic runtime (PASS: additive persistence and HTTP)
 - [ ] 2 Teaching Plan
 - [ ] 3 SharedDocument contract
 - [ ] 4 Shared tasks
