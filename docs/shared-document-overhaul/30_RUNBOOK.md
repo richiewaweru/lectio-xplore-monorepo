@@ -62,10 +62,19 @@
 ## Phase 1E — database terminal-state guards
 
 - Starting SHA: `29e08bec`.
+- Ending SHA for package 1E: `dbb615b2`.
 - Implementation: additive migration `20260924_0044` in both migration trees. PostgreSQL and SQLite reject WorkItem INSERT unless the parent Run is queued/running, and reject Run ready transition without at least one child and all children ready. Existing immutability and append-only guards remain.
 - Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (53 in 128.67s); Ruff check/format PASS; `pnpm program:domain-guards` PASS; architecture guard PASS (0 violations); `git diff --check` PASS. Both migration copies are identical and LF-only.
 - PostgreSQL proof: `uv run alembic heads` and `uv run alembic current` both report `20260924_0044 (head)`. Two-session insert-versus-ready and insert-versus-terminal probes serialized correctly; the ready transition rejected an unfinished newly inserted child, and later insert under terminal Run rejected. Exact fixtures cleaned to zero rows; all eight generation triggers enabled.
 - Status: package PASS. Phase 1 remains IN PROGRESS pending generic HTTP status/action APIs and full phase verification.
+
+## Phase 1F — generic status and legal action HTTP
+
+- Starting SHA: `dbb615b2`.
+- Implementation: owner-scoped `/api/v1/generation` Build and Run status, targeted WorkItem retry, and Run cancellation. Status projects authoritative persisted state, active stages, ready-only completion, failed/cancelled counts, safe errors, allowed actions, and source/output identity and hashes. No generic creation endpoint is exposed before product source authorization/materialization is wired. Retry checks ownership before disclosing item state.
+- Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (60 in 178.22s); HTTP module 7 PASS; Ruff check/format PASS; `pnpm program:domain-guards` PASS (8 tests); architecture guard PASS (0 violations); `git diff --check` PASS.
+- Failure proof: unauthenticated calls, cross-owner/unknown indistinguishable 404, illegal transitions 409, targeted retry preserving ready sibling, cancellation idempotency and ready rejection, empty and mixed Build projection. Response excludes output payloads, checkpoints, and leases.
+- Status: package PASS. Phase 1 remains IN PROGRESS pending the repository's full phase verification script.
 
 ## Baseline
 - [x] branch recorded

@@ -812,11 +812,23 @@ async def retry_work_item(
     current_time = _utcnow(now)
     item = await session.scalar(
         select(GenerationWorkItemModel)
-        .where(GenerationWorkItemModel.id == work_item_id)
-        .with_for_update(skip_locked=True)
+        .join(GenerationRunModel, GenerationRunModel.id == GenerationWorkItemModel.run_id)
+        .where(
+            GenerationWorkItemModel.id == work_item_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+        )
+        .with_for_update(skip_locked=True, of=GenerationWorkItemModel)
     )
     if item is None:
-        if await session.get(GenerationWorkItemModel, work_item_id) is None:
+        owned_item_id = await session.scalar(
+            select(GenerationWorkItemModel.id)
+            .join(GenerationRunModel, GenerationRunModel.id == GenerationWorkItemModel.run_id)
+            .where(
+                GenerationWorkItemModel.id == work_item_id,
+                GenerationRunModel.owner_user_id == owner_user_id,
+            )
+        )
+        if owned_item_id is None:
             raise WorkItemNotFound("generation work item does not exist")
         raise WorkItemUnavailable("work-item row is locked by another transaction")
     if item.status != "failed_recoverable":

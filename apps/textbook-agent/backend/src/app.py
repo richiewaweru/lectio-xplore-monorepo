@@ -15,12 +15,14 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from application.builder_print.routes import router as builder_print_router
+from application.unit_lesson.native_http import native_lesson_router
 from application.unit_lesson.progress_routes import router as realization_progress_router
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
 from core.routes.prompts import router as prompts_router
 from core.routes.shares import router as shares_router
+from curriculum.planning.skeletons import initialize_skeleton_catalog
 from curriculum.routes import router as planning_router
 from infra.config import settings
 from infra.database.migrations import upgrade_database
@@ -54,11 +56,9 @@ from media.diagnostics.v3_image_pipeline_diagnostic import (
 )
 from media.storage.image_store import local_image_store_root
 from print.http.v3_studio.generation_writer import V3GenerationWriter
-from application.unit_lesson.native_http import native_lesson_router
 from print.http.v3_studio.router import v3_studio_router
 from print.rendering.pdf.runtime import cleanup_stale_pdf_exports
 from resource_specs.loader import initialize_registry as initialize_resource_registry
-from curriculum.planning.skeletons import initialize_skeleton_catalog
 
 logger = logging.getLogger("uvicorn.error")
 __version__ = VERSION
@@ -334,6 +334,8 @@ def create_app() -> FastAPI:
     app.include_router(planning_router)
     app.include_router(units_generation_router)
     app.include_router(realization_progress_router)
+    from infra.generation_runtime.http import router as generation_runtime_router
+    app.include_router(generation_runtime_router)
     # D3: /api/v1/legacy-units retired
     app.include_router(telemetry_router)
 
