@@ -17,6 +17,61 @@ TaskResponseType = Literal[
     "ordered_items",
 ]
 
+TaskEvaluationType = Literal[
+    "rubric",
+    "exact_match",
+    "choice_keys",
+    "numeric",
+    "accepted_answers",
+    "teacher_review",
+    "mapping",
+    "ordered_match",
+]
+
+TASK_RESPONSE_FIELDS: dict[TaskResponseType, frozenset[str]] = {
+    "single_choice": frozenset({"type", "options", "answer_lines"}),
+    "multiple_choice": frozenset({"type", "options", "answer_lines"}),
+    "number": frozenset({"type", "unit", "min", "max", "step", "precision", "answer_lines"}),
+    "text": frozenset({"type", "min_length", "max_length", "placeholder", "answer_lines"}),
+    "missing_values": frozenset({"type", "values", "answers", "answer_lines"}),
+    "classification": frozenset({"type", "items", "categories", "correct_placements"}),
+    "matching": frozenset({"type", "pairs"}),
+    "ordered_items": frozenset({"type", "items", "correct_order", "order"}),
+}
+
+TASK_EVALUATION_FIELDS: dict[str, frozenset[str]] = {
+    "rubric": frozenset({"type", "criteria", "rubric"}),
+    "exact_match": frozenset({
+        "type", "answer", "correct_value", "correct_option_id", "correct_key",
+        "correct_option_ids", "correct_keys",
+    }),
+    "choice_keys": frozenset({
+        "type", "correct", "correct_keys", "correct_option_ids", "correct_option_id",
+    }),
+    "numeric": frozenset({"type", "value", "tolerance", "unit"}),
+    "accepted_answers": frozenset({"type", "accepted_answers", "case_sensitive"}),
+    "teacher_review": frozenset({"type", "review_guidance"}),
+    "mapping": frozenset({"type", "correct_placements", "pairs", "correct_pairs"}),
+    "ordered_match": frozenset({"type", "correct_order", "order"}),
+}
+
+ACTION_RESPONSE_TYPES: dict[LearnerActionId, TaskResponseType] = {
+    "select-one": "single_choice",
+    "select-many": "multiple_choice",
+    "complete-missing-values": "missing_values",
+    "classify-items": "classification",
+    "match-pairs": "matching",
+    "order-items": "ordered_items",
+    "reconstruct-order": "ordered_items",
+    "enter-number": "number",
+    "enter-text": "text",
+}
+
+PASSIVE_ACTION_MEANINGS: dict[LearnerActionId, str] = {
+    "compare-without-response": "Compare the presented ideas without submitting an answer.",
+    "read-explanation": "Read the explanation without submitting an answer.",
+}
+
 
 class SharedTaskSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")

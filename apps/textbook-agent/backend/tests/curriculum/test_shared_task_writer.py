@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
+
 import pytest
 
 from curriculum.agents import _SharedTaskDraftEnvelope, run_shared_task_writer
@@ -60,11 +61,34 @@ def _make_plan(blocks: list[TeachingPlanBlock]) -> TeachingPlan:
     )
 
 
-def _make_draft_task(label: str) -> SharedTaskDraft:
+def _make_draft_task(label: str, action: str = "select-one") -> SharedTaskDraft:
+    response_contracts = {
+        "select-one": (
+            {"type": "single_choice", "options": [{"id": "a", "text": "Option A"}, {"id": "b", "text": "Option B"}]},
+            {"type": "exact_match", "correct_option_id": "a"},
+        ),
+        "select-many": (
+            {"type": "multiple_choice", "options": [{"id": "a", "text": "Option A"}, {"id": "b", "text": "Option B"}]},
+            {"type": "choice_keys", "correct_option_ids": ["a"]},
+        ),
+        "enter-number": (
+            {"type": "number"},
+            {"type": "rubric", "criteria": [f"Evidence for {label}"]},
+        ),
+        "enter-text": (
+            {"type": "text"},
+            {"type": "rubric", "criteria": [f"Evidence for {label}"]},
+        ),
+        "match-pairs": (
+            {"type": "matching", "pairs": [{"left": "A", "right": "B"}]},
+            {"type": "mapping", "pairs": [{"left": "A", "right": "B"}]},
+        ),
+    }
+    response, evaluation = response_contracts[action]
     return SharedTaskDraft(
         prompt=f"Task prompt for {label}",
-        response={"type": "single_choice", "options": [{"id": "a", "text": "Option A"}]},
-        evaluation={"type": "exact_match", "correct_option_id": "a"},
+        response=response,
+        evaluation=evaluation,
         expected_evidence=f"Evidence for {label}",
         difficulty="guided",
     )
@@ -74,7 +98,7 @@ def _make_draft_task(label: str) -> SharedTaskDraft:
 async def test_1_response_block_produces_1_task():
     """Requirement 1: 1 response block -> 1 task."""
     plan = _make_plan([_make_block("b1", action="select-one")])
-    envelope = _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1")])
+    envelope = _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one")])
 
     with patch("curriculum.agents._run_structured", new_callable=AsyncMock) as mock_llm:
         mock_llm.return_value = envelope
@@ -98,7 +122,11 @@ async def test_3_response_blocks_produce_3_tasks():
         _make_block("b3", action="enter-text"),
     ])
     envelope = _SharedTaskDraftEnvelope(
-        tasks=[_make_draft_task("b1"), _make_draft_task("b2"), _make_draft_task("b3")]
+        tasks=[
+            _make_draft_task("b1", "select-one"),
+            _make_draft_task("b2", "match-pairs"),
+            _make_draft_task("b3", "enter-text"),
+        ]
     )
 
     with patch("curriculum.agents._run_structured", new_callable=AsyncMock) as mock_llm:
@@ -138,7 +166,7 @@ async def test_mixed_passive_and_response_blocks():
         _make_block("b4", action="enter-number"),
     ])
     envelope = _SharedTaskDraftEnvelope(
-        tasks=[_make_draft_task("b2"), _make_draft_task("b4")]
+        tasks=[_make_draft_task("b2", "select-one"), _make_draft_task("b4", "enter-number")]
     )
 
     with patch("curriculum.agents._run_structured", new_callable=AsyncMock) as mock_llm:
@@ -163,8 +191,8 @@ async def test_too_few_tasks_bounded_repair_and_failure():
     # Case A: repair succeeds
     with patch("curriculum.agents._run_structured", new_callable=AsyncMock) as mock_llm:
         mock_llm.side_effect = [
-            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1")]),  # too few: 1 instead of 2
-            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1"), _make_draft_task("b2")]),  # repaired
+            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one")]),  # too few: 1 instead of 2
+            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one"), _make_draft_task("b2", "select-many")]),  # repaired
         ]
         tasks = await run_shared_task_writer(plan)
         assert len(tasks) == 2
@@ -175,8 +203,8 @@ async def test_too_few_tasks_bounded_repair_and_failure():
     # Case B: repair fails -> hard failure
     with patch("curriculum.agents._run_structured", new_callable=AsyncMock) as mock_llm:
         mock_llm.side_effect = [
-            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1")]),
-            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1")]),
+            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one")]),
+            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one")]),
         ]
         with pytest.raises(ValueError, match="shared task writer must return exactly one task per response-bearing block"):
             await run_shared_task_writer(plan)
@@ -191,8 +219,8 @@ async def test_too_many_tasks_bounded_repair_and_failure():
     # Case A: repair succeeds
     with patch("curriculum.agents._run_structured", new_callable=AsyncMock) as mock_llm:
         mock_llm.side_effect = [
-            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1"), _make_draft_task("b1-extra")]),  # 2 instead of 1
-            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1")]),  # repaired
+            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one"), _make_draft_task("b1-extra", "select-one")]),  # 2 instead of 1
+            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one")]),  # repaired
         ]
         tasks = await run_shared_task_writer(plan)
         assert len(tasks) == 1
@@ -201,8 +229,8 @@ async def test_too_many_tasks_bounded_repair_and_failure():
     # Case B: repair fails -> hard failure
     with patch("curriculum.agents._run_structured", new_callable=AsyncMock) as mock_llm:
         mock_llm.side_effect = [
-            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1"), _make_draft_task("b1-extra")]),
-            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1"), _make_draft_task("b1-extra")]),
+            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one"), _make_draft_task("b1-extra", "select-one")]),
+            _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one"), _make_draft_task("b1-extra", "select-one")]),
         ]
         with pytest.raises(ValueError, match="shared task writer must return exactly one task per response-bearing block"):
             await run_shared_task_writer(plan)
@@ -218,7 +246,7 @@ async def test_assessment_without_approved_source_fails():
     object.__setattr__(block, "task_mode", "assessment")
     object.__setattr__(block, "source_question_ids", [])
 
-    envelope = _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1")])
+    envelope = _SharedTaskDraftEnvelope(tasks=[_make_draft_task("b1", "select-one")])
     with patch("curriculum.agents._run_structured", new_callable=AsyncMock) as mock_llm:
         mock_llm.return_value = envelope
         with pytest.raises(ValueError, match="assessment block 'b1' has no approved source"):
@@ -234,9 +262,9 @@ async def test_ordering_binds_deterministically():
         _make_block("block-gamma", action="match-pairs"),
     ])
     drafts = [
-        _make_draft_task("alpha-task"),
-        _make_draft_task("beta-task"),
-        _make_draft_task("gamma-task"),
+        _make_draft_task("alpha-task", "select-one"),
+        _make_draft_task("beta-task", "enter-text"),
+        _make_draft_task("gamma-task", "match-pairs"),
     ]
     envelope = _SharedTaskDraftEnvelope(tasks=drafts)
 
@@ -254,7 +282,7 @@ async def test_ordering_binds_deterministically():
 async def test_identity_remains_code_owned():
     """Requirement 9: identity remains code-owned."""
     plan = _make_plan([_make_block("block-xyz", action="select-one")])
-    envelope = _SharedTaskDraftEnvelope(tasks=[_make_draft_task("xyz")])
+    envelope = _SharedTaskDraftEnvelope(tasks=[_make_draft_task("xyz", "select-one")])
 
     with patch("curriculum.agents._run_structured", new_callable=AsyncMock) as mock_llm:
         mock_llm.return_value = envelope
