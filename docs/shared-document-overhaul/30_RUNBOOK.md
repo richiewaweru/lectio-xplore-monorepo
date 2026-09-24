@@ -123,10 +123,18 @@
 ## Phase 2E — Teaching Plan edit zero-caller guard
 
 - Starting SHA: `7c70a1d7`.
+- Ending SHA for package 2E: `9be72b86`.
 - Implementation: AST architecture guard rejects production references to the dormant `edit_teaching_plan` helper and `TeachingRevisionStore.edit_plan` method, including aliases and module-qualified access; permits only the helper's own wrapper call. The first-cut edit non-goal is now executable.
 - Tests: focused architecture guard and existing approval-content-identity tests 13 PASS; scoped Ruff PASS; `pnpm program:domain-guards` PASS (zero violations, 8 guard tests); `git diff --check` PASS.
 - Failure proof: synthetic aliased import is rejected; existing HTTP approval tests reject missing submitted hash, stale revision, and mismatched content hash.
 - Status: package PASS. Phase 2 remains IN PROGRESS pending the full phase verification script.
+
+## Phase 2 full gate
+
+- Starting SHA: `9be72b86`.
+- First `scripts/verify-phase.ps1 -Phase full` run: FAIL, exit 1 solely in backend pytest (1479 passed, 2 failed, 5 skipped, 2 deselected, 25 warnings). Page tests 64 PASS and page check PASS; frontend check 0 errors/5 existing warnings, frontend tests 227 PASS, frontend build PASS; PDF fixture and final diff check PASS. The two R04 tests import P08's mocked teaching helper, but P08's clean reviewer fixture was module-local. Those R04 tests unintentionally called the external reviewer, which emitted progression/target findings with invalid block IDs; the strict review contract correctly rejected them. Keep production validation unchanged; move the fake reviewer into the shared test helper and rerun.
+- Correction: P08's shared `_approve_shared_teaching` helper now scopes the clean reviewer fake alongside its planner fake; removed the module-local autouse fixture. Combined P08, both R04 regressions, and semantic-review tests 21 PASS (6 warnings); scoped Ruff and `git diff --check` PASS. Production reviewer and failure tests unchanged.
+- Status: IN PROGRESS. Full verifier rerun required before Phase 2 PASS.
 
 ## Baseline
 - [x] branch recorded

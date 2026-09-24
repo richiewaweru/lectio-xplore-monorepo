@@ -352,19 +352,6 @@ def _reset_injection():
     reset_failure_injection()
 
 
-@pytest.fixture(autouse=True)
-def _fake_clean_teaching_plan_semantic_review(monkeypatch):
-    async def _review(*, plan, **_kwargs):
-        return TeachingPlanSemanticReviewResult(
-            content_hash=curriculum_teaching_plan_content_hash(plan), findings=[]
-        )
-
-    monkeypatch.setattr(
-        "print.generation.whole_lesson.teaching_agent.review_teaching_plan_draft",
-        _review,
-    )
-
-
 def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
     """MOCK provider-shaped draft reacting to packet slots (not an injected plan)."""
     sections: list[TeachingPlanDraftSection] = []
@@ -720,21 +707,30 @@ async def _approve_shared_teaching(*, gid: str, item_id: str) -> int:
         return draft, draft.model_dump_json()
 
     with patch(MOCKS["teaching_llm"], new=AsyncMock(side_effect=_teaching_call)):
-        async with async_session_factory() as session:
-            teaching_result = await run_and_persist_teaching_plan(
-                session, gid, require_items=True
+        async def _clean_review(*, plan, **_kwargs):
+            return TeachingPlanSemanticReviewResult(
+                content_hash=curriculum_teaching_plan_content_hash(plan), findings=[]
             )
-            assert teaching_result["validation"]["ok"] is True
-            review = teaching_result["review"] or {}
-            revision = int(review.get("revision") or 1)
-            await approve_teaching_and_queue(
-                session,
-                gid,
-                expected_revision=revision,
-                reviewed_by="p08-teacher",
-            )
-            await session.commit()
-            return revision
+
+        with patch(
+            "print.generation.whole_lesson.teaching_agent.review_teaching_plan_draft",
+            new=_clean_review,
+        ):
+            async with async_session_factory() as session:
+                teaching_result = await run_and_persist_teaching_plan(
+                    session, gid, require_items=True
+                )
+                assert teaching_result["validation"]["ok"] is True
+                review = teaching_result["review"] or {}
+                revision = int(review.get("revision") or 1)
+                await approve_teaching_and_queue(
+                    session,
+                    gid,
+                    expected_revision=revision,
+                    reviewed_by="p08-teacher",
+                )
+                await session.commit()
+                return revision
 
 
 async def _run_print(*, gid: str, fail_once: bool = False) -> dict:
