@@ -1,0 +1,218 @@
+"""Final deterministic QA for an immutable SharedLessonDocument."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from curriculum.teaching_plan.models import TeachingPlanSection
+from document.shared_lesson.continuity import (
+    ContinuityIssue,
+    ExpectedNodeShape,
+    validate_section_boundary,
+    validate_section_continuity,
+)
+from document.shared_lesson.hashing import shared_lesson_content_hash
+from document.shared_lesson.models import FigureNode, SharedLessonDocument
+
+
+class DocumentQAResult(BaseModel):
+    """The complete final QA result; READY is derived from zero issues."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    document_id: str = Field(min_length=1)
+    document_revision: int = Field(ge=1)
+    issues: tuple[ContinuityIssue, ...] = ()
+
+    @property
+    def ready(self) -> bool:
+        return not self.issues
+
+
+class DocumentQAError(ValueError):
+    """Raised when a document cannot become READY after deterministic QA."""
+
+    def __init__(self, result: DocumentQAResult):
+        self.result = result
+        super().__init__(
+            "shared lesson document is not ready: "
+            + "; ".join(issue.issue_code for issue in result.issues)
+        )
+
+
+def _issue(
+    code: str,
+    section_id: str,
+    explanation: str,
+    correction: str,
+    node_ids: Sequence[str] = (),
+) -> ContinuityIssue:
+    return ContinuityIssue(
+        issue_code=code,
+        affected_section_id=section_id,
+        affected_node_ids=tuple(node_ids),
+        explanation=explanation,
+        required_correction=correction,
+    )
+
+
+def _expected_for_section(
+    expected_shapes: Mapping[str, Sequence[ExpectedNodeShape | Mapping[str, Any] | Any]],
+    section_id: str,
+    plan_section: TeachingPlanSection,
+) -> Sequence[ExpectedNodeShape | Mapping[str, Any] | Any] | None:
+    if section_id in expected_shapes:
+        return expected_shapes[section_id]
+    if plan_section.slot_id in expected_shapes:
+        return expected_shapes[plan_section.slot_id]
+    return None
+
+
+def qa_shared_lesson_document(
+    *,
+    document: SharedLessonDocument,
+    teaching_plan_sections: Sequence[TeachingPlanSection],
+    expected_shapes: Mapping[str, Sequence[ExpectedNodeShape | Mapping[str, Any] | Any]],
+    expected_title: str | None = None,
+    approved_source_ids: Sequence[str] = (),
+    source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
+    required_media_by_section: Mapping[str, Sequence[str]] | None = None,
+    available_media_ids: Sequence[str] = (),
+) -> DocumentQAResult:
+    """Run final section, boundary, lineage, media and hash checks.
+
+    This helper only reports issues. It never edits the document or performs a
+    whole-lesson rewrite. A caller may target a single returned section ID for
+    the bounded repair contract.
+    """
+    issues: list[ContinuityIssue] = []
+    sections = tuple(document.sections)
+    plans = tuple(teaching_plan_sections)
+    source_facts_by_section = source_facts_by_section or {}
+    required_media_by_section = required_media_by_section or {}
+
+    if len(sections) != len(plans):
+        issues.append(
+            _issue(
+                "section_count_mismatch",
+                sections[0].id if sections else "document",
+                f"document has {len(sections)} sections but the approved plan has {len(plans)}",
+                "Assemble exactly one authored section per approved Teaching Plan section.",
+            )
+        )
+
+    if expected_title is not None and document.title != expected_title:
+        issues.append(
+            _issue(
+                "document_title_mismatch",
+                sections[0].id if sections else "document",
+                f"document title {document.title!r} does not match approved title {expected_title!r}",
+                "Use the approved learner-facing title exactly.",
+            )
+        )
+
+    if shared_lesson_content_hash(document) != document.content_hash:
+        issues.append(
+            _issue(
+                "document_hash_mismatch",
+                sections[0].id if sections else "document",
+                "document content_hash does not match canonical learner-significant content",
+                "Reject this artifact and rebuild from the accepted immutable inputs.",
+            )
+        )
+
+    for index, section in enumerate(sections):
+        if section.position != index:
+            issues.append(
+                _issue(
+                    "section_order_mismatch",
+                    section.id,
+                    f"section position is {section.position}; expected {index}",
+                    "Restore the accepted section order before marking the document READY.",
+                )
+            )
+        if index >= len(plans):
+            issues.append(
+                _issue(
+                    "unplanned_section",
+                    section.id,
+                    "document contains a section without an approved Teaching Plan section",
+                    "Remove the unplanned section and preserve only approved section identities.",
+                )
+            )
+            continue
+        plan_section = plans[index]
+        shape = _expected_for_section(expected_shapes, section.id, plan_section)
+        if shape is None:
+            issues.append(
+                _issue(
+                    "expected_shape_missing",
+                    section.id,
+                    "no accepted composition shape was supplied for this section",
+                    "Supply the code-owned accepted shape before writing or QA.",
+                )
+            )
+            continue
+        issues.extend(
+            validate_section_continuity(
+                section=section,
+                teaching_plan_section=plan_section,
+                expected_nodes=shape,
+                approved_source_ids=approved_source_ids,
+                source_facts=source_facts_by_section.get(section.id, ()),
+            )
+        )
+
+        required_media = set(required_media_by_section.get(section.id, ()))
+        if required_media:
+            available = set(available_media_ids)
+            missing = sorted(required_media - available)
+            if missing:
+                issues.append(
+                    _issue(
+                        "required_media_missing",
+                        section.id,
+                        f"required media is not ready: {missing!r}",
+                        "Complete required media generation or fail the document before READY.",
+                        [node.id for node in section.nodes if isinstance(node, FigureNode)],
+                    )
+                )
+
+    for previous, previous_plan, current, current_plan in zip(
+        sections,
+        plans,
+        sections[1:],
+        plans[1:],
+        strict=False,
+    ):
+        issues.extend(
+            validate_section_boundary(
+                previous_section=previous,
+                previous_plan=previous_plan,
+                next_section=current,
+                next_plan=current_plan,
+            )
+        )
+
+    return DocumentQAResult(
+        document_id=document.id,
+        document_revision=document.revision,
+        issues=tuple(issues),
+    )
+
+
+def require_ready_document(result: DocumentQAResult) -> None:
+    """Enforce the final READY gate without mutating the immutable artifact."""
+    if not result.ready:
+        raise DocumentQAError(result)
+
+
+__all__ = [
+    "DocumentQAError",
+    "DocumentQAResult",
+    "qa_shared_lesson_document",
+    "require_ready_document",
+]
