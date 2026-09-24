@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 Difficulty = Literal["guided", "independent"]
 TaskMode = Literal["none", "formative", "assessment"]
@@ -101,6 +101,12 @@ class TeachingPlanSection(BaseModel):
     specific_purpose: str = ""
     transition: str | None = None
     blocks: list[TeachingPlanBlock] = Field(default_factory=list)
+    display_title: str | None = None
+    entry_state: list[str] | None = None
+    must_establish: list[str] | None = None
+    avoid_repeating: list[str] | None = None
+    bridge_from_previous: str | None = None
+    exit_state: list[str] | None = None
 
 
 class AnchorUsageEntry(BaseModel):
@@ -125,6 +131,10 @@ class TeachingPlan(BaseModel):
     anchor_usage: list[AnchorUsageEntry] = Field(default_factory=list)
     misconception_focus_ids: list[str] = Field(default_factory=list)
     sections: list[TeachingPlanSection] = Field(default_factory=list)
+    contract_version: Literal[1, 2] = 1
+    learner_title: str | None = None
+    starting_state: list[str] | None = None
+    target_state: list[str] | None = None
     # Code-owned identity fields (optional on legacy records).
     teaching_plan_id: str | None = None
     revision: int | None = None
@@ -134,7 +144,111 @@ class TeachingPlan(BaseModel):
     @model_validator(mode="after")
     def _validate_anchor_usages(self) -> TeachingPlan:
         _reject_duplicate_anchor_usages(self.anchor_usage)
+        enriched_plan_values = (
+            self.learner_title,
+            self.starting_state,
+            self.target_state,
+        )
+        enriched_section_values = [
+            value
+            for section in self.sections
+            for value in (
+                section.display_title,
+                section.entry_state,
+                section.must_establish,
+                section.avoid_repeating,
+                section.bridge_from_previous,
+                section.exit_state,
+            )
+        ]
+        if self.contract_version == 1:
+            if any(
+                value is not None for value in enriched_plan_values + tuple(enriched_section_values)
+            ):
+                raise ValueError("Teaching Plan v1 cannot include v2 continuity fields")
+            return self
+
+        _require_meaningful(self.learner_title, "learner_title")
+        _require_unique_state_list(self.starting_state, "starting_state")
+        _require_unique_state_list(self.target_state, "target_state")
+        slot_ids = [section.slot_id for section in self.sections]
+        if not slot_ids or any(not slot_id.strip() for slot_id in slot_ids):
+            raise ValueError("v2 Teaching Plans require non-empty section slot_ids")
+        if any(slot_id != slot_id.strip() for slot_id in slot_ids):
+            raise ValueError("v2 section slot_ids cannot have surrounding whitespace")
+        if len(slot_ids) != len(set(slot_ids)):
+            raise ValueError("v2 Teaching Plan section slot_ids must be unique")
+        if any(entry.slot_id != entry.slot_id.strip() for entry in self.anchor_usage):
+            raise ValueError("anchor_usage slot_id cannot have surrounding whitespace")
+        if any(entry.slot_id not in set(slot_ids) for entry in self.anchor_usage):
+            raise ValueError("anchor_usage slot_id must belong to a Teaching Plan section")
+        for index, section in enumerate(self.sections):
+            for field_name in (
+                "display_title",
+                "entry_state",
+                "must_establish",
+                "avoid_repeating",
+                "exit_state",
+            ):
+                if field_name not in section.model_fields_set:
+                    raise ValueError(f"v2 section requires {field_name}")
+            _require_meaningful(section.display_title, "section display_title")
+            _require_unique_state_list(section.entry_state, "section entry_state")
+            _require_unique_state_list(section.must_establish, "section must_establish")
+            _require_unique_state_list(
+                section.avoid_repeating,
+                "section avoid_repeating",
+                allow_empty=True,
+            )
+            _require_unique_state_list(section.exit_state, "section exit_state")
+            if "bridge_from_previous" not in section.model_fields_set:
+                raise ValueError("v2 section requires bridge_from_previous")
+            if index == 0:
+                if section.bridge_from_previous is not None:
+                    raise ValueError("first v2 section bridge_from_previous must be null")
+            else:
+                _require_meaningful(section.bridge_from_previous, "bridge_from_previous")
         return self
+
+    @model_serializer(mode="wrap")
+    def _serialize_versioned_plan(self, handler):
+        payload = handler(self)
+        if self.contract_version == 1:
+            payload.pop("contract_version", None)
+            payload.pop("learner_title", None)
+            payload.pop("starting_state", None)
+            payload.pop("target_state", None)
+            for section in payload.get("sections", []):
+                for field_name in (
+                    "display_title",
+                    "entry_state",
+                    "must_establish",
+                    "avoid_repeating",
+                    "bridge_from_previous",
+                    "exit_state",
+                ):
+                    section.pop(field_name, None)
+        return payload
+
+
+def _require_meaningful(value: str | None, name: str) -> None:
+    if value is None or not value.strip():
+        raise ValueError(f"{name} must be meaningful and non-empty")
+
+
+def _require_unique_state_list(
+    values: list[str] | None,
+    name: str,
+    *,
+    allow_empty: bool = False,
+) -> None:
+    if values is None or (not allow_empty and not values):
+        raise ValueError(f"{name} must contain meaningful entries")
+    normalized = [value.strip() for value in values]
+    if any(not value for value in normalized):
+        raise ValueError(f"{name} entries must be meaningful and non-empty")
+    if len(normalized) != len(set(normalized)):
+        raise ValueError(f"{name} entries must be unique")
 
 
 class TeachingPlanDraftBlock(BaseModel):
@@ -187,6 +301,30 @@ class TeachingPlanDraftSection(BaseModel):
     blocks: list[TeachingPlanDraftBlock] = Field(default_factory=list)
 
 
+class TeachingPlanDraftSectionV2(TeachingPlanDraftSection):
+    """Strict enriched section draft; section identity remains code-owned."""
+
+    display_title: str = Field(min_length=1)
+    entry_state: list[str]
+    must_establish: list[str]
+    avoid_repeating: list[str]
+    bridge_from_previous: str | None
+    exit_state: list[str]
+
+    @model_validator(mode="after")
+    def _validate_continuity(self) -> TeachingPlanDraftSectionV2:
+        _require_meaningful(self.display_title, "section display_title")
+        _require_unique_state_list(self.entry_state, "section entry_state")
+        _require_unique_state_list(self.must_establish, "section must_establish")
+        _require_unique_state_list(
+            self.avoid_repeating,
+            "section avoid_repeating",
+            allow_empty=True,
+        )
+        _require_unique_state_list(self.exit_state, "section exit_state")
+        return self
+
+
 class TeachingPlanDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -194,6 +332,34 @@ class TeachingPlanDraft(BaseModel):
     anchor_usage: list[AnchorUsageEntry] = Field(default_factory=list)
     misconception_focus_ids: list[str] = Field(default_factory=list)
     sections: list[TeachingPlanDraftSection] = Field(default_factory=list)
+
+
+class TeachingPlanDraftV2(BaseModel):
+    """Closed enriched planner output contract for the Phase 2 cutover."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    contract_version: Literal[2] = 2
+    learner_title: str = Field(min_length=1)
+    arc: str = Field(min_length=1)
+    starting_state: list[str]
+    target_state: list[str]
+    anchor_usage: list[AnchorUsageEntry] = Field(default_factory=list)
+    misconception_focus_ids: list[str] = Field(default_factory=list)
+    sections: list[TeachingPlanDraftSectionV2] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_continuity(self) -> TeachingPlanDraftV2:
+        _require_meaningful(self.learner_title, "learner_title")
+        _require_unique_state_list(self.starting_state, "starting_state")
+        _require_unique_state_list(self.target_state, "target_state")
+        _reject_duplicate_anchor_usages(self.anchor_usage)
+        for index, section in enumerate(self.sections):
+            if index == 0 and section.bridge_from_previous is not None:
+                raise ValueError("first v2 section bridge_from_previous must be null")
+            if index > 0:
+                _require_meaningful(section.bridge_from_previous, "bridge_from_previous")
+        return self
 
 
 class TeachingRevisionRecord(BaseModel):
@@ -216,7 +382,7 @@ class TeachingRevisionRecord(BaseModel):
 
 
 def materialize_teaching_plan(
-    draft: TeachingPlanDraft,
+    draft: TeachingPlanDraft | TeachingPlanDraftV2,
     *,
     slot_ids: list[str],
     teaching_plan_id: str | None = None,
@@ -228,10 +394,27 @@ def materialize_teaching_plan(
             f"Teaching draft must return exactly {len(slot_ids)} sections; "
             f"got {len(draft.sections)}"
         )
+    is_v2 = isinstance(draft, TeachingPlanDraftV2)
+    if is_v2:
+        if any(not slot_id.strip() for slot_id in slot_ids):
+            raise ValueError("Teaching Plan slot_ids must be non-empty")
+        if any(slot_id != slot_id.strip() for slot_id in slot_ids):
+            raise ValueError("Teaching Plan slot_ids cannot have surrounding whitespace")
+        if len(slot_ids) != len(set(slot_ids)):
+            raise ValueError("Teaching Plan slot_ids must be unique")
+        if any(
+            entry.slot_id != entry.slot_id.strip() or entry.slot_id not in set(slot_ids)
+            for entry in draft.anchor_usage
+        ):
+            raise ValueError("anchor_usage slot_id must belong to a materialized section")
     return TeachingPlan(
         teaching_plan_id=teaching_plan_id,
         revision=revision,
         preparation_hash=preparation_hash,
+        contract_version=2 if is_v2 else 1,
+        learner_title=draft.learner_title if is_v2 else None,
+        starting_state=list(draft.starting_state) if is_v2 else None,
+        target_state=list(draft.target_state) if is_v2 else None,
         arc=draft.arc,
         anchor_usage=draft.anchor_usage,
         misconception_focus_ids=list(draft.misconception_focus_ids),
@@ -240,6 +423,12 @@ def materialize_teaching_plan(
                 slot_id=slot_id,
                 specific_purpose=section.specific_purpose,
                 transition=section.transition,
+                display_title=section.display_title if is_v2 else None,
+                entry_state=list(section.entry_state) if is_v2 else None,
+                must_establish=list(section.must_establish) if is_v2 else None,
+                avoid_repeating=list(section.avoid_repeating) if is_v2 else None,
+                bridge_from_previous=section.bridge_from_previous if is_v2 else None,
+                exit_state=list(section.exit_state) if is_v2 else None,
                 blocks=[
                     TeachingPlanBlock(
                         id=f"{slot_id}-b{position + 1}",
@@ -275,6 +464,8 @@ __all__ = [
     "TeachingPlanDraft",
     "TeachingPlanDraftBlock",
     "TeachingPlanDraftSection",
+    "TeachingPlanDraftSectionV2",
+    "TeachingPlanDraftV2",
     "TeachingPlanSection",
     "TeachingRevisionRecord",
     "materialize_teaching_plan",

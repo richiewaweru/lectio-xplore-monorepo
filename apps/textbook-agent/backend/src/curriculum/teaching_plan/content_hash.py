@@ -18,14 +18,19 @@ _NON_PEDAGOGICAL_FIELDS = {
 
 
 def teaching_plan_content_hash(plan: TeachingPlan | Mapping[str, Any]) -> str:
-    """Hash validated pedagogical content, excluding code-owned identity metadata.
+    """Hash pedagogical meaning while preserving approved v1 content identities.
 
     Serializing every current model field by default makes future teacher-visible
     TeachingPlan fields part of identity automatically. Ordered pedagogical
-    arrays retain their order; object keys are serialized deterministically.
+    arrays retain their order; object keys are serialized deterministically. The
+    v1 model serializer deliberately omits the enriched v2 fields so legacy
+    approvals keep their original digest. V2 hashes include its explicit version
+    marker and every continuity field.
     """
     validated = plan if isinstance(plan, TeachingPlan) else TeachingPlan.model_validate(dict(plan))
     payload = validated.model_dump(mode="json", exclude=_NON_PEDAGOGICAL_FIELDS)
+    if validated.contract_version == 2:
+        payload["contract_version"] = 2
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 

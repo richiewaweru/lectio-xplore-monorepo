@@ -18,7 +18,7 @@
 - Local UI access: frontend dev server was down; restarted on `127.0.0.1:5173`. Its ignored local `.env` pointed `PUBLIC_API_URL` at `localhost:8001` while the backend listens on `127.0.0.1:8000`; corrected to `http://127.0.0.1:8000`. Same-origin proxy now returns the same authenticated `401` as the backend, instead of a proxy error. The in-app `/units` page now redirects to login rather than showing the 500. Google sign-in reports the local origin is not authorized for the configured client in an isolated browser.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phase 1 PASS (additive generic runtime); Phases 2–16 NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
+- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phase 1 PASS (additive generic runtime); Phase 2 IN PROGRESS; Phases 3–16 NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
 
 ## Phase 1A — generic runtime persistence
 
@@ -83,6 +83,14 @@
 - `scripts/verify-phase.ps1 -Phase full`: PASS, exit 0. Page tests 64/64 and page check 0 errors/warnings; backend 1419 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings, frontend tests 225/225, frontend build PASS; PDF fixture 6/5/5 pages PASS; diff check PASS.
 - Phase 1 status: PASS. Generic persistence, fenced WorkItems, finalization/cancellation, database integrity guards, and owner-scoped status/actions are additive; no product creation path has cut over yet.
 
+## Phase 2A — enriched Teaching Plan contract and identity
+
+- Starting SHA: `b32a6044`.
+- Implementation: explicit strict `TeachingPlanDraftV2` and v2 Teaching Plan fields for learner title, starting/target state, and section display title, entry/must-establish/avoid-repeat/bridge/exit state. V1 drafts and persisted approved snapshots remain readable; v1 serialization excludes v2-only defaults so their approval content identity is preserved. V2 materialization uses exact code-owned slot IDs and hashes all new pedagogical fields.
+- Tests: 81 focused contract, draft, approval/hash, shared-plan and consumer tests PASS; Ruff check/format PASS; `pnpm program:domain-guards` PASS (8 tests); architecture guard PASS (0 violations); `git diff --check` PASS. Fixed v1 content hash fixture remains `79121d3b333a001c5023de3f5d7959066002dd5615b62c9b9e9e11ac13013698`.
+- Failure proof: missing/blank/duplicate v2 state, malformed section bridge, invalid/duplicate/changed slot identity, and each new field changing the v2 hash. Semantic progression and target coverage remain Phase 2B planner QA.
+- Status: package PASS. Phase 2 remains IN PROGRESS pending planner prompt, validation, approval/review integration, and full phase gate.
+
 ## Baseline
 - [x] branch recorded
 - [x] starting SHA recorded
@@ -96,7 +104,7 @@
 ## Phases
 - [ ] 0 Baseline
 - [x] 1 Generic runtime (PASS: additive persistence and HTTP)
-- [ ] 2 Teaching Plan
+- [ ] 2 Teaching Plan (IN PROGRESS)
 - [ ] 3 SharedDocument contract
 - [ ] 4 Shared tasks
 - [ ] 5 Section Composer
