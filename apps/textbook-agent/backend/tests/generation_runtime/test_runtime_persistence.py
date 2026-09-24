@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
 import infra.generation_runtime.repository as generation_runtime_repository
@@ -21,8 +21,10 @@ from infra.database.models import (
 )
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (
+    ArtifactVerificationError,
     BuildAdmission,
     CheckpointCompatibilityError,
+    InvalidRunTransition,
     InvalidWorkItemTransition,
     LeaseLostError,
     OutputHashMismatch,
@@ -31,11 +33,13 @@ from infra.generation_runtime import (
     RunAdmission,
     RunAdmissionConflict,
     RunContract,
+    RunFinalization,
     RuntimeCheckpoint,
     RuntimeCheckpointCompatibility,
     RunType,
     SourceIdentity,
     SourceIdentityConflict,
+    VerifiedArtifact,
     WorkItemAdmission,
     WorkItemConflict,
     WorkItemContract,
@@ -44,10 +48,12 @@ from infra.generation_runtime import (
     add_work_item,
     admit_run,
     append_event,
+    cancel_run,
     claim_work_item,
     complete_work_item,
     create_build,
     fail_work_item,
+    finalize_run,
     get_run_status,
     heartbeat_work_item,
     load_compatible_checkpoint,
@@ -127,6 +133,55 @@ def _source_identity() -> SourceIdentity:
         source_artifact_id="plan-1",
         source_revision=3,
         source_hash="sha256:plan-a",
+    )
+
+
+def _finalization_request(**updates) -> RunFinalization:
+    fields = {
+        "source": _source_identity(),
+        "output_artifact_type": "shared_lesson_document",
+        "output_artifact_id": "document-runtime-1",
+        "output_revision": 1,
+    }
+    fields.update(updates)
+    return RunFinalization(**fields)
+
+
+async def _verify_source(_session, requested: SourceIdentity) -> SourceIdentity:
+    return requested
+
+
+def _load_verified_artifact(output_json, **identity_overrides):
+    async def loader(_session, artifact_type: str, artifact_id: str, revision: int):
+        fields = {
+            "artifact_type": artifact_type,
+            "artifact_id": artifact_id,
+            "revision": revision,
+            "output_json": output_json,
+            "output_hash": content_hash(output_json),
+        }
+        fields.update(identity_overrides)
+        return VerifiedArtifact(**fields)
+
+    return loader
+
+
+async def _complete_item(session, *, item_id: str, worker_id: str, value, now):
+    claim = await claim_work_item(
+        session,
+        work_item_id=item_id,
+        worker_id=worker_id,
+        source=_source_identity(),
+        now=now,
+    )
+    return await complete_work_item(
+        session,
+        work_item_id=item_id,
+        worker_id=worker_id,
+        lease_token=claim.lease_token,
+        output_json=value,
+        output_hash=content_hash(value),
+        now=now + timedelta(seconds=1),
     )
 
 
@@ -1739,6 +1794,498 @@ async def test_work_item_ready_output_is_immutable(db_session) -> None:
     with pytest.raises(ValueError, match="immutable"):
         await db_session.flush()
     await db_session.rollback()
+
+
+@pytest.mark.asyncio
+async def test_finalize_run_requires_persisted_verified_artifact_and_is_idempotent(
+    db_session,
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:final-output",
+            stage="section_writing",
+            input_hash="input-final",
+            definition_hash="definition-final",
+        ),
+    )
+    now = datetime(2026, 9, 18, tzinfo=UTC)
+    await _complete_item(
+        db_session,
+        item_id=item.record.id,
+        worker_id="finalizer-worker",
+        value={"sections": [{"body": "complete"}]},
+        now=now,
+    )
+    artifact_json = {"document": {"sections": ["verified"]}}
+    request = _finalization_request()
+    run = await finalize_run(
+        db_session,
+        run_id=admitted.record.id,
+        owner_user_id=owner_id,
+        finalization=request,
+        source_verifier=_verify_source,
+        artifact_loader=_load_verified_artifact(artifact_json),
+        now=now + timedelta(seconds=2),
+    )
+    assert run.status == "ready"
+    assert run.output_artifact_type == request.output_artifact_type
+    assert run.output_artifact_id == request.output_artifact_id
+    assert run.output_revision == request.output_revision
+    assert run.output_hash == content_hash(artifact_json)
+
+    async def source_changed_after_ready(_session, _requested):
+        raise AssertionError("ready result must be idempotent without a fresh source read")
+
+    repeated = await finalize_run(
+        db_session,
+        run_id=admitted.record.id,
+        owner_user_id=owner_id,
+        finalization=request,
+        source_verifier=source_changed_after_ready,
+        artifact_loader=_load_verified_artifact(artifact_json),
+        now=now + timedelta(seconds=3),
+    )
+    assert repeated.status == "ready"
+    assert (
+        await db_session.scalar(
+            select(func.count())
+            .select_from(GenerationEventModel)
+            .where(
+                GenerationEventModel.run_id == admitted.record.id,
+                GenerationEventModel.event_type == "run_ready",
+            )
+        )
+        == 1
+    )
+    with pytest.raises(InvalidRunTransition, match="active or failed-recoverable"):
+        await cancel_run(
+            db_session,
+            run_id=admitted.record.id,
+            owner_user_id=owner_id,
+        )
+    with pytest.raises(InvalidRunTransition, match="after run termination"):
+        await add_work_item(
+            db_session,
+            WorkItemAdmission(
+                run_id=admitted.record.id,
+                item_key="section:too-late",
+                stage="section_writing",
+                input_hash="late-input",
+                definition_hash="late-definition",
+            ),
+        )
+
+
+@pytest.mark.asyncio
+async def test_running_run_accepts_dynamic_items_but_finalization_rechecks_workset(
+    db_session,
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    first = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:first-stage",
+            stage="composer",
+            input_hash="input-first",
+            definition_hash="definition-first",
+        ),
+    )
+    await _complete_item(
+        db_session,
+        item_id=first.record.id,
+        worker_id="composer-worker",
+        value={"composition": "done"},
+        now=datetime(2026, 9, 23, tzinfo=UTC),
+    )
+    late_dynamic = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="media:generated-after-composition",
+            stage="media_generation",
+            input_hash="input-media",
+            definition_hash="definition-media",
+        ),
+    )
+    assert late_dynamic.created is True
+    with pytest.raises(InvalidRunTransition, match="all declared work items"):
+        await finalize_run(
+            db_session,
+            run_id=admitted.record.id,
+            owner_user_id=owner_id,
+            finalization=_finalization_request(),
+            source_verifier=_verify_source,
+            artifact_loader=_load_verified_artifact({"not": "yet"}),
+        )
+    await db_session.refresh(admitted.record)
+    assert admitted.record.status == "running"
+    assert admitted.record.output_hash is None
+    await db_session.refresh(late_dynamic.record)
+    assert late_dynamic.record.status == "queued"
+
+
+@pytest.mark.asyncio
+async def test_add_work_item_refreshes_run_after_sqlite_build_lock(db_session, monkeypatch) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    original_lock = generation_runtime_repository._serialize_run_build_on_sqlite
+
+    async def terminalize_between_read_and_lock(session, *, run_id: str) -> None:
+        if session is db_session:
+            await session.execute(
+                update(GenerationRunModel)
+                .where(GenerationRunModel.id == run_id)
+                .values(
+                    status="ready",
+                    output_artifact_type="test_artifact",
+                    output_artifact_id="test-artifact-1",
+                    output_revision=1,
+                    output_hash="sha256:test-artifact",
+                )
+            )
+        await original_lock(session, run_id=run_id)
+
+    monkeypatch.setattr(
+        generation_runtime_repository,
+        "_serialize_run_build_on_sqlite",
+        terminalize_between_read_and_lock,
+    )
+    with pytest.raises(InvalidRunTransition, match="after run termination"):
+        await add_work_item(
+            db_session,
+            WorkItemAdmission(
+                run_id=admitted.record.id,
+                item_key="section:late-terminal-race",
+                stage="section_writing",
+                input_hash="late-race-input",
+                definition_hash="late-race-definition",
+            ),
+        )
+    assert (
+        await db_session.scalar(
+            select(func.count())
+            .select_from(GenerationWorkItemModel)
+            .where(
+                GenerationWorkItemModel.run_id == admitted.record.id,
+                GenerationWorkItemModel.item_key == "section:late-terminal-race",
+            )
+        )
+        == 0
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["missing", "identity", "hash", "source", "callback"])
+async def test_finalize_run_verification_failures_never_partially_ready(
+    db_session, failure: str
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key=f"section:final-failure-{failure}",
+            stage="section_writing",
+            input_hash="input-final-failure",
+            definition_hash="definition-final-failure",
+        ),
+    )
+    now = datetime(2026, 9, 19, tzinfo=UTC)
+    await _complete_item(
+        db_session,
+        item_id=item.record.id,
+        worker_id="finalizer-worker",
+        value={"complete": True},
+        now=now,
+    )
+    artifact_json = {"persisted": ["value"]}
+    loader = _load_verified_artifact(artifact_json)
+    verifier = _verify_source
+    expected_error = ArtifactVerificationError
+    request = _finalization_request()
+    if failure == "missing":
+
+        async def loader(_session, *_args):
+            raise LookupError("artifact does not exist")
+    elif failure == "identity":
+        loader = _load_verified_artifact(artifact_json, artifact_id="other-document")
+    elif failure == "hash":
+        loader = _load_verified_artifact(artifact_json, output_hash="sha256:wrong")
+    elif failure == "source":
+
+        async def verifier(_session, _requested):
+            return _source_identity().model_copy(update={"source_hash": "sha256:changed"})
+
+        expected_error = SourceIdentityConflict
+    else:
+
+        async def loader(session, *_args):
+            run = await session.get(GenerationRunModel, admitted.record.id)
+            assert run is not None
+            run.stage = "must-roll-back"
+            await session.flush()
+            raise LookupError("verification adapter failed")
+
+    with pytest.raises(expected_error):
+        await finalize_run(
+            db_session,
+            run_id=admitted.record.id,
+            owner_user_id=owner_id,
+            finalization=request,
+            source_verifier=verifier,
+            artifact_loader=loader,
+            now=now + timedelta(seconds=2),
+        )
+    await db_session.refresh(admitted.record)
+    assert admitted.record.status == "running"
+    assert admitted.record.output_hash is None
+    if failure == "callback":
+        assert admitted.record.stage == "section_composition"
+
+
+@pytest.mark.asyncio
+async def test_finalize_run_requires_all_work_items_ready(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    for key in ("ready", "unfinished"):
+        item = await add_work_item(
+            db_session,
+            WorkItemAdmission(
+                run_id=admitted.record.id,
+                item_key=f"section:{key}",
+                stage="section_writing",
+                input_hash=f"input-{key}",
+                definition_hash=f"definition-{key}",
+            ),
+        )
+        if key == "ready":
+            await _complete_item(
+                db_session,
+                item_id=item.record.id,
+                worker_id=f"worker-{key}",
+                value={"ready": True},
+                now=datetime(2026, 9, 20, tzinfo=UTC),
+            )
+
+    with pytest.raises(InvalidRunTransition, match="all declared work items"):
+        await finalize_run(
+            db_session,
+            run_id=admitted.record.id,
+            owner_user_id=owner_id,
+            finalization=_finalization_request(),
+            source_verifier=_verify_source,
+            artifact_loader=_load_verified_artifact({"should": "not-load"}),
+        )
+    await db_session.refresh(admitted.record)
+    assert admitted.record.status == "running"
+    assert admitted.record.output_artifact_id is None
+
+
+@pytest.mark.asyncio
+async def test_cancel_run_fences_remaining_items_and_preserves_ready_sibling(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    ready = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:keep-ready",
+            stage="section_writing",
+            input_hash="input-ready",
+            definition_hash="definition-ready",
+        ),
+    )
+    await _complete_item(
+        db_session,
+        item_id=ready.record.id,
+        worker_id="worker-ready",
+        value={"ready": ["preserve"]},
+        now=datetime(2026, 9, 21, tzinfo=UTC),
+    )
+    running = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:cancel-running",
+            stage="section_writing",
+            input_hash="input-running",
+            definition_hash="definition-running",
+        ),
+    )
+    queued = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:cancel-queued",
+            stage="section_writing",
+            input_hash="input-queued",
+            definition_hash="definition-queued",
+        ),
+    )
+    started = datetime(2026, 9, 21, 0, 0, 2, tzinfo=UTC)
+    claim = await claim_work_item(
+        db_session,
+        work_item_id=running.record.id,
+        worker_id="worker-running",
+        source=_source_identity(),
+        now=started,
+    )
+    compatibility = _checkpoint_compatibility(
+        input_hash=running.record.input_hash,
+        definition_hash=running.record.definition_hash,
+        composition_identity=None,
+    )
+    await persist_checkpoint(
+        db_session,
+        work_item_id=running.record.id,
+        worker_id="worker-running",
+        lease_token=claim.lease_token,
+        compatibility=compatibility,
+        payload={"keep": "checkpoint"},
+        now=started + timedelta(seconds=1),
+    )
+    previous_token = claim.lease_token
+    late_queued = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="media:admitted-after-run-start",
+            stage="media_generation",
+            input_hash="input-late-media",
+            definition_hash="definition-late-media",
+        ),
+    )
+
+    cancelled = await cancel_run(
+        db_session,
+        run_id=admitted.record.id,
+        owner_user_id=owner_id,
+        now=started + timedelta(seconds=2),
+    )
+    assert cancelled.status == "cancelled"
+    await db_session.refresh(ready.record)
+    await db_session.refresh(running.record)
+    await db_session.refresh(queued.record)
+    await db_session.refresh(late_queued.record)
+    assert ready.record.status == "ready"
+    assert ready.record.output_json == {"ready": ["preserve"]}
+    assert running.record.status == "cancelled"
+    assert running.record.lease_owner is None
+    assert running.record.lease_expires_at is None
+    assert running.record.lease_token == previous_token + 1
+    assert running.record.checkpoint_json["payload"] == {"keep": "checkpoint"}
+    assert queued.record.status == "cancelled"
+    assert queued.record.lease_token == 1
+    assert late_queued.record.status == "cancelled"
+    assert late_queued.record.error_code == "cancelled"
+    assert running.record.error_code == queued.record.error_code == "cancelled"
+    assert running.record.error_class == queued.record.error_class == "cancelled"
+
+    with pytest.raises(LeaseLostError):
+        await complete_work_item(
+            db_session,
+            work_item_id=running.record.id,
+            worker_id="worker-running",
+            lease_token=previous_token,
+            output_json={"late": True},
+            output_hash=content_hash({"late": True}),
+            now=started + timedelta(seconds=3),
+        )
+    with pytest.raises(LeaseLostError):
+        await persist_checkpoint(
+            db_session,
+            work_item_id=running.record.id,
+            worker_id="worker-running",
+            lease_token=previous_token,
+            compatibility=compatibility,
+            payload={"late": True},
+            now=started + timedelta(seconds=3),
+        )
+    await cancel_run(
+        db_session,
+        run_id=admitted.record.id,
+        owner_user_id=owner_id,
+        now=started + timedelta(seconds=4),
+    )
+    assert (
+        await db_session.scalar(
+            select(func.count())
+            .select_from(GenerationEventModel)
+            .where(
+                GenerationEventModel.run_id == admitted.record.id,
+                GenerationEventModel.event_type == "run_cancelled",
+            )
+        )
+        == 1
+    )
+
+
+@pytest.mark.asyncio
+async def test_cancel_committing_first_blocks_finalization(db_session, db_session_factory) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:terminal-race",
+            stage="section_writing",
+            input_hash="input-terminal-race",
+            definition_hash="definition-terminal-race",
+        ),
+    )
+    race_time = datetime(2026, 9, 22, tzinfo=UTC)
+    await _complete_item(
+        db_session,
+        item_id=item.record.id,
+        worker_id="worker-race",
+        value={"item": "ready"},
+        now=race_time,
+    )
+    await db_session.commit()
+    run_id = admitted.record.id
+    winner = await cancel_run(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner_id,
+        now=race_time + timedelta(seconds=3),
+    )
+    assert winner.status == "cancelled"
+    await db_session.commit()
+    with pytest.raises(InvalidRunTransition):
+        await finalize_run(
+            db_session,
+            run_id=run_id,
+            owner_user_id=owner_id,
+            finalization=_finalization_request(),
+            source_verifier=_verify_source,
+            artifact_loader=_load_verified_artifact({"terminal": "race"}),
+            now=race_time + timedelta(seconds=4),
+        )
+    await db_session.rollback()
+    async with db_session_factory() as verify_session:
+        run = await verify_session.get(GenerationRunModel, run_id)
+        assert run is not None
+        assert run.status == "cancelled"
+        assert run.output_hash is None
+        assert (
+            await verify_session.scalar(
+                select(func.count())
+                .select_from(GenerationEventModel)
+                .where(
+                    GenerationEventModel.run_id == run_id,
+                    GenerationEventModel.event_type == "run_ready",
+                )
+            )
+            == 0
+        )
 
 
 @pytest.mark.asyncio

@@ -237,6 +237,34 @@ class SourceIdentity(Contract):
     source_hash: str = Field(min_length=1)
 
 
+class RunFinalization(Contract):
+    """Generic identity used by trusted runtime source/artifact verifiers."""
+
+    source: SourceIdentity
+    output_artifact_type: str = Field(min_length=1)
+    output_artifact_id: str = Field(min_length=1)
+    output_revision: int = Field(ge=1)
+
+
+class VerifiedArtifact(Contract):
+    """Trusted durable artifact row resolved by a Run finalization adapter."""
+
+    artifact_type: str = Field(min_length=1)
+    artifact_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    output_json: JsonValue
+    output_hash: str = Field(min_length=1)
+
+    @field_validator("output_json")
+    @classmethod
+    def output_is_strict_json(cls, value: JsonValue) -> JsonValue:
+        try:
+            json.dumps(value, allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("verified artifact output must be strict JSON") from exc
+        return value
+
+
 class RuntimeCheckpointCompatibility(Contract):
     """All source and definition inputs that authorize checkpoint reuse."""
 

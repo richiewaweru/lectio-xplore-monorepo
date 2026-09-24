@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -28,11 +29,14 @@ from infra.execution.checkpoints import content_hash
 from infra.execution.leases import DEFAULT_LEASE_SECONDS, LeaseLostError
 from infra.generation_runtime.contracts import (
     BuildAdmission,
+    ErrorClass,
     RecoveryAction,
     RunAdmission,
+    RunFinalization,
     RuntimeCheckpoint,
     RuntimeCheckpointCompatibility,
     SourceIdentity,
+    VerifiedArtifact,
     WorkItemAdmission,
     WorkItemFailure,
 )
@@ -90,6 +94,18 @@ class InvalidWorkItemTransition(GenerationRuntimeError):
     """A work item cannot move from its current state to the requested state."""
 
 
+class InvalidRunTransition(GenerationRuntimeError):
+    """A generation run cannot move to the requested terminal state."""
+
+
+class SourceVerificationError(GenerationRuntimeError):
+    """The trusted source verifier could not reproduce the admitted identity."""
+
+
+class ArtifactVerificationError(GenerationRuntimeError):
+    """The trusted artifact loader could not load a canonical persisted artifact."""
+
+
 @dataclass(frozen=True)
 class AdmissionResult:
     record: GenerationRunModel | GenerationWorkItemModel
@@ -129,7 +145,10 @@ async def _lock_run_for_item(
     allow_failed_recoverable: bool = False,
 ) -> GenerationRunModel:
     run = await session.scalar(
-        select(GenerationRunModel).where(GenerationRunModel.id == run_id).with_for_update()
+        select(GenerationRunModel)
+        .where(GenerationRunModel.id == run_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if run is None:
         raise RunNotFound("generation run does not exist")
@@ -141,6 +160,26 @@ async def _lock_run_for_item(
     if run.status not in allowed:
         raise LeaseLostError("parent generation run is no longer active")
     return run
+
+
+async def _serialize_run_build_on_sqlite(
+    session: AsyncSession,
+    *,
+    run_id: str,
+) -> None:
+    """Acquire SQLite's writer lock on the stable Build row for Run mutations."""
+    if session.get_bind().dialect.name != "sqlite":
+        return
+    build_id = await session.scalar(
+        select(GenerationRunModel.build_id).where(GenerationRunModel.id == run_id)
+    )
+    if build_id is None:
+        raise RunNotFound("generation run does not exist")
+    await session.execute(
+        update(GenerationBuildModel)
+        .where(GenerationBuildModel.id == build_id)
+        .values(created_at=GenerationBuildModel.created_at)
+    )
 
 
 async def _execute_fenced_update(session: AsyncSession, statement: Any) -> Any:
@@ -539,7 +578,10 @@ async def _refresh_run_lifecycle(
 ) -> None:
     """Aggregate item outcomes while holding the Run lock after the item lock."""
     locked_run = await session.scalar(
-        select(GenerationRunModel).where(GenerationRunModel.id == run.id).with_for_update()
+        select(GenerationRunModel)
+        .where(GenerationRunModel.id == run.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if locked_run is None:
         raise RunNotFound("generation run does not exist")
@@ -976,6 +1018,378 @@ async def reconcile_expired_work_item(
     return item
 
 
+def _assert_finalization_identity(
+    run: GenerationRunModel,
+    *,
+    request: RunFinalization,
+    computed_hash: str,
+) -> None:
+    _assert_source_identity(run, request.source)
+    if (
+        run.output_artifact_type != request.output_artifact_type
+        or run.output_artifact_id != request.output_artifact_id
+        or run.output_revision != request.output_revision
+        or run.output_hash != computed_hash
+    ):
+        raise InvalidRunTransition(
+            "final artifact identity or hash differs from persisted ready output"
+        )
+
+
+SourceVerifier = Callable[
+    [AsyncSession, SourceIdentity], Awaitable[SourceIdentity | dict[str, Any]]
+]
+ArtifactLoader = Callable[
+    [AsyncSession, str, str, int], Awaitable[VerifiedArtifact | dict[str, Any]]
+]
+
+
+async def _verify_finalization_inputs(
+    session: AsyncSession,
+    *,
+    request: RunFinalization,
+    source_verifier: SourceVerifier,
+    artifact_loader: ArtifactLoader,
+    verify_current_source: bool = True,
+) -> str:
+    if verify_current_source:
+        try:
+            verified_source = await source_verifier(session, request.source)
+            if not isinstance(verified_source, SourceIdentity):
+                verified_source = SourceIdentity.model_validate(verified_source)
+        except Exception as exc:
+            raise SourceVerificationError("trusted source verification failed") from exc
+        if verified_source != request.source:
+            raise SourceIdentityConflict(
+                "current persisted source differs from admitted source identity"
+            )
+
+    try:
+        artifact = await artifact_loader(
+            session,
+            request.output_artifact_type,
+            request.output_artifact_id,
+            request.output_revision,
+        )
+        if not isinstance(artifact, VerifiedArtifact):
+            artifact = VerifiedArtifact.model_validate(artifact)
+        if (
+            artifact.artifact_type != request.output_artifact_type
+            or artifact.artifact_id != request.output_artifact_id
+            or artifact.revision != request.output_revision
+        ):
+            raise ArtifactVerificationError(
+                "loaded artifact identity differs from requested identity"
+            )
+        _canonical, output_hash = _canonical_json_value(artifact.output_json)
+        if artifact.output_hash != output_hash:
+            raise ArtifactVerificationError("loaded artifact hash differs from canonical content")
+    except ArtifactVerificationError:
+        raise
+    except Exception as exc:
+        raise ArtifactVerificationError(
+            "trusted artifact could not be loaded as strict JSON"
+        ) from exc
+    return output_hash
+
+
+async def _finalize_run_in_transaction(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    owner_user_id: str,
+    finalization: RunFinalization,
+    source_verifier: SourceVerifier,
+    artifact_loader: ArtifactLoader,
+    now: datetime | None = None,
+) -> GenerationRunModel:
+    """Commit ready only after trusted source and persisted-artifact verification."""
+    if not isinstance(finalization, RunFinalization):
+        finalization = RunFinalization.model_validate(finalization)
+    current_time = _utcnow(now)
+
+    visible = await session.scalar(
+        select(GenerationRunModel).where(
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+        )
+    )
+    if visible is None:
+        raise RunNotFound("generation run is unavailable to this owner")
+
+    # SQLite ignores FOR UPDATE, so serialize admission/terminal operations before
+    # scanning children; PostgreSQL preserves the item-then-Run lock order below.
+    await _serialize_run_build_on_sqlite(session, run_id=run_id)
+
+    # Child rows are locked in a stable order before the parent Run, matching worker paths.
+    items = list(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel)
+                .where(GenerationWorkItemModel.run_id == run_id)
+                .order_by(GenerationWorkItemModel.id)
+                .with_for_update()
+            )
+        ).all()
+    )
+    if not items:
+        raise InvalidRunTransition("a run with no declared work items cannot be finalized")
+    if any(item.status != "ready" for item in items):
+        raise InvalidRunTransition("all declared work items must be ready before run finalization")
+    for item in items:
+        _canonical_output, item_hash = _canonical_json_value(item.output_json)
+        if item_hash != item.output_hash:
+            raise OutputHashMismatch("a persisted work-item output failed hash validation")
+
+    run = await session.scalar(
+        select(GenerationRunModel)
+        .where(
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if run is None:
+        raise RunNotFound("generation run is unavailable to this owner")
+    if run.status == "ready":
+        computed_hash = await _verify_finalization_inputs(
+            session,
+            request=finalization,
+            source_verifier=source_verifier,
+            artifact_loader=artifact_loader,
+            verify_current_source=False,
+        )
+        _assert_finalization_identity(run, request=finalization, computed_hash=computed_hash)
+        return run
+    if run.status not in {"queued", "running"}:
+        raise InvalidRunTransition("only an active run can be finalized")
+    _assert_source_identity(run, finalization.source)
+    current_items = list(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel)
+                .where(GenerationWorkItemModel.run_id == run_id)
+                .order_by(GenerationWorkItemModel.id)
+            )
+        ).all()
+    )
+    if [item.id for item in current_items] != [item.id for item in items]:
+        raise InvalidRunTransition(
+            "work-item set changed during finalization; retry after admission settles"
+        )
+    if any(item.status != "ready" for item in current_items):
+        raise InvalidRunTransition("all declared work items must be ready before run finalization")
+    computed_hash = await _verify_finalization_inputs(
+        session,
+        request=finalization,
+        source_verifier=source_verifier,
+        artifact_loader=artifact_loader,
+    )
+
+    async with session.begin_nested():
+        result = await session.execute(
+            update(GenerationRunModel)
+            .where(
+                GenerationRunModel.id == run_id,
+                GenerationRunModel.owner_user_id == owner_user_id,
+                GenerationRunModel.status.in_({"queued", "running"}),
+                GenerationRunModel.source_artifact_type == finalization.source.source_artifact_type,
+                GenerationRunModel.source_artifact_id == finalization.source.source_artifact_id,
+                GenerationRunModel.source_revision == finalization.source.source_revision,
+                GenerationRunModel.source_hash == finalization.source.source_hash,
+            )
+            .values(
+                status="ready",
+                output_artifact_type=finalization.output_artifact_type,
+                output_artifact_id=finalization.output_artifact_id,
+                output_revision=finalization.output_revision,
+                output_hash=computed_hash,
+                error_code=None,
+                error_class=None,
+                error_summary=None,
+                recovery_action=None,
+                completed_at=current_time,
+                updated_at=current_time,
+            )
+            .execution_options(synchronize_session=False)
+        )
+        if result.rowcount != 1:
+            raise InvalidRunTransition("run status or source identity changed before ready commit")
+        await session.refresh(run)
+        await append_event(
+            session,
+            run_id=run_id,
+            event_type="run_ready",
+            safe_payload={
+                "output_artifact_type": finalization.output_artifact_type,
+                "output_artifact_id": finalization.output_artifact_id,
+                "output_revision": finalization.output_revision,
+                "output_hash": computed_hash,
+            },
+        )
+    await session.refresh(run)
+    return run
+
+
+async def finalize_run(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    owner_user_id: str,
+    finalization: RunFinalization,
+    source_verifier: SourceVerifier,
+    artifact_loader: ArtifactLoader,
+    now: datetime | None = None,
+) -> GenerationRunModel:
+    """Finalize within one savepoint, rolling back on any verifier/commit failure."""
+    async with session.begin_nested():
+        return await _finalize_run_in_transaction(
+            session,
+            run_id=run_id,
+            owner_user_id=owner_user_id,
+            finalization=finalization,
+            source_verifier=source_verifier,
+            artifact_loader=artifact_loader,
+            now=now,
+        )
+
+
+async def cancel_run(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    owner_user_id: str,
+    now: datetime | None = None,
+) -> GenerationRunModel:
+    """Cancel an active/recoverable Run and fence every remaining non-ready item."""
+    current_time = _utcnow(now)
+    visible = await session.scalar(
+        select(GenerationRunModel).where(
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+        )
+    )
+    if visible is None:
+        raise RunNotFound("generation run is unavailable to this owner")
+    if visible.status == "cancelled":
+        return visible
+    if visible.status not in {"queued", "running", "failed_recoverable"}:
+        raise InvalidRunTransition("only an active or failed-recoverable run can be cancelled")
+
+    await _serialize_run_build_on_sqlite(session, run_id=run_id)
+
+    items = list(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel)
+                .where(GenerationWorkItemModel.run_id == run_id)
+                .order_by(GenerationWorkItemModel.id)
+                .with_for_update()
+            )
+        ).all()
+    )
+    run = await session.scalar(
+        select(GenerationRunModel)
+        .where(
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if run is None:
+        raise RunNotFound("generation run is unavailable to this owner")
+    if run.status == "cancelled":
+        return run
+    if run.status not in {"queued", "running", "failed_recoverable"}:
+        raise InvalidRunTransition("run became terminal before cancellation")
+    current_item_ids = list(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel.id)
+                .where(GenerationWorkItemModel.run_id == run_id)
+                .order_by(GenerationWorkItemModel.id)
+            )
+        ).all()
+    )
+    if current_item_ids != [item.id for item in items]:
+        raise InvalidRunTransition(
+            "work-item set changed during cancellation; retry after admission settles"
+        )
+
+    async with session.begin_nested():
+        for item in items:
+            if item.status == "ready" or item.status == "cancelled":
+                continue
+            result = await session.execute(
+                update(GenerationWorkItemModel)
+                .where(
+                    GenerationWorkItemModel.id == item.id,
+                    GenerationWorkItemModel.run_id == run_id,
+                    GenerationWorkItemModel.status == item.status,
+                    GenerationWorkItemModel.attempt == item.attempt,
+                )
+                .values(
+                    status="cancelled",
+                    lease_owner=None,
+                    lease_token=(item.lease_token or 0) + 1,
+                    lease_expires_at=None,
+                    output_json=None,
+                    output_hash=None,
+                    error_code="cancelled",
+                    error_class=ErrorClass.CANCELLED.value,
+                    error_summary="Generation work item was cancelled.",
+                    recovery_action=RecoveryAction.NONE.value,
+                    completed_at=current_time,
+                    updated_at=current_time,
+                )
+                .execution_options(synchronize_session=False)
+            )
+            if result.rowcount != 1:
+                raise InvalidRunTransition("a work item changed before cancellation committed")
+            await session.refresh(item)
+            await append_event(
+                session,
+                run_id=run_id,
+                work_item_id=item.id,
+                event_type="work_item_cancelled",
+                error_code="cancelled",
+                safe_payload={"error_class": ErrorClass.CANCELLED.value},
+            )
+
+        result = await session.execute(
+            update(GenerationRunModel)
+            .where(
+                GenerationRunModel.id == run_id,
+                GenerationRunModel.owner_user_id == owner_user_id,
+                GenerationRunModel.status.in_({"queued", "running", "failed_recoverable"}),
+            )
+            .values(
+                status="cancelled",
+                error_code="cancelled",
+                error_class=ErrorClass.CANCELLED.value,
+                error_summary="Generation run was cancelled.",
+                recovery_action=RecoveryAction.NONE.value,
+                completed_at=current_time,
+                updated_at=current_time,
+            )
+            .execution_options(synchronize_session=False)
+        )
+        if result.rowcount != 1:
+            raise InvalidRunTransition("run became terminal before cancellation committed")
+        await session.refresh(run)
+        await append_event(
+            session,
+            run_id=run_id,
+            event_type="run_cancelled",
+            error_code="cancelled",
+            safe_payload={"error_class": ErrorClass.CANCELLED.value},
+        )
+    await session.refresh(run)
+    return run
+
+
 async def create_build(
     session: AsyncSession,
     request: BuildAdmission,
@@ -1080,8 +1494,23 @@ async def add_work_item(
     request: WorkItemAdmission,
 ) -> AdmissionResult:
     """Create a stable item key, or return the existing item with identical identity."""
-    if await session.get(GenerationRunModel, request.run_id) is None:
+    run = await session.scalar(
+        select(GenerationRunModel)
+        .where(GenerationRunModel.id == request.run_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if run is None:
         raise RunNotFound("generation run does not exist")
+    await _serialize_run_build_on_sqlite(session, run_id=request.run_id)
+    if session.get_bind().dialect.name == "sqlite":
+        run = await session.scalar(
+            select(GenerationRunModel)
+            .where(GenerationRunModel.id == request.run_id)
+            .execution_options(populate_existing=True)
+        )
+        if run is None:
+            raise RunNotFound("generation run does not exist")
     key_filter = (
         GenerationWorkItemModel.run_id == request.run_id,
         GenerationWorkItemModel.item_key == request.item_key,
@@ -1091,6 +1520,8 @@ async def add_work_item(
         if not _work_item_identity_matches(existing, request):
             raise WorkItemConflict("item key is already bound to a different work-item identity")
         return AdmissionResult(existing, created=False)
+    if run.status not in {"queued", "running"}:
+        raise InvalidRunTransition("new work items cannot be admitted after run termination")
 
     item = GenerationWorkItemModel(
         id=str(uuid.uuid4()),
@@ -1147,7 +1578,10 @@ async def append_event(
         )
 
     run = await session.scalar(
-        select(GenerationRunModel).where(GenerationRunModel.id == run_id).with_for_update()
+        select(GenerationRunModel)
+        .where(GenerationRunModel.id == run_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if run is None:
         raise RunNotFound("generation run does not exist")

@@ -43,10 +43,20 @@
 ## Phase 1C — work-item outcomes and recovery
 
 - Starting SHA: `15e1f378`.
+- Ending SHA for package 1C: `7f960861`.
 - Implementation: fenced completion with canonical output hash and read-only duplicate acceptance; typed safe failure with explicit recovery action; targeted retry that preserves healthy siblings and compatible checkpoints; expired max-attempt reconciliation; serialized Run aggregation under the parent Run lock. No migration or product cutover.
 - Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (41 in 83.55s); scoped Ruff check/format PASS; `pnpm program:domain-guards` PASS (8 tests); `uv run python ../tools/agent/check_architecture.py --format text` PASS (0 violations); `git diff --check` PASS.
 - Failure proof: wrong output hash, stale completion/failure after takeover, inactive parent Run, invalid recovery action, exhausted and nonretryable failure, targeted retry race, expired-lease reconciliation race/restart, and mixed sibling status. Ready sibling output remains immutable.
 - Status: package PASS. Phase 1 remains IN PROGRESS; whole-Run validation/finalization, cancellation, status/retry/cancel HTTP, and the full phase gate remain pending.
+
+## Phase 1D — whole-Run completion and cancellation
+
+- Starting SHA: `7f960861`.
+- Implementation: finalization uses trusted source and artifact loaders in the same transaction, recomputes durable hashes, checks every ready WorkItem output, rechecks the complete child set after locking the Run, and commits ready with output identity/hash. Cancellation fences non-ready items and preserves ready siblings. Dynamic WorkItem admission is legal while a Run is queued/running, serialized with terminal transitions; SQLite refreshes identity-map state after its write lock.
+- Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (52); scoped Ruff check/format PASS; `pnpm program:domain-guards` PASS (8 tests); architecture guard PASS (0 violations); `git diff --check` PASS.
+- Failure proof: missing/mismatched stored source or artifact, invalid artifact JSON/hash, unfinished or changed child set, duplicate finalization, cancel-after-ready and finalize-after-cancel, stale worker after cancellation, add-after-terminal, and SQLite stale identity-map admission. Healthy ready siblings remain unchanged.
+- PostgreSQL proof: disposable two-session terminal race passed both orderings. Finalization first committed ready and rejected cancellation; cancellation first committed cancelled and rejected finalization. Each Run had exactly one terminal event. Exact probe fixtures were removed; all six event/ready guard triggers were confirmed enabled. Initial fixture cleanup was blocked by the append-only Event trigger; scoped transactional cleanup disabled only relevant delete guards for exact fixture rows and restored them.
+- Status: repository package PASS. Phase 1 remains IN PROGRESS. A separate additive migration must reject direct SQL WorkItem insertion under a ready Run; this cannot be enforced by repository admission alone. HTTP and full phase verification remain pending.
 
 ## Baseline
 - [x] branch recorded
