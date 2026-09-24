@@ -84,8 +84,14 @@ def _payload() -> dict[str, object]:
                 "difficulty": "guided",
                 "sourcebook_refs": [],
                 "expected_evidence": "Select light",
-                "response": {"type": "single_choice", "options": ["light", "sand"]},
-                "evaluation": {"correct": "light"},
+                "response": {
+                    "type": "single_choice",
+                    "options": [
+                        {"id": "light", "text": "Light"},
+                        {"id": "sand", "text": "Sand"},
+                    ],
+                },
+                "evaluation": {"type": "exact_match", "correct_option_id": "light"},
                 "feedback": None,
                 "approved_source_ids": [],
             }
@@ -112,7 +118,7 @@ def test_document_round_trips_closed_v1_contract_and_task_anchor() -> None:
         "task_anchor",
     ]
     assert restored.sections[0].nodes[3].accessibility.alt_text == "Leaf showing chloroplasts"
-    assert restored.tasks[0].response["options"][0] == "light"
+    assert restored.tasks[0].response["options"][0]["id"] == "light"
 
 
 def test_hash_tracks_task_meaning_and_excludes_artifact_metadata() -> None:
@@ -141,6 +147,19 @@ def test_contract_rejects_path_specific_fields_and_unknown_node_kinds() -> None:
     unknown_node["sections"][0]["nodes"][0] = {"id": "x", "kind": "learn_widget"}
     with pytest.raises(ValidationError):
         build_shared_lesson_document(unknown_node)
+
+
+@pytest.mark.parametrize("alt_text", [None, "", "   "])
+def test_figure_requires_meaningful_alt_text(alt_text: str | None) -> None:
+    payload = _payload()
+    figure = payload["sections"][0]["nodes"][3]
+    if alt_text is None:
+        del figure["accessibility"]["alt_text"]
+    else:
+        figure["accessibility"]["alt_text"] = alt_text
+
+    with pytest.raises(ValidationError, match="alt_text"):
+        build_shared_lesson_document(payload)
 
 
 @pytest.mark.parametrize(

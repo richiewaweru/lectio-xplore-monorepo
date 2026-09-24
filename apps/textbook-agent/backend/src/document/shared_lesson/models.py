@@ -7,7 +7,15 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from curriculum.shared_tasks.models import SharedTaskSpec
 from document.shared_lesson.hashing import shared_lesson_content_hash
@@ -64,8 +72,18 @@ class _NodeBase(_ClosedModel):
 
 
 class NodeAccessibility(_ClosedModel):
-    alt_text: str = ""
     description: str = ""
+
+
+class FigureAccessibility(_ClosedModel):
+    alt_text: str = Field(min_length=1)
+
+    @field_validator("alt_text")
+    @classmethod
+    def _require_meaningful_alt_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("figure alt_text must not be blank")
+        return value
 
 
 class ParagraphDisplay(_ClosedModel):
@@ -120,7 +138,7 @@ class ListNode(_NodeBase):
 class FigureNode(_NodeBase):
     kind: Literal["figure"] = "figure"
     display: FigureDisplay
-    accessibility: NodeAccessibility
+    accessibility: FigureAccessibility
 
 
 class TableNode(_NodeBase):
@@ -278,6 +296,7 @@ __all__ = [
     "CalloutNode",
     "CalloutDisplay",
     "FigureNode",
+    "FigureAccessibility",
     "FigureDisplay",
     "FrozenSharedTaskSpec",
     "HeadingNode",
