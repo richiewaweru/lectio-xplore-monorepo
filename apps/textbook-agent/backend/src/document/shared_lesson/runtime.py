@@ -1,0 +1,576 @@
+"""Durable section composition and writing over the generic generation runtime.
+
+This module owns orchestration only. Persistence, leases, fencing, retries, and
+checkpoint integrity stay in ``infra.generation_runtime``; composition and
+writing stay in the stateless shared-lesson modules.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import json
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from curriculum.shared_tasks.models import SharedTaskSpec
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanSection
+from document.shared_lesson.composer import (
+    CompositionPolicy,
+    CompositionValidationError,
+    SectionCompositionPlan,
+    compose_section,
+    validate_composition_plan,
+)
+from document.shared_lesson.writer import (
+    SectionSource,
+    SectionTaskSummary,
+    SectionWriteResult,
+    SectionWriterRequest,
+    SectionWriteValidationError,
+    write_section,
+)
+from infra.execution.checkpoints import content_hash
+from infra.generation_runtime import (
+    ErrorClass,
+    RecoveryAction,
+    RunAdmission,
+    RuntimeCheckpointCompatibility,
+    RunType,
+    SourceIdentity,
+    WorkItemAdmission,
+    WorkItemFailure,
+    add_work_item,
+    admit_run,
+    cancel_run,
+    claim_work_item,
+    complete_work_item,
+    fail_work_item,
+    load_compatible_checkpoint,
+    persist_checkpoint,
+    retry_work_item,
+)
+
+MAX_CONCURRENT_SECTION_WRITERS = 4
+_COMPOSER_DEFINITION = "shared-section-composer:v1"
+_WRITER_DEFINITION = "shared-section-writer:v1"
+
+
+class SectionRuntimeError(ValueError):
+    """The requested section work does not match its approved source."""
+
+
+class TeachingPlanSource(BaseModel):
+    """Exact approved Teaching Plan snapshot required by section work."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, arbitrary_types_allowed=True)
+
+    plan: TeachingPlan
+    id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+def verify_teaching_plan_source(source: TeachingPlanSource) -> SourceIdentity:
+    """Verify all identity fields and recompute the plan hash before runtime work."""
+    if source.plan.teaching_plan_id != source.id:
+        raise SectionRuntimeError("Teaching Plan source ID differs from its approved snapshot")
+    if source.plan.revision != source.revision:
+        raise SectionRuntimeError("Teaching Plan revision differs from its approved snapshot")
+    actual_hash = teaching_plan_content_hash(source.plan)
+    if actual_hash != source.content_hash:
+        raise SectionRuntimeError("Teaching Plan content hash differs from its approved snapshot")
+    return SourceIdentity(
+        source_artifact_type="teaching_plan",
+        source_artifact_id=source.id,
+        source_revision=source.revision,
+        source_hash=actual_hash,
+    )
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    if isinstance(value, Mapping):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [_jsonable(item) for item in value]
+    return value
+
+
+def _stable_hash(value: Any) -> str:
+    payload = json.dumps(_jsonable(value), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _section_tasks(
+    section: TeachingPlanSection, tasks: Sequence[SharedTaskSpec]
+) -> tuple[SharedTaskSpec, ...]:
+    block_ids = {block.id for block in section.blocks}
+    return tuple(task for task in tasks if task.teaching_block_id in block_ids)
+
+
+def _section_payload(
+    *,
+    section: TeachingPlanSection,
+    tasks: Sequence[SharedTaskSpec],
+    sources: Sequence[SectionSource],
+) -> dict[str, Any]:
+    return {
+        "section": section.model_dump(mode="json"),
+        "tasks": [task.model_dump(mode="json") for task in tasks],
+        "sources": [source.model_dump(mode="json") for source in sources],
+    }
+
+
+def _checkpoint_compatibility(
+    *, source: SourceIdentity, input_hash: str, definition_hash: str,
+    composition_identity: str | None,
+) -> RuntimeCheckpointCompatibility:
+    return RuntimeCheckpointCompatibility(
+        schema_version=1,
+        source_revision=source.source_revision,
+        source_hash=source.source_hash,
+        input_hash=input_hash,
+        definition_hash=definition_hash,
+        composition_identity=composition_identity,
+    )
+
+
+async def _record_execution_failure(
+    session: Any,
+    *,
+    work_item_id: str,
+    worker_id: str,
+    lease_token: int,
+    error: Exception,
+) -> None:
+    if isinstance(error, (TimeoutError, ConnectionError)):
+        error_class = ErrorClass.PROVIDER_TRANSPORT
+        recovery = RecoveryAction.RETRY
+        code = "provider_transport"
+        summary = "Section provider transport failed."
+    elif isinstance(error, (CompositionValidationError, SectionWriteValidationError)):
+        error_class = ErrorClass.PROVIDER_OUTPUT
+        recovery = RecoveryAction.RETRY
+        code = "invalid_section_output"
+        summary = "Section output failed deterministic validation."
+    else:
+        error_class = ErrorClass.INTERNAL_PROGRAMMING
+        recovery = RecoveryAction.NONE
+        code = "section_runtime_error"
+        summary = "Section runtime failed unexpectedly."
+    await fail_work_item(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=lease_token,
+        failure=WorkItemFailure(
+            error_code=code,
+            error_class=error_class,
+            safe_summary=summary,
+            recovery_action=recovery,
+        ),
+    )
+
+
+async def admit_section_run(
+    session: Any,
+    *,
+    build_id: str,
+    owner_user_id: str,
+    request_key: str,
+    source: TeachingPlanSource,
+    sections: Sequence[TeachingPlanSection] | None = None,
+    tasks: Sequence[SharedTaskSpec] = (),
+    sources: Sequence[SectionSource] = (),
+    max_attempts: int = 3,
+) -> tuple[Any, tuple[Any, ...]]:
+    """Admit/reuse a SharedDocument run and stable composition work per section."""
+    identity = verify_teaching_plan_source(source)
+    selected_sections = tuple(sections if sections is not None else source.plan.sections)
+    if not selected_sections:
+        raise SectionRuntimeError("Teaching Plan must contain at least one section")
+    if len({section.slot_id for section in selected_sections}) != len(selected_sections):
+        raise SectionRuntimeError("section slot IDs must be unique")
+    if any(section not in source.plan.sections for section in selected_sections):
+        raise SectionRuntimeError("requested section is not part of the approved Teaching Plan")
+
+    run_result = await admit_run(
+        session,
+        RunAdmission(
+            build_id=build_id,
+            owner_user_id=owner_user_id,
+            run_type=RunType.SHARED_DOCUMENT,
+            request_key=request_key,
+            stage="section_composition",
+            source_artifact_type=identity.source_artifact_type,
+            source_artifact_id=identity.source_artifact_id,
+            source_revision=identity.source_revision,
+            source_hash=identity.source_hash,
+        ),
+    )
+    run_record = run_result.record
+    items: list[Any] = []
+    for section in selected_sections:
+        task_slice = _section_tasks(section, tasks)
+        payload = _section_payload(section=section, tasks=task_slice, sources=sources)
+        items.append(
+            (
+                await add_work_item(
+                    session,
+                    WorkItemAdmission(
+                        run_id=run_record.id,
+                        item_key=f"compose:{section.slot_id}",
+                        stage="section_composition",
+                        input_hash=_stable_hash(payload),
+                        definition_hash=_stable_hash(_COMPOSER_DEFINITION),
+                        max_attempts=max_attempts,
+                    ),
+                )
+            ).record
+        )
+    return run_record, tuple(items)
+
+
+async def compose_section_work_item(
+    session: Any,
+    *,
+    work_item_id: str,
+    worker_id: str,
+    source: TeachingPlanSource,
+    section: TeachingPlanSection,
+    tasks: Sequence[SharedTaskSpec],
+    sources: Sequence[SectionSource] = (),
+    provider: Callable[[dict[str, Any]], Awaitable[Any]] | None = None,
+    policy: CompositionPolicy | None = None,
+    lease_seconds: int = 300,
+) -> SectionCompositionPlan:
+    """Claim, checkpoint and fence one section composition output."""
+    identity = verify_teaching_plan_source(source)
+    selected_policy = policy or CompositionPolicy()
+    task_slice = _section_tasks(section, tasks)
+    payload = _section_payload(section=section, tasks=task_slice, sources=sources)
+    input_hash = _stable_hash(payload)
+    definition_hash = _stable_hash(_COMPOSER_DEFINITION)
+    compatibility = _checkpoint_compatibility(
+        source=identity,
+        input_hash=input_hash,
+        definition_hash=definition_hash,
+        composition_identity=None,
+    )
+    item = await claim_work_item(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        source=identity,
+        lease_seconds=lease_seconds,
+    )
+    checkpoint = await load_compatible_checkpoint(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=item.lease_token,
+        compatibility=compatibility,
+    )
+    try:
+        if checkpoint is None:
+            plan = await compose_section(
+                section=section,
+                tasks=task_slice,
+                provider=provider,
+                policy=selected_policy,
+            )
+            await persist_checkpoint(
+                session,
+                work_item_id=work_item_id,
+                worker_id=worker_id,
+                lease_token=item.lease_token,
+                compatibility=compatibility,
+                payload=plan.model_dump(mode="json"),
+            )
+        else:
+            plan = SectionCompositionPlan.model_validate(checkpoint.payload)
+        # Revalidate the immutable composition against the exact current section/tasks.
+        validate_composition_plan(
+            plan=plan, section=section, tasks=task_slice, policy=selected_policy
+        )
+    except Exception as exc:
+        await _record_execution_failure(
+            session,
+            work_item_id=work_item_id,
+            worker_id=worker_id,
+            lease_token=item.lease_token,
+            error=exc,
+        )
+        raise
+    await complete_work_item(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=item.lease_token,
+        output_json=plan.model_dump(mode="json"),
+        output_hash=content_hash(plan.model_dump(mode="json")),
+    )
+    return plan
+
+
+def make_section_writer_request(
+    *,
+    section: TeachingPlanSection,
+    composition: SectionCompositionPlan,
+    tasks: Sequence[SharedTaskSpec],
+    sources: Sequence[SectionSource] = (),
+) -> SectionWriterRequest:
+    """Build the writer request from the exact approved composition and task anchors."""
+    task_slice = _section_tasks(section, tasks)
+    validate_composition_plan(plan=composition, section=section, tasks=task_slice)
+    summaries = tuple(
+        SectionTaskSummary(
+            task_spec_id=task.id,
+            teaching_block_id=task.teaching_block_id,
+            action=task.action,
+            purpose=task.purpose,
+            prompt=task.prompt,
+            expected_evidence=task.expected_evidence,
+        )
+        for task in task_slice
+    )
+    return SectionWriterRequest(
+        section=section,
+        composition_plan=composition,
+        sources=tuple(sources),
+        task_summaries=summaries,
+    )
+
+
+async def admit_writer_work_item(
+    session: Any,
+    *,
+    run_id: str,
+    section: TeachingPlanSection,
+    request: SectionWriterRequest,
+    max_attempts: int = 3,
+) -> Any:
+    """Admit writer work whose identity is bound to this exact composition."""
+    composition_identity = _stable_hash(request.composition_plan.model_dump(mode="json"))
+    input_payload = request.model_dump(mode="json")
+    result = await add_work_item(
+            session,
+            WorkItemAdmission(
+                run_id=run_id,
+                item_key=f"write:{section.slot_id}",
+                stage="section_writing",
+                input_hash=_stable_hash(input_payload),
+                definition_hash=_stable_hash(_WRITER_DEFINITION),
+                composition_identity=composition_identity,
+                max_attempts=max_attempts,
+            ),
+        )
+    return result.record
+
+
+async def write_section_work_item(
+    session: Any,
+    *,
+    work_item_id: str,
+    worker_id: str,
+    source: TeachingPlanSource,
+    request: SectionWriterRequest,
+    provider: Callable[[dict[str, Any]], Awaitable[Any]] | None = None,
+    provider_semaphore: asyncio.Semaphore,
+    lease_seconds: int = 300,
+) -> SectionWriteResult:
+    """Write one section under a provider-call cap and a durable lease fence."""
+    identity = verify_teaching_plan_source(source)
+    composition_identity = _stable_hash(request.composition_plan.model_dump(mode="json"))
+    input_hash = _stable_hash(request.model_dump(mode="json"))
+    definition_hash = _stable_hash(_WRITER_DEFINITION)
+    compatibility = _checkpoint_compatibility(
+        source=identity,
+        input_hash=input_hash,
+        definition_hash=definition_hash,
+        composition_identity=composition_identity,
+    )
+    item = await claim_work_item(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        source=identity,
+        lease_seconds=lease_seconds,
+    )
+    checkpoint = await load_compatible_checkpoint(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=item.lease_token,
+        compatibility=compatibility,
+    )
+    expected_composition = request.composition_plan.model_dump(mode="json")
+    if checkpoint is None:
+        await persist_checkpoint(
+            session,
+            work_item_id=work_item_id,
+            worker_id=worker_id,
+            lease_token=item.lease_token,
+            compatibility=compatibility,
+            payload={"composition_identity": composition_identity, "plan": expected_composition},
+        )
+    else:
+        verify_writer_checkpoint_payload(checkpoint.payload, composition=request.composition_plan)
+
+    if provider is None:
+        from document.shared_lesson.writer import _default_provider
+
+        provider_dispatch = _default_provider
+    else:
+        provider_dispatch = provider
+    bounded_provider = bounded_section_provider(provider_dispatch, provider_semaphore)
+
+    try:
+        result = await write_section(request=request, provider=bounded_provider)
+    except Exception as exc:
+        await _record_execution_failure(
+            session,
+            work_item_id=work_item_id,
+            worker_id=worker_id,
+            lease_token=item.lease_token,
+            error=exc,
+        )
+        raise
+    output = result.model_dump(mode="json")
+    # A cancelled run, expired lease, or newer fence rejects this completion.
+    await complete_work_item(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=item.lease_token,
+        output_json=output,
+        output_hash=content_hash(output),
+    )
+    return result
+
+
+def make_writer_provider_semaphore() -> asyncio.Semaphore:
+    """Create a shared semaphore for a run; pass it to every section worker."""
+    return asyncio.Semaphore(MAX_CONCURRENT_SECTION_WRITERS)
+
+
+def bounded_section_provider(
+    provider: Callable[[dict[str, Any]], Awaitable[Any]],
+    semaphore: asyncio.Semaphore,
+) -> Callable[[dict[str, Any]], Awaitable[Any]]:
+    """Cap each provider dispatch, including the writer's bounded repair calls."""
+
+    async def dispatch(payload: dict[str, Any]) -> Any:
+        async with semaphore:
+            return await provider(payload)
+
+    return dispatch
+
+
+def verify_writer_checkpoint_payload(
+    payload: Any, *, composition: SectionCompositionPlan
+) -> None:
+    """Reject a checkpoint that is stale or belongs to another composition."""
+    expected_plan = composition.model_dump(mode="json")
+    expected_identity = _stable_hash(expected_plan)
+    if payload != {"composition_identity": expected_identity, "plan": expected_plan}:
+        raise SectionRuntimeError("writer checkpoint belongs to a different composition plan")
+
+
+async def retry_failed_section(
+    session: Any, *, work_item_id: str, owner_user_id: str
+) -> Any:
+    """Retry exactly one failed section; sibling rows and outputs are untouched."""
+    return await retry_work_item(
+        session,
+        work_item_id=work_item_id,
+        owner_user_id=owner_user_id,
+    )
+
+
+async def cancel_section_run(
+    session: Any, *, run_id: str, owner_user_id: str
+) -> Any:
+    """Cancel a section run and invalidate all outstanding worker fences."""
+    return await cancel_run(session, run_id=run_id, owner_user_id=owner_user_id)
+
+
+async def restart_section_run(
+    session: Any,
+    *,
+    previous_run_id: str,
+    build_id: str,
+    owner_user_id: str,
+    request_key: str,
+    source: TeachingPlanSource,
+    sections: Sequence[TeachingPlanSection] | None = None,
+    tasks: Sequence[SharedTaskSpec] = (),
+    sources: Sequence[SectionSource] = (),
+    max_attempts: int = 3,
+) -> tuple[Any, tuple[Any, ...]]:
+    """Start a new run/revision; the request key must not reuse the prior run."""
+    run, items = await admit_section_run(
+        session,
+        build_id=build_id,
+        owner_user_id=owner_user_id,
+        request_key=request_key,
+        source=source,
+        sections=sections,
+        tasks=tasks,
+        sources=sources,
+        max_attempts=max_attempts,
+    )
+    if run.id == previous_run_id:
+        raise SectionRuntimeError("restart requires a fresh idempotency request key")
+    return run, items
+
+
+async def fail_section_work_item(
+    session: Any,
+    *,
+    work_item_id: str,
+    worker_id: str,
+    lease_token: int,
+    error_code: str,
+    error_class: ErrorClass,
+    safe_summary: str,
+    recovery_action: RecoveryAction,
+) -> Any:
+    """Persist typed failures through the generic retry/failure state machine."""
+    return await fail_work_item(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=lease_token,
+        failure=WorkItemFailure(
+            error_code=error_code,
+            error_class=error_class,
+            safe_summary=safe_summary,
+            recovery_action=recovery_action,
+        ),
+    )
+
+
+__all__ = [
+    "MAX_CONCURRENT_SECTION_WRITERS",
+    "SectionRuntimeError",
+    "TeachingPlanSource",
+    "admit_section_run",
+    "admit_writer_work_item",
+    "bounded_section_provider",
+    "cancel_section_run",
+    "compose_section_work_item",
+    "fail_section_work_item",
+    "make_section_writer_request",
+    "make_writer_provider_semaphore",
+    "restart_section_run",
+    "retry_failed_section",
+    "verify_teaching_plan_source",
+    "verify_writer_checkpoint_payload",
+    "write_section_work_item",
+]
