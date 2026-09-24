@@ -14,6 +14,17 @@
 <div class="review-grid">
 	<section aria-label="Teaching plan content" class="plan-content">
 		<h3>Teaching plan content</h3>
+		{#if plan.contract_version === 2}
+			{#if plan.learner_title}<h4 class="learner-title">{plan.learner_title}</h4>{/if}
+			{#if plan.starting_state?.length}
+				<p class="label">Starting state</p>
+				<ul>{#each plan.starting_state as state}<li>{state}</li>{/each}</ul>
+			{/if}
+			{#if plan.target_state?.length}
+				<p class="label">Target state</p>
+				<ul>{#each plan.target_state as state}<li>{state}</li>{/each}</ul>
+			{/if}
+		{/if}
 		<p class="label">Pedagogical arc</p>
 		<p>{plan.arc}</p>
 		{#if plan.anchor_usage?.length}
@@ -26,7 +37,31 @@
 		{/if}
 		{#each plan.sections ?? [] as section (section.slot_id)}
 			<article>
-				<h4>{section.slot_id}</h4>
+				{#if plan.contract_version === 2}
+					<h4>{section.display_title || section.slot_id}</h4>
+					<p class="label">Section slot</p>
+					<p>{section.slot_id}</p>
+					{#if section.entry_state?.length}
+						<p class="label">Entry state</p>
+						<ul>{#each section.entry_state as state}<li>{state}</li>{/each}</ul>
+					{/if}
+					{#if section.must_establish?.length}
+						<p class="label">Must establish</p>
+						<ul>{#each section.must_establish as item}<li>{item}</li>{/each}</ul>
+					{/if}
+					{#if section.avoid_repeating?.length}
+						<p class="label">Avoid repeating</p>
+						<ul>{#each section.avoid_repeating as item}<li>{item}</li>{/each}</ul>
+					{/if}
+					<p class="label">Bridge from previous</p>
+					<p>{section.bridge_from_previous || 'First section; no prior bridge.'}</p>
+					{#if section.exit_state?.length}
+						<p class="label">Exit state</p>
+						<ul>{#each section.exit_state as state}<li>{state}</li>{/each}</ul>
+					{/if}
+				{:else}
+					<h4>{section.slot_id}</h4>
+				{/if}
 				{#if section.specific_purpose}<p>{section.specific_purpose}</p>{/if}
 				{#if section.transition}<p><strong>Transition:</strong> {section.transition}</p>{/if}
 				{#each section.blocks ?? [] as block (block.id)}
@@ -72,6 +107,7 @@
 	.plan-content h3, .review-meta h3 { margin: 0 0 .75rem; font-size: 1rem; }
 	.plan-content article { margin-top: 1rem; border-top: 1px solid var(--color-border, #d5d9df); padding-top: .75rem; }
 	.plan-content h4 { margin: 0 0 .4rem; }
+	.plan-content .learner-title { font-size: 1.2rem; }
 	.plan-content p { margin: .35rem 0; }
 	.plan-content ul { margin: .35rem 0; padding-left: 1.25rem; }
 	.label { font-size: .8rem; font-weight: 650; }

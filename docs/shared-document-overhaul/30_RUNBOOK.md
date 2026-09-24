@@ -104,6 +104,7 @@
 ## Phase 2C — draft-level semantic continuity QA
 
 - Starting SHA: `b902c16b`.
+- Ending SHA for package 2C: `b367b96d`.
 - Implementation: one structured semantic review per structurally valid v2 planner candidate, using the existing authoring provider and `ModelSlot.STANDARD` under the architecture-neutral `TEACHING_PLAN_SEMANTIC_REVIEWER` capability. Its closed findings cite exact materialized section/block IDs and cover lesson progression, adjacent exit-to-entry plausibility, target coverage, duplicated section responsibility, and task evidence. Blocking findings enter the existing second planner attempt; a second blocked candidate rejects. A clean result is bound to the candidate content hash before the planner returns an approval-ready plan. Invalid/unbound findings and provider/config/auth failures fail closed.
 - Tests: combined focused reviewer, planner, model-policy, prompt, P05 and P08 integration batch 87 PASS; `pnpm program:domain-guards` PASS (zero violations and 8 guard tests); scoped Ruff PASS; `git diff --check` PASS.
 - Failure proof: all five blocking finding families, invalid reviewer code or section binding, provider failure, hash mismatch, repair success, and two-attempt exhaustion. No unreviewed candidate returns from the active planner.
@@ -111,8 +112,12 @@
 
 ## Phase 2D — teacher review presentation and approval boundary
 
-- Starting SHA: pending Phase 2C commit.
-- Status: NOT STARTED. Show every v2 pedagogically meaningful field before approval and resolve how an edited pending draft receives a hash-bound review or is explicitly treated as teacher-authored judgment.
+- Starting SHA: `b367b96d`.
+- Implementation: the teacher review shows v2 learner title, starting and target state, each section's title/entry/must-establish/avoid-repeat/bridge/exit commitments, and existing blocks/evidence alongside verified pending or approved identity. V1 historical rendering remains readable. The approval helper rejects incomplete visible v2 content and still requires matching current pending revision and verified content hash.
+- Tests: focused frontend Vitest 6 PASS; `pnpm check` PASS (0 errors, 5 existing unrelated warnings); `pnpm build` PASS; `pnpm program:domain-guards` PASS (zero violations, 8 guard tests); `git diff --check` PASS.
+- Failure proof: blank v2 title, missing exit state or blocks, invalid first bridge, blank hash, and mismatched revision disable approval.
+- Decision: `03_INVARIANTS_AND_NON_GOALS.md` excludes arbitrary field-level Teaching Plan editing from first cut. Approval HTTP requires the displayed exact content hash. `edit_teaching_plan` has no active backend caller, so the active approval path receives a planner-reviewed candidate. Any future edit entrypoint must not bypass semantic review.
+- Status: package PASS. Phase 2 remains IN PROGRESS pending full phase verification and a zero-caller guard for the dormant edit entrypoint.
 
 ## Baseline
 - [x] branch recorded
