@@ -113,11 +113,20 @@
 ## Phase 2D — teacher review presentation and approval boundary
 
 - Starting SHA: `b367b96d`.
+- Ending SHA for package 2D: `7c70a1d7`.
 - Implementation: the teacher review shows v2 learner title, starting and target state, each section's title/entry/must-establish/avoid-repeat/bridge/exit commitments, and existing blocks/evidence alongside verified pending or approved identity. V1 historical rendering remains readable. The approval helper rejects incomplete visible v2 content and still requires matching current pending revision and verified content hash.
 - Tests: focused frontend Vitest 6 PASS; `pnpm check` PASS (0 errors, 5 existing unrelated warnings); `pnpm build` PASS; `pnpm program:domain-guards` PASS (zero violations, 8 guard tests); `git diff --check` PASS.
 - Failure proof: blank v2 title, missing exit state or blocks, invalid first bridge, blank hash, and mismatched revision disable approval.
 - Decision: `03_INVARIANTS_AND_NON_GOALS.md` excludes arbitrary field-level Teaching Plan editing from first cut. Approval HTTP requires the displayed exact content hash. `edit_teaching_plan` has no active backend caller, so the active approval path receives a planner-reviewed candidate. Any future edit entrypoint must not bypass semantic review.
 - Status: package PASS. Phase 2 remains IN PROGRESS pending full phase verification and a zero-caller guard for the dormant edit entrypoint.
+
+## Phase 2E — Teaching Plan edit zero-caller guard
+
+- Starting SHA: `7c70a1d7`.
+- Implementation: AST architecture guard rejects production references to the dormant `edit_teaching_plan` helper and `TeachingRevisionStore.edit_plan` method, including aliases and module-qualified access; permits only the helper's own wrapper call. The first-cut edit non-goal is now executable.
+- Tests: focused architecture guard and existing approval-content-identity tests 13 PASS; scoped Ruff PASS; `pnpm program:domain-guards` PASS (zero violations, 8 guard tests); `git diff --check` PASS.
+- Failure proof: synthetic aliased import is rejected; existing HTTP approval tests reject missing submitted hash, stale revision, and mismatched content hash.
+- Status: package PASS. Phase 2 remains IN PROGRESS pending the full phase verification script.
 
 ## Baseline
 - [x] branch recorded
