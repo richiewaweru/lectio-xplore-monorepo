@@ -52,11 +52,20 @@
 ## Phase 1D — whole-Run completion and cancellation
 
 - Starting SHA: `7f960861`.
+- Ending SHA for package 1D: `29e08bec`.
 - Implementation: finalization uses trusted source and artifact loaders in the same transaction, recomputes durable hashes, checks every ready WorkItem output, rechecks the complete child set after locking the Run, and commits ready with output identity/hash. Cancellation fences non-ready items and preserves ready siblings. Dynamic WorkItem admission is legal while a Run is queued/running, serialized with terminal transitions; SQLite refreshes identity-map state after its write lock.
 - Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (52); scoped Ruff check/format PASS; `pnpm program:domain-guards` PASS (8 tests); architecture guard PASS (0 violations); `git diff --check` PASS.
 - Failure proof: missing/mismatched stored source or artifact, invalid artifact JSON/hash, unfinished or changed child set, duplicate finalization, cancel-after-ready and finalize-after-cancel, stale worker after cancellation, add-after-terminal, and SQLite stale identity-map admission. Healthy ready siblings remain unchanged.
 - PostgreSQL proof: disposable two-session terminal race passed both orderings. Finalization first committed ready and rejected cancellation; cancellation first committed cancelled and rejected finalization. Each Run had exactly one terminal event. Exact probe fixtures were removed; all six event/ready guard triggers were confirmed enabled. Initial fixture cleanup was blocked by the append-only Event trigger; scoped transactional cleanup disabled only relevant delete guards for exact fixture rows and restored them.
 - Status: repository package PASS. Phase 1 remains IN PROGRESS. A separate additive migration must reject direct SQL WorkItem insertion under a ready Run; this cannot be enforced by repository admission alone. HTTP and full phase verification remain pending.
+
+## Phase 1E — database terminal-state guards
+
+- Starting SHA: `29e08bec`.
+- Implementation: additive migration `20260924_0044` in both migration trees. PostgreSQL and SQLite reject WorkItem INSERT unless the parent Run is queued/running, and reject Run ready transition without at least one child and all children ready. Existing immutability and append-only guards remain.
+- Tests: `uv run pytest tests/generation_runtime -q --tb=short -o log_cli=false` PASS (53 in 128.67s); Ruff check/format PASS; `pnpm program:domain-guards` PASS; architecture guard PASS (0 violations); `git diff --check` PASS. Both migration copies are identical and LF-only.
+- PostgreSQL proof: `uv run alembic heads` and `uv run alembic current` both report `20260924_0044 (head)`. Two-session insert-versus-ready and insert-versus-terminal probes serialized correctly; the ready transition rejected an unfinished newly inserted child, and later insert under terminal Run rejected. Exact fixtures cleaned to zero rows; all eight generation triggers enabled.
+- Status: package PASS. Phase 1 remains IN PROGRESS pending generic HTTP status/action APIs and full phase verification.
 
 ## Baseline
 - [x] branch recorded
