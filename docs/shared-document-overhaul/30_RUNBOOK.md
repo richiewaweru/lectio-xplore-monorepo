@@ -18,17 +18,19 @@
 - Local UI access: frontend dev server was down; restarted on `127.0.0.1:5173`. Its ignored local `.env` pointed `PUBLIC_API_URL` at `localhost:8001` while the backend listens on `127.0.0.1:8000`; corrected to `http://127.0.0.1:8000`. Same-origin proxy now returns the same authenticated `401` as the backend, instead of a proxy error. The in-app `/units` page now redirects to login rather than showing the 500. Google sign-in reports the local origin is not authorized for the configured client in an isolated browser.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–2 PASS; Phase 3 contract and Phase 4 task meaning are in isolated parallel worktrees (not integrated or PASS); Phases 5–16 NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
+- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–3 PASS; Phase 4 task meaning and Phase 5 composer are in isolated worktrees (not integrated or PASS); Phase 6A section writer and Phase 7A continuity/QA are in isolated implementation (not integrated or PASS); Phases 8–16 NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
 
 ## Parallel work allocation
 
 | Stream | Owner | Isolated scope | Handoff gate |
 | --- | --- | --- | --- |
-| Phase 2 full verifier | Luna | Main worktree, read-only verification | Full script exits 0; Sol records phase decision. |
-| Phase 3A SharedLessonDocument contract | Luna | `shared-document-contract` worktree; new `document/shared_lesson/` contract and focused tests | Closed node/TaskAnchor/hash/lineage tests and guards; Sol cherry-picks after Phase 2 gate. |
-| Phase 4A shared task meaning | Luna | `shared-task-contract` worktree; `curriculum/shared_tasks/` and focused tests | Closed response/evaluation and action-coverage tests; Sol integrates after Phase 3 interface review. |
+| Phase 3 full verifier | Luna | Main worktree, read-only verification of integrated contract | Full script exits 0; Sol records phase decision. |
+| Phase 4A shared task meaning | Luna | `shared-task-contract` worktree; `curriculum/shared_tasks/` and focused tests | Closed response/evaluation and action-coverage tests; Sol integrates after Phase 3 gate. |
+| Phase 5 Section Composer | Luna | `section-composer` worktree; new shared section composition/validation and focused tests | Closed node shape and deterministic invalid-state tests; Sol integrates after Phase 4 contract review. |
+| Phase 6A Section Writer contract | Luna | `section-composer` worktree after composer commit; generic ordinary-content writer and focused tests | Fixed shape, bounded repair and fail-closed semantic validation; Sol integrates after Phase 5 gate. |
+| Phase 7A Continuity and document QA | Luna | `continuity-qa` worktree; new pure validation modules and focused tests | Typed issues, boundary checks and targeted repair contract; Sol integrates after writer contract review. |
 
-The Phase 3 and Phase 4 streams preserve current `SharedTaskSpec` outer fields and do not edit each other's modules. Composer/writer and Learn/Print cutovers wait for integrated contracts. Sol owns the main runbook, cross-stream review, merge order, and phase PASS decisions.
+The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer fields and do not edit each other's modules. Durable writer execution and Learn/Print cutovers wait for integrated contracts. Sol owns the main runbook, cross-stream review, merge order, and phase PASS decisions.
 
 ## Phase 1A — generic runtime persistence
 
@@ -147,6 +149,17 @@ The Phase 3 and Phase 4 streams preserve current `SharedTaskSpec` outer fields a
 - Full verifier rerun from `0e47cac5`: `scripts/verify-phase.ps1 -Phase full` PASS, exit 0. Page tests 64 PASS and page check 0 errors/warnings; backend 1481 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings, frontend tests 227 PASS, build PASS; PDF fixture 5 PDFs with page counts 6/6/5/5/5 PASS; final `git diff --check` PASS.
 - Post-gate: `pnpm program:domain-guards` PASS (0 violations, 8 guard tests); backend architecture guard 0 violations; applied local Alembic head `20260924_0044`; only this runbook was modified in the main worktree.
 - Phase 2 status: PASS. Active generated v2 Teaching Plans are structurally validated, semantically reviewed with bounded repair, shown completely to the teacher, approved against the displayed revision/content hash, and verifiable by consumers. Dormant field-level edit API has zero production callers and an executable guard. Production provider behavior still requires Phase 9 shadow quality proof.
+
+## Phase 3A — SharedLessonDocument v1 contract
+
+- Starting SHA: `7b3f7290`.
+- Integrated commits: `7a55b7f4` (closed contract, hash, package wiring), `8c45598a` (required figure alt text and canonical shared-task fixture).
+- Implementation: path-neutral `document.shared_lesson` defines six typed ordinary nodes with separate display/accessibility fields plus TaskAnchor; closed SharedSection/SharedLessonDocument v1, immutable SharedTaskSpec snapshot, exact approved Teaching Plan lineage, canonical learner-content/task/source hash, and consumer source verification. The backend wheel now packages `src/document`.
+- Focused tests: 13 shared document contract tests PASS on integrated main branch; isolated-worktree Ruff, domain/architecture guards and built-wheel membership check PASS.
+- Failure proof: unknown/path-specific fields, bad section order/IDs, missing or misbound TaskAnchor, task lineage mismatch, missing/blank figure alt text, stale content hash, source mismatch, and nested mutation reject.
+- Full gate on integrated `8c45598a`: `scripts/verify-phase.ps1 -Phase full` PASS (`Verification passed for phase: full`, exit 0). Backend pytest: 1,494 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings; frontend tests 57 files/227 tests; frontend build PASS with existing Svelte/optional-dependency warnings; page fixture PDF 5 outputs at 6/6/5/5/5 pages. The verifier also ran its page tests/check and diff gate successfully.
+- Post-gate: `pnpm program:domain-guards` PASS (0 violations, 8 guard tests); `uv run python ../tools/agent/check_architecture.py` PASS (0 violations); applied local Alembic head `20260924_0044`; `git diff --check` PASS, with only this runbook modified.
+- Phase 3 status: PASS. Phase 4 nested task semantics remain in a separate worktree; its strict finalization gate is staged separately from current Learn/Print validation.
 
 ## Baseline
 - [x] branch recorded
