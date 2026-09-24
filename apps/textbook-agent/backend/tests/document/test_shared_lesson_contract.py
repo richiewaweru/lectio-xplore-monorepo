@@ -205,3 +205,25 @@ def test_rejects_stale_canonical_hash() -> None:
     payload["content_hash"] = "0" * 64
     with pytest.raises(ValidationError, match="content_hash"):
         SharedLessonDocument.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    "response,evaluation",
+    [
+        ({"type": "single_choice", "options": []}, {"type": "exact_match"}),
+        ({"type": "text"}, {"type": "exact_match", "correct_option_id": "light"}),
+        (
+            {"type": "single_choice", "options": [{"id": "light", "text": "Light"}, {"id": "sand", "text": "Sand"}]},
+            {"type": "exact_match", "correct_option_id": "missing"},
+        ),
+    ],
+)
+def test_ready_document_rejects_incomplete_or_conflicting_task_meaning(
+    response: dict[str, object], evaluation: dict[str, object]
+) -> None:
+    payload = _payload()
+    payload["tasks"][0]["response"] = response
+    payload["tasks"][0]["evaluation"] = evaluation
+
+    with pytest.raises(ValidationError, match="invalid shared task response/evaluation"):
+        build_shared_lesson_document(payload)

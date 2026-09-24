@@ -18,6 +18,7 @@ from pydantic import (
 )
 
 from curriculum.shared_tasks.models import SharedTaskSpec
+from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
 
 _HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -206,6 +207,7 @@ class FrozenSharedTaskSpec(SharedTaskSpec):
 
     @model_validator(mode="after")
     def _freeze_nested_task_meaning(self) -> FrozenSharedTaskSpec:
+        assert_task_response_contract(self)
         object.__setattr__(self, "response", _freeze_json(self.response))
         object.__setattr__(self, "evaluation", _freeze_json(self.evaluation))
         if self.feedback is not None:
@@ -293,25 +295,25 @@ def build_shared_lesson_document(payload: Mapping[str, Any]) -> SharedLessonDocu
 
 
 __all__ = [
-    "CalloutNode",
     "CalloutDisplay",
-    "FigureNode",
+    "CalloutNode",
     "FigureAccessibility",
     "FigureDisplay",
+    "FigureNode",
     "FrozenSharedTaskSpec",
-    "HeadingNode",
     "HeadingDisplay",
-    "ListNode",
+    "HeadingNode",
     "ListDisplay",
+    "ListNode",
     "NodeAccessibility",
-    "ParagraphNode",
     "ParagraphDisplay",
+    "ParagraphNode",
     "SharedLessonDocument",
     "SharedLessonNode",
     "SharedProvenance",
     "SharedSection",
-    "TableNode",
     "TableDisplay",
+    "TableNode",
     "TaskAnchor",
     "build_shared_lesson_document",
     "shared_lesson_node_adapter",
