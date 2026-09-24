@@ -12,6 +12,8 @@ from .service import build_shared_task_registry, learner_action_meaning, shared_
 from .validation import (
     assert_task_response_contract,
     finalize_shared_tasks,
+    validate_final_shared_tasks,
+    validate_final_task_response_contract,
     validate_shared_tasks,
     validate_task_response_contract,
 )
@@ -28,6 +30,8 @@ __all__ = [
     "finalize_shared_tasks",
     "learner_action_meaning",
     "shared_task_for_block",
+    "validate_final_shared_tasks",
+    "validate_final_task_response_contract",
     "validate_shared_tasks",
     "validate_task_response_contract",
 ]

@@ -8,6 +8,7 @@ import pytest
 
 from curriculum.agents import _SharedTaskDraftEnvelope, run_shared_task_writer
 from curriculum.shared_tasks.models import SharedTaskDraft
+from curriculum.shared_tasks.validation import finalize_shared_tasks
 from curriculum.teaching_plan.models import (
     LearnerActionBrief,
     TeachingPlan,
@@ -89,7 +90,7 @@ def _make_draft_task(label: str, action: str = "select-one") -> SharedTaskDraft:
         prompt=f"Task prompt for {label}",
         response=response,
         evaluation=evaluation,
-        expected_evidence=f"Evidence for {label}",
+        expected_evidence=f"evidence for {label}",
         difficulty="guided",
     )
 
@@ -107,6 +108,7 @@ async def test_1_response_block_produces_1_task():
     assert len(tasks) == 1
     assert tasks[0].teaching_block_id == "b1"
     assert tasks[0].id == "task-b1"
+    assert finalize_shared_tasks(plan, tasks) == tasks
     assert mock_llm.call_count == 1
     call_payload = mock_llm.call_args.kwargs["user_payload"]
     assert call_payload["expected_task_count"] == 1

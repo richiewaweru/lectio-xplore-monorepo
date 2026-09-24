@@ -12,8 +12,9 @@ from curriculum.shared_tasks.service import learner_action_meaning, teaching_pla
 from curriculum.shared_tasks.validation import (
     assert_task_response_contract,
     finalize_shared_tasks,
+    validate_final_shared_tasks,
+    validate_final_task_response_contract,
     validate_shared_tasks,
-    validate_task_response_contract,
 )
 from curriculum.teaching_plan.models import (
     LearnerActionBrief,
@@ -127,7 +128,7 @@ def test_each_response_action_accepts_a_complete_path_neutral_task() -> None:
     plan = _plan(list(ACTION_RESPONSE_TYPES))
     tasks = [_task(plan, block) for block in plan.sections[0].blocks]
 
-    assert all(validate_task_response_contract(task) == [] for task in tasks)
+    assert all(validate_final_task_response_contract(task) == [] for task in tasks)
     assert finalize_shared_tasks(plan, tasks) == tasks
 
 
@@ -182,6 +183,20 @@ def test_legacy_response_alias_remains_readable_but_cannot_be_finalized() -> Non
         assert_task_response_contract(task)
 
 
+def test_legacy_validator_keeps_accepting_old_choice_response_aliases() -> None:
+    plan = _plan(["select-one"])
+    task = _task(
+        plan,
+        plan.sections[0].blocks[0],
+        response={
+            "type": "select-one",
+            "options": [{"id": "a"}, {"id": "b"}],
+        },
+    )
+
+    assert validate_shared_tasks(plan, [task]) == []
+
+
 def test_choice_options_and_evaluation_must_form_a_closed_contract() -> None:
     plan = _plan(["select-one"])
     task = _task(
@@ -191,7 +206,7 @@ def test_choice_options_and_evaluation_must_form_a_closed_contract() -> None:
         evaluation={"type": "exact_match", "correct_option_id": "missing"},
     )
 
-    errors = validate_shared_tasks(plan, [task])
+    errors = validate_final_shared_tasks(plan, [task])
 
     assert any("unknown option ids" in error for error in errors)
 
@@ -209,7 +224,7 @@ def test_task_must_preserve_exact_block_action_evidence_and_mode() -> None:
         }
     )
 
-    errors = validate_shared_tasks(plan, [task])
+    errors = validate_final_shared_tasks(plan, [task])
 
     assert any("wrong purpose" in error for error in errors)
     assert any("wrong expected_evidence" in error for error in errors)
@@ -237,7 +252,12 @@ def test_sourcebook_and_content_binding_must_match_the_approved_plan_identity() 
         shared_task_id=task.id,
     )
 
-    errors = validate_shared_tasks(plan, [task], sourcebook=sourcebook, bindings=[binding])
+    errors = validate_final_shared_tasks(
+        plan,
+        [task],
+        sourcebook=sourcebook,
+        bindings=[binding],
+    )
 
     assert "sourcebook has the wrong teaching_plan_hash" in errors
     assert any("binding 'b-0' has the wrong teaching_plan_hash" in error for error in errors)
