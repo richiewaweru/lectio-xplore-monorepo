@@ -15,10 +15,13 @@ source and a loader that reads the active durable work-item outputs.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import pairwise
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
@@ -27,6 +30,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from curriculum.shared_tasks.models import SharedTaskSpec
 from document.shared_lesson.assembly import SharedLessonAssemblyResult
+from document.shared_lesson.boundary import BoundaryValidationResult
+from document.shared_lesson.boundary_runtime import (
+    BOUNDARY_DEFINITION,
+    BOUNDARY_STAGE,
+    BoundaryWorkOrder,
+    accepted_section_output_hash,
+)
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import FigureMediaResult, ReadyFigureMediaResult
@@ -41,7 +51,11 @@ from document.shared_lesson.repository import (
     promote_shared_lesson_document,
     save_shared_lesson_document,
 )
-from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from document.shared_lesson.runtime import (
+    TeachingPlanSource,
+    _stable_hash,
+    verify_teaching_plan_source,
+)
 from document.shared_lesson.section_sources import SectionSourceError, build_section_sources
 from document.shared_lesson.semantic_inputs import (
     SemanticInputError,
@@ -51,7 +65,7 @@ from document.shared_lesson.work_item_inputs import (
     SharedLessonInputError,
     load_verified_shared_lesson_inputs,
 )
-from document.shared_lesson.writer import SectionSource
+from document.shared_lesson.writer import SectionSource, SectionWriteResult
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (
@@ -374,6 +388,199 @@ def _verify_document_qa_matches_handoff(
         )
 
 
+def _logical_boundary_item_key(
+    item: GenerationWorkItemModel,
+    by_id: Mapping[str, GenerationWorkItemModel],
+) -> str:
+    current = item
+    seen: set[str] = set()
+    while current.replaces_work_item_id is not None:
+        if current.id in seen:
+            raise SharedLessonFinalizationError("boundary replacement chain contains a cycle")
+        seen.add(current.id)
+        predecessor = by_id.get(current.replaces_work_item_id)
+        if predecessor is None:
+            raise SharedLessonFinalizationError(
+                "boundary replacement chain has a missing predecessor"
+            )
+        current = predecessor
+    return current.item_key
+
+
+def _boundary_item_composition_identity(previous: str, next_: str) -> str:
+    return json.dumps(
+        {"previous": previous, "next": next_},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _verify_boundary_coverage(
+    *,
+    source: TeachingPlanSource,
+    document: SharedLessonDocument,
+    verified_inputs: Any,
+    active_items: Sequence[GenerationWorkItemModel],
+    all_items: Sequence[GenerationWorkItemModel] | None = None,
+) -> None:
+    """Verify every adjacent approved section has one current passing boundary."""
+    plan_sections = tuple(source.plan.sections)
+    accepted_sections = tuple(verified_inputs.sections)
+    compositions = tuple(verified_inputs.compositions)
+    if len(accepted_sections) != len(plan_sections) or len(compositions) != len(plan_sections):
+        raise SharedLessonFinalizationError(
+            "durable section inputs do not cover the approved section sequence"
+        )
+    if tuple(document.sections) != accepted_sections:
+        raise SharedLessonFinalizationError(
+            "boundary sections differ from the final handoff sections"
+        )
+
+    expected_pairs = tuple(pairwise(plan_sections))
+    expected_keys = {
+        f"boundary:{previous.slot_id}->{next_.slot_id}" for previous, next_ in expected_pairs
+    }
+    by_id = {item.id: item for item in (all_items if all_items is not None else active_items)}
+    boundary_items: list[tuple[str, GenerationWorkItemModel]] = []
+    for item in active_items:
+        if item.stage != BOUNDARY_STAGE and not item.item_key.startswith("boundary:"):
+            continue
+        if item.stage != BOUNDARY_STAGE:
+            raise SharedLessonFinalizationError("active boundary work item has an invalid stage")
+        boundary_items.append((_logical_boundary_item_key(item, by_id), item))
+    active_keys = [key for key, _item in boundary_items]
+    if len(active_keys) != len(set(active_keys)):
+        raise SharedLessonFinalizationError("duplicate active boundary work-item identity")
+    if set(active_keys) != expected_keys:
+        missing = sorted(expected_keys - set(active_keys))
+        extra = sorted(set(active_keys) - expected_keys)
+        raise SharedLessonFinalizationError(
+            f"active boundary work-item set mismatch; missing={missing!r}, extra={extra!r}"
+        )
+
+    item_by_key = dict(boundary_items)
+    definition_hash = hashlib.sha256(BOUNDARY_DEFINITION.encode("utf-8")).hexdigest()
+    section_by_id = {section.id: section for section in accepted_sections}
+    composition_by_id = {composition.section_slot_id: composition for composition in compositions}
+    for previous_plan, next_plan in expected_pairs:
+        previous = section_by_id.get(previous_plan.slot_id)
+        next_ = section_by_id.get(next_plan.slot_id)
+        previous_composition = composition_by_id.get(previous_plan.slot_id)
+        next_composition = composition_by_id.get(next_plan.slot_id)
+        if (
+            previous is None
+            or next_ is None
+            or previous_composition is None
+            or next_composition is None
+        ):
+            raise SharedLessonFinalizationError(
+                "durable boundary inputs are missing an approved section pair"
+            )
+        expected_composition_output_hash = content_hash(
+            previous_composition.model_dump(mode="json")
+        )
+        expected_section_output_hash = content_hash(
+            SectionWriteResult(
+                section_slot_id=previous_plan.slot_id,
+                title=previous.title,
+                nodes=previous.nodes,
+            ).model_dump(mode="json")
+        )
+        if (
+            verified_inputs.composition_hashes.get(previous_plan.slot_id)
+            != expected_composition_output_hash
+            or verified_inputs.section_hashes.get(previous_plan.slot_id)
+            != expected_section_output_hash
+        ):
+            raise SharedLessonFinalizationError(
+                f"current accepted section inputs for {previous.id!r} have stale hashes"
+            )
+        expected_composition_output_hash = content_hash(next_composition.model_dump(mode="json"))
+        expected_section_output_hash = content_hash(
+            SectionWriteResult(
+                section_slot_id=next_plan.slot_id,
+                title=next_.title,
+                nodes=next_.nodes,
+            ).model_dump(mode="json")
+        )
+        if (
+            verified_inputs.composition_hashes.get(next_plan.slot_id)
+            != expected_composition_output_hash
+            or verified_inputs.section_hashes.get(next_plan.slot_id) != expected_section_output_hash
+        ):
+            raise SharedLessonFinalizationError(
+                f"current accepted section inputs for {next_.id!r} have stale hashes"
+            )
+        previous_identity = _stable_hash(previous_composition.model_dump(mode="json"))
+        next_identity = _stable_hash(next_composition.model_dump(mode="json"))
+        expected_work = BoundaryWorkOrder(
+            source_plan_id=source.id,
+            source_plan_revision=source.revision,
+            source_plan_hash=source.content_hash,
+            previous_section_id=previous.id,
+            previous_section_output_hash=accepted_section_output_hash(previous),
+            previous_composition_identity=previous_identity,
+            next_section_id=next_.id,
+            next_section_output_hash=accepted_section_output_hash(next_),
+            next_composition_identity=next_identity,
+        )
+        item = item_by_key[f"boundary:{previous_plan.slot_id}->{next_plan.slot_id}"]
+        if item.status != "ready" or item.output_json is None or not item.output_hash:
+            raise SharedLessonFinalizationError(
+                f"boundary work item for {previous.id!r}->{next_.id!r} is not ready"
+            )
+        if content_hash(item.output_json) != item.output_hash:
+            raise SharedLessonFinalizationError(
+                f"boundary work item for {previous.id!r}->{next_.id!r} has an invalid output hash"
+            )
+        expected_composition_identity = _boundary_item_composition_identity(
+            previous_identity, next_identity
+        )
+        if (
+            item.input_hash != content_hash(expected_work.model_dump(mode="json"))
+            or item.definition_hash != definition_hash
+            or item.composition_identity != expected_composition_identity
+        ):
+            raise SharedLessonFinalizationError(
+                f"boundary work item for {previous.id!r}->{next_.id!r} has stale input binding"
+            )
+        raw = item.output_json
+        if not isinstance(raw, Mapping):
+            raise SharedLessonFinalizationError("boundary output violates its closed schema")
+        expected_output_keys = {
+            "kind",
+            "status",
+            "work",
+            "previous_section",
+            "next_section",
+            "semantic_calls",
+        }
+        if set(raw) != expected_output_keys or raw.get("kind") != "shared_lesson_boundary_result":
+            raise SharedLessonFinalizationError("boundary output violates its closed schema")
+        try:
+            observed_work = BoundaryWorkOrder.model_validate(raw["work"])
+            result = BoundaryValidationResult.model_validate(
+                {key: raw[key] for key in expected_output_keys if key not in {"kind", "work"}}
+            )
+        except (TypeError, ValueError) as exc:
+            raise SharedLessonFinalizationError(
+                "boundary output violates its closed schema"
+            ) from exc
+        if observed_work != expected_work:
+            raise SharedLessonFinalizationError(
+                f"boundary output for {previous.id!r}->{next_.id!r} has stale work identity"
+            )
+        if not result.passed:
+            raise SharedLessonFinalizationError(
+                f"boundary output for {previous.id!r}->{next_.id!r} is not PASS"
+            )
+        if result.previous_section != previous or result.next_section != next_:
+            raise SharedLessonFinalizationError(
+                f"boundary output for {previous.id!r}->{next_.id!r} has stale sections"
+            )
+
+
 def _verify_media_matches_work_items(
     *,
     document: SharedLessonDocument,
@@ -602,6 +809,13 @@ async def finalize_shared_lesson_document(
             tasks=request.tasks,
             verified_inputs=verified_inputs,
             handoff_expected_shapes=request.handoff.expected_shapes,
+        )
+        _verify_boundary_coverage(
+            source=request.source,
+            document=request.handoff.document,
+            verified_inputs=verified_inputs,
+            active_items=active_items,
+            all_items=locked_items,
         )
         try:
             verified_qa = await load_verified_document_qa(

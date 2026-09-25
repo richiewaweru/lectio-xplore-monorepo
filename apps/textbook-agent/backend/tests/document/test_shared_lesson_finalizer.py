@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
+from test_shared_boundary_runtime import _section as _boundary_section
+from test_shared_boundary_runtime import _source as _boundary_source
 from test_shared_lesson_repository import (
     _approved_source_and_document,
     _bound_media,
@@ -13,12 +16,22 @@ from test_shared_lesson_repository import (
 )
 
 from curriculum.lesson_sourcebook import LessonSourcebook, SourcebookEntry
+from document.shared_lesson.boundary_runtime import (
+    BOUNDARY_DEFINITION,
+    BOUNDARY_STAGE,
+    BoundaryWorkOrder,
+)
+from document.shared_lesson.boundary_runtime import (
+    accepted_section_output_hash as _accepted_section_output_hash,
+)
 from document.shared_lesson.composer import CompositionItem, SectionCompositionPlan
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.finalizer import (
     SharedLessonFinalizationError,
     SharedLessonFinalizationRequest,
     VerifiedWorkItemOutput,
+    _boundary_item_composition_identity,
+    _verify_boundary_coverage,
     _verify_document_qa_matches_handoff,
     _verify_durable_inputs_match_handoff,
     _verify_media_matches_work_items,
@@ -28,8 +41,9 @@ from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import ReadyFigureMediaResult
 from document.shared_lesson.models import build_shared_lesson_document
 from document.shared_lesson.qa_runtime import VerifiedDocumentQA
+from document.shared_lesson.runtime import _stable_hash
 from document.shared_lesson.semantic_inputs import VerifiedSemanticInputs
-from document.shared_lesson.writer import SectionSource
+from document.shared_lesson.writer import SectionSource, SectionWriteResult
 from infra.database.models import GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 
@@ -107,6 +121,101 @@ def _verified_qa(request, work_item_id):
         output_hash="0" * 64,
         semantic_qa=request.handoff.semantic_qa,
     )
+
+
+def _boundary_fixture():
+    source = _boundary_source()
+    previous = _boundary_section("s1", 0, "The first idea.")
+    next_ = _boundary_section("s2", 1, "The second idea.")
+    document = build_shared_lesson_document(
+        {
+            "id": "boundary-lesson",
+            "revision": 1,
+            "teaching_plan_id": source.id,
+            "teaching_plan_revision": source.revision,
+            "teaching_plan_hash": source.content_hash,
+            "title": "Two ideas",
+            "sections": [previous.model_dump(mode="json"), next_.model_dump(mode="json")],
+            "created_at": "2026-09-25T00:00:00Z",
+        }
+    )
+    previous_composition = SectionCompositionPlan(
+        section_slot_id="s1",
+        items=(
+            CompositionItem(
+                id="s1-node",
+                kind="paragraph",
+                teaching_block_id="s1-block",
+                semantic_role="explanation",
+            ),
+        ),
+    )
+    next_composition = SectionCompositionPlan(
+        section_slot_id="s2",
+        items=(
+            CompositionItem(
+                id="s2-node",
+                kind="paragraph",
+                teaching_block_id="s2-block",
+                semantic_role="explanation",
+            ),
+        ),
+    )
+    verified_inputs = SimpleNamespace(
+        source=source,
+        sections=(previous, next_),
+        compositions=(previous_composition, next_composition),
+        composition_hashes={
+            "s1": content_hash(previous_composition.model_dump(mode="json")),
+            "s2": content_hash(next_composition.model_dump(mode="json")),
+        },
+        section_hashes={
+            "s1": content_hash(
+                SectionWriteResult(
+                    section_slot_id="s1", title=previous.title, nodes=previous.nodes
+                ).model_dump(mode="json")
+            ),
+            "s2": content_hash(
+                SectionWriteResult(
+                    section_slot_id="s2", title=next_.title, nodes=next_.nodes
+                ).model_dump(mode="json")
+            ),
+        },
+    )
+    previous_identity = _stable_hash(previous_composition.model_dump(mode="json"))
+    next_identity = _stable_hash(next_composition.model_dump(mode="json"))
+    work = BoundaryWorkOrder(
+        source_plan_id=source.id,
+        source_plan_revision=source.revision,
+        source_plan_hash=source.content_hash,
+        previous_section_id=previous.id,
+        previous_section_output_hash=_accepted_section_output_hash(previous),
+        previous_composition_identity=previous_identity,
+        next_section_id=next_.id,
+        next_section_output_hash=_accepted_section_output_hash(next_),
+        next_composition_identity=next_identity,
+    )
+    output = {
+        "kind": "shared_lesson_boundary_result",
+        "status": "pass",
+        "work": work.model_dump(mode="json"),
+        "previous_section": previous.model_dump(mode="json"),
+        "next_section": next_.model_dump(mode="json"),
+        "semantic_calls": 0,
+    }
+    item = GenerationWorkItemModel(
+        id="boundary-item",
+        run_id="run-1",
+        item_key="boundary:s1->s2",
+        stage=BOUNDARY_STAGE,
+        status="ready",
+        input_hash=content_hash(work.model_dump(mode="json")),
+        definition_hash=hashlib.sha256(BOUNDARY_DEFINITION.encode("utf-8")).hexdigest(),
+        composition_identity=_boundary_item_composition_identity(previous_identity, next_identity),
+        output_json=output,
+        output_hash=content_hash(output),
+    )
+    return source, document, verified_inputs, item
 
 
 def test_finalization_request_requires_explicit_semantic_inputs() -> None:
@@ -357,6 +466,129 @@ def test_document_qa_gate_rejects_non_pass_result() -> None:
                 semantic_qa=issue,
             ),
             active_items=(item,),
+        )
+
+
+def test_boundary_gate_accepts_current_passing_adjacent_boundary() -> None:
+    source, document, verified_inputs, item = _boundary_fixture()
+
+    _verify_boundary_coverage(
+        source=source,
+        document=document,
+        verified_inputs=verified_inputs,
+        active_items=(item,),
+    )
+
+
+def test_boundary_gate_rejects_missing_adjacent_boundary() -> None:
+    source, document, verified_inputs, _item = _boundary_fixture()
+
+    with pytest.raises(SharedLessonFinalizationError, match="missing"):
+        _verify_boundary_coverage(
+            source=source,
+            document=document,
+            verified_inputs=verified_inputs,
+            active_items=(),
+        )
+
+
+def test_boundary_gate_rejects_stale_boundary_work_binding() -> None:
+    source, document, verified_inputs, item = _boundary_fixture()
+    forged_output = dict(item.output_json)
+    forged_work = dict(forged_output["work"])
+    forged_work["next_section_output_hash"] = "f" * 64
+    forged_output["work"] = forged_work
+    forged = GenerationWorkItemModel(
+        id=item.id,
+        run_id=item.run_id,
+        item_key=item.item_key,
+        stage=item.stage,
+        status=item.status,
+        input_hash=item.input_hash,
+        definition_hash=item.definition_hash,
+        composition_identity=item.composition_identity,
+        output_json=forged_output,
+        output_hash=content_hash(forged_output),
+    )
+
+    with pytest.raises(SharedLessonFinalizationError, match="stale work identity"):
+        _verify_boundary_coverage(
+            source=source,
+            document=document,
+            verified_inputs=verified_inputs,
+            active_items=(forged,),
+        )
+
+
+def test_boundary_gate_rejects_stale_current_section_hash() -> None:
+    source, document, verified_inputs, item = _boundary_fixture()
+    verified_inputs.section_hashes["s1"] = "f" * 64
+
+    with pytest.raises(SharedLessonFinalizationError, match="stale hashes"):
+        _verify_boundary_coverage(
+            source=source,
+            document=document,
+            verified_inputs=verified_inputs,
+            active_items=(item,),
+        )
+
+
+def test_boundary_gate_follows_replacement_chain_to_current_leaf() -> None:
+    source, document, verified_inputs, item = _boundary_fixture()
+    predecessor = GenerationWorkItemModel(
+        id=item.id,
+        run_id=item.run_id,
+        item_key=item.item_key,
+        stage=item.stage,
+        status="failed",
+        input_hash=item.input_hash,
+        definition_hash=item.definition_hash,
+        composition_identity=item.composition_identity,
+        output_json=item.output_json,
+        output_hash=item.output_hash,
+    )
+    replacement = GenerationWorkItemModel(
+        id="boundary-replacement",
+        run_id=item.run_id,
+        item_key="boundary:s1->s2:replacement",
+        stage=item.stage,
+        status=item.status,
+        input_hash=item.input_hash,
+        definition_hash=item.definition_hash,
+        composition_identity=item.composition_identity,
+        replaces_work_item_id=predecessor.id,
+        output_json=item.output_json,
+        output_hash=item.output_hash,
+    )
+
+    _verify_boundary_coverage(
+        source=source,
+        document=document,
+        verified_inputs=verified_inputs,
+        active_items=(replacement,),
+        all_items=(predecessor, replacement),
+    )
+
+
+def test_boundary_gate_rejects_extra_active_boundary_pair() -> None:
+    source, document = _approved_source_and_document()
+    verified_inputs = _verified_inputs(document)
+    extra = GenerationWorkItemModel(
+        id="extra-boundary",
+        run_id="run-1",
+        item_key="boundary:section-1->section-2",
+        stage=BOUNDARY_STAGE,
+        status="ready",
+        output_json={},
+        output_hash=content_hash({}),
+    )
+
+    with pytest.raises(SharedLessonFinalizationError, match="extra"):
+        _verify_boundary_coverage(
+            source=source,
+            document=document,
+            verified_inputs=verified_inputs,
+            active_items=(extra,),
         )
 
 
