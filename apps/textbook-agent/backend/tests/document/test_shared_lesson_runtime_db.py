@@ -94,12 +94,26 @@ def _teaching_plan() -> TeachingPlan:
 
 
 def _source() -> TeachingPlanSource:
-    plan = _teaching_plan()
+    plan = _teaching_plan().model_copy(update={"approval_status": "approved"})
+    digest = teaching_plan_content_hash(plan)
+    record = TeachingRevisionRecord(
+        teaching_plan_id=plan.teaching_plan_id,
+        revision=plan.revision,
+        status="approved",
+        preparation_hash=plan.preparation_hash or "preparation-hash",
+        content_hash=digest,
+        plan=plan.model_dump(mode="json"),
+        created_at="2026-09-24T00:00:00Z",
+        approved_at="2026-09-24T00:00:00Z",
+        reviewed_by="teacher-1",
+        approval_hash_binding="submitted",
+    )
     return TeachingPlanSource(
         plan=plan,
+        revision_record=record,
         id=plan.teaching_plan_id,
         revision=plan.revision,
-        content_hash=teaching_plan_content_hash(plan),
+        content_hash=digest,
     )
 
 
@@ -405,9 +419,9 @@ async def test_shared_lesson_runtime_persists_composition_writer_retry_cancel_an
 async def test_shared_document_admission_rejects_hashed_pending_teaching_revision(
     db_session,
 ) -> None:
-    """Pending source rejection is a required invariant; currently exposes a gap."""
+    """A correctly hashed pending revision cannot enter SharedDocument work."""
     owner_id, lesson_id = await _seed_build(db_session, suffix="pending-source")
-    plan = _teaching_plan()
+    plan = _teaching_plan().model_copy(update={"approval_status": "pending"})
     pending_record = TeachingRevisionRecord(
         teaching_plan_id=plan.teaching_plan_id,
         revision=plan.revision,
@@ -420,13 +434,11 @@ async def test_shared_document_admission_rejects_hashed_pending_teaching_revisio
     )
     source = TeachingPlanSource(
         plan=TeachingPlan.model_validate(pending_record.plan),
+        revision_record=pending_record,
         id=pending_record.teaching_plan_id,
         revision=pending_record.revision,
         content_hash=pending_record.content_hash or "",
     )
-    identity = verify_teaching_plan_source(source)
-    assert identity.source_hash == pending_record.content_hash
-
     from infra.generation_runtime import BuildAdmission, create_build
 
     build = await create_build(
@@ -441,6 +453,12 @@ async def test_shared_document_admission_rejects_hashed_pending_teaching_revisio
             request_key="pending-plan-request",
             source=source,
         )
+    run_count = await db_session.scalar(
+        select(GenerationRunModel.id).where(
+            GenerationRunModel.build_id == build.id,
+        )
+    )
+    assert run_count is None
 
 
 async def _admit_run(

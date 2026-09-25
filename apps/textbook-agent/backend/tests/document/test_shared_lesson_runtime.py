@@ -6,7 +6,12 @@ from types import SimpleNamespace
 import pytest
 
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
-from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, TeachingPlanSection
+from curriculum.teaching_plan.models import (
+    TeachingPlan,
+    TeachingPlanBlock,
+    TeachingPlanSection,
+    TeachingRevisionRecord,
+)
 from document.shared_lesson.composer import CompositionItem, SectionCompositionPlan
 from document.shared_lesson.models import ParagraphDisplay, ParagraphNode
 from document.shared_lesson.runtime import (
@@ -18,6 +23,7 @@ from document.shared_lesson.runtime import (
     admit_section_run,
     admit_writer_work_item,
     cancel_section_run,
+    compose_section_work_item,
     restart_section_run,
     retry_failed_section,
     verify_teaching_plan_source,
@@ -28,18 +34,40 @@ from document.shared_lesson.writer import SectionWriteResult, SectionWriterReque
 from infra.generation_runtime import LeaseLostError
 
 
-def _source() -> TeachingPlanSource:
-    plan = TeachingPlan(
-        arc="Teach a simple idea",
-        teaching_plan_id="tp-approved-1",
-        revision=3,
-        sections=[],
+def _approved_source(plan: TeachingPlan) -> TeachingPlanSource:
+    plan = plan.model_copy(update={"approval_status": "approved"})
+    plan_id = str(plan.teaching_plan_id)
+    revision = int(plan.revision or 1)
+    digest = teaching_plan_content_hash(plan)
+    record = TeachingRevisionRecord(
+        teaching_plan_id=plan_id,
+        revision=revision,
+        status="approved",
+        preparation_hash=plan.preparation_hash or "preparation-hash",
+        content_hash=digest,
+        plan=plan.model_dump(mode="json"),
+        created_at="2026-09-24T00:00:00Z",
+        approved_at="2026-09-24T00:00:00Z",
+        reviewed_by="teacher-1",
+        approval_hash_binding="submitted",
     )
     return TeachingPlanSource(
         plan=plan,
-        id="tp-approved-1",
-        revision=3,
-        content_hash=teaching_plan_content_hash(plan),
+        revision_record=record,
+        id=plan_id,
+        revision=revision,
+        content_hash=digest,
+    )
+
+
+def _source() -> TeachingPlanSource:
+    return _approved_source(
+        TeachingPlan(
+            arc="Teach a simple idea",
+            teaching_plan_id="tp-approved-1",
+            revision=3,
+            sections=[],
+        )
     )
 
 
@@ -52,12 +80,7 @@ async def test_admission_uses_generic_repository_records(monkeypatch) -> None:
         revision=3,
         sections=[section],
     )
-    source = TeachingPlanSource(
-        plan=plan,
-        id="tp-approved-1",
-        revision=3,
-        content_hash=teaching_plan_content_hash(plan),
-    )
+    source = _approved_source(plan)
     calls = []
 
     async def fake_admit(_session, request):
@@ -146,6 +169,185 @@ def test_source_identity_requires_exact_id_revision_and_recomputed_hash() -> Non
     with pytest.raises(SectionRuntimeError, match="content hash"):
         verify_teaching_plan_source(source.model_copy(update={"content_hash": "a" * 64}))
 
+    for status in ("pending", "superseded", "rejected"):
+        unapproved = source.model_copy(
+            update={
+                "revision_record": source.revision_record.model_copy(
+                    update={"status": status}
+                )
+            }
+        )
+        with pytest.raises(SectionRuntimeError, match="must be approved"):
+            verify_teaching_plan_source(unapproved)
+
+    with pytest.raises(SectionRuntimeError, match="no content hash"):
+        verify_teaching_plan_source(
+            source.model_copy(
+                update={
+                    "revision_record": source.revision_record.model_copy(
+                        update={"content_hash": None}
+                    )
+                }
+            )
+        )
+
+    with pytest.raises(SectionRuntimeError, match="content hash does not match"):
+        verify_teaching_plan_source(
+            source.model_copy(
+                update={
+                    "revision_record": source.revision_record.model_copy(
+                        update={"content_hash": "a" * 64}
+                    )
+                }
+            )
+        )
+
+    forged_record_plan = source.revision_record.plan | {"arc": "Forged plan content"}
+    with pytest.raises(SectionRuntimeError, match="content hash does not match"):
+        verify_teaching_plan_source(
+            source.model_copy(
+                update={
+                    "revision_record": source.revision_record.model_copy(
+                        update={"plan": forged_record_plan}
+                    )
+                }
+            )
+        )
+
+    with pytest.raises(SectionRuntimeError, match="Record identity"):
+        verify_teaching_plan_source(
+            source.model_copy(
+                update={
+                    "revision_record": source.revision_record.model_copy(
+                        update={"teaching_plan_id": "another-plan"}
+                    )
+                }
+            )
+        )
+
+    with pytest.raises(SectionRuntimeError, match="Record identity"):
+        verify_teaching_plan_source(
+            source.model_copy(
+                update={
+                    "revision_record": source.revision_record.model_copy(
+                        update={"revision": source.revision + 1}
+                    )
+                }
+            )
+        )
+
+    forged_plan_identity = source.revision_record.plan | {
+        "teaching_plan_id": "another-plan"
+    }
+    with pytest.raises(SectionRuntimeError, match="plan ID differs"):
+        verify_teaching_plan_source(
+            source.model_copy(
+                update={
+                    "revision_record": source.revision_record.model_copy(
+                        update={"plan": forged_plan_identity}
+                    )
+                }
+            )
+        )
+
+    forged_plan_revision = source.revision_record.plan | {
+        "revision": source.revision + 1
+    }
+    with pytest.raises(SectionRuntimeError, match="plan revision differs"):
+        verify_teaching_plan_source(
+            source.model_copy(
+                update={
+                    "revision_record": source.revision_record.model_copy(
+                        update={"plan": forged_plan_revision}
+                    )
+                }
+            )
+        )
+
+    pending_record_plan = source.revision_record.plan | {"approval_status": "pending"}
+    with pytest.raises(SectionRuntimeError, match="Record plan approval_status"):
+        verify_teaching_plan_source(
+            source.model_copy(
+                update={
+                    "revision_record": source.revision_record.model_copy(
+                        update={"plan": pending_record_plan}
+                    )
+                }
+            )
+        )
+
+    pending_plan = source.plan.model_copy(update={"approval_status": "pending"})
+    with pytest.raises(SectionRuntimeError, match="approval_status"):
+        verify_teaching_plan_source(source.model_copy(update={"plan": pending_plan}))
+
+
+@pytest.mark.asyncio
+async def test_pending_source_is_rejected_before_work_item_claim(monkeypatch) -> None:
+    source = _source()
+    pending_plan = source.plan.model_copy(update={"approval_status": "pending"})
+    pending_record = source.revision_record.model_copy(
+        update={"status": "pending", "plan": pending_plan.model_dump(mode="json")}
+    )
+    pending_source = source.model_copy(
+        update={"plan": pending_plan, "revision_record": pending_record}
+    )
+    section = TeachingPlanSection(
+        slot_id="orient",
+        display_title="Start here",
+        entry_state=["Learner is ready"],
+        must_establish=["Learner understands the idea"],
+        avoid_repeating=["Do not repeat prior content"],
+        bridge_from_previous=None,
+        exit_state=["Learner can explain the idea"],
+        blocks=[
+            TeachingPlanBlock(
+                id="block-orient",
+                position=0,
+                intent="Explain the idea",
+                brief="Explain the idea clearly.",
+                evidence="Learner explains the idea.",
+            )
+        ],
+    )
+    composition = SectionCompositionPlan(
+        section_slot_id="orient",
+        items=(
+            CompositionItem(
+                id="node-orient",
+                kind="paragraph",
+                teaching_block_id="block-orient",
+                semantic_role="explanation",
+            ),
+        ),
+    )
+    request = SectionWriterRequest(section=section, composition_plan=composition)
+    claim_calls = []
+
+    async def fake_claim(*args, **kwargs):
+        claim_calls.append((args, kwargs))
+        return SimpleNamespace(lease_token=1)
+
+    monkeypatch.setattr("document.shared_lesson.runtime.claim_work_item", fake_claim)
+    with pytest.raises(SectionRuntimeError, match="approved"):
+        await compose_section_work_item(
+            "session",
+            work_item_id="compose:orient",
+            worker_id="worker-compose",
+            source=pending_source,
+            section=section,
+            tasks=(),
+        )
+    with pytest.raises(SectionRuntimeError, match="approved"):
+        await _write_section_work_item(
+            "session",
+            work_item_id="write:orient",
+            worker_id="worker-1",
+            source=pending_source,
+            request=request,
+            provider_semaphore=asyncio.Semaphore(1),
+        )
+    assert claim_calls == []
+
 
 @pytest.mark.asyncio
 async def test_public_writer_batch_enforces_four_and_skips_ready_sibling(monkeypatch) -> None:
@@ -177,12 +379,7 @@ async def test_public_writer_batch_enforces_four_and_skips_ready_sibling(monkeyp
         revision=3,
         sections=[section],
     )
-    source = TeachingPlanSource(
-        plan=plan,
-        id="tp-approved-1",
-        revision=3,
-        content_hash=teaching_plan_content_hash(plan),
-    )
+    source = _approved_source(plan)
     composition = SectionCompositionPlan(
         section_slot_id="orient",
         items=(
@@ -364,12 +561,7 @@ async def test_late_provider_result_cannot_complete_after_lease_is_lost(monkeypa
         revision=3,
         sections=[section],
     )
-    source = TeachingPlanSource(
-        plan=plan,
-        id="tp-approved-1",
-        revision=3,
-        content_hash=teaching_plan_content_hash(plan),
-    )
+    source = _approved_source(plan)
     composition = SectionCompositionPlan(
         section_slot_id="orient",
         items=(

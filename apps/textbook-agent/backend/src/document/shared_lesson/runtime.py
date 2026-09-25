@@ -18,7 +18,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
-from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanSection
+from curriculum.teaching_plan.models import (
+    TeachingPlan,
+    TeachingPlanSection,
+    TeachingRevisionRecord,
+)
 from document.shared_lesson.composer import (
     CompositionPolicy,
     CompositionValidationError,
@@ -70,6 +74,7 @@ class TeachingPlanSource(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, arbitrary_types_allowed=True)
 
     plan: TeachingPlan
+    revision_record: TeachingRevisionRecord
     id: str = Field(min_length=1)
     revision: int = Field(ge=1)
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -100,13 +105,42 @@ class SectionWriterOutcome:
 
 
 def verify_teaching_plan_source(source: TeachingPlanSource) -> SourceIdentity:
-    """Verify all identity fields and recompute the plan hash before runtime work."""
+    """Verify approved revision provenance and recompute both source hashes."""
+    record = source.revision_record
+    if record.status != "approved":
+        raise SectionRuntimeError(
+            f"SharedDocument source revision must be approved, got {record.status!r}"
+        )
+    if source.plan.approval_status != "approved":
+        raise SectionRuntimeError("SharedDocument source plan approval_status must be approved")
     if source.plan.teaching_plan_id != source.id:
         raise SectionRuntimeError("Teaching Plan source ID differs from its approved snapshot")
     if source.plan.revision != source.revision:
         raise SectionRuntimeError("Teaching Plan revision differs from its approved snapshot")
+    if record.teaching_plan_id != source.id or record.revision != source.revision:
+        raise SectionRuntimeError("Teaching Revision Record identity differs from its source")
+    if not record.content_hash:
+        raise SectionRuntimeError("approved Teaching Revision Record has no content hash")
+    if not isinstance(record.plan, Mapping):
+        raise SectionRuntimeError("approved Teaching Revision Record has an invalid plan snapshot")
+    try:
+        record_plan = TeachingPlan.model_validate(record.plan)
+    except (TypeError, ValueError) as exc:
+        raise SectionRuntimeError("approved Teaching Revision Record plan is invalid") from exc
+    if record_plan.approval_status != "approved":
+        raise SectionRuntimeError("Teaching Revision Record plan approval_status must be approved")
+    if record_plan.teaching_plan_id != record.teaching_plan_id:
+        raise SectionRuntimeError("Teaching Revision Record plan ID differs from its record")
+    if record_plan.revision != record.revision:
+        raise SectionRuntimeError("Teaching Revision Record plan revision differs from its record")
+
+    record_hash = teaching_plan_content_hash(record_plan)
     actual_hash = teaching_plan_content_hash(source.plan)
-    if actual_hash != source.content_hash:
+    if record_hash != record.content_hash:
+        raise SectionRuntimeError("Teaching Revision Record content hash does not match its plan")
+    if actual_hash != record_hash:
+        raise SectionRuntimeError("Teaching Plan source content differs from its approved revision")
+    if source.content_hash != actual_hash:
         raise SectionRuntimeError("Teaching Plan content hash differs from its approved snapshot")
     return SourceIdentity(
         source_artifact_type="teaching_plan",
