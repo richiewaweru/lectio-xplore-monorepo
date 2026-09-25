@@ -93,6 +93,7 @@ CLOSEOUT_PROMPT_IDS = (
     "print-realization",
     "lesson-sourcebook-writer",
     "shared-task-writer",
+    "document-semantic-qa",
     "whole-lesson-coherence-reviewer",
     "teaching-plan-semantic-reviewer",
     "targeted-lesson-repair",

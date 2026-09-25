@@ -42,6 +42,7 @@ TEACHING_PLAN_SEMANTIC_REVIEWER = "teaching_plan_semantic_reviewer"
 SECTION_COMPOSER = "section_composer"
 SHARED_SECTION_WRITER = "shared_section_writer"
 BOUNDARY_CONTINUITY_VALIDATOR = "boundary_continuity_validator"
+DOCUMENT_SEMANTIC_QA = "document_semantic_qa"
 V3_TARGETED_LESSON_REPAIR = "v3_targeted_lesson_repair"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
@@ -78,6 +79,7 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     SECTION_COMPOSER: ModelSlot.STANDARD,
     SHARED_SECTION_WRITER: ModelSlot.STANDARD,
     BOUNDARY_CONTINUITY_VALIDATOR: ModelSlot.STANDARD,
+    DOCUMENT_SEMANTIC_QA: ModelSlot.FAST,
     V3_TARGETED_LESSON_REPAIR: ModelSlot.FAST,
 }
 
@@ -129,6 +131,7 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     SECTION_COMPOSER: False,
     SHARED_SECTION_WRITER: False,
     BOUNDARY_CONTINUITY_VALIDATOR: False,
+    DOCUMENT_SEMANTIC_QA: False,
     V3_TARGETED_LESSON_REPAIR: False,
 }
 
@@ -333,10 +336,11 @@ def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
 
 
 __all__ = [
+    "BOUNDARY_CONTINUITY_VALIDATOR",
+    "DOCUMENT_SEMANTIC_QA",
     "NATIVE_CAPABILITY_SELECTOR",
     "SECTION_COMPOSER",
     "SHARED_SECTION_WRITER",
-    "BOUNDARY_CONTINUITY_VALIDATOR",
     "TEACHING_PLAN_SEMANTIC_REVIEWER",
     "V2_COMPONENT_SELECTOR",
     "V2_FORM_PLANNER",

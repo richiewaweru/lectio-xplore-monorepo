@@ -1,5 +1,6 @@
 from infra.authoring.model_policy.models import (
     BOUNDARY_CONTINUITY_VALIDATOR,
+    DOCUMENT_SEMANTIC_QA,
     NATIVE_CAPABILITY_SELECTOR,
     SECTION_COMPOSER,
     SHARED_SECTION_WRITER,
@@ -31,6 +32,7 @@ from infra.authoring.model_policy.models import (
 
 __all__ = [
     "BOUNDARY_CONTINUITY_VALIDATOR",
+    "DOCUMENT_SEMANTIC_QA",
     "NATIVE_CAPABILITY_SELECTOR",
     "SECTION_COMPOSER",
     "SHARED_SECTION_WRITER",
