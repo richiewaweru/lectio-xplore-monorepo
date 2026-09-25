@@ -184,13 +184,4 @@ def build_section_sources(
     return tuple(sources)
 
 
-def section_sources_for_section(
-    inputs: VerifiedSemanticInputs,
-    section: TeachingPlanSection,
-) -> tuple[SectionSource, ...]:
-    """Named integration alias for callers assembling a writer request."""
-
-    return build_section_sources(inputs, section)
-
-
-__all__ = ["SectionSourceError", "build_section_sources", "section_sources_for_section"]
+__all__ = ["SectionSourceError", "build_section_sources"]
