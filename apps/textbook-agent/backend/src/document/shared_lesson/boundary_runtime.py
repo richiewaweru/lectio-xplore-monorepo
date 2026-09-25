@@ -474,7 +474,7 @@ async def admit_boundary_replacement_work_item(
     }
     if len(changed) != 1:
         raise BoundarySourceConflict("boundary repair proof must identify one changed section")
-    await _verify_active_writer_outputs(
+    current_previous, current_next = await _verify_active_writer_outputs(
         session,
         run_id=predecessor.run_id,
         previous_section=previous_section,
@@ -483,6 +483,19 @@ async def admit_boundary_replacement_work_item(
         next_composition_identity=next_composition_identity,
         lock=True,
     )
+    current_hashes = {
+        current_previous.id: accepted_section_output_hash(current_previous),
+        current_next.id: accepted_section_output_hash(current_next),
+    }
+    for section_id, original_hash in original_hashes.items():
+        observed_hash = current_hashes.get(section_id)
+        if observed_hash is None:
+            raise BoundarySourceConflict("current active boundary pair is incomplete")
+        expected_hash = result_hashes[section_id] if section_id in changed else original_hash
+        if observed_hash != expected_hash:
+            raise BoundarySourceConflict(
+                f"current active writer output for {section_id!r} does not match the durable repair proof"
+            )
     current_work = _work_order(
         identity,
         previous_section,

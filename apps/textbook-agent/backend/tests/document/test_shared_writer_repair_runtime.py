@@ -399,7 +399,7 @@ async def test_boundary_replacement_uses_current_writer_leaf_and_fresh_identity(
         return None
 
     async def no_writer_check(*_args, **_kwargs):
-        return None
+        return previous, repaired
 
     captured = []
 
@@ -425,6 +425,23 @@ async def test_boundary_replacement_uses_current_writer_leaf_and_fresh_identity(
     assert replacement.item_key.startswith("boundary:s1->s2:repair:")
     assert replacement.input_hash != predecessor.input_hash
     assert captured[0].predecessor_work_item_id == predecessor.id
+    unrelated = _section("s2", 1, "A different active replacement.")
+
+    async def unrelated_writer_check(*_args, **_kwargs):
+        return previous, unrelated
+
+    monkeypatch.setattr(boundary_runtime, "_verify_active_writer_outputs", unrelated_writer_check)
+    with pytest.raises(boundary_runtime.BoundarySourceConflict, match="durable repair proof"):
+        await boundary_runtime.admit_boundary_replacement_work_item(
+            Session(),
+            predecessor_work_item_id=predecessor.id,
+            owner_user_id="owner",
+            source=source,
+            previous_section=previous,
+            next_section=unrelated,
+            previous_composition_identity="composition-s1",
+            next_composition_identity="composition-s2",
+        )
 
 
 @pytest.mark.asyncio
