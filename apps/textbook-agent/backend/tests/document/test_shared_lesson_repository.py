@@ -17,8 +17,8 @@ from document.shared_lesson.assembly import SharedLessonAssemblyResult
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.document_semantic import DocumentSemanticQAResult
 from document.shared_lesson.media import (
-    bind_generated_figure,
     bind_figure_media_to_document,
+    bind_generated_figure,
     build_figure_work_order,
 )
 from document.shared_lesson.qa import DocumentQAResult
