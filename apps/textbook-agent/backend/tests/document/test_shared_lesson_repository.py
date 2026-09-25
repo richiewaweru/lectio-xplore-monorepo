@@ -15,6 +15,7 @@ from curriculum.teaching_plan.models import (
 from document.shared_lesson import build_shared_lesson_document
 from document.shared_lesson.assembly import SharedLessonAssemblyResult
 from document.shared_lesson.continuity import ExpectedNodeShape
+from document.shared_lesson.document_semantic import DocumentSemanticQAResult
 from document.shared_lesson.qa import DocumentQAResult
 from document.shared_lesson.repository import (
     SharedLessonDocumentConflict,
@@ -181,6 +182,16 @@ def _expected_shapes(*, include_figure: bool = False):
     return {"section-1": tuple(shapes)}
 
 
+def _semantic_pass(document):
+    return DocumentSemanticQAResult(
+        document_id=document.id,
+        document_revision=document.revision,
+        document_hash=document.content_hash,
+        status="pass",
+        semantic_calls=1,
+    )
+
+
 @pytest.mark.asyncio
 async def test_exact_duplicate_save_is_idempotent(db_session) -> None:
     document = _document()
@@ -332,6 +343,7 @@ async def test_ready_promotion_requires_approved_source_and_final_qa(db_session)
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=assembly,
+            semantic_qa=_semantic_pass(document),
             expected_shapes=_expected_shapes(),
         )
 
@@ -341,6 +353,7 @@ async def test_ready_promotion_requires_approved_source_and_final_qa(db_session)
         path_lesson_id="path-lesson-1",
         source=source,
         assembly=assembly,
+        semantic_qa=_semantic_pass(document),
         expected_shapes=_expected_shapes(),
     )
     assert promoted.status == "ready"
@@ -350,6 +363,7 @@ async def test_ready_promotion_requires_approved_source_and_final_qa(db_session)
         path_lesson_id="path-lesson-1",
         source=source,
         assembly=assembly,
+        semantic_qa=_semantic_pass(document),
         expected_shapes=_expected_shapes(),
     )
     assert replay == promoted
@@ -384,6 +398,7 @@ async def test_ready_promotion_blocks_failed_qa_required_media_and_lineage_confl
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=blocked,
+            semantic_qa=_semantic_pass(document),
             expected_shapes=_expected_shapes(),
             required_media_by_section={"section-1": ("figure-1",)},
         )
@@ -394,6 +409,7 @@ async def test_ready_promotion_blocks_failed_qa_required_media_and_lineage_confl
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=_ready_assembly(document),
+            semantic_qa=_semantic_pass(document),
             expected_shapes=_expected_shapes(),
             required_media_by_section={"section-1": ("figure-1",)},
         )
@@ -404,6 +420,7 @@ async def test_ready_promotion_blocks_failed_qa_required_media_and_lineage_confl
             path_lesson_id="path-lesson-1",
             source=source.model_copy(update={"content_hash": "b" * 64}),
             assembly=_ready_assembly(document),
+            semantic_qa=_semantic_pass(document),
             expected_shapes=_expected_shapes(),
         )
 
@@ -421,6 +438,7 @@ async def test_ready_promotion_derives_required_figures_when_media_map_is_omitte
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=_ready_assembly(document),
+            semantic_qa=_semantic_pass(document),
             expected_shapes=_expected_shapes(include_figure=True),
         )
 
@@ -430,6 +448,7 @@ async def test_ready_promotion_derives_required_figures_when_media_map_is_omitte
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=_ready_assembly(document),
+            semantic_qa=_semantic_pass(document),
             expected_shapes=_expected_shapes(include_figure=True),
             required_media_by_section={"section-1": ()},
         )
@@ -455,5 +474,70 @@ async def test_ready_promotion_recomputes_qa_instead_of_trusting_forged_assembly
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=_ready_assembly(forged_document),
+            semantic_qa=_semantic_pass(forged_document),
             expected_shapes=_expected_shapes(),
         )
+
+
+@pytest.mark.asyncio
+async def test_ready_promotion_rejects_missing_or_invalid_semantic_verdicts(db_session) -> None:
+    source, document = _approved_source_and_document()
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
+    invalid_results = (
+        None,
+        {"status": "pass", "semantic_calls": 1},
+        DocumentSemanticQAResult(
+            document_id=document.id,
+            document_revision=document.revision,
+            document_hash=document.content_hash,
+            status="pass",
+            semantic_calls=0,
+        ),
+        DocumentSemanticQAResult(
+            document_id=document.id,
+            document_revision=document.revision,
+            document_hash=document.content_hash,
+            status="issue",
+            issues=(
+                {
+                    "issue_code": "progression_gap",
+                    "affected_section_id": "section-1",
+                    "explanation": "The progression is incomplete.",
+                    "required_correction": "Repair the section.",
+                },
+            ),
+            semantic_calls=1,
+        ),
+        DocumentSemanticQAResult(
+            document_id="stale-document",
+            document_revision=document.revision,
+            document_hash=document.content_hash,
+            status="pass",
+            semantic_calls=1,
+        ),
+        DocumentSemanticQAResult(
+            document_id=document.id,
+            document_revision=document.revision,
+            document_hash="b" * 64,
+            status="pass",
+            semantic_calls=1,
+        ),
+    )
+    for semantic_qa in invalid_results:
+        with pytest.raises(SharedLessonDocumentReadinessError):
+            await promote_shared_lesson_document(
+                db_session,
+                path_lesson_id="path-lesson-1",
+                source=source,
+                assembly=_ready_assembly(document),
+                semantic_qa=semantic_qa,
+                expected_shapes=_expected_shapes(),
+            )
+
+    stored = await load_shared_lesson_document(
+        db_session,
+        document_id=document.id,
+        revision=document.revision,
+        path_lesson_id="path-lesson-1",
+    )
+    assert stored.status == "draft"

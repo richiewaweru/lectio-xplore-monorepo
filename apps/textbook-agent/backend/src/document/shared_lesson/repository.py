@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from document.shared_lesson.assembly import SharedLessonAssemblyResult
+from document.shared_lesson.document_semantic import DocumentSemanticQAResult
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.hashing import verify_shared_lesson_source as verify_document_source
 from document.shared_lesson.media import (
@@ -301,6 +302,7 @@ async def promote_shared_lesson_document(
     path_lesson_id: str,
     source: TeachingPlanSource,
     assembly: SharedLessonAssemblyResult,
+    semantic_qa: DocumentSemanticQAResult,
     expected_shapes: Mapping[str, Sequence[Any]],
     approved_source_ids: Sequence[str] = (),
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
@@ -313,11 +315,12 @@ async def promote_shared_lesson_document(
     immutable assembly result produced by ``assemble_shared_lesson_document``.
     The final deterministic QA is recomputed here from the approved plan and
     the exact code-owned accepted composition shapes.  The assembly's QA
-    result is therefore evidence, never the authority for READY. Source
-    identity and content hashes are recomputed here. READY is idempotent for
-    the same artifact, while a different artifact at the same identity is a
-    hard conflict. This function only flushes; transaction ownership stays
-    with the caller.
+    result is therefore evidence, never the authority for READY. The supplied
+    semantic QA result must be a single-call PASS bound to the exact
+    recomputed document. Source identity and content hashes are recomputed
+    here. READY is idempotent for the same artifact, while a different artifact
+    at the same identity is a hard conflict. This function only flushes;
+    transaction ownership stays with the caller.
     """
     if not path_lesson_id:
         raise ValueError("path_lesson_id must not be blank")
@@ -362,6 +365,30 @@ async def promote_shared_lesson_document(
         raise SharedLessonDocumentReadinessError(
             "recomputed final deterministic QA failed: "
             + "; ".join(issue.issue_code for issue in recomputed_qa.issues)
+        )
+
+    if not isinstance(semantic_qa, DocumentSemanticQAResult):
+        raise SharedLessonDocumentReadinessError(
+            "document semantic QA result must use the closed semantic contract"
+        )
+    if (
+        not semantic_qa.passed
+        or semantic_qa.status != "pass"
+        or semantic_qa.issues
+        or semantic_qa.semantic_calls != 1
+        or semantic_qa.deterministic_skipped_semantic
+    ):
+        raise SharedLessonDocumentReadinessError(
+            "document semantic QA must PASS with exactly one semantic call and no issues"
+        )
+    if (
+        semantic_qa.document_id != document.id
+        or semantic_qa.document_revision != document.revision
+        or semantic_qa.document_hash != shared_lesson_content_hash(document)
+        or semantic_qa.document_hash != document.content_hash
+    ):
+        raise SharedLessonDocumentReadinessError(
+            "document semantic QA identity does not match the recomputed document"
         )
 
     required_media = _document_required_media(document)
