@@ -34,19 +34,20 @@ from document.shared_lesson.runtime import (
     verify_teaching_plan_source,
 )
 from document.shared_lesson.writer import (
-    SectionWriteResult,
-    SectionWriteValidationError,
     SectionWriterDraft,
+    SectionWriteResult,
     SectionWriterRequest,
+    SectionWriteValidationError,
     validate_and_build_section,
 )
+from infra.database.models import GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (
     ErrorClass,
     LeaseLostError,
     RecoveryAction,
-    RuntimeCheckpointCompatibility,
     RuntimeCheckpoint,
+    RuntimeCheckpointCompatibility,
     SourceIdentity,
     WorkItemAdmission,
     WorkItemFailure,
@@ -59,8 +60,6 @@ from infra.generation_runtime import (
     persist_checkpoint,
     replace_work_item,
 )
-from infra.database.models import GenerationWorkItemModel
-
 
 WRITER_REPAIR_STAGE = "section_writing"
 WRITER_REPAIR_DEFINITION = "shared-section-boundary-targeted-repair:v1"

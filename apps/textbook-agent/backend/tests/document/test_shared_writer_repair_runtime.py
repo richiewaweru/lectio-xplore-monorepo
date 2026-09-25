@@ -12,8 +12,8 @@ from curriculum.teaching_plan.models import (
     TeachingPlanSection,
     TeachingRevisionRecord,
 )
-from document.shared_lesson import writer_repair_runtime as runtime
 from document.shared_lesson import boundary_runtime
+from document.shared_lesson import writer_repair_runtime as runtime
 from document.shared_lesson.boundary import BoundaryValidationResult
 from document.shared_lesson.composer import CompositionChoice, validate_and_build_composition
 from document.shared_lesson.continuity import ContinuityIssue
@@ -91,9 +91,7 @@ def _section(section_id: str, position: int, text: str) -> SharedSection:
     node_id = (
         "shared-node-"
         + hashlib.sha256(
-            f"{section_id}{chr(0)}{section_id}-block{chr(0)}0{chr(0)}paragraph{chr(0)}explanation".encode(
-                "utf-8"
-            )
+            f"{section_id}{chr(0)}{section_id}-block{chr(0)}0{chr(0)}paragraph{chr(0)}explanation".encode()
         ).hexdigest()[:20]
     )
     return SharedSection(
