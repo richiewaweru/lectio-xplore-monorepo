@@ -127,6 +127,7 @@ class RunContract(Contract):
 class WorkItemContract(Contract):
     id: str
     run_id: str
+    replaces_work_item_id: str | None = None
     item_key: str = Field(min_length=1)
     stage: str = Field(min_length=1)
     status: WorkItemStatus
@@ -235,6 +236,15 @@ class SourceIdentity(Contract):
     source_artifact_id: str = Field(min_length=1)
     source_revision: int = Field(ge=1)
     source_hash: str = Field(min_length=1)
+
+
+class WorkItemReplacement(Contract):
+    """Internal authorization to replace one item after bounded repair validation."""
+
+    predecessor_work_item_id: str = Field(min_length=1)
+    owner_user_id: str = Field(min_length=1)
+    source: SourceIdentity
+    replacement: WorkItemAdmission
 
 
 class RunFinalization(Contract):

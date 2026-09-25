@@ -117,10 +117,12 @@ async def _seed_run(
         run.error_summary = "Safe run failure summary." if status == "failed_recoverable" else None
         run.recovery_action = "retry" if status == "failed_recoverable" else None
         item_ids = []
+        item_ids_by_key = {}
         for spec in item_specs:
             item = GenerationWorkItemModel(
                 id=f"runtime-http-item-{suffix}-{spec['key']}",
                 run_id=run.id,
+                replaces_work_item_id=item_ids_by_key.get(spec.get("replaces_key")),
                 item_key=spec["key"],
                 stage=spec.get("stage", "section_writing"),
                 status=spec.get("status", "queued"),
@@ -137,6 +139,7 @@ async def _seed_run(
             )
             session.add(item)
             item_ids.append(item.id)
+            item_ids_by_key[spec["key"]] = item.id
         await session.commit()
         return owner_id, run.id, item_ids
 
@@ -170,6 +173,49 @@ async def test_generation_status_requires_authentication() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/generation/runs/missing")
     assert response.status_code == 401
+
+
+async def test_replacement_history_does_not_inflate_run_progress(runtime_http, db_session_factory):
+    client, identity = runtime_http
+    owner_id, run_id, item_ids = await _seed_run(
+        db_session_factory,
+        suffix="replacement-progress",
+        item_specs=(
+            {
+                "key": "original",
+                "status": "ready",
+                "output_json": {"section": "old"},
+                "output_hash": content_hash({"section": "old"}),
+            },
+            {
+                "key": "replacement",
+                "replaces_key": "original",
+                "status": "queued",
+            },
+            {
+                "key": "sibling",
+                "status": "ready",
+                "output_json": ["kept"],
+                "output_hash": content_hash(["kept"]),
+            },
+        ),
+    )
+    identity["user_id"] = owner_id
+    response = await client.get(f"/api/v1/generation/runs/{run_id}")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["progress"] == {
+        "active": 1,
+        "completed": 1,
+        "failed": 0,
+        "cancelled": 0,
+        "total": 2,
+    }
+    historical, replacement, _sibling = body["work_items"]
+    assert historical["id"] == item_ids[0]
+    assert historical["current"] is False
+    assert historical["replaced_by"] == item_ids[1]
+    assert replacement["current"] is True
 
 
 async def test_status_is_owner_scoped_and_omits_private_runtime_payloads(

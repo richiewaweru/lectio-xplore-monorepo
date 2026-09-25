@@ -18,6 +18,7 @@ from infra.generation_runtime.contracts import (
     WorkItemAdmission,
     WorkItemContract,
     WorkItemFailure,
+    WorkItemReplacement,
     WorkItemStatus,
 )
 from infra.generation_runtime.repository import (
@@ -39,6 +40,7 @@ from infra.generation_runtime.repository import (
     WorkItemConflict,
     WorkItemNotFound,
     WorkItemUnavailable,
+    active_work_items,
     add_work_item,
     admit_run,
     append_event,
@@ -53,6 +55,7 @@ from infra.generation_runtime.repository import (
     load_compatible_checkpoint,
     persist_checkpoint,
     reconcile_expired_work_item,
+    replace_work_item,
     retry_work_item,
 )
 
@@ -91,8 +94,10 @@ __all__ = [
     "WorkItemContract",
     "WorkItemFailure",
     "WorkItemNotFound",
+    "WorkItemReplacement",
     "WorkItemStatus",
     "WorkItemUnavailable",
+    "active_work_items",
     "add_work_item",
     "admit_run",
     "append_event",
@@ -107,5 +112,6 @@ __all__ = [
     "load_compatible_checkpoint",
     "persist_checkpoint",
     "reconcile_expired_work_item",
+    "replace_work_item",
     "retry_work_item",
 ]

@@ -9,9 +9,9 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
-    ForeignKeyConstraint,
     Float,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     PrimaryKeyConstraint,
@@ -1267,7 +1267,14 @@ class GenerationWorkItemModel(Base):
             "status != 'ready' OR (output_json IS NOT NULL AND output_hash IS NOT NULL)",
             name="ck_generation_work_items_ready_has_output",
         ),
+        CheckConstraint(
+            "replaces_work_item_id IS NULL OR replaces_work_item_id != id",
+            name="ck_generation_work_items_not_self_replacing",
+        ),
         UniqueConstraint("run_id", "item_key", name="uq_generation_work_items_run_key"),
+        UniqueConstraint(
+            "replaces_work_item_id", name="uq_generation_work_items_replacement_child"
+        ),
         Index("ix_generation_work_items_run_status", "run_id", "status"),
         Index("ix_generation_work_items_status_lease", "status", "lease_expires_at"),
     )
@@ -1275,6 +1282,11 @@ class GenerationWorkItemModel(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     run_id = Column(
         String, ForeignKey("generation_runs.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    replaces_work_item_id = Column(
+        String,
+        ForeignKey("generation_work_items.id", ondelete="RESTRICT"),
+        nullable=True,
     )
     item_key = Column(String, nullable=False)
     stage = Column(String, nullable=False)

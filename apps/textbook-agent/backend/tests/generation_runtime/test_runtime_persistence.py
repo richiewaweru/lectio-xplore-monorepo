@@ -34,6 +34,7 @@ from infra.generation_runtime import (
     RunAdmissionConflict,
     RunContract,
     RunFinalization,
+    RunNotFound,
     RuntimeCheckpoint,
     RuntimeCheckpointCompatibility,
     RunType,
@@ -44,6 +45,7 @@ from infra.generation_runtime import (
     WorkItemConflict,
     WorkItemContract,
     WorkItemFailure,
+    WorkItemReplacement,
     WorkItemUnavailable,
     add_work_item,
     admit_run,
@@ -59,6 +61,7 @@ from infra.generation_runtime import (
     load_compatible_checkpoint,
     persist_checkpoint,
     reconcile_expired_work_item,
+    replace_work_item,
     retry_work_item,
 )
 
@@ -2289,6 +2292,245 @@ async def test_cancel_committing_first_blocks_finalization(db_session, db_sessio
 
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
+async def test_ready_item_replacement_preserves_history_and_finalizes_active_leaves(
+    db_session,
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session, suffix="replacement-ready")
+    _build, admitted = await _admit(
+        db_session, owner_id=owner_id, lesson_id=lesson_id, request_key="replacement-ready"
+    )
+    prior = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:original",
+            stage="section_writing",
+            input_hash="input-original",
+            definition_hash="definition-original",
+        ),
+    )
+    sibling = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:sibling",
+            stage="section_writing",
+            input_hash="input-sibling",
+            definition_hash="definition-sibling",
+        ),
+    )
+    now = datetime(2026, 9, 25, tzinfo=UTC)
+    original_output = {"section": "original"}
+    sibling_output = {"section": "unchanged"}
+    await _complete_item(
+        db_session, item_id=prior.record.id, worker_id="writer-1", value=original_output, now=now
+    )
+    await _complete_item(
+        db_session,
+        item_id=sibling.record.id,
+        worker_id="writer-2",
+        value=sibling_output,
+        now=now + timedelta(seconds=2),
+    )
+
+    replacement_request = WorkItemAdmission(
+        run_id=admitted.record.id,
+        item_key="section:original-repair-1",
+        stage="section_writing",
+        input_hash="input-repaired",
+        definition_hash="definition-v2",
+        composition_identity="repair:qa-1",
+    )
+    replacement = await replace_work_item(
+        db_session,
+        WorkItemReplacement(
+            predecessor_work_item_id=prior.record.id,
+            owner_user_id=owner_id,
+            source=_source_identity(),
+            replacement=replacement_request,
+        ),
+        now=now + timedelta(seconds=4),
+    )
+    duplicate = await replace_work_item(
+        db_session,
+        WorkItemReplacement(
+            predecessor_work_item_id=prior.record.id,
+            owner_user_id=owner_id,
+            source=_source_identity(),
+            replacement=replacement_request,
+        ),
+        now=now + timedelta(seconds=5),
+    )
+    assert duplicate.id == replacement.id
+    assert replacement.replaces_work_item_id == prior.record.id
+    assert prior.record.status == "ready" and prior.record.output_json == original_output
+    assert sibling.record.status == "ready" and sibling.record.output_json == sibling_output
+    assert admitted.record.status == "queued"
+
+    await _complete_item(
+        db_session,
+        item_id=replacement.id,
+        worker_id="writer-repair",
+        value={"section": "repaired"},
+        now=now + timedelta(seconds=6),
+    )
+    artifact_json = {"document": {"sections": ["repaired", "unchanged"]}}
+    run = await finalize_run(
+        db_session,
+        run_id=admitted.record.id,
+        owner_user_id=owner_id,
+        finalization=_finalization_request(),
+        source_verifier=_verify_source,
+        artifact_loader=_load_verified_artifact(artifact_json),
+        now=now + timedelta(seconds=8),
+    )
+    assert run.status == "ready"
+    assert prior.record.status == sibling.record.status == replacement.status == "ready"
+    assert replacement.output_json == {"section": "repaired"}
+
+
+@pytest.mark.asyncio
+async def test_failed_recoverable_item_replacement_reopens_run_and_requires_changed_identity(
+    db_session,
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session, suffix="replacement-failed")
+    _build, admitted = await _admit(
+        db_session, owner_id=owner_id, lesson_id=lesson_id, request_key="replacement-failed"
+    )
+    failed = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:recoverable",
+            stage="section_writing",
+            input_hash="input-before-repair",
+            definition_hash="definition-before-repair",
+        ),
+    )
+    now = datetime(2026, 9, 25, tzinfo=UTC)
+    claim = await claim_work_item(
+        db_session,
+        work_item_id=failed.record.id,
+        worker_id="writer-fails",
+        source=_source_identity(),
+        now=now,
+    )
+    await fail_work_item(
+        db_session,
+        work_item_id=failed.record.id,
+        worker_id="writer-fails",
+        lease_token=claim.lease_token,
+        failure=_failure(recovery_action=RecoveryAction.RETRY),
+        now=now + timedelta(seconds=1),
+    )
+    assert admitted.record.status == "failed_recoverable"
+
+    same_identity = WorkItemAdmission(
+        run_id=admitted.record.id,
+        item_key="section:repair-bad",
+        stage="section_writing",
+        input_hash="input-before-repair",
+        definition_hash="definition-before-repair",
+    )
+    base_request = WorkItemReplacement(
+        predecessor_work_item_id=failed.record.id,
+        owner_user_id=owner_id,
+        source=_source_identity(),
+        replacement=same_identity,
+    )
+    with pytest.raises(WorkItemConflict, match="changed work identity"):
+        await replace_work_item(db_session, base_request, now=now + timedelta(seconds=2))
+    with pytest.raises(RunNotFound):
+        await replace_work_item(
+            db_session,
+            base_request.model_copy(update={"owner_user_id": "another-owner"}),
+            now=now + timedelta(seconds=2),
+        )
+    replacement = await replace_work_item(
+        db_session,
+        base_request.model_copy(
+            update={
+                "replacement": same_identity.model_copy(
+                    update={
+                        "item_key": "section:repair-good",
+                        "input_hash": "input-after-repair",
+                        "definition_hash": "definition-after-repair",
+                        "composition_identity": "repair:qa-2",
+                    }
+                )
+            }
+        ),
+        now=now + timedelta(seconds=3),
+    )
+    assert replacement.status == "queued"
+    assert replacement.replaces_work_item_id == failed.record.id
+    assert failed.record.status == "failed_recoverable"
+    assert admitted.record.status == "queued"
+    with pytest.raises(WorkItemUnavailable):
+        await claim_work_item(
+            db_session,
+            work_item_id=failed.record.id,
+            worker_id="stale-original",
+            source=_source_identity(),
+            now=now + timedelta(seconds=4),
+        )
+
+
+@pytest.mark.asyncio
+async def test_finalized_run_rejects_late_replacement(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session, suffix="replacement-after-ready")
+    _build, admitted = await _admit(
+        db_session, owner_id=owner_id, lesson_id=lesson_id, request_key="replacement-after-ready"
+    )
+    original = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:finalized",
+            stage="section_writing",
+            input_hash="input-finalized",
+            definition_hash="definition-finalized",
+        ),
+    )
+    now = datetime(2026, 9, 25, tzinfo=UTC)
+    await _complete_item(
+        db_session,
+        item_id=original.record.id,
+        worker_id="writer-finalized",
+        value={"section": "final"},
+        now=now,
+    )
+    artifact_json = {"document": {"sections": ["final"]}}
+    await finalize_run(
+        db_session,
+        run_id=admitted.record.id,
+        owner_user_id=owner_id,
+        finalization=_finalization_request(),
+        source_verifier=_verify_source,
+        artifact_loader=_load_verified_artifact(artifact_json),
+        now=now + timedelta(seconds=2),
+    )
+    with pytest.raises(InvalidRunTransition):
+        await replace_work_item(
+            db_session,
+            WorkItemReplacement(
+                predecessor_work_item_id=original.record.id,
+                owner_user_id=owner_id,
+                source=_source_identity(),
+                replacement=WorkItemAdmission(
+                    run_id=admitted.record.id,
+                    item_key="section:too-late",
+                    stage="section_writing",
+                    input_hash="input-after-finalization",
+                    definition_hash="definition-after-finalization",
+                ),
+            ),
+            now=now + timedelta(seconds=3),
+        )
+    assert admitted.record.status == "ready"
+
+
 async def test_database_rejects_unknown_run_status(db_session) -> None:
     owner_id, lesson_id = await _seed_lesson(db_session)
     build, _admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)

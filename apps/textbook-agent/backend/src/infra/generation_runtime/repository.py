@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -13,7 +13,7 @@ from pydantic import JsonValue, TypeAdapter, ValidationError
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from infra.database.models import (
     GenerationBuildModel,
@@ -39,6 +39,7 @@ from infra.generation_runtime.contracts import (
     VerifiedArtifact,
     WorkItemAdmission,
     WorkItemFailure,
+    WorkItemReplacement,
 )
 
 
@@ -137,6 +138,26 @@ def _canonical_json_value(value: Any) -> tuple[JsonValue, str]:
     return validated, content_hash(validated)
 
 
+def _active_leaf_clause():
+    successor = aliased(GenerationWorkItemModel)
+    return (
+        ~select(successor.id)
+        .where(successor.replaces_work_item_id == GenerationWorkItemModel.id)
+        .exists()
+    )
+
+
+def active_work_items(
+    items: Iterable[GenerationWorkItemModel],
+) -> tuple[GenerationWorkItemModel, ...]:
+    """Return current replacement-chain leaves while retaining old rows as history."""
+    materialized = tuple(items)
+    replaced_ids = {
+        item.replaces_work_item_id for item in materialized if item.replaces_work_item_id
+    }
+    return tuple(item for item in materialized if item.id not in replaced_ids)
+
+
 async def _lock_run_for_item(
     session: AsyncSession,
     *,
@@ -219,6 +240,7 @@ def _live_item_update(
             GenerationWorkItemModel.lease_token == lease_token,
             GenerationWorkItemModel.lease_expires_at > now,
             active_run,
+            _active_leaf_clause(),
         )
         .values(**values)
         .execution_options(synchronize_session=False)
@@ -260,7 +282,10 @@ async def claim_work_item(
     selected = await session.execute(
         select(GenerationWorkItemModel, GenerationRunModel)
         .join(GenerationRunModel, GenerationRunModel.id == GenerationWorkItemModel.run_id)
-        .where(GenerationWorkItemModel.id == work_item_id)
+        .where(
+            GenerationWorkItemModel.id == work_item_id,
+            _active_leaf_clause(),
+        )
         .with_for_update(skip_locked=True, of=GenerationWorkItemModel)
     )
     row = selected.first()
@@ -313,6 +338,7 @@ async def claim_work_item(
             if prior_expiry is None
             else GenerationWorkItemModel.lease_expires_at == prior_expiry
         ),
+        _active_leaf_clause(),
     ]
     try:
         # The conditional update is the SQLite equivalent of row locking. It
@@ -382,7 +408,7 @@ async def _require_live_lease(
 ) -> GenerationWorkItemModel:
     item = await session.scalar(
         select(GenerationWorkItemModel)
-        .where(GenerationWorkItemModel.id == work_item_id)
+        .where(GenerationWorkItemModel.id == work_item_id, _active_leaf_clause())
         .with_for_update(skip_locked=True)
     )
     if (
@@ -591,7 +617,8 @@ async def _refresh_run_lifecycle(
         (
             await session.scalars(
                 select(GenerationWorkItemModel.status).where(
-                    GenerationWorkItemModel.run_id == run.id
+                    GenerationWorkItemModel.run_id == run.id,
+                    _active_leaf_clause(),
                 )
             )
         ).all()
@@ -614,6 +641,7 @@ async def _refresh_run_lifecycle(
             GenerationWorkItemModel.run_id == run.id,
             GenerationWorkItemModel.status.in_({"failed_recoverable", "failed_terminal"}),
             GenerationWorkItemModel.error_code.is_not(None),
+            _active_leaf_clause(),
         )
         .order_by(
             GenerationWorkItemModel.updated_at.desc(),
@@ -655,7 +683,7 @@ async def complete_work_item(
 
     item = await session.scalar(
         select(GenerationWorkItemModel)
-        .where(GenerationWorkItemModel.id == work_item_id)
+        .where(GenerationWorkItemModel.id == work_item_id, _active_leaf_clause())
         .with_for_update(skip_locked=True)
     )
     if item is None:
@@ -816,6 +844,7 @@ async def retry_work_item(
         .where(
             GenerationWorkItemModel.id == work_item_id,
             GenerationRunModel.owner_user_id == owner_user_id,
+            _active_leaf_clause(),
         )
         .with_for_update(skip_locked=True, of=GenerationWorkItemModel)
     )
@@ -879,6 +908,7 @@ async def retry_work_item(
                     {"validation", "provider_transport", "provider_output"}
                 ),
                 GenerationWorkItemModel.recovery_action == RecoveryAction.RETRY.value,
+                _active_leaf_clause(),
                 (
                     GenerationWorkItemModel.lease_token.is_(None)
                     if item.lease_token is None
@@ -907,7 +937,6 @@ async def retry_work_item(
             raise InvalidWorkItemTransition("work-item or parent run changed before retry")
         await session.refresh(item)
         await session.refresh(run)
-        await _refresh_run_lifecycle(session, run=run, now=current_time)
         await append_event(
             session,
             run_id=run.id,
@@ -919,6 +948,7 @@ async def retry_work_item(
                 "recovery_action": RecoveryAction.RETRY.value,
             },
         )
+        await _refresh_run_lifecycle(session, run=run, now=current_time)
     await session.refresh(item)
     return item
 
@@ -933,7 +963,7 @@ async def reconcile_expired_work_item(
     current_time = _utcnow(now)
     item = await session.scalar(
         select(GenerationWorkItemModel)
-        .where(GenerationWorkItemModel.id == work_item_id)
+        .where(GenerationWorkItemModel.id == work_item_id, _active_leaf_clause())
         .with_for_update(skip_locked=True)
     )
     if item is None:
@@ -991,6 +1021,7 @@ async def reconcile_expired_work_item(
                     if item.lease_owner is None
                     else GenerationWorkItemModel.lease_owner == item.lease_owner
                 ),
+                _active_leaf_clause(),
                 run_may_reconcile,
             )
             .values(
@@ -1134,7 +1165,7 @@ async def _finalize_run_in_transaction(
     await _serialize_run_build_on_sqlite(session, run_id=run_id)
 
     # Child rows are locked in a stable order before the parent Run, matching worker paths.
-    items = list(
+    all_items = list(
         (
             await session.scalars(
                 select(GenerationWorkItemModel)
@@ -1144,6 +1175,7 @@ async def _finalize_run_in_transaction(
             )
         ).all()
     )
+    items = active_work_items(all_items)
     if not items:
         raise InvalidRunTransition("a run with no declared work items cannot be finalized")
     if any(item.status != "ready" for item in items):
@@ -1177,7 +1209,7 @@ async def _finalize_run_in_transaction(
     if run.status not in {"queued", "running"}:
         raise InvalidRunTransition("only an active run can be finalized")
     _assert_source_identity(run, finalization.source)
-    current_items = list(
+    current_all_items = list(
         (
             await session.scalars(
                 select(GenerationWorkItemModel)
@@ -1186,10 +1218,11 @@ async def _finalize_run_in_transaction(
             )
         ).all()
     )
-    if [item.id for item in current_items] != [item.id for item in items]:
+    if [item.id for item in current_all_items] != [item.id for item in all_items]:
         raise InvalidRunTransition(
             "work-item set changed during finalization; retry after admission settles"
         )
+    current_items = active_work_items(current_all_items)
     if any(item.status != "ready" for item in current_items):
         raise InvalidRunTransition("all declared work items must be ready before run finalization")
     computed_hash = await _verify_finalization_inputs(
@@ -1291,7 +1324,7 @@ async def cancel_run(
 
     await _serialize_run_build_on_sqlite(session, run_id=run_id)
 
-    items = list(
+    all_items = list(
         (
             await session.scalars(
                 select(GenerationWorkItemModel)
@@ -1301,6 +1334,7 @@ async def cancel_run(
             )
         ).all()
     )
+    items = active_work_items(all_items)
     run = await session.scalar(
         select(GenerationRunModel)
         .where(
@@ -1316,7 +1350,7 @@ async def cancel_run(
         return run
     if run.status not in {"queued", "running", "failed_recoverable"}:
         raise InvalidRunTransition("run became terminal before cancellation")
-    current_item_ids = list(
+    current_all_item_ids = list(
         (
             await session.scalars(
                 select(GenerationWorkItemModel.id)
@@ -1325,7 +1359,7 @@ async def cancel_run(
             )
         ).all()
     )
-    if current_item_ids != [item.id for item in items]:
+    if current_all_item_ids != [item.id for item in all_items]:
         raise InvalidRunTransition(
             "work-item set changed during cancellation; retry after admission settles"
         )
@@ -1493,7 +1527,8 @@ def _work_item_identity_matches(
     request: WorkItemAdmission,
 ) -> bool:
     return (
-        item.stage == request.stage
+        item.replaces_work_item_id is None
+        and item.stage == request.stage
         and item.input_hash == request.input_hash
         and item.definition_hash == request.definition_hash
         and item.composition_identity == request.composition_identity
@@ -1559,6 +1594,215 @@ async def add_work_item(
             raise WorkItemConflict("item key is already bound to a different work-item identity")
         return AdmissionResult(existing, created=False)
     return AdmissionResult(item, created=True)
+
+
+def _replacement_identity_matches(
+    item: GenerationWorkItemModel,
+    request: WorkItemAdmission,
+    predecessor_id: str,
+) -> bool:
+    return (
+        item.run_id == request.run_id
+        and item.replaces_work_item_id == predecessor_id
+        and item.item_key == request.item_key
+        and item.stage == request.stage
+        and item.input_hash == request.input_hash
+        and item.definition_hash == request.definition_hash
+        and item.composition_identity == request.composition_identity
+        and item.max_attempts == request.max_attempts
+    )
+
+
+async def replace_work_item(
+    session: AsyncSession,
+    request: WorkItemReplacement,
+    *,
+    now: datetime | None = None,
+) -> GenerationWorkItemModel:
+    """Admit one linked successor after an application-validated targeted repair.
+
+    This is an internal application-service operation, not a generic user-facing
+    admission route. The caller must validate the repair against its durable QA
+    issue; this layer enforces owner/source identity, lineage, lock order and
+    idempotency.
+    """
+    if not isinstance(request, WorkItemReplacement):
+        request = WorkItemReplacement.model_validate(request)
+    predecessor_id = request.predecessor_work_item_id
+    replacement = request.replacement
+    preliminary_run_id = await session.scalar(
+        select(GenerationWorkItemModel.run_id).where(GenerationWorkItemModel.id == predecessor_id)
+    )
+    if preliminary_run_id is None:
+        raise WorkItemNotFound("replacement predecessor does not exist")
+    if replacement.run_id != preliminary_run_id:
+        raise WorkItemConflict("replacement must remain in the predecessor's Run")
+
+    # SQLite serializes through the stable Build row. PostgreSQL locks item then
+    # Run, matching claim/finalization and the database insertion trigger.
+    await _serialize_run_build_on_sqlite(session, run_id=preliminary_run_id)
+    predecessor = await session.scalar(
+        select(GenerationWorkItemModel)
+        .where(
+            GenerationWorkItemModel.id == predecessor_id,
+            GenerationWorkItemModel.run_id == preliminary_run_id,
+        )
+        .with_for_update(skip_locked=True)
+        .execution_options(populate_existing=True)
+    )
+    if predecessor is None:
+        if await session.get(GenerationWorkItemModel, predecessor_id) is None:
+            raise WorkItemNotFound("replacement predecessor does not exist")
+        raise WorkItemUnavailable("replacement predecessor is locked by another transaction")
+
+    run = await session.scalar(
+        select(GenerationRunModel)
+        .where(GenerationRunModel.id == preliminary_run_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if run is None:
+        raise RunNotFound("generation run does not exist")
+    if run.owner_user_id != request.owner_user_id:
+        raise RunNotFound("replacement predecessor is unavailable to this owner")
+    source = request.source
+    if not isinstance(source, SourceIdentity):
+        source = SourceIdentity.model_validate(source)
+    _assert_source_identity(run, source)
+
+    child = await session.scalar(
+        select(GenerationWorkItemModel).where(
+            GenerationWorkItemModel.run_id == run.id,
+            GenerationWorkItemModel.replaces_work_item_id == predecessor_id,
+        )
+    )
+    if child is not None:
+        if _replacement_identity_matches(child, replacement, predecessor_id):
+            return child
+        raise WorkItemConflict("predecessor already has a different replacement")
+
+    if run.status not in {"queued", "running", "failed_recoverable"}:
+        raise InvalidRunTransition("only an active or recoverable Run can admit a replacement")
+    if predecessor.status not in {"ready", "failed_recoverable"}:
+        raise InvalidWorkItemTransition(
+            "only a ready or failed_recoverable work item can be replaced"
+        )
+    if predecessor.stage != replacement.stage:
+        raise WorkItemConflict("replacement stage must match the predecessor stage")
+    if predecessor.item_key == replacement.item_key:
+        raise WorkItemConflict("replacement must use a new stable item key")
+    if (
+        predecessor.input_hash == replacement.input_hash
+        and predecessor.definition_hash == replacement.definition_hash
+        and predecessor.composition_identity == replacement.composition_identity
+    ):
+        raise WorkItemConflict("replacement must bind a changed work identity")
+    if predecessor.status == "failed_recoverable" and (
+        predecessor.error_class not in {"validation", "provider_output"}
+        or predecessor.recovery_action
+        not in {RecoveryAction.RETRY.value, RecoveryAction.REVIEW.value}
+    ):
+        raise InvalidWorkItemTransition(
+            "this failure is not eligible for targeted repaired-work replacement"
+        )
+
+    same_key = await session.scalar(
+        select(GenerationWorkItemModel).where(
+            GenerationWorkItemModel.run_id == run.id,
+            GenerationWorkItemModel.item_key == replacement.item_key,
+        )
+    )
+    if same_key is not None:
+        if _replacement_identity_matches(same_key, replacement, predecessor_id):
+            return same_key
+        raise WorkItemConflict("replacement key is already bound to different work")
+
+    if session.get_bind().dialect.name == "sqlite":
+        run = await session.scalar(
+            select(GenerationRunModel)
+            .where(GenerationRunModel.id == run.id)
+            .execution_options(populate_existing=True)
+        )
+        if run is None:
+            raise RunNotFound("generation run does not exist")
+    _assert_source_identity(run, source)
+    if run.status not in {"queued", "running", "failed_recoverable"}:
+        raise InvalidRunTransition("Run became terminal before replacement admission")
+
+    current_time = _utcnow(now)
+    item = GenerationWorkItemModel(
+        id=str(uuid.uuid4()),
+        run_id=run.id,
+        replaces_work_item_id=predecessor.id,
+        item_key=replacement.item_key,
+        stage=replacement.stage,
+        status="queued",
+        attempt=1,
+        max_attempts=replacement.max_attempts,
+        input_hash=replacement.input_hash,
+        definition_hash=replacement.definition_hash,
+        composition_identity=replacement.composition_identity,
+        created_at=current_time,
+        updated_at=current_time,
+    )
+    try:
+        async with session.begin_nested():
+            session.add(item)
+            await session.flush()
+            if run.status == "failed_recoverable":
+                result = await session.execute(
+                    update(GenerationRunModel)
+                    .where(
+                        GenerationRunModel.id == run.id,
+                        GenerationRunModel.owner_user_id == request.owner_user_id,
+                        GenerationRunModel.status == "failed_recoverable",
+                        GenerationRunModel.source_artifact_type == source.source_artifact_type,
+                        GenerationRunModel.source_artifact_id == source.source_artifact_id,
+                        GenerationRunModel.source_revision == source.source_revision,
+                        GenerationRunModel.source_hash == source.source_hash,
+                    )
+                    .values(
+                        status="queued",
+                        error_code=None,
+                        error_class=None,
+                        error_summary=None,
+                        recovery_action=None,
+                        completed_at=None,
+                        updated_at=current_time,
+                    )
+                    .execution_options(synchronize_session=False)
+                )
+                if result.rowcount != 1:
+                    raise InvalidRunTransition("Run changed before replacement admission")
+            await session.refresh(run)
+            await _refresh_run_lifecycle(session, run=run, now=current_time)
+            await append_event(
+                session,
+                run_id=run.id,
+                work_item_id=item.id,
+                event_type="work_item_replacement_queued",
+                safe_payload={
+                    "replaces_work_item_id": predecessor.id,
+                    "replaces_item_key": predecessor.item_key,
+                    "input_hash": item.input_hash,
+                    "definition_hash": item.definition_hash,
+                    "composition_identity": item.composition_identity,
+                },
+            )
+    except IntegrityError as exc:
+        existing = await session.scalar(
+            select(GenerationWorkItemModel).where(
+                GenerationWorkItemModel.run_id == run.id,
+                GenerationWorkItemModel.replaces_work_item_id == predecessor_id,
+            )
+        )
+        if existing is not None and _replacement_identity_matches(
+            existing, replacement, predecessor_id
+        ):
+            return existing
+        raise WorkItemConflict("replacement was concurrently admitted or violates lineage") from exc
+    await session.refresh(item)
+    return item
 
 
 async def append_event(

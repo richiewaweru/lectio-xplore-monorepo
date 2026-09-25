@@ -24,6 +24,7 @@ from infra.generation_runtime.repository import (
     RunNotFound,
     WorkItemNotFound,
     WorkItemUnavailable,
+    active_work_items,
     cancel_run,
     get_run_status,
     retry_work_item,
@@ -59,16 +60,25 @@ def _latest_error(run: GenerationRunModel, items: list[GenerationWorkItemModel])
 
 def _run_status(run: GenerationRunModel) -> dict[str, Any]:
     items = sorted(run.work_items, key=lambda item: (item.created_at, item.id))
-    active = sum(item.status in _ACTIVE_ITEM_STATUSES for item in items)
-    ready = sum(item.status == "ready" for item in items)
-    failed = sum(item.status in _FAILED_ITEM_STATUSES for item in items)
-    cancelled = sum(item.status == "cancelled" for item in items)
-    active_stages = sorted({item.stage for item in items if item.status in _ACTIVE_ITEM_STATUSES})
+    current_items = active_work_items(items)
+    current_ids = {item.id for item in current_items}
+    replaced_by = {
+        item.replaces_work_item_id: item.id for item in items if item.replaces_work_item_id
+    }
+    active = sum(item.status in _ACTIVE_ITEM_STATUSES for item in current_items)
+    ready = sum(item.status == "ready" for item in current_items)
+    failed = sum(item.status in _FAILED_ITEM_STATUSES for item in current_items)
+    cancelled = sum(item.status == "cancelled" for item in current_items)
+    active_stages = sorted(
+        {item.stage for item in current_items if item.status in _ACTIVE_ITEM_STATUSES}
+    )
     run_actions = ["cancel"] if run.status in {"queued", "running", "failed_recoverable"} else []
     work_items = []
     for item in items:
+        is_current = item.id in current_ids
         can_retry = (
-            item.status == "failed_recoverable"
+            is_current
+            and item.status == "failed_recoverable"
             and item.recovery_action == "retry"
             and item.error_class in _RETRYABLE_ERROR_CLASSES
             and item.attempt < item.max_attempts
@@ -80,6 +90,8 @@ def _run_status(run: GenerationRunModel) -> dict[str, Any]:
             "key": item.item_key,
             "stage": item.stage,
             "status": item.status,
+            "current": is_current,
+            "replaced_by": replaced_by.get(item.id),
             "attempt": item.attempt,
             "max_attempts": item.max_attempts,
             "latest_error": _safe_error(item),
@@ -111,7 +123,7 @@ def _run_status(run: GenerationRunModel) -> dict[str, Any]:
             "completed": ready,
             "failed": failed,
             "cancelled": cancelled,
-            "total": len(items),
+            "total": len(current_items),
         },
         "source": {
             "type": run.source_artifact_type,
@@ -120,7 +132,7 @@ def _run_status(run: GenerationRunModel) -> dict[str, Any]:
             "hash": run.source_hash,
         },
         "output": output,
-        "latest_error": _latest_error(run, items),
+        "latest_error": _latest_error(run, list(current_items)),
         "work_items": work_items,
         "allowed_actions": run_actions,
         "links": {
@@ -152,7 +164,7 @@ def _build_status(runs: list[GenerationRunModel]) -> dict[str, Any]:
         status = "awaiting_review"
     else:
         status = next(iter(run_statuses)) if len(run_statuses) == 1 else None
-    items = [item for run in runs for item in run.work_items]
+    items = [item for run in runs for item in active_work_items(run.work_items)]
     active = sum(item.status in _ACTIVE_ITEM_STATUSES for item in items)
     ready = sum(item.status == "ready" for item in items)
     failed = sum(item.status in _FAILED_ITEM_STATUSES for item in items)
