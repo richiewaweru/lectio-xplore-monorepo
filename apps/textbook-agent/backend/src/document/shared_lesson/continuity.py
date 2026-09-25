@@ -131,9 +131,9 @@ def coerce_expected_node_shape(
     if isinstance(value, Mapping):
         return ExpectedNodeShape.model_validate(value)
     payload = {
-        "id": getattr(value, "id"),
-        "kind": getattr(value, "kind"),
-        "teaching_block_id": getattr(value, "teaching_block_id"),
+        "id": value.id,
+        "kind": value.kind,
+        "teaching_block_id": value.teaching_block_id,
         "semantic_role": getattr(value, "semantic_role", None),
         "task_spec_id": getattr(value, "task_spec_id", None),
     }
@@ -146,7 +146,7 @@ def _node_text(node: SharedLessonNode) -> str:
     if isinstance(node, ListNode):
         return " ".join(node.display.items)
     if isinstance(node, FigureNode):
-        return " ".join((node.display.caption, node.accessibility.alt_text))
+        return f"{node.display.caption} {node.accessibility.alt_text}"
     if isinstance(node, TableNode):
         return " ".join(
             (
@@ -156,7 +156,7 @@ def _node_text(node: SharedLessonNode) -> str:
             )
         )
     if isinstance(node, CalloutNode):
-        return " ".join((node.display.title, node.display.body))
+        return f"{node.display.title} {node.display.body}"
     return ""
 
 
@@ -247,17 +247,20 @@ def _shape_issues(
                     node_ids,
                 )
             )
-        if expected_node.kind == "task_anchor" and isinstance(actual_node, TaskAnchor):
-            if actual_node.task_spec_id != expected_node.task_spec_id:
-                issues.append(
-                    _issue(
-                        "task_anchor_mismatch",
-                        section.id,
-                        f"anchor {actual_node.id!r} names {actual_node.task_spec_id!r}; expected {expected_node.task_spec_id!r}",
-                        "Restore the accepted TaskAnchor task_spec_id and keep it adjacent to its block content.",
-                        node_ids,
-                    )
+        if (
+            expected_node.kind == "task_anchor"
+            and isinstance(actual_node, TaskAnchor)
+            and actual_node.task_spec_id != expected_node.task_spec_id
+        ):
+            issues.append(
+                _issue(
+                    "task_anchor_mismatch",
+                    section.id,
+                    f"anchor {actual_node.id!r} names {actual_node.task_spec_id!r}; expected {expected_node.task_spec_id!r}",
+                    "Restore the accepted TaskAnchor task_spec_id and keep it adjacent to its block content.",
+                    node_ids,
                 )
+            )
     return issues
 
 

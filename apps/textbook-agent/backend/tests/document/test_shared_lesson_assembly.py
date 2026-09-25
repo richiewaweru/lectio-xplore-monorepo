@@ -14,6 +14,7 @@ from document.shared_lesson import (
     SharedSection,
     assemble_shared_lesson_document,
 )
+from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.models import (
     FigureAccessibility,
     FigureDisplay,
@@ -21,9 +22,8 @@ from document.shared_lesson.models import (
     ParagraphDisplay,
     ParagraphNode,
 )
-from document.shared_lesson.runtime import TeachingPlanSource
 from document.shared_lesson.qa import DocumentQAError
-from document.shared_lesson.continuity import ExpectedNodeShape
+from document.shared_lesson.runtime import TeachingPlanSource
 
 
 def _plan(slot_id: str, title: str, block_id: str) -> TeachingPlanSection:
@@ -208,7 +208,10 @@ def test_pending_teaching_plan_cannot_be_treated_as_approved() -> None:
         _paragraph_section("section-2", "Application", "block-2", 1),
     ]
 
-    plans = (_plan("section-1", "Introduction", "block-1"), _plan("section-2", "Application", "block-2"))
+    plans = (
+        _plan("section-1", "Introduction", "block-1"),
+        _plan("section-2", "Application", "block-2"),
+    )
     source = _source(plans)
     pending_record = source.revision_record.model_copy(update={"status": "pending"})
     pending_source = source.model_copy(update={"revision_record": pending_record})
@@ -246,7 +249,10 @@ def test_pending_teaching_plan_cannot_be_treated_as_approved() -> None:
     ],
 )
 def test_forged_or_stale_teaching_plan_source_fails_before_draft(mutate) -> None:
-    plans = (_plan("section-1", "Introduction", "block-1"), _plan("section-2", "Application", "block-2"))
+    plans = (
+        _plan("section-1", "Introduction", "block-1"),
+        _plan("section-2", "Application", "block-2"),
+    )
     source = mutate(_source(plans))
     with pytest.raises(SharedLessonAssemblyError, match="teaching_plan_source_invalid"):
         assemble_shared_lesson_document(

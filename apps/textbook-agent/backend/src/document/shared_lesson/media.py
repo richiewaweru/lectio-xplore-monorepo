@@ -155,7 +155,9 @@ def _fact_entries(
     return tuple(entries)
 
 
-def _planned_section(source: TeachingPlanSource, section: SharedSection) -> tuple[SourceIdentity, Any]:
+def _planned_section(
+    source: TeachingPlanSource, section: SharedSection
+) -> tuple[SourceIdentity, Any]:
     identity = _verify_source(source)
     planned = next((item for item in source.plan.sections if item.slot_id == section.id), None)
     if planned is None:

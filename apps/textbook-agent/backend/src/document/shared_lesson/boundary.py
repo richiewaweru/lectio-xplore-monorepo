@@ -28,6 +28,7 @@ from document.shared_lesson.models import SharedLessonNode, SharedSection
 from document.shared_lesson.writer import (
     SectionWriteResult,
     SectionWriterRequest,
+    SectionWriteValidationError,
     _default_provider,
     _request_payload,
     validate_and_build_section,
@@ -89,7 +90,9 @@ class BoundaryRepairRequest(_ClosedModel):
 
 
 class BoundaryRepairEngine(Protocol):
-    async def repair_section(self, request: BoundaryRepairRequest) -> SharedSection | SectionWriteResult:
+    async def repair_section(
+        self, request: BoundaryRepairRequest
+    ) -> SharedSection | SectionWriteResult:
         """Return only the affected section using the existing writer stack."""
 
 
@@ -127,7 +130,9 @@ class BoundaryValidationResult(_ClosedModel):
         return self.status == "pass" and not self.issues
 
 
-def _failure_issue(code: str, section_id: str, explanation: str, correction: str) -> ContinuityIssue:
+def _failure_issue(
+    code: str, section_id: str, explanation: str, correction: str
+) -> ContinuityIssue:
     return ContinuityIssue(
         issue_code=code,
         affected_section_id=section_id,
@@ -164,7 +169,9 @@ def _coerce_verdict(raw: Any) -> BoundarySemanticVerdict:
                 raw = raw.model_dump(mode="json")
             verdict = BoundarySemanticVerdict.model_validate(raw)
     except ValidationError as exc:
-        raise BoundarySemanticOutputError("semantic boundary output violates its closed schema") from exc
+        raise BoundarySemanticOutputError(
+            "semantic boundary output violates its closed schema"
+        ) from exc
     if verdict.issue is not None and any(
         _INTERNAL_REVIEW_TEXT.search(value)
         for value in (verdict.issue.explanation, verdict.issue.required_correction)
@@ -222,11 +229,7 @@ class _WriterBoundaryRepairEngine:
 
     async def repair_section(self, request: BoundaryRepairRequest) -> SharedSection:
         errors = tuple(issue.required_correction for issue in request.issues)
-        node_ids = tuple(
-            node_id
-            for issue in request.issues
-            for node_id in issue.affected_node_ids
-        )
+        node_ids = tuple(node_id for issue in request.issues for node_id in issue.affected_node_ids)
         payload = _request_payload(
             request.writer_request,
             repair_scope="targeted",
@@ -248,6 +251,7 @@ async def default_boundary_semantic_validator(
 ) -> BoundarySemanticVerdict:
     """Use the existing structured provider with the STANDARD capability slot."""
     from core.llm.runner import RetryPolicy
+
     from core.prompts import effective_prompt_text
     from infra.authoring.model_policy import BOUNDARY_CONTINUITY_VALIDATOR
     from infra.authoring.structured_provider import run_structured_agent
@@ -404,7 +408,7 @@ async def validate_and_repair_boundary(
             request=request,
             value=await repair_engine.repair_section(request),
         )
-    except Exception as exc:
+    except SectionWriteValidationError as exc:
         issue = _failure_issue(
             "boundary_repair_failed",
             target_id,

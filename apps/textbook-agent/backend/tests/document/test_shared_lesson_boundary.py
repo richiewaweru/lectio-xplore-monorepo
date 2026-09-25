@@ -97,7 +97,9 @@ class _Repair:
 
 
 def _boundary(*, next_text: str = "Light energy supports photosynthesis."):
-    previous_plan = _plan("s1", title="Light and energy", must=("light energy",), exit_state=("light energy",))
+    previous_plan = _plan(
+        "s1", title="Light and energy", must=("light energy",), exit_state=("light energy",)
+    )
     next_plan = _plan(
         "s2",
         title="Photosynthesis",
@@ -113,7 +115,9 @@ def _boundary(*, next_text: str = "Light energy supports photosynthesis."):
 
 @pytest.mark.asyncio
 async def test_deterministic_boundary_failure_precedes_semantic_and_repairs_once() -> None:
-    previous_plan, next_plan, previous, following = _boundary(next_text="Photosynthesis makes food.")
+    previous_plan, next_plan, previous, following = _boundary(
+        next_text="Photosynthesis makes food."
+    )
     semantic = _Semantic(BoundarySemanticVerdict(status="pass"))
     repair = _Repair(_section("s2", 1, "Light energy supports photosynthesis."))
 
@@ -137,7 +141,9 @@ async def test_deterministic_boundary_failure_precedes_semantic_and_repairs_once
 
 @pytest.mark.asyncio
 async def test_deterministic_repair_is_blocked_by_post_repair_semantic_issue() -> None:
-    previous_plan, next_plan, previous, following = _boundary(next_text="Photosynthesis makes food.")
+    previous_plan, next_plan, previous, following = _boundary(
+        next_text="Photosynthesis makes food."
+    )
     semantic = _Semantic(
         BoundarySemanticVerdict(
             status="issue",
@@ -398,3 +404,27 @@ async def test_persistent_semantic_issue_fails_after_one_revalidation_without_re
     assert result.semantic_calls == 2
     assert repair.calls == 1
     assert result.previous_section == previous
+
+
+@pytest.mark.asyncio
+async def test_repair_operational_error_is_not_reclassified_as_recoverable_content_failure() -> (
+    None
+):
+    previous_plan, next_plan, previous, following = _boundary(
+        next_text="Photosynthesis makes food."
+    )
+
+    class _OperationalRepair:
+        async def repair_section(self, _request):
+            raise RuntimeError("writer credentials are unavailable")
+
+    with pytest.raises(RuntimeError, match="credentials"):
+        await validate_and_repair_boundary(
+            previous_section=previous,
+            previous_plan=previous_plan,
+            next_section=following,
+            next_plan=next_plan,
+            semantic_validator=_Semantic(BoundarySemanticVerdict(status="pass")),
+            repair_engine=_OperationalRepair(),
+            writer_requests={"s2": _writer_request(next_plan)},
+        )

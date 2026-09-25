@@ -7,6 +7,7 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
+
 def _json_value(value: Any) -> Any:
     if hasattr(value, "model_dump"):
         return value.model_dump(mode="json")

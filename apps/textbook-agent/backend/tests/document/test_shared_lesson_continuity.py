@@ -18,16 +18,16 @@ from document.shared_lesson.models import (
     ParagraphDisplay,
     ParagraphNode,
     SharedSection,
-    TaskAnchor,
     TableDisplay,
     TableNode,
+    TaskAnchor,
+    build_shared_lesson_document,
 )
 from document.shared_lesson.qa import (
     DocumentQAError,
     qa_shared_lesson_document,
     require_ready_document,
 )
-from document.shared_lesson.models import build_shared_lesson_document
 
 
 def _plan(
@@ -277,8 +277,14 @@ def test_final_qa_returns_ready_for_valid_document() -> None:
                     "prompt": "What does light provide?",
                     "difficulty": "guided",
                     "expected_evidence": "Light provides energy",
-                    "response": {"type": "single_choice"},
-                    "evaluation": {"type": "exact_match"},
+                    "response": {
+                        "type": "single_choice",
+                        "options": [
+                            {"id": "light", "text": "Light"},
+                            {"id": "sand", "text": "Sand"},
+                        ],
+                    },
+                    "evaluation": {"type": "exact_match", "correct_option_id": "light"},
                 }
             ],
             "created_at": "2026-09-24T09:00:00+03:00",
@@ -326,8 +332,14 @@ def test_final_qa_blocks_required_media_and_ready_gate() -> None:
                     "prompt": "What does light provide?",
                     "difficulty": "guided",
                     "expected_evidence": "Light provides energy",
-                    "response": {"type": "single_choice"},
-                    "evaluation": {"type": "exact_match"},
+                    "response": {
+                        "type": "single_choice",
+                        "options": [
+                            {"id": "light", "text": "Light"},
+                            {"id": "sand", "text": "Sand"},
+                        ],
+                    },
+                    "evaluation": {"type": "exact_match", "correct_option_id": "light"},
                 }
             ],
             "created_at": "2026-09-24T09:00:00+03:00",

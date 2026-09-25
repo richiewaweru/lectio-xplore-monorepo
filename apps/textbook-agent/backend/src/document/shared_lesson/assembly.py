@@ -226,7 +226,13 @@ def assemble_shared_lesson_document(
     title = plan.learner_title
     if title is None:  # The Phase 6 verifier normally rejects this for v2 plans.
         raise SharedLessonAssemblyError(
-            (_issue("teaching_plan_title_missing", "document", "approved source has no learner title"),)
+            (
+                _issue(
+                    "teaching_plan_title_missing",
+                    "document",
+                    "approved source has no learner title",
+                ),
+            )
         )
     if expected_title is not None and expected_title != title:
         raise SharedLessonAssemblyError(

@@ -213,7 +213,10 @@ def test_rejects_stale_canonical_hash() -> None:
         ({"type": "single_choice", "options": []}, {"type": "exact_match"}),
         ({"type": "text"}, {"type": "exact_match", "correct_option_id": "light"}),
         (
-            {"type": "single_choice", "options": [{"id": "light", "text": "Light"}, {"id": "sand", "text": "Sand"}]},
+            {
+                "type": "single_choice",
+                "options": [{"id": "light", "text": "Light"}, {"id": "sand", "text": "Sand"}],
+            },
             {"type": "exact_match", "correct_option_id": "missing"},
         ),
     ],

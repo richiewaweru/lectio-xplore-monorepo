@@ -163,13 +163,7 @@ class TaskAnchor(_ClosedModel):
 
 
 SharedLessonNode = Annotated[
-    ParagraphNode
-    | HeadingNode
-    | ListNode
-    | FigureNode
-    | TableNode
-    | CalloutNode
-    | TaskAnchor,
+    ParagraphNode | HeadingNode | ListNode | FigureNode | TableNode | CalloutNode | TaskAnchor,
     Field(discriminator="kind"),
 ]
 shared_lesson_node_adapter: TypeAdapter[SharedLessonNode] = TypeAdapter(SharedLessonNode)
@@ -231,9 +225,7 @@ class SharedLessonDocument(_ClosedModel):
     diagnostics: tuple[str, ...] = ()
 
     @model_validator(mode="after")
-    def _validate_complete_immutable_artifact(
-        self, info: ValidationInfo
-    ) -> SharedLessonDocument:
+    def _validate_complete_immutable_artifact(self, info: ValidationInfo) -> SharedLessonDocument:
         if self.created_at.tzinfo is None or self.created_at.utcoffset() is None:
             raise ValueError("created_at must include a timezone")
         positions = [section.position for section in self.sections]

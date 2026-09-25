@@ -23,7 +23,9 @@ def _migration_module():
         / "versions"
         / "20260925_0045_shared_lesson_documents.py"
     )
-    spec = importlib.util.spec_from_file_location("shared_lesson_document_migration", migration_path)
+    spec = importlib.util.spec_from_file_location(
+        "shared_lesson_document_migration", migration_path
+    )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -80,29 +82,24 @@ def test_migration_guards_shared_document_json_and_ready_rows() -> None:
             {**values, "plan_hash": "a" * 64, "content_hash": "c" * 64},
         )
 
-        with pytest.raises(IntegrityError, match="immutable"):
-            with connection.begin_nested():
-                connection.execute(
-                    text(
-                        "UPDATE shared_lesson_documents SET document_json=:document_json "
-                        "WHERE id='document-1'"
-                    ),
-                    {"document_json": _document_json("Changed")},
-                )
+        with pytest.raises(IntegrityError, match="immutable"), connection.begin_nested():
+            connection.execute(
+                text(
+                    "UPDATE shared_lesson_documents SET document_json=:document_json "
+                    "WHERE id='document-1'"
+                ),
+                {"document_json": _document_json("Changed")},
+            )
 
         connection.execute(
             text("UPDATE shared_lesson_documents SET status='ready' WHERE id='document-1'")
         )
-        with pytest.raises(IntegrityError, match="immutable"):
-            with connection.begin_nested():
-                connection.execute(
-                    text("UPDATE shared_lesson_documents SET status='draft' WHERE id='document-1'")
-                )
-        with pytest.raises(IntegrityError, match="immutable"):
-            with connection.begin_nested():
-                connection.execute(
-                    text("DELETE FROM shared_lesson_documents WHERE id='document-1'")
-                )
+        with pytest.raises(IntegrityError, match="immutable"), connection.begin_nested():
+            connection.execute(
+                text("UPDATE shared_lesson_documents SET status='draft' WHERE id='document-1'")
+            )
+        with pytest.raises(IntegrityError, match="immutable"), connection.begin_nested():
+            connection.execute(text("DELETE FROM shared_lesson_documents WHERE id='document-1'"))
 
         with Operations.context(MigrationContext.configure(connection)):
             migration.downgrade()

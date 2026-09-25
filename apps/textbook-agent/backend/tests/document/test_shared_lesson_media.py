@@ -21,16 +21,18 @@ from document.shared_lesson.media import (
     execute_figure_work_orders,
     validate_reusable_figure_asset,
 )
-from document.shared_lesson.models import SharedLessonDocument, SharedSection, build_shared_lesson_document
+from document.shared_lesson.models import (
+    SharedLessonDocument,
+    SharedSection,
+    build_shared_lesson_document,
+)
 from document.shared_lesson.runtime import TeachingPlanSource
 from media.generation.contracts import GeneratedVisualBlock
 
 
 def _section(section_id: str, position: int, *, caption: str | None = None) -> SharedSection:
     caption = caption or (
-        "A leaf in sunlight"
-        if section_id == "section-a"
-        else "Energy moves from the source"
+        "A leaf in sunlight" if section_id == "section-a" else "Energy moves from the source"
     )
     alt_text = (
         "A leaf receiving sunlight"
@@ -152,7 +154,9 @@ def _work(section_id: str = "section-a", *, facts=None, required: bool = True):
     )
 
 
-def _document(source: TeachingPlanSource | None = None, *, changed_caption: str | None = None) -> SharedLessonDocument:
+def _document(
+    source: TeachingPlanSource | None = None, *, changed_caption: str | None = None
+) -> SharedLessonDocument:
     source = source or _source()
     section_a = _section("section-a", 0, caption=changed_caption)
     section_b = _section("section-b", 1)
@@ -231,7 +235,9 @@ def test_changed_section_and_stale_document_are_rejected() -> None:
 
     stale_payload = deepcopy(_document().model_dump(mode="json"))
     stale_payload["title"] = "Changed without recomputing hash"
-    stale = SharedLessonDocument.model_validate(stale_payload, context={"skip_content_hash_validation": True})
+    stale = SharedLessonDocument.model_validate(
+        stale_payload, context={"skip_content_hash_validation": True}
+    )
     with pytest.raises(SharedFigureMediaError, match="stale"):
         bind_figure_media_to_document(ready, stale)
 
@@ -254,9 +260,14 @@ def test_pending_source_and_invalid_shape_or_facts_fail_before_media_order() -> 
             source,
             section,
             figure_node_id="figure-a",
-            expected_shape=(ExpectedNodeShape(
-                id="other", kind="figure", teaching_block_id="block-a", semantic_role="explanation"
-            ),),
+            expected_shape=(
+                ExpectedNodeShape(
+                    id="other",
+                    kind="figure",
+                    teaching_block_id="block-a",
+                    semantic_role="explanation",
+                ),
+            ),
         )
     with pytest.raises(SharedFigureMediaError, match="unsupported_required_fact"):
         build_figure_work_order(
@@ -271,14 +282,18 @@ def test_pending_source_and_invalid_shape_or_facts_fail_before_media_order() -> 
 def test_provider_diagnostics_never_replace_learner_figure_fields() -> None:
     work = _work()
     block = _block(work)
-    block = block.model_copy(update={"caption": "provider diagnostic", "alt_text": "provider diagnostic"})
+    block = block.model_copy(
+        update={"caption": "provider diagnostic", "alt_text": "provider diagnostic"}
+    )
     with pytest.raises(SharedFigureMediaError, match="semantics"):
         bind_generated_figure(work, [block])
 
 
 def test_independent_figures_run_concurrently_and_required_failure_preserves_sibling() -> None:
     work_a = _work("section-a")
-    work_b = _work("section-b", facts={"fact-energy": "Energy moves through the leaf."}, required=False)
+    work_b = _work(
+        "section-b", facts={"fact-energy": "Energy moves through the leaf."}, required=False
+    )
     works = (work_a, work_b)
 
     class Executor:
@@ -307,7 +322,9 @@ def test_independent_figures_run_concurrently_and_required_failure_preserves_sib
 
 def test_targeted_retry_preserves_healthy_sibling_output() -> None:
     work_a = _work("section-a")
-    work_b = _work("section-b", facts={"fact-energy": "Energy moves through the leaf."}, required=False)
+    work_b = _work(
+        "section-b", facts={"fact-energy": "Energy moves through the leaf."}, required=False
+    )
     healthy = bind_generated_figure(work_b, [_block(work_b)])
     attempts = {"figure-a": 0}
 
