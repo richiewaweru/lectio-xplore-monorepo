@@ -45,6 +45,7 @@ BOUNDARY_CONTINUITY_VALIDATOR = "boundary_continuity_validator"
 DOCUMENT_SEMANTIC_QA = "document_semantic_qa"
 V3_TARGETED_LESSON_REPAIR = "v3_targeted_lesson_repair"
 SHARED_SOURCEBOOK_AUTHORING = "shared_sourcebook_authoring"
+SHARED_TASK_AUTHORING = "shared_task_authoring"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
@@ -83,6 +84,7 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     DOCUMENT_SEMANTIC_QA: ModelSlot.FAST,
     V3_TARGETED_LESSON_REPAIR: ModelSlot.FAST,
     SHARED_SOURCEBOOK_AUTHORING: ModelSlot.STANDARD,
+    SHARED_TASK_AUTHORING: ModelSlot.FAST,
 }
 
 V3ReasoningLevel = Literal["low", "medium", "high"]
@@ -136,6 +138,7 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     DOCUMENT_SEMANTIC_QA: False,
     V3_TARGETED_LESSON_REPAIR: False,
     SHARED_SOURCEBOOK_AUTHORING: False,
+    SHARED_TASK_AUTHORING: False,
 }
 
 V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
@@ -345,6 +348,7 @@ __all__ = [
     "SECTION_COMPOSER",
     "SHARED_SECTION_WRITER",
     "SHARED_SOURCEBOOK_AUTHORING",
+    "SHARED_TASK_AUTHORING",
     "TEACHING_PLAN_SEMANTIC_REVIEWER",
     "V2_COMPONENT_SELECTOR",
     "V2_FORM_PLANNER",
