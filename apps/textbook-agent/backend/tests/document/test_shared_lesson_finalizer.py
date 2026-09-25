@@ -12,6 +12,7 @@ from test_shared_lesson_repository import (
     _semantic_pass,
 )
 
+from curriculum.lesson_sourcebook import LessonSourcebook, SourcebookEntry
 from document.shared_lesson.composer import CompositionItem, SectionCompositionPlan
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.finalizer import (
@@ -20,10 +21,12 @@ from document.shared_lesson.finalizer import (
     VerifiedWorkItemOutput,
     _verify_durable_inputs_match_handoff,
     _verify_media_matches_work_items,
+    _verify_semantic_inputs_match_request,
 )
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import ReadyFigureMediaResult
 from document.shared_lesson.models import build_shared_lesson_document
+from document.shared_lesson.semantic_inputs import VerifiedSemanticInputs
 from document.shared_lesson.writer import SectionSource
 from infra.database.models import GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
@@ -74,6 +77,25 @@ def _verified_inputs(document):
                 ),
             ),
         ),
+    )
+
+
+def _verified_semantic_inputs(source, *, tasks=(), sourcebook=None):
+    sourcebook = sourcebook or LessonSourcebook(
+        teaching_plan_id=source.id,
+        teaching_plan_revision=source.revision,
+        teaching_plan_hash=source.content_hash,
+        entries=[],
+    )
+    return VerifiedSemanticInputs(
+        run_id="run-1",
+        owner_user_id="owner-1",
+        source=source,
+        sourcebook=sourcebook,
+        tasks=tasks,
+        sourcebook_output_hash=content_hash(sourcebook.model_dump(mode="json")),
+        task_output_hash="0" * 64,
+        work_item_ids={"sourcebook": "sourcebook-item", "shared_tasks": "task-item"},
     )
 
 
@@ -206,6 +228,62 @@ def test_verified_work_item_output_rejects_tampered_hash() -> None:
         )
 
 
+def test_semantic_gate_rejects_forged_task_snapshot() -> None:
+    source, document = _approved_source_and_document()
+    forged_task = {
+        "id": "task-1",
+        "teaching_plan_id": source.id,
+        "teaching_plan_revision": source.revision,
+        "teaching_plan_hash": source.content_hash,
+        "teaching_block_id": "block-1",
+        "mode": "formative",
+        "action": "read-explanation",
+        "purpose": "Understand",
+        "prompt": "Read",
+        "difficulty": "guided",
+        "expected_evidence": "understand",
+        "response": {"type": "text"},
+        "evaluation": {"type": "teacher_review"},
+    }
+    verified = _verified_semantic_inputs(source, tasks=(forged_task,))
+
+    with pytest.raises(SharedLessonFinalizationError, match="verified durable semantic task"):
+        _verify_semantic_inputs_match_request(
+            request=_request(source, document),
+            verified_inputs=verified,
+        )
+
+
+def test_semantic_gate_rejects_forged_source_projection() -> None:
+    source, document = _approved_source_and_document()
+    forged = SectionSource(id="forged-source", kind="approved_fact", text="Forged")
+
+    with pytest.raises(SharedLessonFinalizationError, match="verified durable sourcebook"):
+        _verify_semantic_inputs_match_request(
+            request=_request(source, document, sources=(forged,)),
+            verified_inputs=_verified_semantic_inputs(source),
+        )
+
+
+def test_semantic_gate_rejects_stale_sourcebook_output() -> None:
+    source, document = _approved_source_and_document()
+    verified = _verified_semantic_inputs(source)
+    verified.sourcebook.entries.append(
+        SourcebookEntry(
+            id="forged-source",
+            type="definition",
+            purpose="Forged",
+            content={"text": "Forged"},
+        )
+    )
+
+    with pytest.raises(SharedLessonFinalizationError, match="verified sourcebook"):
+        _verify_semantic_inputs_match_request(
+            request=_request(source, document),
+            verified_inputs=verified,
+        )
+
+
 class _TransactionProbe:
     def __init__(self) -> None:
         self.committed = False
@@ -277,6 +355,9 @@ async def test_finalizer_rolls_back_document_write_when_run_commit_fails(monkeyp
     async def fake_inputs(*_args, **_kwargs):
         return _verified_inputs(document)
 
+    async def fake_semantic_inputs(*_args, **_kwargs):
+        return _verified_semantic_inputs(source)
+
     async def fake_save(*_args, **_kwargs):
         writes.append("draft")
 
@@ -285,6 +366,7 @@ async def test_finalizer_rolls_back_document_write_when_run_commit_fails(monkeyp
         raise RuntimeError("simulated finalization conflict")
 
     monkeypatch.setattr(finalizer, "_load_and_lock_run", lambda *a, **k: _locked(run, item))
+    monkeypatch.setattr(finalizer, "load_verified_semantic_inputs", fake_semantic_inputs)
     monkeypatch.setattr(finalizer, "load_verified_shared_lesson_inputs", fake_inputs)
     monkeypatch.setattr(finalizer, "save_shared_lesson_document", fake_save)
     monkeypatch.setattr(finalizer, "promote_shared_lesson_document", fake_promote)
@@ -345,6 +427,9 @@ async def test_finalizer_commits_document_and_run_together(monkeypatch) -> None:
     async def fake_inputs(*_args, **_kwargs):
         return _verified_inputs(document)
 
+    async def fake_semantic_inputs(*_args, **_kwargs):
+        return _verified_semantic_inputs(source)
+
     async def fake_save(*_args, **_kwargs):
         return SimpleNamespace(status="draft")
 
@@ -355,6 +440,7 @@ async def test_finalizer_commits_document_and_run_together(monkeypatch) -> None:
         return run
 
     monkeypatch.setattr(finalizer, "_load_and_lock_run", lambda *a, **k: _locked(run, item))
+    monkeypatch.setattr(finalizer, "load_verified_semantic_inputs", fake_semantic_inputs)
     monkeypatch.setattr(finalizer, "load_verified_shared_lesson_inputs", fake_inputs)
     monkeypatch.setattr(finalizer, "save_shared_lesson_document", fake_save)
     monkeypatch.setattr(finalizer, "promote_shared_lesson_document", fake_promote)

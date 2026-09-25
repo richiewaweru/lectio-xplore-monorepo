@@ -37,6 +37,11 @@ from document.shared_lesson.repository import (
     save_shared_lesson_document,
 )
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from document.shared_lesson.section_sources import SectionSourceError, build_section_sources
+from document.shared_lesson.semantic_inputs import (
+    SemanticInputError,
+    load_verified_semantic_inputs,
+)
 from document.shared_lesson.work_item_inputs import (
     SharedLessonInputError,
     load_verified_shared_lesson_inputs,
@@ -265,6 +270,65 @@ def _verify_durable_inputs_match_handoff(
         )
 
 
+def _verify_semantic_inputs_match_request(
+    *,
+    request: SharedLessonFinalizationRequest,
+    verified_inputs: Any,
+) -> None:
+    """Bind caller evidence to the durable sourcebook and shared-task leaves."""
+    if not _json_equal(verified_inputs.source, request.source):
+        raise SharedLessonFinalizationError(
+            "durable semantic inputs differ from the approved Teaching Plan source"
+        )
+
+    verified_tasks = tuple(verified_inputs.tasks)
+    if len(verified_tasks) != len(request.tasks) or any(
+        not _json_equal(left, right)
+        for left, right in zip(verified_tasks, request.tasks, strict=False)
+    ):
+        raise SharedLessonFinalizationError(
+            "caller task snapshots differ from the verified durable semantic task inputs"
+        )
+
+    try:
+        derived_sources: list[SectionSource] = []
+        source_by_id: dict[str, SectionSource] = {}
+        for section in verified_inputs.source.plan.sections:
+            for source in build_section_sources(verified_inputs, section):
+                previous = source_by_id.get(source.id)
+                if previous is None:
+                    source_by_id[source.id] = source
+                    derived_sources.append(source)
+                elif not _json_equal(previous, source):
+                    raise SectionSourceError(
+                        f"verified sourcebook entry {source.id!r} has conflicting projections"
+                    )
+    except SectionSourceError as exc:
+        raise SharedLessonFinalizationError(
+            "verified sourcebook could not be projected into section sources"
+        ) from exc
+
+    supplied_sources = tuple(request.sources)
+    if len(supplied_sources) != len(derived_sources) or any(
+        not _json_equal(left, right)
+        for left, right in zip(supplied_sources, derived_sources, strict=False)
+    ):
+        raise SharedLessonFinalizationError(
+            "caller sources differ from the verified durable sourcebook projection"
+        )
+
+    expected_source_ids = tuple(source.id for source in derived_sources)
+    if tuple(request.approved_source_ids) != expected_source_ids:
+        raise SharedLessonFinalizationError(
+            "approved source IDs differ from the verified sourcebook projection"
+        )
+
+    if request.source_facts_by_section and any(request.source_facts_by_section.values()):
+        raise SharedLessonFinalizationError(
+            "caller supplied source facts are not backed by a durable approved projection"
+        )
+
+
 def _verify_media_matches_work_items(
     *,
     document: SharedLessonDocument,
@@ -455,6 +519,22 @@ async def finalize_shared_lesson_document(
             raise SharedLessonFinalizationError(
                 "generation run source identity differs from approved Teaching Plan"
             )
+
+        try:
+            verified_semantic_inputs = await load_verified_semantic_inputs(
+                session,
+                run_id=request.run_id,
+                owner_user_id=request.owner_user_id,
+                source=request.source,
+            )
+            _verify_semantic_inputs_match_request(
+                request=request,
+                verified_inputs=verified_semantic_inputs,
+            )
+        except SemanticInputError as exc:
+            raise SharedLessonFinalizationError(
+                "durable semantic task/source inputs failed shared lesson input verification"
+            ) from exc
 
         try:
             # This exact repository loader is mandatory.  A custom callback
