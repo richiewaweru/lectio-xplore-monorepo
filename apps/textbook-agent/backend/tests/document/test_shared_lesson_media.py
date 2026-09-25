@@ -20,6 +20,7 @@ from document.shared_lesson.media import (
     build_figure_work_order,
     execute_figure_work_orders,
     validate_reusable_figure_asset,
+    verify_bound_figure_media,
 )
 from document.shared_lesson.models import (
     SharedLessonDocument,
@@ -208,6 +209,32 @@ def test_ready_media_binds_only_after_document_hash_and_semantics_are_verified()
     assert result.source_document_id == "shared-media-lesson"
     assert result.source_document_hash == _document(source).content_hash
     assert result.asset_id == work.work_order.visual.id
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda value: value.model_copy(update={"source_document_hash": "b" * 64}),
+        lambda value: value.model_copy(update={"section_output_hash": "b" * 64}),
+        lambda value: value.model_copy(update={"figure_semantic_hash": "b" * 64}),
+        lambda value: value.model_copy(update={"asset_id": "other-asset"}),
+    ],
+)
+def test_bound_media_verifier_rejects_stale_document_section_semantic_and_asset(
+    mutate,
+) -> None:
+    work = _work()
+    bound = bind_figure_media_to_document(bind_generated_figure(work, [_block(work)]), _document())
+    with pytest.raises(SharedFigureMediaError):
+        verify_bound_figure_media(mutate(bound), _document())
+
+
+def test_bound_media_verifier_recomputes_an_unchanged_result() -> None:
+    work = _work()
+    document = _document()
+    bound = bind_figure_media_to_document(bind_generated_figure(work, [_block(work)]), document)
+
+    assert verify_bound_figure_media(bound, document) == bound
 
 
 @pytest.mark.parametrize(

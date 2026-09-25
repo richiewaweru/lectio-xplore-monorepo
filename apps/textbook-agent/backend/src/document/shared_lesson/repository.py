@@ -18,7 +18,7 @@ from document.shared_lesson.hashing import verify_shared_lesson_source as verify
 from document.shared_lesson.media import (
     FigureMediaResult,
     SharedFigureMediaError,
-    bind_figure_media_to_document,
+    verify_bound_figure_media,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
 from document.shared_lesson.qa import DocumentQAError, qa_shared_lesson_document
@@ -255,7 +255,7 @@ def _validate_required_media(
             )
         supplied[result.figure_node_id] = result
         try:
-            bind_figure_media_to_document(result, document)
+            verify_bound_figure_media(result, document)
         except SharedFigureMediaError as exc:
             raise SharedLessonDocumentReadinessError(
                 f"media binding for figure {result.figure_node_id!r} is invalid: {exc}"

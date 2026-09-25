@@ -88,6 +88,8 @@ class FigureMediaResult(BaseModel):
     visual_id: str = Field(min_length=1)
     asset_id: str = Field(min_length=1)
     asset_url: str = Field(min_length=1)
+    mode: str = Field(min_length=1)
+    source_facts: tuple[SourceOfTruthEntry, ...] = ()
     required: bool = True
     status: str = "ready"
 
@@ -407,9 +409,55 @@ def bind_figure_media_to_document(
         visual_id=media.visual_id,
         asset_id=media.asset_id,
         asset_url=media.asset_url,
+        mode=media.mode,
+        source_facts=tuple(media.source_facts),
         required=media.required,
         status=media.status,
     )
+
+
+def verify_bound_figure_media(
+    media: FigureMediaResult,
+    document: SharedLessonDocument,
+) -> FigureMediaResult:
+    """Recompute and verify every identity of an already document-bound result.
+
+    ``bind_figure_media_to_document`` accepts the pre-document-bound provider
+    result.  READY persistence receives the post-binding result, so reconstruct
+    that pre-binding view from the closed result, bind it again, and require an
+    exact canonical match.  This catches stale document, section, semantic,
+    work-order, asset, and source lineage fields at the final boundary.
+    """
+    _verify_document(document)
+    if (
+        media.source_document_id != document.id
+        or media.source_document_revision != document.revision
+        or media.source_document_hash != document.content_hash
+    ):
+        raise SharedFigureMediaError("bound media document identity is stale or changed")
+    candidate = ReadyFigureMediaResult(
+        source_plan_id=media.source_plan_id,
+        source_plan_revision=media.source_plan_revision,
+        source_plan_hash=media.source_plan_hash,
+        section_id=media.section_id,
+        section_output_hash=media.section_output_hash,
+        figure_node_id=media.figure_node_id,
+        figure_semantic_hash=media.figure_semantic_hash,
+        work_order_id=media.work_order_id,
+        visual_id=media.visual_id,
+        asset_id=media.asset_id,
+        asset_url=media.asset_url,
+        mode=media.mode,
+        source_facts=tuple(media.source_facts),
+        required=media.required,
+        status=media.status,
+    )
+    rebound = bind_figure_media_to_document(candidate, document)
+    if rebound != media:
+        raise SharedFigureMediaError(
+            "bound media result does not match its recomputed document binding"
+        )
+    return media
 
 
 async def execute_figure_work_order(
@@ -499,4 +547,5 @@ __all__ = [
     "execute_figure_work_order",
     "execute_figure_work_orders",
     "validate_reusable_figure_asset",
+    "verify_bound_figure_media",
 ]
