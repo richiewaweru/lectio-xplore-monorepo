@@ -19,6 +19,7 @@ from document.shared_lesson.runtime import (
     SectionRuntimeError,
     SectionWriterJob,
     TeachingPlanSource,
+    _record_execution_failure,
     _write_section_work_item,
     admit_section_run,
     admit_writer_work_item,
@@ -61,21 +62,46 @@ def _approved_source(plan: TeachingPlan) -> TeachingPlanSource:
 
 
 def _source() -> TeachingPlanSource:
+    section = TeachingPlanSection(
+        slot_id="orient",
+        display_title="Start with the idea",
+        entry_state=["Learner is ready to learn"],
+        must_establish=["Learner understands the idea"],
+        avoid_repeating=[],
+        bridge_from_previous=None,
+        exit_state=["Learner can explain the idea"],
+    )
     return _approved_source(
         TeachingPlan(
             arc="Teach a simple idea",
+            contract_version=2,
+            learner_title="A lesson about one idea",
+            starting_state=["Learner is ready to learn"],
+            target_state=["Learner can explain the idea"],
             teaching_plan_id="tp-approved-1",
             revision=3,
-            sections=[],
+            sections=[section],
         )
     )
 
 
 @pytest.mark.asyncio
 async def test_admission_uses_generic_repository_records(monkeypatch) -> None:
-    section = TeachingPlanSection(slot_id="orient")
+    section = TeachingPlanSection(
+        slot_id="orient",
+        display_title="Start with the idea",
+        entry_state=["Learner is ready to learn"],
+        must_establish=["Learner understands the idea"],
+        avoid_repeating=[],
+        bridge_from_previous=None,
+        exit_state=["Learner can explain the idea"],
+    )
     plan = TeachingPlan(
         arc="Teach a simple idea",
+        contract_version=2,
+        learner_title="A lesson about one idea",
+        starting_state=["Learner is ready to learn"],
+        target_state=["Learner can explain the idea"],
         teaching_plan_id="tp-approved-1",
         revision=3,
         sections=[section],
@@ -279,6 +305,45 @@ def test_source_identity_requires_exact_id_revision_and_recomputed_hash() -> Non
     pending_plan = source.plan.model_copy(update={"approval_status": "pending"})
     with pytest.raises(SectionRuntimeError, match="approval_status"):
         verify_teaching_plan_source(source.model_copy(update={"plan": pending_plan}))
+
+
+def test_source_admission_rejects_legacy_teaching_plan_contract() -> None:
+    legacy = TeachingPlan(
+        arc="Teach a simple idea",
+        teaching_plan_id="tp-legacy-1",
+        revision=1,
+        sections=[TeachingPlanSection(slot_id="orient")],
+    )
+    source = _approved_source(legacy)
+
+    with pytest.raises(SectionRuntimeError, match="contract version 2"):
+        verify_teaching_plan_source(source)
+
+
+@pytest.mark.asyncio
+async def test_provider_validation_error_keeps_provider_output_classification(monkeypatch) -> None:
+    from pydantic import TypeAdapter, ValidationError
+
+    from infra.generation_runtime import ErrorClass
+
+    with pytest.raises(ValidationError) as caught:
+        TypeAdapter(int).validate_python("invalid")
+    recorded = []
+
+    async def fake_fail(_session, **kwargs):
+        recorded.append(kwargs["failure"])
+
+    monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    await _record_execution_failure(
+        "session",
+        work_item_id="item-1",
+        worker_id="worker-1",
+        lease_token=1,
+        error=caught.value,
+    )
+
+    assert recorded[0].error_class == ErrorClass.PROVIDER_OUTPUT
+    assert recorded[0].error_code == "invalid_section_output"
 
 
 @pytest.mark.asyncio

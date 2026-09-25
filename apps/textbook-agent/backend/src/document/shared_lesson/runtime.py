@@ -14,7 +14,7 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
@@ -40,12 +40,16 @@ from document.shared_lesson.writer import (
 )
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (
+    CheckpointCompatibilityError,
+    CheckpointIntegrityError,
     ErrorClass,
+    LeaseLostError,
     RecoveryAction,
     RunAdmission,
     RuntimeCheckpointCompatibility,
     RunType,
     SourceIdentity,
+    SourceIdentityConflict,
     WorkItemAdmission,
     WorkItemFailure,
     add_work_item,
@@ -66,6 +70,10 @@ _WRITER_DEFINITION = "shared-section-writer:v1"
 
 class SectionRuntimeError(ValueError):
     """The requested section work does not match its approved source."""
+
+
+class CheckpointPayloadError(SectionRuntimeError):
+    """A persisted checkpoint payload is malformed or mismatches its identity."""
 
 
 class TeachingPlanSource(BaseModel):
@@ -113,6 +121,10 @@ def verify_teaching_plan_source(source: TeachingPlanSource) -> SourceIdentity:
         )
     if source.plan.approval_status != "approved":
         raise SectionRuntimeError("SharedDocument source plan approval_status must be approved")
+    if source.plan.contract_version < 2:
+        raise SectionRuntimeError(
+            "SharedDocument source requires Teaching Plan contract version 2 continuity"
+        )
     if source.plan.teaching_plan_id != source.id:
         raise SectionRuntimeError("Teaching Plan source ID differs from its approved snapshot")
     if source.plan.revision != source.revision:
@@ -207,12 +219,26 @@ async def _record_execution_failure(
     lease_token: int,
     error: Exception,
 ) -> None:
-    if isinstance(error, (TimeoutError, ConnectionError)):
+    if isinstance(error, LeaseLostError):
+        raise error
+    if isinstance(error, (CheckpointCompatibilityError, SourceIdentityConflict)):
+        error_class = ErrorClass.SOURCE_CONFLICT
+        recovery = RecoveryAction.NONE
+        code = "checkpoint_compatibility_conflict"
+        summary = "Persisted checkpoint no longer matches the approved source or work identity."
+    elif isinstance(error, (CheckpointIntegrityError, CheckpointPayloadError)):
+        error_class = ErrorClass.UNSUPPORTED_CONTRACT
+        recovery = RecoveryAction.NONE
+        code = "checkpoint_integrity_failure"
+        summary = "Persisted checkpoint failed compatibility or integrity validation."
+    elif isinstance(error, (TimeoutError, ConnectionError)):
         error_class = ErrorClass.PROVIDER_TRANSPORT
         recovery = RecoveryAction.RETRY
         code = "provider_transport"
         summary = "Section provider transport failed."
-    elif isinstance(error, (CompositionValidationError, SectionWriteValidationError)):
+    elif isinstance(
+        error, (CompositionValidationError, SectionWriteValidationError, ValidationError)
+    ):
         error_class = ErrorClass.PROVIDER_OUTPUT
         recovery = RecoveryAction.RETRY
         code = "invalid_section_output"
@@ -328,14 +354,14 @@ async def compose_section_work_item(
         source=identity,
         lease_seconds=lease_seconds,
     )
-    checkpoint = await load_compatible_checkpoint(
-        session,
-        work_item_id=work_item_id,
-        worker_id=worker_id,
-        lease_token=item.lease_token,
-        compatibility=compatibility,
-    )
     try:
+        checkpoint = await load_compatible_checkpoint(
+            session,
+            work_item_id=work_item_id,
+            worker_id=worker_id,
+            lease_token=item.lease_token,
+            compatibility=compatibility,
+        )
         if checkpoint is None:
             plan = await compose_section(
                 section=section,
@@ -352,11 +378,23 @@ async def compose_section_work_item(
                 payload=plan.model_dump(mode="json"),
             )
         else:
-            plan = SectionCompositionPlan.model_validate(checkpoint.payload)
+            try:
+                plan = SectionCompositionPlan.model_validate(checkpoint.payload)
+            except (ValidationError, TypeError, ValueError) as exc:
+                raise CheckpointPayloadError("persisted composition checkpoint is invalid") from exc
         # Revalidate the immutable composition against the exact current section/tasks.
-        validate_composition_plan(
-            plan=plan, section=section, tasks=task_slice, policy=selected_policy
-        )
+        try:
+            validate_composition_plan(
+                plan=plan, section=section, tasks=task_slice, policy=selected_policy
+            )
+        except CompositionValidationError as exc:
+            if checkpoint is not None:
+                raise CheckpointPayloadError(
+                    "persisted composition checkpoint no longer matches its source"
+                ) from exc
+            raise
+    except LeaseLostError:
+        raise
     except Exception as exc:
         await _record_execution_failure(
             session,
@@ -461,36 +499,42 @@ async def _write_section_work_item(
         source=identity,
         lease_seconds=lease_seconds,
     )
-    checkpoint = await load_compatible_checkpoint(
-        session,
-        work_item_id=work_item_id,
-        worker_id=worker_id,
-        lease_token=item.lease_token,
-        compatibility=compatibility,
-    )
-    expected_composition = request.composition_plan.model_dump(mode="json")
-    if checkpoint is None:
-        await persist_checkpoint(
+    try:
+        checkpoint = await load_compatible_checkpoint(
             session,
             work_item_id=work_item_id,
             worker_id=worker_id,
             lease_token=item.lease_token,
             compatibility=compatibility,
-            payload={"composition_identity": composition_identity, "plan": expected_composition},
         )
-    else:
-        verify_writer_checkpoint_payload(checkpoint.payload, composition=request.composition_plan)
+        expected_composition = request.composition_plan.model_dump(mode="json")
+        if checkpoint is None:
+            await persist_checkpoint(
+                session,
+                work_item_id=work_item_id,
+                worker_id=worker_id,
+                lease_token=item.lease_token,
+                compatibility=compatibility,
+                payload={"composition_identity": composition_identity, "plan": expected_composition},
+            )
+        else:
+            try:
+                verify_writer_checkpoint_payload(
+                    checkpoint.payload, composition=request.composition_plan
+                )
+            except SectionRuntimeError as exc:
+                raise CheckpointPayloadError(str(exc)) from exc
 
-    if provider is None:
-        from document.shared_lesson.writer import _default_provider
+        if provider is None:
+            from document.shared_lesson.writer import _default_provider
 
-        provider_dispatch = _default_provider
-    else:
-        provider_dispatch = provider
-    bounded_provider = _bounded_section_provider(provider_dispatch, provider_semaphore)
-
-    try:
+            provider_dispatch = _default_provider
+        else:
+            provider_dispatch = provider
+        bounded_provider = _bounded_section_provider(provider_dispatch, provider_semaphore)
         result = await write_section(request=request, provider=bounded_provider)
+    except LeaseLostError:
+        raise
     except Exception as exc:
         await _record_execution_failure(
             session,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from sqlalchemy import select
 
@@ -17,9 +19,11 @@ from document.shared_lesson.composer import (
 from document.shared_lesson.runtime import (
     SectionRuntimeError,
     TeachingPlanSource,
+    _write_section_work_item,
     admit_section_run,
     admit_writer_work_item,
     cancel_section_run,
+    compose_section_work_item,
     make_section_writer_request,
     restart_section_run,
     retry_failed_section,
@@ -38,9 +42,11 @@ from infra.database.models import (
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (
     CheckpointCompatibilityError,
+    CheckpointIntegrityError,
     ErrorClass,
     LeaseLostError,
     RecoveryAction,
+    RuntimeCheckpoint,
     RuntimeCheckpointCompatibility,
     SourceIdentityConflict,
     WorkItemFailure,
@@ -459,6 +465,177 @@ async def test_shared_document_admission_rejects_hashed_pending_teaching_revisio
         )
     )
     assert run_count is None
+
+
+@pytest.mark.asyncio
+async def test_shared_document_admission_rejects_legacy_plan_before_run_creation(
+    db_session,
+) -> None:
+    owner_id, lesson_id = await _seed_build(db_session, suffix="legacy-source")
+    legacy_plan = TeachingPlan(
+        arc="A historically approved v1 plan",
+        teaching_plan_id="legacy-shared-plan",
+        revision=1,
+        approval_status="approved",
+        sections=[TeachingPlanSection(slot_id="orient")],
+    )
+    legacy_hash = teaching_plan_content_hash(legacy_plan)
+    record = TeachingRevisionRecord(
+        teaching_plan_id=legacy_plan.teaching_plan_id,
+        revision=legacy_plan.revision,
+        status="approved",
+        preparation_hash="preparation-hash",
+        content_hash=legacy_hash,
+        approval_hash_binding="submitted",
+        plan=legacy_plan.model_dump(mode="json"),
+        created_at="2026-09-24T00:00:00Z",
+        approved_at="2026-09-24T00:00:00Z",
+        reviewed_by="teacher-legacy",
+    )
+    source = TeachingPlanSource(
+        plan=legacy_plan,
+        revision_record=record,
+        id=legacy_plan.teaching_plan_id or "",
+        revision=legacy_plan.revision or 0,
+        content_hash=legacy_hash,
+    )
+    from infra.generation_runtime import BuildAdmission, create_build
+
+    build = await create_build(
+        db_session,
+        BuildAdmission(owner_user_id=owner_id, path_lesson_id=lesson_id),
+    )
+    with pytest.raises(SectionRuntimeError, match="contract version 2"):
+        await admit_section_run(
+            db_session,
+            build_id=build.id,
+            owner_user_id=owner_id,
+            request_key="legacy-plan-request",
+            source=source,
+        )
+    assert await db_session.scalar(
+        select(GenerationRunModel.id).where(GenerationRunModel.build_id == build.id)
+    ) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("worker_kind", ["composer", "writer"])
+@pytest.mark.parametrize("checkpoint_kind", ["integrity", "compatibility"])
+async def test_bad_checkpoint_fails_item_and_preserves_ready_sibling(
+    db_session, db_session_factory, worker_kind: str, checkpoint_kind: str
+) -> None:
+    suffix = f"bad-checkpoint-{worker_kind}-{checkpoint_kind}"
+    owner_id, lesson_id = await _seed_build(db_session, suffix=suffix)
+    source = _source()
+    _build, (run, composition_items) = await _admit_run(
+        db_session,
+        owner_id=owner_id,
+        lesson_id=lesson_id,
+        source=source,
+        request_key=f"{suffix}-request",
+    )
+    sections = {section.slot_id: section for section in source.plan.sections}
+    ready_section = sections["orient"]
+    ready_request = _writer_request(ready_section)
+    ready_item = await admit_writer_work_item(
+        db_session, run_id=run.id, section=ready_section, request=ready_request
+    )
+    ready_claim = await claim_work_item(
+        db_session,
+        work_item_id=ready_item.id,
+        worker_id=f"{suffix}-ready-worker",
+        source=verify_teaching_plan_source(source),
+    )
+    ready_output = {"slot_id": "orient", "nodes": [{"text": "Ready sibling."}]}
+    await complete_work_item(
+        db_session,
+        work_item_id=ready_item.id,
+        worker_id=f"{suffix}-ready-worker",
+        lease_token=ready_claim.lease_token,
+        output_json=ready_output,
+        output_hash=content_hash(ready_output),
+    )
+
+    if worker_kind == "composer":
+        target = next(item for item in composition_items if item.item_key == "compose:explain")
+        target_id = target.id
+    else:
+        target_request = _writer_request(sections["explain"])
+        target = await admit_writer_work_item(
+            db_session,
+            run_id=run.id,
+            section=sections["explain"],
+            request=target_request,
+        )
+        target_id = target.id
+    target_row = await db_session.get(GenerationWorkItemModel, target_id)
+    assert target_row is not None
+    if checkpoint_kind == "integrity":
+        target_row.checkpoint_json = {"corrupt": True}
+        expected_error = CheckpointIntegrityError
+        expected_code = "checkpoint_integrity_failure"
+        expected_class = "unsupported_contract"
+    else:
+        payload = {"saved": "checkpoint payload"}
+        checkpoint = RuntimeCheckpoint(
+            compatibility=_compatibility(target_row, source).model_copy(
+                update={"source_hash": "f" * 64}
+            ),
+            payload=payload,
+            payload_hash=content_hash(payload),
+        )
+        target_row.checkpoint_json = checkpoint.model_dump(mode="json")
+        expected_error = CheckpointCompatibilityError
+        expected_code = "checkpoint_compatibility_conflict"
+        expected_class = "source_conflict"
+    await db_session.commit()
+
+    with pytest.raises(expected_error):
+        if worker_kind == "composer":
+            await compose_section_work_item(
+                db_session,
+                work_item_id=target_id,
+                worker_id=f"{suffix}-worker",
+                source=source,
+                section=sections["explain"],
+                tasks=(),
+            )
+        else:
+            await _write_section_work_item(
+                db_session,
+                work_item_id=target_id,
+                worker_id=f"{suffix}-worker",
+                source=source,
+                request=target_request,
+                provider_semaphore=asyncio.Semaphore(1),
+            )
+    await db_session.commit()
+
+    async with db_session_factory() as verify:
+        failed = await verify.get(GenerationWorkItemModel, target_id)
+        preserved = await verify.get(GenerationWorkItemModel, ready_item.id)
+        failed_run = await verify.get(GenerationRunModel, run.id)
+        assert failed is not None
+        assert failed.status == "failed_terminal"
+        assert failed.error_code == expected_code
+        assert failed.error_class == expected_class
+        assert failed.recovery_action == "none"
+        assert failed.lease_owner is None
+        assert failed_run is not None and failed_run.status == "failed_terminal"
+        assert preserved is not None
+        assert preserved.status == "ready"
+        assert preserved.output_json == ready_output
+        assert preserved.output_hash == content_hash(ready_output)
+        events = list(
+            (
+                await verify.scalars(
+                    select(GenerationEventModel).where(
+                        GenerationEventModel.work_item_id == target_id
+                    )
+                )
+            ).all()
+        )
+        assert any(event.event_type == "work_item_failed" for event in events)
 
 
 async def _admit_run(
