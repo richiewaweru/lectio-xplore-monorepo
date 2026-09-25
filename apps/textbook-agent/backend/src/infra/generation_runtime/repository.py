@@ -779,7 +779,14 @@ async def fail_work_item(
         and failure.recovery_action == RecoveryAction.RETRY.value
         and item.attempt < item.max_attempts
     )
-    next_status = "failed_recoverable" if can_retry else "failed_terminal"
+    can_review = (
+        failure.error_class in {ErrorClass.VALIDATION, ErrorClass.PROVIDER_OUTPUT}
+        and failure.recovery_action == RecoveryAction.REVIEW.value
+    )
+    # Reviewable content failures remain recoverable so an application can
+    # admit a changed, linked replacement.  retry_work_item deliberately
+    # continues to reject REVIEW; only targeted replacement may proceed.
+    next_status = "failed_recoverable" if can_retry or can_review else "failed_terminal"
     recovery_action = str(failure.recovery_action)
     if not can_retry and recovery_action == RecoveryAction.RETRY.value:
         recovery_action = RecoveryAction.REGENERATE.value

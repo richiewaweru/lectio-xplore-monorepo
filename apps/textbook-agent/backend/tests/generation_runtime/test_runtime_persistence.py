@@ -1313,6 +1313,76 @@ async def test_failure_action_none_cannot_be_target_retried(db_session) -> None:
 
 
 @pytest.mark.asyncio
+async def test_reviewable_content_failure_is_recoverable_but_requires_replacement(
+    db_session,
+) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session, suffix="reviewable")
+    _build, admitted = await _admit(
+        db_session, owner_id=owner_id, lesson_id=lesson_id, request_key="reviewable"
+    )
+    item = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="document-qa",
+            stage="document_qa",
+            input_hash="document-before-repair",
+            definition_hash="document-qa-definition",
+        ),
+    )
+    now = datetime(2026, 9, 25, tzinfo=UTC)
+    claim = await claim_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="document-qa-worker",
+        source=_source_identity(),
+        now=now,
+    )
+    failed = await fail_work_item(
+        db_session,
+        work_item_id=item.record.id,
+        worker_id="document-qa-worker",
+        lease_token=claim.lease_token,
+        failure=_failure(
+            error_class="validation",
+            recovery_action=RecoveryAction.REVIEW,
+            error_code="document_qa_semantic_issue",
+        ),
+        now=now + timedelta(seconds=1),
+    )
+    assert failed.status == "failed_recoverable"
+    run = await db_session.get(GenerationRunModel, admitted.record.id)
+    assert run is not None and run.status == "failed_recoverable"
+    with pytest.raises(InvalidWorkItemTransition, match="recovery action"):
+        await retry_work_item(
+            db_session,
+            work_item_id=item.record.id,
+            owner_user_id=owner_id,
+            now=now + timedelta(seconds=2),
+        )
+
+    replacement = await replace_work_item(
+        db_session,
+        WorkItemReplacement(
+            predecessor_work_item_id=item.record.id,
+            owner_user_id=owner_id,
+            source=_source_identity(),
+            replacement=WorkItemAdmission(
+                run_id=admitted.record.id,
+                item_key="document-qa:repaired",
+                stage="document_qa",
+                input_hash="document-after-repair",
+                definition_hash="document-qa-definition",
+                composition_identity="repaired-document-hash",
+            ),
+        ),
+        now=now + timedelta(seconds=3),
+    )
+    assert replacement.status == "queued"
+    assert replacement.replaces_work_item_id == item.record.id
+
+
+@pytest.mark.asyncio
 async def test_terminal_failure_blocks_live_sibling_worker(db_session) -> None:
     owner_id, lesson_id = await _seed_lesson(db_session)
     _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
