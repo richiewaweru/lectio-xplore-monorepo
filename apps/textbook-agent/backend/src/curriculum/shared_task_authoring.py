@@ -127,13 +127,11 @@ def _snapshot_from_input(
         except ValidationError as exc:
             raise SharedTaskAuthoringError("approved item snapshot is malformed") from exc
     elif isinstance(raw, Mapping):
-        # The legacy packet shape is a map keyed by approved item ID.  Bind it
-        # to the exact plan revision at the adapter boundary before dispatch.
-        snapshot = ApprovedItemSnapshot(
-            teaching_plan_id=plan_id,
-            teaching_plan_revision=revision,
-            teaching_plan_hash=plan_hash,
-            items={str(key): _jsonable(value) for key, value in raw.items()},
+        # An arbitrary legacy map has no durable revision verifier.  Rebinding
+        # it to this plan would create a provenance claim the caller did not
+        # supply; the future executor must provide the persisted snapshot.
+        raise SharedTaskAuthoringError(
+            "approved item snapshot must include revision-bound metadata and items"
         )
     else:
         raise SharedTaskAuthoringError("approved item snapshot is malformed")
@@ -266,24 +264,28 @@ def _draft_contract_validator(
             errors.append(f"task {index} expected_evidence must match the approved learner action")
         if draft.difficulty != expected["difficulty"]:
             errors.append(f"task {index} difficulty must match the approved learner action")
-        task = SharedTaskSpec(
-            id=f"task-{descriptor['block_id']}",
-            teaching_plan_id=str(request.scoped_request["teaching_plan_id"]),
-            teaching_plan_revision=int(request.teaching_revision),
-            teaching_plan_hash=str(request.scoped_request["teaching_plan_hash"]),
-            teaching_block_id=str(descriptor["block_id"]),
-            mode=("assessment" if descriptor["assessment"] else "formative"),
-            action=expected["action"],
-            purpose=expected["purpose"],
-            prompt=draft.prompt,
-            difficulty=draft.difficulty,
-            sourcebook_refs=list(descriptor["sourcebook_refs"]),
-            expected_evidence=draft.expected_evidence,
-            response=dict(draft.response),
-            evaluation=dict(draft.evaluation),
-            feedback=draft.feedback,
-            approved_source_ids=list(descriptor["source_question_ids"]),
-        )
+        try:
+            task = SharedTaskSpec(
+                id=f"task-{descriptor['block_id']}",
+                teaching_plan_id=str(request.scoped_request["teaching_plan_id"]),
+                teaching_plan_revision=int(request.teaching_revision),
+                teaching_plan_hash=str(request.scoped_request["teaching_plan_hash"]),
+                teaching_block_id=str(descriptor["block_id"]),
+                mode=("assessment" if descriptor["assessment"] else "formative"),
+                action=expected["action"],
+                purpose=expected["purpose"],
+                prompt=draft.prompt,
+                difficulty=draft.difficulty,
+                sourcebook_refs=list(descriptor["sourcebook_refs"]),
+                expected_evidence=draft.expected_evidence,
+                response=dict(draft.response),
+                evaluation=dict(draft.evaluation),
+                feedback=draft.feedback,
+                approved_source_ids=list(descriptor["source_question_ids"]),
+            )
+        except ValidationError as exc:
+            errors.append(f"task {index} failed canonical model validation: {exc}")
+            continue
         errors.extend(validate_final_task_response_contract(task))
     return [AuthoringValidationError("tasks", error) for error in errors]
 

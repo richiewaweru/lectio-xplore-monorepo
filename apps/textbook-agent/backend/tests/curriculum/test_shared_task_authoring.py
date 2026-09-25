@@ -6,6 +6,7 @@ import pytest
 
 from curriculum.lesson_sourcebook.models import LessonSourcebook, SourcebookEntry
 from curriculum.shared_task_authoring import (
+    ApprovedItemSnapshot,
     SharedTaskAuthoringError,
     author_shared_tasks,
 )
@@ -115,6 +116,17 @@ def _task(*, prompt: str = "Choose the correct idea.") -> dict[str, Any]:
     }
 
 
+def _items_snapshot(plan: TeachingPlan) -> ApprovedItemSnapshot:
+    from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+
+    return ApprovedItemSnapshot(
+        teaching_plan_id=str(plan.teaching_plan_id),
+        teaching_plan_revision=int(plan.revision or 0),
+        teaching_plan_hash=teaching_plan_content_hash(plan),
+        items={"item-a": {"id": "item-a", "prompt": "Approved question"}},
+    )
+
+
 @pytest.mark.asyncio
 async def test_author_shared_tasks_binds_exact_lineage_and_ids() -> None:
     plan = _plan()
@@ -123,7 +135,7 @@ async def test_author_shared_tasks_binds_exact_lineage_and_ids() -> None:
     tasks = await author_shared_tasks(
         plan,
         _sourcebook(plan),
-        approved_items={"item-a": {"id": "item-a", "prompt": "Approved question"}},
+        approved_item_snapshot=_items_snapshot(plan),
         provider=provider,
     )
 
@@ -144,7 +156,7 @@ async def test_malformed_count_gets_one_bounded_repair() -> None:
     tasks = await author_shared_tasks(
         plan,
         _sourcebook(plan),
-        approved_items={"item-a": {"id": "item-a"}},
+        approved_item_snapshot=_items_snapshot(plan),
         provider=provider,
     )
 
@@ -163,10 +175,55 @@ async def test_unresolved_schema_repair_fails_closed_after_two_calls() -> None:
         await author_shared_tasks(
             plan,
             _sourcebook(plan),
-            approved_items={"item-a": {"id": "item-a"}},
+            approved_item_snapshot=_items_snapshot(plan),
             provider=provider,
         )
     assert len(provider.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_malformed_response_contract_gets_one_repair_then_fails_closed() -> None:
+    plan = _plan()
+    malformed = {
+        "tasks": [
+            {
+                "prompt": "Choose the idea.",
+                "response": {
+                    "type": "single_choice",
+                    "options": [{"id": "a", "text": "Only option"}],
+                },
+                "evaluation": {"type": "exact_match", "correct_option_id": "a"},
+                "expected_evidence": "Learner selects the correct idea.",
+                "difficulty": "guided",
+            }
+        ]
+    }
+    provider = ScriptedProvider(malformed, malformed)
+
+    with pytest.raises(RuntimeError, match="REPAIR_EXHAUSTED"):
+        await author_shared_tasks(
+            plan,
+            _sourcebook(plan),
+            approved_item_snapshot=_items_snapshot(plan),
+            provider=provider,
+        )
+    assert len(provider.calls) == 2
+    assert provider.calls[1].is_repair is True
+
+
+@pytest.mark.asyncio
+async def test_arbitrary_legacy_item_map_is_not_rebound_to_plan() -> None:
+    plan = _plan()
+    provider = ScriptedProvider(_task())
+
+    with pytest.raises(SharedTaskAuthoringError, match="revision-bound metadata"):
+        await author_shared_tasks(
+            plan,
+            _sourcebook(plan),
+            approved_items={"item-a": {"id": "item-a"}},
+            provider=provider,
+        )
+    assert provider.calls == []
 
 
 @pytest.mark.asyncio
@@ -179,7 +236,7 @@ async def test_stale_sourcebook_and_unknown_item_are_rejected_before_dispatch() 
         await author_shared_tasks(
             plan,
             stale,
-            approved_items={"item-a": {"id": "item-a"}},
+            approved_item_snapshot=_items_snapshot(plan),
             provider=provider,
         )
     assert provider.calls == []
@@ -188,7 +245,9 @@ async def test_stale_sourcebook_and_unknown_item_are_rejected_before_dispatch() 
         await author_shared_tasks(
             plan,
             _sourcebook(plan),
-            approved_items={"other-item": {"id": "other-item"}},
+            approved_item_snapshot=_items_snapshot(plan).model_copy(
+                update={"items": {"other-item": {"id": "other-item"}}}
+            ),
             provider=provider,
         )
     assert provider.calls == []
@@ -205,7 +264,7 @@ async def test_terminal_provider_error_is_not_semantically_repaired() -> None:
         await author_shared_tasks(
             plan,
             _sourcebook(plan),
-            approved_items={"item-a": {"id": "item-a"}},
+            approved_item_snapshot=_items_snapshot(plan),
             provider=provider,
         )
     assert len(provider.calls) == 1
