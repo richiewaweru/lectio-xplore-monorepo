@@ -25,23 +25,23 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from curriculum.shared_tasks.models import SharedTaskSpec
 from document.shared_lesson.assembly import SharedLessonAssemblyResult
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import FigureMediaResult, ReadyFigureMediaResult
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
-from document.shared_lesson.work_item_inputs import (
-    SharedLessonInputError,
-    load_verified_shared_lesson_inputs,
-)
-from document.shared_lesson.writer import SectionSource
-from curriculum.shared_tasks.models import SharedTaskSpec
 from document.shared_lesson.repository import (
     StoredSharedLessonDocument,
     promote_shared_lesson_document,
     save_shared_lesson_document,
 )
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from document.shared_lesson.work_item_inputs import (
+    SharedLessonInputError,
+    load_verified_shared_lesson_inputs,
+)
+from document.shared_lesson.writer import SectionSource
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (

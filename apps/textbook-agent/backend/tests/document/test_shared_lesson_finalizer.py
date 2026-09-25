@@ -4,7 +4,16 @@ from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
+from test_shared_lesson_repository import (
+    _approved_source_and_document,
+    _bound_media,
+    _expected_shapes,
+    _ready_assembly,
+    _semantic_pass,
+)
 
+from document.shared_lesson.composer import CompositionItem, SectionCompositionPlan
+from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.finalizer import (
     SharedLessonFinalizationError,
     SharedLessonFinalizationRequest,
@@ -15,19 +24,9 @@ from document.shared_lesson.finalizer import (
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import ReadyFigureMediaResult
 from document.shared_lesson.models import build_shared_lesson_document
-from document.shared_lesson.composer import CompositionItem, SectionCompositionPlan
-from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.writer import SectionSource
 from infra.database.models import GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
-
-from test_shared_lesson_repository import (
-    _approved_source_and_document,
-    _bound_media,
-    _expected_shapes,
-    _ready_assembly,
-    _semantic_pass,
-)
 
 
 def _handoff(source, document, *, expected_shapes=None):
@@ -125,7 +124,7 @@ def test_finalization_request_rejects_task_from_a_different_plan_revision() -> N
 
 
 def test_forged_handoff_sections_are_rejected_against_durable_writer_outputs() -> None:
-    source, document = _approved_source_and_document()
+    _, document = _approved_source_and_document()
     forged_payload = document.model_dump(mode="json")
     forged_payload["sections"][0]["nodes"][0]["display"]["text"] = "Forged output"
     forged = build_shared_lesson_document(forged_payload)
@@ -236,7 +235,7 @@ class _SessionProbe:
 
 @pytest.mark.asyncio
 async def test_finalizer_rolls_back_document_write_when_run_commit_fails(monkeypatch) -> None:
-    import document.shared_lesson.finalizer as finalizer
+    from document.shared_lesson import finalizer
 
     source, document = _approved_source_and_document()
     request = _request(source, document)
@@ -305,7 +304,7 @@ async def test_finalizer_rolls_back_document_write_when_run_commit_fails(monkeyp
 
 @pytest.mark.asyncio
 async def test_finalizer_commits_document_and_run_together(monkeypatch) -> None:
-    import document.shared_lesson.finalizer as finalizer
+    from document.shared_lesson import finalizer
 
     source, document = _approved_source_and_document()
     request = _request(source, document)
