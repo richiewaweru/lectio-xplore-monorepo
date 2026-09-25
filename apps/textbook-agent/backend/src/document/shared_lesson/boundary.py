@@ -14,7 +14,7 @@ import re
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any, Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from curriculum.teaching_plan.models import TeachingPlanSection
 from document.shared_lesson.composer import SectionCompositionPlan
@@ -98,6 +98,10 @@ class BoundarySemanticValidator(Protocol):
         """Return one closed semantic verdict without a rewrite."""
 
 
+class BoundarySemanticOutputError(ValueError):
+    """The provider returned a value outside the closed semantic contract."""
+
+
 _INTERNAL_REVIEW_TEXT = re.compile(
     r"\b(?:teaching[_ -]?block[_ -]?id|task[_ -]?spec[_ -]?id|section[_ -]?slot|"
     r"composition[_ -]?plan|semantic[_ -]?role|source[_ -]?ids?|renderer|"
@@ -152,17 +156,20 @@ def _semantic_request(
 
 
 def _coerce_verdict(raw: Any) -> BoundarySemanticVerdict:
-    if isinstance(raw, BoundarySemanticVerdict):
-        verdict = raw
-    else:
-        if hasattr(raw, "model_dump"):
-            raw = raw.model_dump(mode="json")
-        verdict = BoundarySemanticVerdict.model_validate(raw)
+    try:
+        if isinstance(raw, BoundarySemanticVerdict):
+            verdict = raw
+        else:
+            if hasattr(raw, "model_dump"):
+                raw = raw.model_dump(mode="json")
+            verdict = BoundarySemanticVerdict.model_validate(raw)
+    except ValidationError as exc:
+        raise BoundarySemanticOutputError("semantic boundary output violates its closed schema") from exc
     if verdict.issue is not None and any(
         _INTERNAL_REVIEW_TEXT.search(value)
         for value in (verdict.issue.explanation, verdict.issue.required_correction)
     ):
-        raise ValueError("semantic boundary issue contains internal planning text")
+        raise BoundarySemanticOutputError("semantic boundary issue contains internal planning text")
     return verdict
 
 
@@ -287,10 +294,10 @@ async def validate_and_repair_boundary(
     )
     semantic_calls = 0
     initial = deterministic
+    reviewer = semantic_validator or default_boundary_semantic_validator
     if not initial:
         semantic_calls = 1
         try:
-            reviewer = semantic_validator or default_boundary_semantic_validator
             verdict = _coerce_verdict(
                 await reviewer(
                     _semantic_request(
@@ -302,7 +309,7 @@ async def validate_and_repair_boundary(
                     )
                 )
             )
-        except Exception as exc:
+        except BoundarySemanticOutputError as exc:
             issue = _failure_issue(
                 "boundary_semantic_output_invalid",
                 next_section.id,
@@ -444,6 +451,69 @@ async def validate_and_repair_boundary(
             semantic_calls=semantic_calls,
             failure_code="boundary_revalidation_failed",
         )
+    if semantic_calls == 1:
+        semantic_calls = 2
+        try:
+            verdict = _coerce_verdict(
+                await reviewer(
+                    _semantic_request(
+                        previous_section=repaired_previous,
+                        previous_plan=previous_plan,
+                        next_section=repaired_next,
+                        next_plan=next_plan,
+                        lookaround_nodes=lookaround_nodes,
+                    )
+                )
+            )
+        except BoundarySemanticOutputError as exc:
+            issue = _failure_issue(
+                "boundary_semantic_output_invalid",
+                target_id,
+                f"semantic boundary revalidation returned malformed output: {exc}",
+                "Return exactly PASS or one typed ContinuityIssue.",
+            )
+            return BoundaryValidationResult(
+                status="recoverable_failure",
+                previous_section=repaired_previous,
+                next_section=repaired_next,
+                issues=(issue,),
+                initial_issues=initial,
+                repair_attempted=True,
+                semantic_calls=semantic_calls,
+                failure_code=issue.issue_code,
+            )
+        if verdict.status == "issue":
+            assert verdict.issue is not None
+            if verdict.issue.affected_section_id not in {
+                repaired_previous.id,
+                repaired_next.id,
+            }:
+                issue = _failure_issue(
+                    "boundary_issue_unbound",
+                    target_id,
+                    "semantic boundary revalidation targeted a section outside this boundary",
+                    "Target only the accepted previous or next section.",
+                )
+                return BoundaryValidationResult(
+                    status="recoverable_failure",
+                    previous_section=repaired_previous,
+                    next_section=repaired_next,
+                    issues=(issue,),
+                    initial_issues=initial,
+                    repair_attempted=True,
+                    semantic_calls=semantic_calls,
+                    failure_code=issue.issue_code,
+                )
+            return BoundaryValidationResult(
+                status="recoverable_failure",
+                previous_section=repaired_previous,
+                next_section=repaired_next,
+                issues=(verdict.issue,),
+                initial_issues=initial,
+                repair_attempted=True,
+                semantic_calls=semantic_calls,
+                failure_code="boundary_semantic_revalidation_failed",
+            )
     return BoundaryValidationResult(
         status="pass",
         previous_section=repaired_previous,

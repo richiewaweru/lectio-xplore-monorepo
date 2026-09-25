@@ -74,11 +74,13 @@ def _writer_request(plan: TeachingPlanSection) -> SectionWriterRequest:
 
 class _Semantic:
     def __init__(self, verdict):
-        self.verdict = verdict
+        self.verdict = list(verdict) if isinstance(verdict, list) else verdict
         self.calls = 0
 
     async def __call__(self, _request):
         self.calls += 1
+        if isinstance(self.verdict, list):
+            return self.verdict[min(self.calls - 1, len(self.verdict) - 1)]
         return self.verdict
 
 
@@ -159,15 +161,18 @@ async def test_malformed_semantic_output_is_typed_and_never_repaired() -> None:
 async def test_semantic_issue_targets_one_section_and_preserves_sibling() -> None:
     previous_plan, next_plan, previous, following = _boundary()
     semantic = _Semantic(
-        BoundarySemanticVerdict(
-            status="issue",
-            issue=ContinuityIssue(
-                issue_code="semantic_bridge_gap",
-                affected_section_id="s2",
-                explanation="the opening does not connect the prerequisite",
-                required_correction="add the approved bridge to the opening",
+        [
+            BoundarySemanticVerdict(
+                status="issue",
+                issue=ContinuityIssue(
+                    issue_code="semantic_bridge_gap",
+                    affected_section_id="s2",
+                    explanation="the opening does not connect the prerequisite",
+                    required_correction="add the approved bridge to the opening",
+                ),
             ),
-        )
+            BoundarySemanticVerdict(status="pass"),
+        ]
     )
     repaired = _section("s2", 1, "Light energy supports photosynthesis.")
     repair = _Repair(repaired)
@@ -184,8 +189,9 @@ async def test_semantic_issue_targets_one_section_and_preserves_sibling() -> Non
 
     assert result.passed
     assert result.repair_attempted
-    assert result.semantic_calls == 1
+    assert result.semantic_calls == 2
     assert repair.calls == 1
+    assert semantic.calls == 2
     assert repair.requests[0].target_section_id == "s2"
     assert result.previous_section == previous
 
@@ -307,3 +313,54 @@ async def test_semantic_issue_cannot_leak_internal_planning_language() -> None:
 
     assert result.failure_code == "boundary_semantic_output_invalid"
     assert result.repair_attempted is False
+
+
+@pytest.mark.asyncio
+async def test_provider_operational_error_is_not_reclassified_as_bad_output() -> None:
+    previous_plan, next_plan, previous, following = _boundary()
+
+    async def operational_failure(_request):
+        raise RuntimeError("provider credentials are unavailable")
+
+    with pytest.raises(RuntimeError, match="credentials"):
+        await validate_and_repair_boundary(
+            previous_section=previous,
+            previous_plan=previous_plan,
+            next_section=following,
+            next_plan=next_plan,
+            semantic_validator=operational_failure,
+        )
+
+
+@pytest.mark.asyncio
+async def test_persistent_semantic_issue_fails_after_one_revalidation_without_repair_loop() -> None:
+    previous_plan, next_plan, previous, following = _boundary()
+    issue = ContinuityIssue(
+        issue_code="semantic_bridge_gap",
+        affected_section_id="s2",
+        explanation="the opening does not connect the prerequisite",
+        required_correction="add the approved bridge to the opening",
+    )
+    semantic = _Semantic(
+        [
+            BoundarySemanticVerdict(status="issue", issue=issue),
+            BoundarySemanticVerdict(status="issue", issue=issue),
+        ]
+    )
+    repair = _Repair(_section("s2", 1, "Light energy supports photosynthesis."))
+
+    result = await validate_and_repair_boundary(
+        previous_section=previous,
+        previous_plan=previous_plan,
+        next_section=following,
+        next_plan=next_plan,
+        semantic_validator=semantic,
+        repair_engine=repair,
+        writer_requests={"s2": _writer_request(next_plan)},
+    )
+
+    assert result.status == "recoverable_failure"
+    assert result.failure_code == "boundary_semantic_revalidation_failed"
+    assert result.semantic_calls == 2
+    assert repair.calls == 1
+    assert result.previous_section == previous
