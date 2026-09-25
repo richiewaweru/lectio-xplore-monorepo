@@ -31,6 +31,11 @@ from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import FigureMediaResult, ReadyFigureMediaResult
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
+from document.shared_lesson.qa_runtime import (
+    DocumentQARuntimeError,
+    VerifiedDocumentQA,
+    load_verified_document_qa,
+)
 from document.shared_lesson.repository import (
     StoredSharedLessonDocument,
     promote_shared_lesson_document,
@@ -329,6 +334,46 @@ def _verify_semantic_inputs_match_request(
         )
 
 
+def _verify_document_qa_matches_handoff(
+    *,
+    document: SharedLessonDocument,
+    semantic_qa: Any,
+    verified_qa: Any,
+    active_items: Sequence[GenerationWorkItemModel],
+) -> None:
+    """Bind the finalizer handoff to the one active durable QA leaf."""
+    if not isinstance(verified_qa, VerifiedDocumentQA):
+        raise SharedLessonFinalizationError("durable document QA loader returned invalid evidence")
+    active_ids = {item.id for item in active_items}
+    if verified_qa.work_item_id not in active_ids:
+        raise SharedLessonFinalizationError(
+            "durable document QA WorkItem is not among the locked active work items"
+        )
+    observed = verified_qa.semantic_qa
+    if (
+        not observed.passed
+        or observed.status != "pass"
+        or observed.issues
+        or observed.semantic_calls != 1
+        or observed.deterministic_skipped_semantic
+    ):
+        raise SharedLessonFinalizationError(
+            "durable document QA WorkItem does not contain a PASS verdict"
+        )
+    if (
+        observed.document_id != document.id
+        or observed.document_revision != document.revision
+        or observed.document_hash != document.content_hash
+    ):
+        raise SharedLessonFinalizationError(
+            "durable document QA result is stale for the finalization document"
+        )
+    if not _json_equal(observed, semantic_qa):
+        raise SharedLessonFinalizationError(
+            "durable document QA result differs from the handoff semantic QA"
+        )
+
+
 def _verify_media_matches_work_items(
     *,
     document: SharedLessonDocument,
@@ -558,6 +603,24 @@ async def finalize_shared_lesson_document(
             verified_inputs=verified_inputs,
             handoff_expected_shapes=request.handoff.expected_shapes,
         )
+        try:
+            verified_qa = await load_verified_document_qa(
+                session,
+                run_id=request.run_id,
+                owner_user_id=request.owner_user_id,
+                source=request.source,
+                document=request.handoff.document,
+            )
+            _verify_document_qa_matches_handoff(
+                document=request.handoff.document,
+                semantic_qa=request.handoff.semantic_qa,
+                verified_qa=verified_qa,
+                active_items=active_items,
+            )
+        except DocumentQARuntimeError as exc:
+            raise SharedLessonFinalizationError(
+                "durable document QA failed finalization verification"
+            ) from exc
         if work_item_loader is _load_default_work_item_outputs:
             loaded_outputs = await _load_default_work_item_outputs(session, request.run_id)
         else:

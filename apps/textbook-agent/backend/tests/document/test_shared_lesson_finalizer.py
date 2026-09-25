@@ -19,6 +19,7 @@ from document.shared_lesson.finalizer import (
     SharedLessonFinalizationError,
     SharedLessonFinalizationRequest,
     VerifiedWorkItemOutput,
+    _verify_document_qa_matches_handoff,
     _verify_durable_inputs_match_handoff,
     _verify_media_matches_work_items,
     _verify_semantic_inputs_match_request,
@@ -26,6 +27,7 @@ from document.shared_lesson.finalizer import (
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import ReadyFigureMediaResult
 from document.shared_lesson.models import build_shared_lesson_document
+from document.shared_lesson.qa_runtime import VerifiedDocumentQA
 from document.shared_lesson.semantic_inputs import VerifiedSemanticInputs
 from document.shared_lesson.writer import SectionSource
 from infra.database.models import GenerationWorkItemModel
@@ -96,6 +98,14 @@ def _verified_semantic_inputs(source, *, tasks=(), sourcebook=None):
         sourcebook_output_hash=content_hash(sourcebook.model_dump(mode="json")),
         task_output_hash="0" * 64,
         work_item_ids={"sourcebook": "sourcebook-item", "shared_tasks": "task-item"},
+    )
+
+
+def _verified_qa(request, work_item_id):
+    return VerifiedDocumentQA(
+        work_item_id=work_item_id,
+        output_hash="0" * 64,
+        semantic_qa=request.handoff.semantic_qa,
     )
 
 
@@ -284,6 +294,72 @@ def test_semantic_gate_rejects_stale_sourcebook_output() -> None:
         )
 
 
+def test_document_qa_gate_rejects_unlocked_work_item() -> None:
+    source, document = _approved_source_and_document()
+    request = _request(source, document)
+    item = GenerationWorkItemModel(id="writer-item", run_id="run-1")
+
+    with pytest.raises(SharedLessonFinalizationError, match="locked active work items"):
+        _verify_document_qa_matches_handoff(
+            document=document,
+            semantic_qa=request.handoff.semantic_qa,
+            verified_qa=_verified_qa(request, "qa-item"),
+            active_items=(item,),
+        )
+
+
+def test_document_qa_gate_rejects_missing_or_forged_evidence() -> None:
+    source, document = _approved_source_and_document()
+    request = _request(source, document)
+    item = GenerationWorkItemModel(id="qa-item", run_id="run-1")
+
+    with pytest.raises(SharedLessonFinalizationError, match="invalid evidence"):
+        _verify_document_qa_matches_handoff(
+            document=document,
+            semantic_qa=request.handoff.semantic_qa,
+            verified_qa=None,
+            active_items=(item,),
+        )
+
+
+def test_document_qa_gate_rejects_stale_result() -> None:
+    source, document = _approved_source_and_document()
+    request = _request(source, document)
+    item = GenerationWorkItemModel(id="qa-item", run_id="run-1")
+    stale = request.handoff.semantic_qa.model_copy(update={"document_hash": "0" * 64})
+
+    with pytest.raises(SharedLessonFinalizationError, match="stale"):
+        _verify_document_qa_matches_handoff(
+            document=document,
+            semantic_qa=request.handoff.semantic_qa,
+            verified_qa=VerifiedDocumentQA(
+                work_item_id=item.id,
+                output_hash="0" * 64,
+                semantic_qa=stale,
+            ),
+            active_items=(item,),
+        )
+
+
+def test_document_qa_gate_rejects_non_pass_result() -> None:
+    source, document = _approved_source_and_document()
+    request = _request(source, document)
+    item = GenerationWorkItemModel(id="qa-item", run_id="run-1")
+    issue = request.handoff.semantic_qa.model_copy(update={"passed": False, "status": "issue"})
+
+    with pytest.raises(SharedLessonFinalizationError, match="PASS verdict"):
+        _verify_document_qa_matches_handoff(
+            document=document,
+            semantic_qa=request.handoff.semantic_qa,
+            verified_qa=VerifiedDocumentQA(
+                work_item_id=item.id,
+                output_hash="0" * 64,
+                semantic_qa=issue,
+            ),
+            active_items=(item,),
+        )
+
+
 class _TransactionProbe:
     def __init__(self) -> None:
         self.committed = False
@@ -358,6 +434,9 @@ async def test_finalizer_rolls_back_document_write_when_run_commit_fails(monkeyp
     async def fake_semantic_inputs(*_args, **_kwargs):
         return _verified_semantic_inputs(source)
 
+    async def fake_document_qa(*_args, **_kwargs):
+        return _verified_qa(request, item.id)
+
     async def fake_save(*_args, **_kwargs):
         writes.append("draft")
 
@@ -368,6 +447,7 @@ async def test_finalizer_rolls_back_document_write_when_run_commit_fails(monkeyp
     monkeypatch.setattr(finalizer, "_load_and_lock_run", lambda *a, **k: _locked(run, item))
     monkeypatch.setattr(finalizer, "load_verified_semantic_inputs", fake_semantic_inputs)
     monkeypatch.setattr(finalizer, "load_verified_shared_lesson_inputs", fake_inputs)
+    monkeypatch.setattr(finalizer, "load_verified_document_qa", fake_document_qa)
     monkeypatch.setattr(finalizer, "save_shared_lesson_document", fake_save)
     monkeypatch.setattr(finalizer, "promote_shared_lesson_document", fake_promote)
 
@@ -430,6 +510,9 @@ async def test_finalizer_commits_document_and_run_together(monkeypatch) -> None:
     async def fake_semantic_inputs(*_args, **_kwargs):
         return _verified_semantic_inputs(source)
 
+    async def fake_document_qa(*_args, **_kwargs):
+        return _verified_qa(request, item.id)
+
     async def fake_save(*_args, **_kwargs):
         return SimpleNamespace(status="draft")
 
@@ -442,6 +525,7 @@ async def test_finalizer_commits_document_and_run_together(monkeypatch) -> None:
     monkeypatch.setattr(finalizer, "_load_and_lock_run", lambda *a, **k: _locked(run, item))
     monkeypatch.setattr(finalizer, "load_verified_semantic_inputs", fake_semantic_inputs)
     monkeypatch.setattr(finalizer, "load_verified_shared_lesson_inputs", fake_inputs)
+    monkeypatch.setattr(finalizer, "load_verified_document_qa", fake_document_qa)
     monkeypatch.setattr(finalizer, "save_shared_lesson_document", fake_save)
     monkeypatch.setattr(finalizer, "promote_shared_lesson_document", fake_promote)
     monkeypatch.setattr(finalizer, "finalize_run", fake_finalize)
