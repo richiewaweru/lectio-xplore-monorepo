@@ -91,6 +91,13 @@ from document.shared_lesson.runtime import (
     verify_writer_checkpoint_payload,
     write_section_work_items,
 )
+from document.shared_lesson.semantic_inputs import (
+    SemanticInputError,
+    VerifiedSemanticInputs,
+    admit_shared_task_work_item,
+    admit_sourcebook_work_item,
+    load_verified_semantic_inputs,
+)
 from document.shared_lesson.writer import (
     SectionSource,
     SectionTaskSummary,
@@ -136,6 +143,7 @@ __all__ = [
     "SectionWriterJob",
     "SectionWriterOutcome",
     "SectionWriterRequest",
+    "SemanticInputError",
     "SharedFigureMediaError",
     "SharedFigureWorkOrder",
     "SharedLessonAssemblyError",
@@ -151,7 +159,10 @@ __all__ = [
     "TableNode",
     "TaskAnchor",
     "TeachingPlanSource",
+    "VerifiedSemanticInputs",
     "admit_section_run",
+    "admit_shared_task_work_item",
+    "admit_sourcebook_work_item",
     "admit_writer_work_item",
     "assemble_shared_lesson_document",
     "bind_figure_media_to_document",
@@ -167,6 +178,7 @@ __all__ = [
     "execute_figure_work_orders",
     "fail_section_work_item",
     "load_shared_lesson_document",
+    "load_verified_semantic_inputs",
     "load_verified_shared_lesson_artifact",
     "make_section_writer_request",
     "restart_section_run",
