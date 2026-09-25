@@ -616,6 +616,24 @@ async def execute_boundary_work_item(
         ),
         recovery_action=RecoveryAction.RETRY,
     )
+    if changed_sections:
+        # A changed targeted repair remains a recoverable boundary failure, but
+        # its exact validated result must survive the failure transition so the
+        # linked writer successor can prove what was admitted.  Checkpoints are
+        # retained by the generic failure state machine; output_json is cleared.
+        await persist_checkpoint(
+            job.session,
+            work_item_id=item.id,
+            worker_id=job.worker_id,
+            lease_token=item.lease_token or 0,
+            compatibility=compatibility,
+            payload={
+                "kind": "shared_lesson_boundary_repair_result",
+                "work": work.model_dump(mode="json"),
+                "result": result.model_dump(mode="json"),
+            },
+            now=now,
+        )
     await fail_work_item(
         job.session,
         work_item_id=item.id,
