@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 from curriculum.teaching_plan.models import TeachingPlanSection
 from document.shared_lesson.continuity import ContinuityIssue
+from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import SharedLessonDocument
 from document.shared_lesson.qa import DocumentQAResult
 
@@ -51,6 +52,7 @@ class DocumentSemanticQAResult(_ClosedModel):
 
     document_id: str = Field(min_length=1)
     document_revision: int = Field(ge=1)
+    document_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     status: Literal["pass", "issue"]
     issues: tuple[ContinuityIssue, ...] = ()
     semantic_calls: int = Field(ge=0, le=1)
@@ -71,6 +73,10 @@ class DocumentSemanticQAResult(_ClosedModel):
 
 class DocumentSemanticOutputError(ValueError):
     """Provider output was outside the closed semantic QA contract."""
+
+
+class DocumentSemanticInputError(ValueError):
+    """The deterministic result or document identity cannot be trusted."""
 
 
 class DocumentSemanticValidator(Protocol):
@@ -149,10 +155,23 @@ async def qa_shared_lesson_document_semantics(
     uncaught so they remain operational failures rather than being mislabeled
     as learner-content issues.
     """
+    if (
+        deterministic.document_id != document.id
+        or deterministic.document_revision != document.revision
+    ):
+        raise DocumentSemanticInputError(
+            "deterministic QA identity does not match the shared lesson document"
+        )
+    if shared_lesson_content_hash(document) != document.content_hash:
+        raise DocumentSemanticInputError(
+            "shared lesson document content_hash does not match canonical content"
+        )
+
     if not deterministic.ready:
         return DocumentSemanticQAResult(
             document_id=document.id,
             document_revision=document.revision,
+            document_hash=document.content_hash,
             status="issue",
             issues=deterministic.issues,
             semantic_calls=0,
@@ -168,6 +187,7 @@ async def qa_shared_lesson_document_semantics(
     return DocumentSemanticQAResult(
         document_id=document.id,
         document_revision=document.revision,
+        document_hash=document.content_hash,
         status="pass" if verdict.status == "pass" else "issue",
         issues=verdict.issues,
         semantic_calls=1,
@@ -176,6 +196,7 @@ async def qa_shared_lesson_document_semantics(
 
 
 __all__ = [
+    "DocumentSemanticInputError",
     "DocumentSemanticOutputError",
     "DocumentSemanticQARequest",
     "DocumentSemanticQAResult",

@@ -6,6 +6,7 @@ import pytest
 
 from curriculum.teaching_plan.models import TeachingPlanSection
 from document.shared_lesson.document_semantic import (
+    DocumentSemanticInputError,
     DocumentSemanticOutputError,
     DocumentSemanticQAResult,
     DocumentSemanticVerdict,
@@ -91,6 +92,7 @@ async def test_document_semantic_qa_makes_one_call_and_preserves_pass() -> None:
     assert result == DocumentSemanticQAResult(
         document_id="document-1",
         document_revision=1,
+        document_hash=document.content_hash,
         status="pass",
         semantic_calls=1,
     )
@@ -193,6 +195,42 @@ async def test_deterministic_failure_skips_semantic_call() -> None:
     assert result.semantic_calls == 0
     assert result.deterministic_skipped_semantic is True
     assert result.issues[0].issue_code == "required_media_missing"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("document_id", "document_revision"),
+    [("stale-document", 1), ("document-1", 99)],
+)
+async def test_stale_deterministic_result_is_rejected(
+    document_id: str, document_revision: int
+) -> None:
+    document = _document()
+    with pytest.raises(DocumentSemanticInputError, match="identity"):
+        await qa_shared_lesson_document_semantics(
+            document=document,
+            teaching_plan_sections=(_plan_section(),),
+            deterministic=DocumentQAResult(
+                document_id=document_id,
+                document_revision=document_revision,
+            ),
+            semantic_validator=lambda _request: pytest.fail("semantic call must be skipped"),
+        )
+
+
+@pytest.mark.asyncio
+async def test_document_hash_mismatch_is_rejected_before_semantic_call() -> None:
+    document = _document().model_copy(update={"content_hash": "b" * 64})
+    with pytest.raises(DocumentSemanticInputError, match="content_hash"):
+        await qa_shared_lesson_document_semantics(
+            document=document,
+            teaching_plan_sections=(_plan_section(),),
+            deterministic=DocumentQAResult(
+                document_id=document.id,
+                document_revision=document.revision,
+            ),
+            semantic_validator=lambda _request: pytest.fail("semantic call must be skipped"),
+        )
 
 
 @pytest.mark.asyncio
