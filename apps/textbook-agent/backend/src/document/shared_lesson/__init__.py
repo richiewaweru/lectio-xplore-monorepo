@@ -35,6 +35,17 @@ from document.shared_lesson.models import (
     TaskAnchor,
     build_shared_lesson_document,
 )
+from document.shared_lesson.repository import (
+    SharedLessonDocumentConflict,
+    SharedLessonDocumentIntegrityError,
+    SharedLessonDocumentNotFound,
+    SharedLessonDocumentRepositoryError,
+    StoredSharedLessonDocument,
+    load_shared_lesson_document,
+    load_verified_shared_lesson_artifact,
+    save_shared_lesson_document,
+    verify_shared_lesson_source as verify_persisted_shared_lesson_source,
+)
 from document.shared_lesson.runtime import (
     MAX_CONCURRENT_SECTION_WRITERS,
     SectionRuntimeError,
@@ -90,8 +101,13 @@ __all__ = [
     "SharedLessonDocument",
     "SharedLessonAssemblyError",
     "SharedLessonAssemblyResult",
+    "SharedLessonDocumentConflict",
+    "SharedLessonDocumentIntegrityError",
+    "SharedLessonDocumentNotFound",
+    "SharedLessonDocumentRepositoryError",
     "SharedProvenance",
     "SharedSection",
+    "StoredSharedLessonDocument",
     "TableNode",
     "TaskAnchor",
     "TeachingPlanSource",
@@ -116,4 +132,8 @@ __all__ = [
     "verify_writer_checkpoint_payload",
     "write_section",
     "write_section_work_items",
+    "verify_persisted_shared_lesson_source",
+    "load_shared_lesson_document",
+    "load_verified_shared_lesson_artifact",
+    "save_shared_lesson_document",
 ]

@@ -9,10 +9,12 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
+    ForeignKeyConstraint,
     Float,
     ForeignKey,
     Index,
     Integer,
+    PrimaryKeyConstraint,
     String,
     Text,
     UniqueConstraint,
@@ -1104,6 +1106,48 @@ class CallerEffectKeyModel(Base):
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
 
+# --- Shared Lesson Document storage (Shared Document overhaul Phase 7C) ---
+
+
+class SharedLessonDocumentModel(Base):
+    """Immutable canonical SharedLessonDocument storage envelope.
+
+    The typed aggregate remains in ``document_json``. Identity and lineage are
+    duplicated into explicit columns so trusted runtime loaders can verify a
+    source without opening the JSON first.
+    """
+
+    __tablename__ = "shared_lesson_documents"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", "revision", name="pk_shared_lesson_documents"),
+        CheckConstraint("revision >= 1", name="ck_shared_lesson_documents_revision_positive"),
+        CheckConstraint(
+            "teaching_plan_revision >= 1",
+            name="ck_shared_lesson_documents_plan_revision_positive",
+        ),
+        CheckConstraint(
+            "status IN ('draft', 'ready')",
+            name="ck_shared_lesson_documents_status",
+        ),
+        Index("ix_shared_lesson_documents_path_lesson", "path_lesson_id"),
+        Index("ix_shared_lesson_documents_content_hash", "content_hash"),
+        ForeignKeyConstraint(
+            ["path_lesson_id"], ["path_lessons.id"], ondelete="RESTRICT"
+        ),
+    )
+
+    id = Column(String, nullable=False)
+    revision = Column(Integer, nullable=False)
+    path_lesson_id = Column(String, nullable=False)
+    teaching_plan_id = Column(String, nullable=False)
+    teaching_plan_revision = Column(Integer, nullable=False)
+    teaching_plan_hash = Column(String, nullable=False)
+    content_hash = Column(String, nullable=False)
+    document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    status = Column(String, nullable=False, default="draft", server_default="draft")
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
 # --- Generic generation runtime (Shared Document overhaul Phase 1A) ---
 
 
@@ -1296,6 +1340,55 @@ class GenerationEventModel(Base):
     work_item = relationship("GenerationWorkItemModel", back_populates="events")
 
 
+def _reject_shared_lesson_document_update(mapper, connection, target) -> None:
+    """Keep stored JSON and identity fixed; draft may only become ready."""
+    persisted = connection.execute(
+        select(
+            SharedLessonDocumentModel.status,
+            SharedLessonDocumentModel.id,
+            SharedLessonDocumentModel.revision,
+            SharedLessonDocumentModel.path_lesson_id,
+            SharedLessonDocumentModel.teaching_plan_id,
+            SharedLessonDocumentModel.teaching_plan_revision,
+            SharedLessonDocumentModel.teaching_plan_hash,
+            SharedLessonDocumentModel.content_hash,
+            SharedLessonDocumentModel.document_json,
+            SharedLessonDocumentModel.created_at,
+        ).where(
+            SharedLessonDocumentModel.id == target.id,
+            SharedLessonDocumentModel.revision == target.revision,
+        )
+    ).mappings().one_or_none()
+    if persisted is None:
+        return
+    if persisted["status"] == "ready":
+        raise ValueError("ready shared lesson documents are immutable")
+    immutable_fields = (
+        "id",
+        "revision",
+        "path_lesson_id",
+        "teaching_plan_id",
+        "teaching_plan_revision",
+        "teaching_plan_hash",
+        "content_hash",
+        "document_json",
+        "created_at",
+    )
+    if any(getattr(target, field) != persisted[field] for field in immutable_fields):
+        raise ValueError("stored shared lesson document identity and JSON are immutable")
+
+
+def _reject_shared_lesson_document_delete(mapper, connection, target) -> None:
+    persisted_status = connection.execute(
+        select(SharedLessonDocumentModel.status).where(
+            SharedLessonDocumentModel.id == target.id,
+            SharedLessonDocumentModel.revision == target.revision,
+        )
+    ).scalar_one_or_none()
+    if persisted_status == "ready":
+        raise ValueError("ready shared lesson documents are immutable")
+
+
 def _reject_ready_update(mapper, connection, target) -> None:
     if not target.id:
         return
@@ -1328,3 +1421,5 @@ event.listen(GenerationRunModel, "before_delete", _reject_ready_delete)
 event.listen(GenerationWorkItemModel, "before_delete", _reject_ready_delete)
 event.listen(GenerationEventModel, "before_update", _immutable_generation_event)
 event.listen(GenerationEventModel, "before_delete", _immutable_generation_event)
+event.listen(SharedLessonDocumentModel, "before_update", _reject_shared_lesson_document_update)
+event.listen(SharedLessonDocumentModel, "before_delete", _reject_shared_lesson_document_delete)
