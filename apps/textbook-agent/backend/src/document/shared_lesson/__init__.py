@@ -6,6 +6,16 @@ from document.shared_lesson.assembly import (
     SharedLessonAssemblyResult,
     assemble_shared_lesson_document,
 )
+from document.shared_lesson.boundary import (
+    BoundaryRepairEngine,
+    BoundaryRepairRequest,
+    BoundarySemanticRequest,
+    BoundarySemanticValidator,
+    BoundarySemanticVerdict,
+    BoundaryValidationResult,
+    default_boundary_semantic_validator,
+    validate_and_repair_boundary,
+)
 from document.shared_lesson.composer import (
     CompositionChoice,
     CompositionItem,
@@ -93,6 +103,12 @@ from document.shared_lesson.writer import (
 __all__ = [
     "MAX_CONCURRENT_SECTION_WRITERS",
     "AssemblyIssue",
+    "BoundaryRepairEngine",
+    "BoundaryRepairRequest",
+    "BoundarySemanticRequest",
+    "BoundarySemanticValidator",
+    "BoundarySemanticVerdict",
+    "BoundaryValidationResult",
     "CalloutNode",
     "CompositionChoice",
     "CompositionItem",
@@ -136,6 +152,7 @@ __all__ = [
     "admit_section_run",
     "admit_writer_work_item",
     "build_shared_lesson_document",
+    "default_boundary_semantic_validator",
     "build_figure_work_order",
     "bind_figure_media_to_document",
     "bind_generated_figure",
@@ -153,6 +170,7 @@ __all__ = [
     "shared_lesson_content_hash",
     "validate_and_build_composition",
     "validate_and_build_section",
+    "validate_and_repair_boundary",
     "validate_composition_plan",
     "validate_reusable_figure_asset",
     "verify_shared_lesson_source",
