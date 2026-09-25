@@ -27,6 +27,11 @@ from document.shared_lesson.qa import (
     DocumentQAResult,
     qa_shared_lesson_document,
 )
+from document.shared_lesson.runtime import (
+    SectionRuntimeError,
+    TeachingPlanSource,
+    verify_teaching_plan_source,
+)
 
 
 class AssemblyIssue(BaseModel):
@@ -181,12 +186,7 @@ def assemble_shared_lesson_document(
     *,
     document_id: str,
     revision: int,
-    teaching_plan_id: str,
-    teaching_plan_revision: int,
-    teaching_plan_hash: str,
-    teaching_plan_approval_status: Literal["approved"],
-    title: str,
-    teaching_plan_sections: Sequence[TeachingPlanSection],
+    source: TeachingPlanSource,
     accepted_sections: Mapping[str, SharedSection] | Sequence[SharedSection],
     tasks: Sequence[Mapping[str, Any] | Any] = (),
     provenance: SharedProvenance | Mapping[str, Any] | None = None,
@@ -206,13 +206,35 @@ def assemble_shared_lesson_document(
     silently create a different lesson.  Contract failures raise before a
     draft is built; QA failures return a blocked result with the draft intact.
     """
-    if teaching_plan_approval_status != "approved":
+    try:
+        source_identity = verify_teaching_plan_source(source)
+    except SectionRuntimeError as exc:
         raise SharedLessonAssemblyError(
             (
                 _issue(
-                    "teaching_plan_not_approved",
+                    "teaching_plan_source_invalid",
                     "document",
-                    "SharedLessonDocument assembly requires an explicitly approved Teaching Plan",
+                    str(exc),
+                ),
+            )
+        ) from exc
+    plan = source.plan
+    teaching_plan_sections = tuple(plan.sections)
+    teaching_plan_id = source_identity.source_artifact_id
+    teaching_plan_revision = source_identity.source_revision
+    teaching_plan_hash = source_identity.source_hash
+    title = plan.learner_title
+    if title is None:  # The Phase 6 verifier normally rejects this for v2 plans.
+        raise SharedLessonAssemblyError(
+            (_issue("teaching_plan_title_missing", "document", "approved source has no learner title"),)
+        )
+    if expected_title is not None and expected_title != title:
+        raise SharedLessonAssemblyError(
+            (
+                _issue(
+                    "teaching_plan_title_mismatch",
+                    "document",
+                    "expected title differs from the approved Teaching Plan learner title",
                 ),
             )
         )
@@ -258,7 +280,7 @@ def assemble_shared_lesson_document(
         document=document,
         teaching_plan_sections=teaching_plan_sections,
         expected_shapes=expected_shapes or {},
-        expected_title=expected_title or title,
+        expected_title=title,
         approved_source_ids=approved_source_ids,
         source_facts_by_section=source_facts_by_section,
         required_media_by_section=required_media_by_section,

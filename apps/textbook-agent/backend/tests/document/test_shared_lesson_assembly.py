@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+from curriculum.teaching_plan.models import (
+    TeachingPlan,
+    TeachingPlanBlock,
+    TeachingPlanSection,
+    TeachingRevisionRecord,
+)
 from document.shared_lesson import (
     SharedLessonAssemblyError,
     SharedSection,
@@ -15,17 +21,33 @@ from document.shared_lesson.models import (
     ParagraphDisplay,
     ParagraphNode,
 )
+from document.shared_lesson.runtime import TeachingPlanSource
 from document.shared_lesson.qa import DocumentQAError
 from document.shared_lesson.continuity import ExpectedNodeShape
-
-
-PLAN_HASH = "a" * 64
 
 
 def _plan(slot_id: str, title: str, block_id: str) -> TeachingPlanSection:
     return TeachingPlanSection(
         slot_id=slot_id,
+        specific_purpose=f"Teach {title}",
         display_title=title,
+        entry_state=(
+            ["The learner is ready to learn"]
+            if slot_id == "section-1"
+            else ["The learner can explain Introduction"]
+        ),
+        must_establish=[
+            f"The learner knows {title}"
+            if slot_id == "section-1"
+            else f"The learner understands {title}"
+        ],
+        avoid_repeating=[],
+        bridge_from_previous=None if slot_id == "section-1" else "Build on the prior section",
+        exit_state=[
+            "The learner can explain Introduction"
+            if slot_id == "section-1"
+            else "The learner can apply Application"
+        ],
         blocks=[
             TeachingPlanBlock(
                 id=block_id,
@@ -38,6 +60,40 @@ def _plan(slot_id: str, title: str, block_id: str) -> TeachingPlanSection:
     )
 
 
+def _source(plans: tuple[TeachingPlanSection, ...]) -> TeachingPlanSource:
+    plan = TeachingPlan(
+        arc="Teach light and energy",
+        contract_version=2,
+        learner_title="Light and energy",
+        starting_state=["The learner is ready to learn"],
+        target_state=["The learner can explain the idea"],
+        teaching_plan_id="plan-1",
+        revision=3,
+        sections=list(plans),
+        approval_status="approved",
+    )
+    digest = teaching_plan_content_hash(plan)
+    record = TeachingRevisionRecord(
+        teaching_plan_id="plan-1",
+        revision=3,
+        status="approved",
+        preparation_hash="preparation-hash",
+        content_hash=digest,
+        plan=plan.model_dump(mode="json"),
+        created_at="2026-09-24T09:00:00Z",
+        approved_at="2026-09-24T09:01:00Z",
+        reviewed_by="teacher-1",
+        approval_hash_binding="submitted",
+    )
+    return TeachingPlanSource(
+        plan=plan,
+        revision_record=record,
+        id="plan-1",
+        revision=3,
+        content_hash=digest,
+    )
+
+
 def _paragraph_section(
     slot_id: str,
     title: str,
@@ -45,6 +101,13 @@ def _paragraph_section(
     position: int,
     text: str = "Plants use light.",
 ) -> SharedSection:
+    if text == "Plants use light.":
+        text = (
+            f"{title}: The learner knows {title} and can explain {title}."
+            if slot_id == "section-1"
+            else f"{title}: The learner understands {title} and can apply {title}. "
+            "Build on the prior section."
+        )
     return SharedSection(
         id=slot_id,
         title=title,
@@ -73,7 +136,6 @@ def _shape(slot_id: str, block_id: str) -> tuple[ExpectedNodeShape, ...]:
 def _assemble(
     sections: list[SharedSection] | dict[str, SharedSection],
     *,
-    approval: str = "approved",
     expected_content_hash: str | None = None,
     required_media_by_section: dict[str, tuple[str, ...]] | None = None,
 ):
@@ -81,15 +143,11 @@ def _assemble(
         _plan("section-1", "Introduction", "block-1"),
         _plan("section-2", "Application", "block-2"),
     )
+    source = _source(plans)
     return assemble_shared_lesson_document(
         document_id="document-1",
         revision=1,
-        teaching_plan_id="plan-1",
-        teaching_plan_revision=3,
-        teaching_plan_hash=PLAN_HASH,
-        teaching_plan_approval_status=approval,  # type: ignore[arg-type]
-        title="Light and energy",
-        teaching_plan_sections=plans,
+        source=source,
         accepted_sections=sections,
         created_at="2026-09-24T09:00:00+03:00",
         expected_shapes={
@@ -150,10 +208,54 @@ def test_pending_teaching_plan_cannot_be_treated_as_approved() -> None:
         _paragraph_section("section-2", "Application", "block-2", 1),
     ]
 
-    with pytest.raises(SharedLessonAssemblyError) as raised:
-        _assemble(sections, approval="pending")
+    plans = (_plan("section-1", "Introduction", "block-1"), _plan("section-2", "Application", "block-2"))
+    source = _source(plans)
+    pending_record = source.revision_record.model_copy(update={"status": "pending"})
+    pending_source = source.model_copy(update={"revision_record": pending_record})
 
-    assert raised.value.issues[0].issue_code == "teaching_plan_not_approved"
+    with pytest.raises(SharedLessonAssemblyError) as raised:
+        assemble_shared_lesson_document(
+            document_id="document-1",
+            revision=1,
+            source=pending_source,
+            accepted_sections=sections,
+            created_at="2026-09-24T09:00:00+03:00",
+        )
+
+    assert raised.value.issues[0].issue_code == "teaching_plan_source_invalid"
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda source: source.model_copy(update={"content_hash": "b" * 64}),
+        lambda source: source.model_copy(update={"revision": 4}),
+        lambda source: source.model_copy(
+            update={
+                "revision_record": source.revision_record.model_copy(
+                    update={"content_hash": "c" * 64}
+                )
+            }
+        ),
+        lambda source: source.model_copy(
+            update={"plan": source.plan.model_copy(update={"learner_title": "Forged title"})}
+        ),
+        lambda source: source.model_copy(
+            update={"plan": source.plan.model_copy(update={"approval_status": "pending"})}
+        ),
+    ],
+)
+def test_forged_or_stale_teaching_plan_source_fails_before_draft(mutate) -> None:
+    plans = (_plan("section-1", "Introduction", "block-1"), _plan("section-2", "Application", "block-2"))
+    source = mutate(_source(plans))
+    with pytest.raises(SharedLessonAssemblyError, match="teaching_plan_source_invalid"):
+        assemble_shared_lesson_document(
+            document_id="document-1",
+            revision=1,
+            source=source,
+            accepted_sections={},
+            created_at="2026-09-24T09:00:00+03:00",
+        )
 
 
 def test_expected_hash_mismatch_blocks_assembly() -> None:
@@ -191,12 +293,7 @@ def test_required_media_failure_returns_blocked_draft_and_preserves_siblings() -
     result = assemble_shared_lesson_document(
         document_id="document-1",
         revision=1,
-        teaching_plan_id="plan-1",
-        teaching_plan_revision=3,
-        teaching_plan_hash=PLAN_HASH,
-        teaching_plan_approval_status="approved",
-        title="Light and energy",
-        teaching_plan_sections=plans,
+        source=_source(plans),
         accepted_sections={"section-1": figure, "section-2": sibling},
         created_at="2026-09-24T09:00:00+03:00",
         expected_shapes={
