@@ -213,6 +213,7 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 
 - Read-only local PostgreSQL inventory: 35 non-skipped lessons on active paths; only 2 have both a verified approved Teaching Plan snapshot and current lesson provenance. Both are Science/conceptual (Grades 6 and 7). The other 33 cannot count until normal preparation and approval establish current provenance. No staging database URL is configured locally, and no authenticated SharedDocument shadow admission/dispatch endpoint exists yet.
 - Proof bar remains 12 unique lessons across six archetypes (two each) plus eight regenerations. Current local data is insufficient for the 20-run program. Phase 9/15 proof has not started; lesson preparation, selection, and a gated shadow entry point are required.
+- Phase 9 entry audit: existing generic build/run status, retry, and cancellation routes can be reused. A new owner-scoped shadow admission and immutable document preview still require the atomic finalizer, durable worker dispatch, and revision-bound sourcebook/shared-task outputs. Old Print creates sourcebook/tasks lazily; that state is not a valid SharedDocument input. Approved `sourcebook_refs` must match generated sourcebook entry IDs exactly; the current writer's sequential `source-N` assignment needs a shared authoring adapter before plans with explicit refs can pass. No Phase 9 API or quality proof has been claimed.
 
 ## Baseline
 - [x] branch recorded
