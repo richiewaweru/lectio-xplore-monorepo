@@ -11,6 +11,7 @@ from curriculum.teaching_plan.models import (
     TeachingPlanSection,
     TeachingRevisionRecord,
 )
+from document.shared_lesson import handoff
 from document.shared_lesson.composer import (
     CompositionChoice,
     SectionCompositionPlan,
@@ -217,7 +218,6 @@ async def test_handoff_returns_blocked_evidence_for_semantic_issue() -> None:
 
 @pytest.mark.asyncio
 async def test_handoff_rejects_stale_semantic_evidence(monkeypatch) -> None:
-    import document.shared_lesson.handoff as handoff
     from document.shared_lesson.document_semantic import DocumentSemanticQAResult
 
     async def stale(**_kwargs):

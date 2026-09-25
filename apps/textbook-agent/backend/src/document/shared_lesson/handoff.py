@@ -255,17 +255,14 @@ async def handoff_accepted_sections_to_document(
         value_name="accepted section",
         identity_attribute="id",
     )
-    try:
-        composition_by_section = {
-            section_id: _coerce_composition(raw_compositions[section_id], section_id)
-            for section_id in section_ids
-        }
-        section_by_id = {
-            section_id: _coerce_section(raw_sections[section_id], section_id)
-            for section_id in section_ids
-        }
-    except SharedLessonHandoffError:
-        raise
+    composition_by_section = {
+        section_id: _coerce_composition(raw_compositions[section_id], section_id)
+        for section_id in section_ids
+    }
+    section_by_id = {
+        section_id: _coerce_section(raw_sections[section_id], section_id)
+        for section_id in section_ids
+    }
 
     task_ids = [task.id for task in tasks]
     if len(task_ids) != len(set(task_ids)):
