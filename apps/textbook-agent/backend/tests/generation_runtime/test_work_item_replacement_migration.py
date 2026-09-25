@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from alembic.migration import MigrationContext
@@ -250,9 +251,72 @@ def test_recoverable_run_reopens_for_event_backed_targeted_retry() -> None:
             connection.scalar(text("SELECT status FROM generation_runs WHERE id='retry-run'"))
             == "queued"
         )
+
+        _run(connection, "stale-retry-run")
+        _item(connection, "stale-retry-item", "stale-retry-run")
+        connection.execute(
+            text(
+                "UPDATE generation_work_items SET status='failed_recoverable' "
+                "WHERE id='stale-retry-item'"
+            )
+        )
+        connection.execute(
+            text(
+                "UPDATE generation_runs SET status='failed_recoverable' WHERE id='stale-retry-run'"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO generation_events (id, run_id, work_item_id, seq, event_type, status, "
+                "stage, attempt, safe_payload_json, created_at) VALUES ('stale-retry-event', "
+                "'stale-retry-run', 'stale-retry-item', 1, 'work_item_retry_queued', 'queued', "
+                "'document_qa', 2, '{}', CURRENT_TIMESTAMP)"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO generation_events (id, run_id, work_item_id, seq, event_type, status, "
+                "stage, attempt, safe_payload_json, created_at) VALUES ('later-failure-event', "
+                "'stale-retry-run', 'stale-retry-item', 2, 'work_item_failed', "
+                "'failed_recoverable', 'document_qa', 2, '{}', CURRENT_TIMESTAMP)"
+            )
+        )
+        connection.execute(
+            text(
+                "UPDATE generation_work_items SET status='queued', attempt=3 "
+                "WHERE id='stale-retry-item'"
+            )
+        )
+        with pytest.raises(IntegrityError), connection.begin_nested():
+            connection.execute(
+                text("UPDATE generation_runs SET status='queued' WHERE id='stale-retry-run'")
+            )
     finally:
         connection.close()
         engine.dispose()
+
+
+def test_postgresql_admission_guard_uses_work_item_then_run_lock_order() -> None:
+    migration = _load_migration("20260925_0046_generation_work_item_replacements.py")
+    executed: list[str] = []
+    migration.op = SimpleNamespace(execute=executed.append)
+    migration._create_postgresql_guards()
+    admission_function = next(
+        statement
+        for statement in executed
+        if "CREATE FUNCTION guard_generation_work_item_admission" in statement
+    )
+    predecessor_lock = admission_function.index(
+        "FROM generation_work_items WHERE id = NEW.replaces_work_item_id FOR UPDATE"
+    )
+    run_lock = admission_function.index("FROM generation_runs WHERE id = NEW.run_id FOR UPDATE")
+    assert predecessor_lock < run_lock
+    reopen_function = next(
+        statement
+        for statement in executed
+        if "CREATE FUNCTION guard_generation_run_reopen_for_repair" in statement
+    )
+    assert "event.seq > COALESCE(" in reopen_function
 
 
 def test_replacement_migration_downgrade_refuses_to_delete_lineage() -> None:
