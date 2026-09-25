@@ -451,8 +451,11 @@ async def validate_and_repair_boundary(
             semantic_calls=semantic_calls,
             failure_code="boundary_revalidation_failed",
         )
-    if semantic_calls == 1:
-        semantic_calls = 2
+    # Every repaired boundary gets one final semantic review.  A
+    # deterministic-first repair has one call total; a semantic-initiated
+    # repair has the initial review plus this one, never another repair.
+    if semantic_calls < 2:
+        semantic_calls += 1
         try:
             verdict = _coerce_verdict(
                 await reviewer(

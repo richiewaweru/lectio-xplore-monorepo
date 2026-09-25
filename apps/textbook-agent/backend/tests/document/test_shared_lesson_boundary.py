@@ -128,11 +128,45 @@ async def test_deterministic_boundary_failure_precedes_semantic_and_repairs_once
     )
 
     assert result.passed
-    assert result.semantic_calls == 0
-    assert semantic.calls == 0
+    assert result.semantic_calls == 1
+    assert semantic.calls == 1
     assert repair.calls == 1
     assert result.previous_section == previous
     assert result.next_section.nodes[0].display.text.startswith("Light energy")
+
+
+@pytest.mark.asyncio
+async def test_deterministic_repair_is_blocked_by_post_repair_semantic_issue() -> None:
+    previous_plan, next_plan, previous, following = _boundary(next_text="Photosynthesis makes food.")
+    semantic = _Semantic(
+        BoundarySemanticVerdict(
+            status="issue",
+            issue=ContinuityIssue(
+                issue_code="semantic_bridge_gap",
+                affected_section_id="s2",
+                explanation="the opening still does not connect the prerequisite",
+                required_correction="add the approved bridge to the opening",
+            ),
+        )
+    )
+    repair = _Repair(_section("s2", 1, "Light energy supports photosynthesis."))
+
+    result = await validate_and_repair_boundary(
+        previous_section=previous,
+        previous_plan=previous_plan,
+        next_section=following,
+        next_plan=next_plan,
+        semantic_validator=semantic,
+        repair_engine=repair,
+        writer_requests={"s2": _writer_request(next_plan)},
+    )
+
+    assert result.status == "recoverable_failure"
+    assert result.failure_code == "boundary_semantic_revalidation_failed"
+    assert result.semantic_calls == 1
+    assert semantic.calls == 1
+    assert repair.calls == 1
+    assert result.previous_section == previous
 
 
 @pytest.mark.asyncio
