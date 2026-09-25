@@ -410,9 +410,7 @@ async def test_shared_lesson_runtime_persists_composition_writer_retry_cancel_an
         events = list(
             (
                 await verify.scalars(
-                    select(GenerationEventModel).where(
-                        GenerationEventModel.run_id == run_id
-                    )
+                    select(GenerationEventModel).where(GenerationEventModel.run_id == run_id)
                 )
             ).all()
         )
@@ -513,9 +511,12 @@ async def test_shared_document_admission_rejects_legacy_plan_before_run_creation
             request_key="legacy-plan-request",
             source=source,
         )
-    assert await db_session.scalar(
-        select(GenerationRunModel.id).where(GenerationRunModel.build_id == build.id)
-    ) is None
+    assert (
+        await db_session.scalar(
+            select(GenerationRunModel.id).where(GenerationRunModel.build_id == build.id)
+        )
+        is None
+    )
 
 
 @pytest.mark.asyncio

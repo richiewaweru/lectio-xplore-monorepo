@@ -172,9 +172,7 @@ async def test_writer_admission_returns_work_item_record(monkeypatch) -> None:
         return SimpleNamespace(record=SimpleNamespace(item_key=admission.item_key))
 
     monkeypatch.setattr("document.shared_lesson.runtime.add_work_item", fake_add)
-    item = await admit_writer_work_item(
-        "session", run_id="run-1", section=section, request=request
-    )
+    item = await admit_writer_work_item("session", run_id="run-1", section=section, request=request)
 
     assert item.item_key == "write:orient"
     assert captured[0].composition_identity
@@ -197,11 +195,7 @@ def test_source_identity_requires_exact_id_revision_and_recomputed_hash() -> Non
 
     for status in ("pending", "superseded", "rejected"):
         unapproved = source.model_copy(
-            update={
-                "revision_record": source.revision_record.model_copy(
-                    update={"status": status}
-                )
-            }
+            update={"revision_record": source.revision_record.model_copy(update={"status": status})}
         )
         with pytest.raises(SectionRuntimeError, match="must be approved"):
             verify_teaching_plan_source(unapproved)
@@ -262,9 +256,7 @@ def test_source_identity_requires_exact_id_revision_and_recomputed_hash() -> Non
             )
         )
 
-    forged_plan_identity = source.revision_record.plan | {
-        "teaching_plan_id": "another-plan"
-    }
+    forged_plan_identity = source.revision_record.plan | {"teaching_plan_id": "another-plan"}
     with pytest.raises(SectionRuntimeError, match="plan ID differs"):
         verify_teaching_plan_source(
             source.model_copy(
@@ -276,9 +268,7 @@ def test_source_identity_requires_exact_id_revision_and_recomputed_hash() -> Non
             )
         )
 
-    forged_plan_revision = source.revision_record.plan | {
-        "revision": source.revision + 1
-    }
+    forged_plan_revision = source.revision_record.plan | {"revision": source.revision + 1}
     with pytest.raises(SectionRuntimeError, match="plan revision differs"):
         verify_teaching_plan_source(
             source.model_copy(
@@ -478,7 +468,9 @@ async def test_public_writer_batch_enforces_four_and_skips_ready_sibling(monkeyp
                 ParagraphNode(
                     id="node-1",
                     teaching_block_id="block-1",
-                    display=ParagraphDisplay(text="A material can be identified by its properties."),
+                    display=ParagraphDisplay(
+                        text="A material can be identified by its properties."
+                    ),
                 ),
             ),
         )
@@ -492,7 +484,9 @@ async def test_public_writer_batch_enforces_four_and_skips_ready_sibling(monkeyp
         return {"nodes": []}
 
     monkeypatch.setattr("document.shared_lesson.runtime.claim_work_item", fake_claim)
-    monkeypatch.setattr("document.shared_lesson.runtime.load_compatible_checkpoint", fake_no_checkpoint)
+    monkeypatch.setattr(
+        "document.shared_lesson.runtime.load_compatible_checkpoint", fake_no_checkpoint
+    )
     monkeypatch.setattr("document.shared_lesson.runtime.persist_checkpoint", fake_no_checkpoint)
     monkeypatch.setattr("document.shared_lesson.runtime.complete_work_item", fake_no_checkpoint)
     monkeypatch.setattr("document.shared_lesson.runtime.write_section", fake_write)
@@ -558,7 +552,9 @@ async def test_targeted_retry_names_only_the_selected_failed_work_item(monkeypat
         return "retried"
 
     monkeypatch.setattr("document.shared_lesson.runtime.retry_work_item", fake_retry)
-    result = await retry_failed_section("session", work_item_id="write:orient", owner_user_id="teacher")
+    result = await retry_failed_section(
+        "session", work_item_id="write:orient", owner_user_id="teacher"
+    )
 
     assert result == "retried"
     assert calls == [("session", "write:orient", "teacher")]
@@ -659,7 +655,9 @@ async def test_late_provider_result_cannot_complete_after_lease_is_lost(monkeypa
                 ParagraphNode(
                     id="node-1",
                     teaching_block_id="block-1",
-                    display=ParagraphDisplay(text="A material can be identified by its properties."),
+                    display=ParagraphDisplay(
+                        text="A material can be identified by its properties."
+                    ),
                 ),
             ),
         )

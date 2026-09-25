@@ -173,7 +173,9 @@ def _jsonable(value: Any) -> Any:
 
 
 def _stable_hash(value: Any) -> str:
-    payload = json.dumps(_jsonable(value), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    payload = json.dumps(
+        _jsonable(value), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -198,7 +200,10 @@ def _section_payload(
 
 
 def _checkpoint_compatibility(
-    *, source: SourceIdentity, input_hash: str, definition_hash: str,
+    *,
+    source: SourceIdentity,
+    input_hash: str,
+    definition_hash: str,
     composition_identity: str | None,
 ) -> RuntimeCheckpointCompatibility:
     return RuntimeCheckpointCompatibility(
@@ -456,17 +461,17 @@ async def admit_writer_work_item(
     composition_identity = _stable_hash(request.composition_plan.model_dump(mode="json"))
     input_payload = request.model_dump(mode="json")
     result = await add_work_item(
-            session,
-            WorkItemAdmission(
-                run_id=run_id,
-                item_key=f"write:{section.slot_id}",
-                stage="section_writing",
-                input_hash=_stable_hash(input_payload),
-                definition_hash=_stable_hash(_WRITER_DEFINITION),
-                composition_identity=composition_identity,
-                max_attempts=max_attempts,
-            ),
-        )
+        session,
+        WorkItemAdmission(
+            run_id=run_id,
+            item_key=f"write:{section.slot_id}",
+            stage="section_writing",
+            input_hash=_stable_hash(input_payload),
+            definition_hash=_stable_hash(_WRITER_DEFINITION),
+            composition_identity=composition_identity,
+            max_attempts=max_attempts,
+        ),
+    )
     return result.record
 
 
@@ -515,7 +520,10 @@ async def _write_section_work_item(
                 worker_id=worker_id,
                 lease_token=item.lease_token,
                 compatibility=compatibility,
-                payload={"composition_identity": composition_identity, "plan": expected_composition},
+                payload={
+                    "composition_identity": composition_identity,
+                    "plan": expected_composition,
+                },
             )
         else:
             try:
@@ -615,9 +623,7 @@ def _bounded_section_provider(
     return dispatch
 
 
-def verify_writer_checkpoint_payload(
-    payload: Any, *, composition: SectionCompositionPlan
-) -> None:
+def verify_writer_checkpoint_payload(payload: Any, *, composition: SectionCompositionPlan) -> None:
     """Reject a checkpoint that is stale or belongs to another composition."""
     expected_plan = composition.model_dump(mode="json")
     expected_identity = _stable_hash(expected_plan)
@@ -625,9 +631,7 @@ def verify_writer_checkpoint_payload(
         raise SectionRuntimeError("writer checkpoint belongs to a different composition plan")
 
 
-async def retry_failed_section(
-    session: Any, *, work_item_id: str, owner_user_id: str
-) -> Any:
+async def retry_failed_section(session: Any, *, work_item_id: str, owner_user_id: str) -> Any:
     """Retry exactly one failed section; sibling rows and outputs are untouched."""
     return await retry_work_item(
         session,
@@ -636,9 +640,7 @@ async def retry_failed_section(
     )
 
 
-async def cancel_section_run(
-    session: Any, *, run_id: str, owner_user_id: str
-) -> Any:
+async def cancel_section_run(session: Any, *, run_id: str, owner_user_id: str) -> Any:
     """Cancel a section run and invalidate all outstanding worker fences."""
     return await cancel_run(session, run_id=run_id, owner_user_id=owner_user_id)
 
