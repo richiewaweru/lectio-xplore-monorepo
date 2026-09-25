@@ -31,9 +31,9 @@ from document.shared_lesson.runtime import (
 )
 from document.shared_lesson.writer import (
     SectionSource,
+    SectionWriterDraft,
     SectionWriteResult,
     SectionWriteValidationError,
-    SectionWriterDraft,
     validate_and_build_section,
 )
 from infra.execution.checkpoints import content_hash

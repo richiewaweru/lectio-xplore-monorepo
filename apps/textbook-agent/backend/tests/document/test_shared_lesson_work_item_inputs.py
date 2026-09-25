@@ -15,13 +15,13 @@ from curriculum.teaching_plan.models import (
 from document.shared_lesson.composer import CompositionChoice, validate_and_build_composition
 from document.shared_lesson.models import ParagraphDisplay, ParagraphNode
 from document.shared_lesson.runtime import TeachingPlanSource, _stable_hash
-from document.shared_lesson.writer import SectionWriteResult
 from document.shared_lesson.work_item_inputs import (
     SharedLessonInputError,
-    _parse_output,
     _assert_active_chain,
+    _parse_output,
     load_verified_shared_lesson_inputs,
 )
+from document.shared_lesson.writer import SectionWriteResult
 from infra.database.models import (
     ConceptModel,
     GenerationBuildModel,
