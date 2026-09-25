@@ -20,8 +20,7 @@ from document.shared_lesson.media import (
     bind_figure_media_to_document,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
-from document.shared_lesson.qa import DocumentQAError
-from document.shared_lesson.qa import qa_shared_lesson_document
+from document.shared_lesson.qa import DocumentQAError, qa_shared_lesson_document
 from document.shared_lesson.runtime import (
     SectionRuntimeError,
     TeachingPlanSource,
