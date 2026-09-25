@@ -164,6 +164,7 @@ async def test_admission_binds_exact_issue_plan_composition_and_prior_output(mon
     predecessor = SimpleNamespace(
         id="writer-old",
         item_key="write:s2",
+        replaces_work_item_id=None,
         run_id="run-1",
         stage="section_writing",
         status="ready",
@@ -228,6 +229,7 @@ async def test_admission_rejects_unchanged_or_forged_issue(monkeypatch) -> None:
     predecessor = SimpleNamespace(
         id="writer-old",
         item_key="write:s2",
+        replaces_work_item_id=None,
         run_id="run-1",
         stage="section_writing",
         status="ready",
@@ -337,6 +339,204 @@ async def test_admission_requires_durable_boundary_repair_proof() -> None:
             run_id="run-1",
             source=runtime._identity(source),
             boundary_result=boundary_result,
+        )
+
+
+@pytest.mark.asyncio
+async def test_boundary_replacement_uses_current_writer_leaf_and_fresh_identity(
+    monkeypatch,
+) -> None:
+    source = _source()
+    previous = _section("s1", 0, "The first idea.")
+    original = _section("s2", 1, "The second idea.")
+    repaired = _section("s2", 1, "Connect the first idea to the second idea.")
+    old_work = boundary_runtime._work_order(
+        runtime._identity(source),
+        previous,
+        original,
+        previous_composition_identity="composition-s1",
+        next_composition_identity="composition-s2",
+    )
+    result = _boundary_result(previous, original, repaired)
+    payload = {
+        "kind": "shared_lesson_boundary_repair_result",
+        "work": old_work.model_dump(mode="json"),
+        "result": result.model_dump(mode="json"),
+    }
+    old_item = boundary_runtime._item_request("run-1", old_work, max_attempts=3)
+    checkpoint = RuntimeCheckpoint(
+        compatibility=RuntimeCheckpointCompatibility(
+            schema_version=1,
+            source_revision=source.revision,
+            source_hash=source.content_hash,
+            input_hash=old_item.input_hash,
+            definition_hash=old_item.definition_hash,
+            composition_identity=old_item.composition_identity,
+        ),
+        payload=payload,
+        payload_hash=content_hash(payload),
+    )
+    predecessor = SimpleNamespace(
+        id="boundary-old",
+        run_id="run-1",
+        stage="continuity_validation",
+        status="failed_recoverable",
+        input_hash=old_item.input_hash,
+        definition_hash=old_item.definition_hash,
+        composition_identity=old_item.composition_identity,
+        checkpoint_json=checkpoint.model_dump(mode="json"),
+    )
+
+    class Session:
+        def __init__(self):
+            self.calls = 0
+
+        async def scalar(self, _statement):
+            self.calls += 1
+            return predecessor if self.calls == 1 else None
+
+    async def no_run_check(*_args, **_kwargs):
+        return None
+
+    async def no_writer_check(*_args, **_kwargs):
+        return None
+
+    captured = []
+
+    async def fake_replace(_session, request):
+        captured.append(request)
+        return "boundary-successor"
+
+    monkeypatch.setattr(boundary_runtime, "_verify_run_source", no_run_check)
+    monkeypatch.setattr(boundary_runtime, "_verify_active_writer_outputs", no_writer_check)
+    monkeypatch.setattr(boundary_runtime, "replace_work_item", fake_replace)
+    admitted = await boundary_runtime.admit_boundary_replacement_work_item(
+        Session(),
+        predecessor_work_item_id=predecessor.id,
+        owner_user_id="owner",
+        source=source,
+        previous_section=previous,
+        next_section=repaired,
+        previous_composition_identity="composition-s1",
+        next_composition_identity="composition-s2",
+    )
+    assert admitted == "boundary-successor"
+    replacement = captured[0].replacement
+    assert replacement.item_key.startswith("boundary:s1->s2:repair:")
+    assert replacement.input_hash != predecessor.input_hash
+    assert captured[0].predecessor_work_item_id == predecessor.id
+
+
+@pytest.mark.asyncio
+async def test_boundary_replacement_rejects_second_successor_and_old_checkpoint_kind(
+    monkeypatch,
+) -> None:
+    source = _source()
+    previous = _section("s1", 0, "The first idea.")
+    original = _section("s2", 1, "The second idea.")
+    repaired = _section("s2", 1, "Connect the first idea to the second idea.")
+    old_work = boundary_runtime._work_order(
+        runtime._identity(source),
+        previous,
+        original,
+        previous_composition_identity="composition-s1",
+        next_composition_identity="composition-s2",
+    )
+    result = _boundary_result(previous, original, repaired)
+    payload = {
+        "kind": "shared_lesson_boundary_repair_result",
+        "work": old_work.model_dump(mode="json"),
+        "result": result.model_dump(mode="json"),
+    }
+    old_item = boundary_runtime._item_request("run-1", old_work, max_attempts=3)
+    checkpoint = RuntimeCheckpoint(
+        compatibility=RuntimeCheckpointCompatibility(
+            schema_version=1,
+            source_revision=source.revision,
+            source_hash=source.content_hash,
+            input_hash=old_item.input_hash,
+            definition_hash=old_item.definition_hash,
+            composition_identity=old_item.composition_identity,
+        ),
+        payload=payload,
+        payload_hash=content_hash(payload),
+    )
+    predecessor = SimpleNamespace(
+        id="boundary-old",
+        run_id="run-1",
+        stage="continuity_validation",
+        status="failed_recoverable",
+        input_hash=old_item.input_hash,
+        definition_hash=old_item.definition_hash,
+        composition_identity=old_item.composition_identity,
+        checkpoint_json=checkpoint.model_dump(mode="json"),
+    )
+
+    class Session:
+        async def scalar(self, _statement):
+            return predecessor
+
+    monkeypatch.setattr(boundary_runtime, "_verify_run_source", lambda *_a, **_k: None)
+    with pytest.raises(boundary_runtime.BoundarySourceConflict, match="successor"):
+        await boundary_runtime.admit_boundary_replacement_work_item(
+            Session(),
+            predecessor_work_item_id=predecessor.id,
+            owner_user_id="owner",
+            source=source,
+            previous_section=previous,
+            next_section=repaired,
+            previous_composition_identity="composition-s1",
+            next_composition_identity="composition-s2",
+        )
+
+
+def test_repair_result_checkpoint_cannot_be_reused_as_initial_boundary_checkpoint() -> None:
+    work = boundary_runtime.BoundaryWorkOrder(
+        source_plan_id="plan",
+        source_plan_revision=2,
+        source_plan_hash="a" * 64,
+        previous_section_id="s1",
+        previous_section_output_hash="b" * 64,
+        previous_composition_identity="c1",
+        next_section_id="s2",
+        next_section_output_hash="c" * 64,
+        next_composition_identity="c2",
+    )
+    with pytest.raises(boundary_runtime.BoundaryCheckpointError, match="unsupported shape"):
+        boundary_runtime._validate_checkpoint_payload(
+            {"kind": "shared_lesson_boundary_repair_result", "work": work.model_dump(mode="json")},
+            work,
+        )
+
+
+@pytest.mark.asyncio
+async def test_writer_repair_rejects_historical_leaf_with_existing_successor() -> None:
+    source = _source()
+    accepted = _section("s2", 1, "The second idea.")
+    request = _request(source, "s2")
+    predecessor = SimpleNamespace(
+        id="writer-old",
+        item_key="write:s2",
+        replaces_work_item_id=None,
+        stage="section_writing",
+        status="ready",
+    )
+    child = SimpleNamespace(id="writer-child")
+
+    class Session:
+        def __init__(self):
+            self.calls = 0
+
+        async def scalar(self, _statement):
+            self.calls += 1
+            return predecessor if self.calls == 1 else child
+
+    with pytest.raises(runtime.WriterRepairSourceConflict, match="already has a successor"):
+        await runtime._load_predecessor(
+            Session(),
+            predecessor_work_item_id=predecessor.id,
+            accepted_section=accepted,
+            request=request,
         )
 
 

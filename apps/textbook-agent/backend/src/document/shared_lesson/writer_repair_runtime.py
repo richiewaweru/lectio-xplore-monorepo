@@ -204,10 +204,6 @@ async def _load_predecessor(
         raise WriterRepairSourceConflict("accepted writer predecessor does not exist")
     if predecessor.stage != WRITER_REPAIR_STAGE or predecessor.status != "ready":
         raise WriterRepairSourceConflict("targeted repair predecessor is no longer ready")
-    if predecessor.item_key != f"write:{accepted_section.id}":
-        raise WriterRepairSourceConflict(
-            "targeted repair predecessor is not the logical writer root"
-        )
     successor = await session.scalar(
         select(GenerationWorkItemModel.id).where(
             GenerationWorkItemModel.replaces_work_item_id == predecessor_work_item_id
@@ -215,6 +211,23 @@ async def _load_predecessor(
     )
     if successor is not None:
         raise WriterRepairSourceConflict("targeted repair predecessor already has a successor")
+    current = predecessor
+    seen: set[str] = set()
+    while current.replaces_work_item_id is not None:
+        if current.id in seen:
+            raise WriterRepairSourceConflict("writer replacement chain contains a cycle")
+        seen.add(current.id)
+        current = await session.scalar(
+            select(GenerationWorkItemModel).where(
+                GenerationWorkItemModel.id == current.replaces_work_item_id
+            )
+        )
+        if current is None:
+            raise WriterRepairSourceConflict("writer replacement chain has a missing predecessor")
+    if current.item_key != f"write:{accepted_section.id}":
+        raise WriterRepairSourceConflict(
+            "targeted repair predecessor is not the logical writer root"
+        )
     if predecessor.output_json is None or not predecessor.output_hash:
         raise WriterRepairSourceConflict("accepted writer predecessor has no complete output")
     if content_hash(predecessor.output_json) != predecessor.output_hash:

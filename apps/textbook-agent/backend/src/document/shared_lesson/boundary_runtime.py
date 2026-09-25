@@ -38,9 +38,11 @@ from infra.generation_runtime import (
     ErrorClass,
     RecoveryAction,
     RuntimeCheckpointCompatibility,
+    RuntimeCheckpoint,
     SourceIdentity,
     WorkItemAdmission,
     WorkItemFailure,
+    WorkItemReplacement,
     active_work_items,
     add_work_item,
     claim_work_item,
@@ -48,6 +50,7 @@ from infra.generation_runtime import (
     fail_work_item,
     load_compatible_checkpoint,
     persist_checkpoint,
+    replace_work_item,
 )
 
 BOUNDARY_STAGE = "continuity_validation"
@@ -354,6 +357,164 @@ async def admit_boundary_work_item(
         next_composition_identity=next_composition_identity,
     )
     return await add_work_item(session, _item_request(run_id, work, max_attempts=max_attempts))
+
+
+async def admit_boundary_replacement_work_item(
+    session: Any,
+    *,
+    predecessor_work_item_id: str,
+    owner_user_id: str,
+    source: TeachingPlanSource,
+    previous_section: SharedSection,
+    next_section: SharedSection,
+    previous_composition_identity: str,
+    next_composition_identity: str,
+    max_attempts: int = 3,
+) -> GenerationWorkItemModel:
+    """Admit a fresh boundary successor after a targeted writer replacement.
+
+    The failed boundary row is historical evidence only.  Its checkpoint must
+    prove the original pair and repair result; the successor is bound to the
+    current active writer leaves and therefore receives a new item identity.
+    """
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be positive")
+    identity = _identity(source)
+    _plan_pair(source, previous_section, next_section)
+    if not previous_composition_identity.strip() or not next_composition_identity.strip():
+        raise BoundarySourceConflict("boundary composition identities must be non-empty")
+    predecessor = await session.scalar(
+        select(GenerationWorkItemModel).where(
+            GenerationWorkItemModel.id == predecessor_work_item_id,
+            GenerationWorkItemModel.stage == BOUNDARY_STAGE,
+        )
+    )
+    if predecessor is None or predecessor.status != "failed_recoverable":
+        raise BoundarySourceConflict("boundary predecessor is not a recoverable historical item")
+    successor = await session.scalar(
+        select(GenerationWorkItemModel.id).where(
+            GenerationWorkItemModel.replaces_work_item_id == predecessor_work_item_id
+        )
+    )
+    if successor is not None:
+        raise BoundarySourceConflict("boundary predecessor already has a successor")
+    if predecessor.checkpoint_json is None:
+        raise BoundarySourceConflict("boundary predecessor has no durable repair proof")
+    await _verify_run_source(
+        session,
+        run_id=predecessor.run_id,
+        owner_user_id=owner_user_id,
+        source=identity,
+        lock=True,
+    )
+    try:
+        checkpoint = RuntimeCheckpoint.model_validate(predecessor.checkpoint_json)
+    except (TypeError, ValueError) as exc:
+        raise BoundarySourceConflict(
+            "boundary repair proof violates the runtime checkpoint contract"
+        ) from exc
+    if content_hash(checkpoint.payload) != checkpoint.payload_hash:
+        raise BoundarySourceConflict("boundary repair proof hash is invalid")
+    payload = checkpoint.payload
+    if (
+        not isinstance(payload, Mapping)
+        or payload.get("kind") != "shared_lesson_boundary_repair_result"
+    ):
+        raise BoundarySourceConflict("boundary predecessor checkpoint is not a repair proof")
+    try:
+        original_work = BoundaryWorkOrder.model_validate(payload["work"])
+        repair_result = BoundaryValidationResult.model_validate(payload["result"])
+    except (TypeError, ValueError) as exc:
+        raise BoundarySourceConflict(
+            "boundary repair proof has an invalid work or result shape"
+        ) from exc
+    if (
+        checkpoint.compatibility.source_revision != identity.source_revision
+        or checkpoint.compatibility.source_hash != identity.source_hash
+        or checkpoint.compatibility.input_hash
+        != content_hash(original_work.model_dump(mode="json"))
+        or checkpoint.compatibility.definition_hash
+        != hashlib.sha256(BOUNDARY_DEFINITION.encode("utf-8")).hexdigest()
+        or checkpoint.compatibility.composition_identity
+        != _composition_identity(
+            original_work.previous_composition_identity,
+            original_work.next_composition_identity,
+        )
+        or predecessor.input_hash != checkpoint.compatibility.input_hash
+        or predecessor.definition_hash != checkpoint.compatibility.definition_hash
+        or predecessor.composition_identity != checkpoint.compatibility.composition_identity
+    ):
+        raise BoundarySourceConflict("boundary repair proof identity is stale")
+    if (
+        original_work.source_plan_id,
+        original_work.source_plan_revision,
+        original_work.source_plan_hash,
+    ) != (identity.source_artifact_id, identity.source_revision, identity.source_hash):
+        raise BoundarySourceConflict("boundary repair proof source differs from the approved plan")
+    if not repair_result.passed or not repair_result.repair_attempted:
+        raise BoundarySourceConflict(
+            "boundary repair proof does not contain a passing targeted repair"
+        )
+    original_hashes = {
+        original_work.previous_section_id: original_work.previous_section_output_hash,
+        original_work.next_section_id: original_work.next_section_output_hash,
+    }
+    result_hashes = {
+        repair_result.previous_section.id: accepted_section_output_hash(
+            repair_result.previous_section
+        ),
+        repair_result.next_section.id: accepted_section_output_hash(repair_result.next_section),
+    }
+    if set(original_hashes) != {previous_section.id, next_section.id}:
+        raise BoundarySourceConflict("boundary repair proof binds a different original pair")
+    changed = {
+        section_id
+        for section_id, original_hash in original_hashes.items()
+        if result_hashes.get(section_id) != original_hash
+    }
+    if len(changed) != 1:
+        raise BoundarySourceConflict("boundary repair proof must identify one changed section")
+    await _verify_active_writer_outputs(
+        session,
+        run_id=predecessor.run_id,
+        previous_section=previous_section,
+        next_section=next_section,
+        previous_composition_identity=previous_composition_identity,
+        next_composition_identity=next_composition_identity,
+        lock=True,
+    )
+    current_work = _work_order(
+        identity,
+        previous_section,
+        next_section,
+        previous_composition_identity=previous_composition_identity,
+        next_composition_identity=next_composition_identity,
+    )
+    if current_work.model_dump(mode="json") == original_work.model_dump(mode="json"):
+        raise BoundarySourceConflict(
+            "boundary successor must bind the changed active writer output"
+        )
+    input_hash = content_hash(current_work.model_dump(mode="json"))
+    replacement = WorkItemAdmission(
+        run_id=predecessor.run_id,
+        item_key=(f"boundary:{previous_section.id}->{next_section.id}:repair:{input_hash[:24]}"),
+        stage=BOUNDARY_STAGE,
+        input_hash=input_hash,
+        definition_hash=hashlib.sha256(BOUNDARY_DEFINITION.encode("utf-8")).hexdigest(),
+        composition_identity=_composition_identity(
+            previous_composition_identity, next_composition_identity
+        ),
+        max_attempts=max_attempts,
+    )
+    return await replace_work_item(
+        session,
+        WorkItemReplacement(
+            predecessor_work_item_id=predecessor_work_item_id,
+            owner_user_id=owner_user_id,
+            source=identity,
+            replacement=replacement,
+        ),
+    )
 
 
 def _checkpoint_compatibility(
@@ -718,6 +879,7 @@ __all__ = [
     "BoundaryWorkOrder",
     "accepted_section_output_hash",
     "admit_boundary_work_item",
+    "admit_boundary_replacement_work_item",
     "execute_boundary_work_item",
     "execute_boundary_work_items",
 ]
