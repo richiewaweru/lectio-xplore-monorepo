@@ -63,7 +63,7 @@ def _document(**kwargs):
     return build_shared_lesson_document(_payload(**kwargs))
 
 
-def _approved_source_and_document():
+def _approved_source_and_document(*, include_figure: bool = False):
     section = TeachingPlanSection(
         slot_id="section-1",
         specific_purpose="Explain how plants make food",
@@ -105,6 +105,22 @@ def _approved_source_and_document():
         revision=3,
         content_hash=digest,
     )
+    nodes = [
+        {
+            "id": "paragraph-1",
+            "kind": "paragraph",
+            "display": {"text": "Plants use light to make food."},
+        }
+    ]
+    if include_figure:
+        nodes.append(
+            {
+                "id": "figure-1",
+                "kind": "figure",
+                "display": {"caption": "A plant using light"},
+                "accessibility": {"alt_text": "A plant using light"},
+            }
+        )
     document = build_shared_lesson_document(
         {
             **_payload(title=plan.learner_title),
@@ -114,13 +130,7 @@ def _approved_source_and_document():
                     "id": "section-1",
                     "title": "How plants make food",
                     "position": 0,
-                    "nodes": [
-                        {
-                            "id": "paragraph-1",
-                            "kind": "paragraph",
-                            "display": {"text": "Plants use light to make food."},
-                        }
-                    ],
+                    "nodes": nodes,
                 }
             ],
         }
@@ -354,4 +364,29 @@ async def test_ready_promotion_blocks_failed_qa_required_media_and_lineage_confl
             path_lesson_id="path-lesson-1",
             source=source.model_copy(update={"content_hash": "b" * 64}),
             assembly=_ready_assembly(document),
+        )
+
+
+@pytest.mark.asyncio
+async def test_ready_promotion_derives_required_figures_when_media_map_is_omitted(
+    db_session,
+) -> None:
+    source, document = _approved_source_and_document(include_figure=True)
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
+
+    with pytest.raises(SharedLessonDocumentReadinessError, match="required media"):
+        await promote_shared_lesson_document(
+            db_session,
+            path_lesson_id="path-lesson-1",
+            source=source,
+            assembly=_ready_assembly(document),
+        )
+
+    with pytest.raises(SharedLessonDocumentReadinessError, match="does not match"):
+        await promote_shared_lesson_document(
+            db_session,
+            path_lesson_id="path-lesson-1",
+            source=source,
+            assembly=_ready_assembly(document),
+            required_media_by_section={"section-1": ()},
         )

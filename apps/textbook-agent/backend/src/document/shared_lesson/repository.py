@@ -14,9 +14,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from document.shared_lesson.assembly import SharedLessonAssemblyResult
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.hashing import verify_shared_lesson_source as verify_document_source
-from document.shared_lesson.media import FigureMediaResult, bind_figure_media_to_document
-from document.shared_lesson.models import SharedLessonDocument
-from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from document.shared_lesson.media import (
+    FigureMediaResult,
+    SharedFigureMediaError,
+    bind_figure_media_to_document,
+)
+from document.shared_lesson.models import FigureNode, SharedLessonDocument
+from document.shared_lesson.qa import DocumentQAError
+from document.shared_lesson.runtime import (
+    SectionRuntimeError,
+    TeachingPlanSource,
+    verify_teaching_plan_source,
+)
 from infra.database.models import SharedLessonDocumentModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime.contracts import SourceIdentity, VerifiedArtifact
@@ -246,7 +255,7 @@ def _validate_required_media(
         supplied[result.figure_node_id] = result
         try:
             bind_figure_media_to_document(result, document)
-        except Exception as exc:
+        except SharedFigureMediaError as exc:
             raise SharedLessonDocumentReadinessError(
                 f"media binding for figure {result.figure_node_id!r} is invalid: {exc}"
             ) from exc
@@ -267,6 +276,23 @@ def _validate_required_media(
             raise SharedLessonDocumentReadinessError(
                 f"required media figure {figure_id!r} has the wrong section or required flag"
             )
+
+
+def _document_required_media(document: SharedLessonDocument) -> dict[str, tuple[str, ...]]:
+    """Derive the required figure identity set from the immutable document."""
+    return {
+        section.id: tuple(node.id for node in section.nodes if isinstance(node, FigureNode))
+        for section in document.sections
+        if any(isinstance(node, FigureNode) for node in section.nodes)
+    }
+
+
+def _same_required_media_identity(
+    expected: Mapping[str, Sequence[str]], supplied: Mapping[str, Sequence[str]]
+) -> bool:
+    return {section_id: frozenset(figure_ids) for section_id, figure_ids in expected.items()} == {
+        section_id: frozenset(figure_ids) for section_id, figure_ids in supplied.items()
+    }
 
 
 async def promote_shared_lesson_document(
@@ -291,7 +317,7 @@ async def promote_shared_lesson_document(
         raise ValueError("path_lesson_id must not be blank")
     try:
         source_identity = verify_teaching_plan_source(source)
-    except Exception as exc:
+    except SectionRuntimeError as exc:
         raise SharedLessonDocumentReadinessError(
             f"approved Teaching Plan source is invalid: {exc}"
         ) from exc
@@ -307,14 +333,21 @@ async def promote_shared_lesson_document(
             teaching_plan_revision=source_identity.source_revision,
             teaching_plan_hash=source_identity.source_hash,
         )
-    except Exception as exc:
+    except (DocumentQAError, ValueError) as exc:
         raise SharedLessonDocumentReadinessError(
             f"assembled SharedLessonDocument source lineage is invalid: {exc}"
         ) from exc
 
+    required_media = _document_required_media(document)
+    if required_media_by_section is not None and not _same_required_media_identity(
+        required_media, required_media_by_section
+    ):
+        raise SharedLessonDocumentReadinessError(
+            "required media declaration does not match the assembled document figures"
+        )
     _validate_required_media(
         document=document,
-        required_media_by_section=required_media_by_section or {},
+        required_media_by_section=required_media,
         media_results=media_results,
     )
 
