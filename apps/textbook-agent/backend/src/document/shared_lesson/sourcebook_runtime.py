@@ -15,10 +15,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, ValidationError
 from sqlalchemy import select
 
+from curriculum.lesson_sourcebook import LessonSourcebook, validate_sourcebook
 from curriculum.shared_sourcebook_authoring import (
     author_shared_sourcebook,
 )
-from curriculum.lesson_sourcebook import LessonSourcebook, validate_sourcebook
 from document.shared_lesson.runtime import (
     SectionRuntimeError,
     TeachingPlanSource,
@@ -99,7 +99,9 @@ class SourcebookWorkItemJob:
 
 def _identity(source: TeachingPlanSource) -> SourceIdentity:
     if not isinstance(source, TeachingPlanSource):
-        raise SourcebookSourceConflict("sourcebook execution requires an approved TeachingPlanSource")
+        raise SourcebookSourceConflict(
+            "sourcebook execution requires an approved TeachingPlanSource"
+        )
     try:
         return verify_teaching_plan_source(source)
     except SectionRuntimeError as exc:
@@ -123,7 +125,9 @@ def _checkpoint_compatibility(
     )
 
 
-def _checkpoint_payload(source: TeachingPlanSource, item: GenerationWorkItemModel) -> dict[str, Any]:
+def _checkpoint_payload(
+    source: TeachingPlanSource, item: GenerationWorkItemModel
+) -> dict[str, Any]:
     return {
         "kind": "shared_sourcebook",
         "source_artifact_type": "teaching_plan",
@@ -152,7 +156,9 @@ def _validate_item_binding(item: GenerationWorkItemModel, source: TeachingPlanSo
         or item.definition_hash != _definition_hash()
         or item.composition_identity is not None
     ):
-        raise SourcebookSourceConflict("sourcebook WorkItem is bound to a different source or definition")
+        raise SourcebookSourceConflict(
+            "sourcebook WorkItem is bound to a different source or definition"
+        )
 
 
 async def _verify_persisted_source(
@@ -167,9 +173,15 @@ async def _verify_persisted_source(
     if inspect.isawaitable(observed):
         observed = await observed
     try:
-        identity = observed if isinstance(observed, SourceIdentity) else SourceIdentity.model_validate(observed)
+        identity = (
+            observed
+            if isinstance(observed, SourceIdentity)
+            else SourceIdentity.model_validate(observed)
+        )
     except (TypeError, ValueError) as exc:
-        raise SourceVerificationError("approved source verifier returned an invalid identity") from exc
+        raise SourceVerificationError(
+            "approved source verifier returned an invalid identity"
+        ) from exc
     if identity != requested:
         raise SourcebookSourceConflict("persisted approved source differs from the admitted source")
     return identity
@@ -293,7 +305,9 @@ async def execute_sourcebook_work_item(
             identity.source_revision,
             identity.source_hash,
         ):
-            raise SourcebookSourceConflict("ready sourcebook item source differs from the admitted source")
+            raise SourcebookSourceConflict(
+                "ready sourcebook item source differs from the admitted source"
+            )
         _validate_item_binding(persisted, job.source)
         if persisted.output_json is None or not persisted.output_hash:
             raise SourcebookRuntimeError("ready sourcebook item has no complete output")
@@ -303,7 +317,9 @@ async def execute_sourcebook_work_item(
             ready_sourcebook = LessonSourcebook.model_validate(persisted.output_json)
             _validate_sourcebook(job.source, ready_sourcebook)
         except (TypeError, ValueError, SemanticInputError) as exc:
-            raise SourcebookRuntimeError("ready sourcebook output violates its approved contract") from exc
+            raise SourcebookRuntimeError(
+                "ready sourcebook output violates its approved contract"
+            ) from exc
         return SourcebookRuntimeOutcome(work_item_id=job.work_item_id, preserved_ready=True)
     if job.status != "queued":
         raise SourcebookRuntimeError("sourcebook execution accepts queued items only")
@@ -355,7 +371,7 @@ async def execute_sourcebook_work_item(
             await result
     except LeaseLostError:
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - persist a typed failure after claim.
         return await _fail_after_claim(job, item, exc, now=now)
 
     try:
@@ -372,13 +388,15 @@ async def execute_sourcebook_work_item(
             sourcebook.teaching_plan_revision,
             sourcebook.teaching_plan_hash,
         ) != (job.source.id, job.source.revision, job.source.content_hash):
-            raise SourcebookProviderOutputError("sourcebook output is bound to a stale Teaching Plan")
+            raise SourcebookProviderOutputError(
+                "sourcebook output is bound to a stale Teaching Plan"
+            )
         validation_errors = validate_sourcebook(sourcebook)
         if validation_errors:
             raise SourcebookProviderOutputError("; ".join(validation_errors))
     except LeaseLostError:
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - classify bounded provider failures.
         return await _fail_after_claim(job, item, exc, now=now)
 
     # A source can be replaced while the provider is running.  Rechecking the
@@ -398,7 +416,7 @@ async def execute_sourcebook_work_item(
         )
     except LeaseLostError:
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - preserve failure under the live fence.
         return await _fail_after_claim(job, item, exc, now=now)
     return SourcebookRuntimeOutcome(work_item_id=item.id, sourcebook=sourcebook)
 

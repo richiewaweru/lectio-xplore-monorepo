@@ -5,16 +5,16 @@ from typing import Any
 
 import pytest
 
-from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.lesson_sourcebook import LessonSourcebook, SourcebookEntry
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import (
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
     TeachingRevisionRecord,
 )
-from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
 from document.shared_lesson import sourcebook_runtime
+from document.shared_lesson.runtime import TeachingPlanSource
 from infra.authoring import AuthoringProviderCall, AuthoringProviderTerminalError
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import LeaseLostError, SourceIdentity
@@ -154,7 +154,9 @@ def runtime_mocks(monkeypatch):
     monkeypatch.setattr(sourcebook_runtime, "persist_checkpoint", persist_checkpoint)
     monkeypatch.setattr(sourcebook_runtime, "complete_work_item", complete)
     monkeypatch.setattr(sourcebook_runtime, "fail_work_item", fail)
-    return SimpleNamespace(set_item=lambda value: _set_item(value), failures=failures, completed=completed)
+    return SimpleNamespace(
+        set_item=lambda value: _set_item(value), failures=failures, completed=completed
+    )
 
 
 @pytest.mark.asyncio
