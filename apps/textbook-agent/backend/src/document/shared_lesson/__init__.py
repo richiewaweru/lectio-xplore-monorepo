@@ -1,5 +1,9 @@
 """Path-neutral shared lesson artifact contract."""
 
+from document.shared_lesson.approved_source import (
+    ApprovedSourceVerificationError,
+    make_approved_source_verifier,
+)
 from document.shared_lesson.assembly import (
     AssemblyIssue,
     SharedLessonAssemblyError,
@@ -111,6 +115,7 @@ from document.shared_lesson.writer import (
 
 __all__ = [
     "MAX_CONCURRENT_SECTION_WRITERS",
+    "ApprovedSourceVerificationError",
     "AssemblyIssue",
     "BoundaryRepairEngine",
     "BoundaryRepairRequest",
@@ -181,6 +186,7 @@ __all__ = [
     "load_verified_semantic_inputs",
     "load_verified_shared_lesson_artifact",
     "make_section_writer_request",
+    "make_approved_source_verifier",
     "restart_section_run",
     "retry_failed_section",
     "save_shared_lesson_document",
