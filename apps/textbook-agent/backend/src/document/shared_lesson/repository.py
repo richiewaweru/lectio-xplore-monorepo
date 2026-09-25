@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -11,8 +11,12 @@ from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from document.shared_lesson.assembly import SharedLessonAssemblyResult
 from document.shared_lesson.hashing import shared_lesson_content_hash
+from document.shared_lesson.hashing import verify_shared_lesson_source as verify_document_source
+from document.shared_lesson.media import FigureMediaResult, bind_figure_media_to_document
 from document.shared_lesson.models import SharedLessonDocument
+from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
 from infra.database.models import SharedLessonDocumentModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime.contracts import SourceIdentity, VerifiedArtifact
@@ -34,6 +38,10 @@ class SharedLessonDocumentNotFound(SharedLessonDocumentRepositoryError):
 
 class SharedLessonDocumentIntegrityError(SharedLessonDocumentRepositoryError):
     """Stored identity, JSON, or content hashes cannot be trusted."""
+
+
+class SharedLessonDocumentReadinessError(SharedLessonDocumentRepositoryError):
+    """A document failed the final QA, lineage, or required-media gate."""
 
 
 @dataclass(frozen=True)
@@ -78,7 +86,9 @@ def _validate_stored_row(
     try:
         document = SharedLessonDocument.model_validate(row.document_json)
     except ValidationError as exc:
-        raise SharedLessonDocumentIntegrityError("stored document JSON failed contract validation") from exc
+        raise SharedLessonDocumentIntegrityError(
+            "stored document JSON failed contract validation"
+        ) from exc
 
     expected_columns = {
         "id": document.id,
@@ -205,6 +215,141 @@ async def save_shared_lesson_document(
     return _validate_stored_row(row, expected_path_lesson_id=path_lesson_id)
 
 
+def _validate_required_media(
+    *,
+    document: SharedLessonDocument,
+    required_media_by_section: Mapping[str, Sequence[str]],
+    media_results: Sequence[FigureMediaResult],
+) -> None:
+    """Require every declared figure to be bound to this exact document.
+
+    ``FigureMediaResult`` is the closed, post-assembly media contract.  Calling
+    the binder again here is intentional: persistence is the last boundary
+    before READY and must recompute the document, section, and semantic
+    identities even when an upstream worker already validated them.
+    """
+    expected: dict[str, str] = {}
+    for section_id, figure_ids in required_media_by_section.items():
+        for figure_id in figure_ids:
+            if figure_id in expected:
+                raise SharedLessonDocumentReadinessError(
+                    f"required media figure {figure_id!r} is declared more than once"
+                )
+            expected[figure_id] = section_id
+
+    supplied: dict[str, FigureMediaResult] = {}
+    for result in media_results:
+        if result.figure_node_id in supplied:
+            raise SharedLessonDocumentReadinessError(
+                f"required media figure {result.figure_node_id!r} is supplied more than once"
+            )
+        supplied[result.figure_node_id] = result
+        try:
+            bind_figure_media_to_document(result, document)
+        except Exception as exc:
+            raise SharedLessonDocumentReadinessError(
+                f"media binding for figure {result.figure_node_id!r} is invalid: {exc}"
+            ) from exc
+
+    missing = sorted(set(expected) - set(supplied))
+    if missing:
+        raise SharedLessonDocumentReadinessError(
+            f"required media is not ready for figures: {missing!r}"
+        )
+    unexpected = sorted(set(supplied) - set(expected))
+    if unexpected:
+        raise SharedLessonDocumentReadinessError(
+            f"media supplied for undeclared required figures: {unexpected!r}"
+        )
+    for figure_id, section_id in expected.items():
+        result = supplied[figure_id]
+        if result.section_id != section_id or not result.required:
+            raise SharedLessonDocumentReadinessError(
+                f"required media figure {figure_id!r} has the wrong section or required flag"
+            )
+
+
+async def promote_shared_lesson_document(
+    session: AsyncSession,
+    *,
+    path_lesson_id: str,
+    source: TeachingPlanSource,
+    assembly: SharedLessonAssemblyResult,
+    required_media_by_section: Mapping[str, Sequence[str]] | None = None,
+    media_results: Sequence[FigureMediaResult] = (),
+) -> StoredSharedLessonDocument:
+    """Atomically promote one persisted draft after the complete READY gate.
+
+    The caller must provide the exact approved Teaching Plan snapshot and the
+    immutable assembly result produced by ``assemble_shared_lesson_document``.
+    Source identity and content hashes are recomputed here.  READY is
+    idempotent for the same artifact, while a different artifact at the same
+    identity is a hard conflict.  This function only flushes; transaction
+    ownership stays with the caller.
+    """
+    if not path_lesson_id:
+        raise ValueError("path_lesson_id must not be blank")
+    try:
+        source_identity = verify_teaching_plan_source(source)
+    except Exception as exc:
+        raise SharedLessonDocumentReadinessError(
+            f"approved Teaching Plan source is invalid: {exc}"
+        ) from exc
+    if not assembly.ready:
+        raise SharedLessonDocumentReadinessError(
+            "SharedLessonDocument cannot become ready before final deterministic QA passes"
+        )
+    try:
+        document = assembly.require_ready()
+        verify_document_source(
+            document,
+            teaching_plan_id=source_identity.source_artifact_id,
+            teaching_plan_revision=source_identity.source_revision,
+            teaching_plan_hash=source_identity.source_hash,
+        )
+    except Exception as exc:
+        raise SharedLessonDocumentReadinessError(
+            f"assembled SharedLessonDocument source lineage is invalid: {exc}"
+        ) from exc
+
+    _validate_required_media(
+        document=document,
+        required_media_by_section=required_media_by_section or {},
+        media_results=media_results,
+    )
+
+    identity = {"id": document.id, "revision": document.revision}
+    row = await session.get(SharedLessonDocumentModel, identity)
+    if row is None:
+        raise SharedLessonDocumentNotFound(
+            "shared document draft must be persisted before READY promotion"
+        )
+    stored = _validate_stored_row(row, expected_path_lesson_id=path_lesson_id)
+    payload = _canonical_json(document)
+    if not _same_immutable_identity(
+        row,
+        path_lesson_id=path_lesson_id,
+        document=document,
+        payload=payload,
+    ):
+        raise SharedLessonDocumentConflict(
+            "shared document identity is already bound to different content or lineage"
+        )
+    if stored.status == "ready":
+        return stored
+    if stored.status != "draft":  # pragma: no cover - closed status check above
+        raise SharedLessonDocumentIntegrityError("stored document has an invalid lifecycle status")
+
+    row.status = "ready"
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise SharedLessonDocumentIntegrityError(
+            "database rejected the SharedLessonDocument READY transition"
+        ) from exc
+    return _validate_stored_row(row, expected_path_lesson_id=path_lesson_id)
+
+
 async def load_shared_lesson_document(
     session: AsyncSession,
     *,
@@ -272,10 +417,12 @@ __all__ = [
     "SharedLessonDocumentConflict",
     "SharedLessonDocumentIntegrityError",
     "SharedLessonDocumentNotFound",
+    "SharedLessonDocumentReadinessError",
     "SharedLessonDocumentRepositoryError",
     "StoredSharedLessonDocument",
     "load_shared_lesson_document",
     "load_verified_shared_lesson_artifact",
+    "promote_shared_lesson_document",
     "save_shared_lesson_document",
     "verify_shared_lesson_source",
 ]

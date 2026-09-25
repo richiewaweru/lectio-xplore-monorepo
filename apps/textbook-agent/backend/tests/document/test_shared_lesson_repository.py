@@ -5,15 +5,27 @@ from copy import deepcopy
 import pytest
 from sqlalchemy import select, update
 
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+from curriculum.teaching_plan.models import (
+    TeachingPlan,
+    TeachingPlanSection,
+    TeachingRevisionRecord,
+)
 from document.shared_lesson import build_shared_lesson_document
+from document.shared_lesson.assembly import SharedLessonAssemblyResult
+from document.shared_lesson.qa import DocumentQAResult
 from document.shared_lesson.repository import (
     SharedLessonDocumentConflict,
     SharedLessonDocumentIntegrityError,
+    SharedLessonDocumentNotFound,
+    SharedLessonDocumentReadinessError,
     load_shared_lesson_document,
     load_verified_shared_lesson_artifact,
+    promote_shared_lesson_document,
     save_shared_lesson_document,
     verify_shared_lesson_source,
 )
+from document.shared_lesson.runtime import TeachingPlanSource
 from infra.database.models import SharedLessonDocumentModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime.contracts import SourceIdentity
@@ -51,6 +63,79 @@ def _document(**kwargs):
     return build_shared_lesson_document(_payload(**kwargs))
 
 
+def _approved_source_and_document():
+    section = TeachingPlanSection(
+        slot_id="section-1",
+        specific_purpose="Explain how plants make food",
+        display_title="How plants make food",
+        entry_state=["Learner is ready to learn"],
+        must_establish=["Learner understands how plants make food"],
+        avoid_repeating=[],
+        bridge_from_previous=None,
+        exit_state=["Learner can explain how plants make food"],
+        blocks=[],
+    )
+    plan = TeachingPlan(
+        arc="Teach photosynthesis",
+        contract_version=2,
+        learner_title="How plants make food",
+        starting_state=["Learner is ready to learn"],
+        target_state=["Learner can explain photosynthesis"],
+        teaching_plan_id="plan-1",
+        revision=3,
+        sections=[section],
+        approval_status="approved",
+    )
+    digest = teaching_plan_content_hash(plan)
+    source = TeachingPlanSource(
+        plan=plan,
+        revision_record=TeachingRevisionRecord(
+            teaching_plan_id="plan-1",
+            revision=3,
+            status="approved",
+            preparation_hash="preparation-hash",
+            content_hash=digest,
+            plan=plan.model_dump(mode="json"),
+            created_at="2026-09-24T09:00:00Z",
+            approved_at="2026-09-24T09:01:00Z",
+            reviewed_by="teacher-1",
+            approval_hash_binding="submitted",
+        ),
+        id="plan-1",
+        revision=3,
+        content_hash=digest,
+    )
+    document = build_shared_lesson_document(
+        {
+            **_payload(title=plan.learner_title),
+            "teaching_plan_hash": digest,
+            "sections": [
+                {
+                    "id": "section-1",
+                    "title": "How plants make food",
+                    "position": 0,
+                    "nodes": [
+                        {
+                            "id": "paragraph-1",
+                            "kind": "paragraph",
+                            "display": {"text": "Plants use light to make food."},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    return source, document
+
+
+def _ready_assembly(document):
+    return SharedLessonAssemblyResult(
+        document=document,
+        qa=DocumentQAResult(document_id=document.id, document_revision=document.revision),
+        status="ready",
+    )
+
+
 @pytest.mark.asyncio
 async def test_exact_duplicate_save_is_idempotent(db_session) -> None:
     document = _document()
@@ -78,9 +163,7 @@ async def test_exact_duplicate_save_is_idempotent(db_session) -> None:
 @pytest.mark.asyncio
 async def test_same_identity_conflicting_content_or_path_is_rejected(db_session) -> None:
     document = _document()
-    await save_shared_lesson_document(
-        db_session, path_lesson_id="path-lesson-1", document=document
-    )
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
 
     with pytest.raises(SharedLessonDocumentConflict, match="different content"):
         await save_shared_lesson_document(
@@ -97,9 +180,7 @@ async def test_same_identity_conflicting_content_or_path_is_rejected(db_session)
 @pytest.mark.asyncio
 async def test_loader_rejects_corrupted_json_and_explicit_lineage(db_session) -> None:
     document = _document()
-    await save_shared_lesson_document(
-        db_session, path_lesson_id="path-lesson-1", document=document
-    )
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
 
     changed_json = deepcopy(document.model_dump(mode="json"))
     changed_json["title"] = "Corrupted"
@@ -117,9 +198,7 @@ async def test_loader_rejects_corrupted_json_and_explicit_lineage(db_session) ->
         )
 
     await db_session.rollback()
-    await save_shared_lesson_document(
-        db_session, path_lesson_id="path-lesson-1", document=document
-    )
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
     await db_session.execute(
         update(SharedLessonDocumentModel)
         .where(SharedLessonDocumentModel.id == document.id)
@@ -135,9 +214,7 @@ async def test_loader_rejects_corrupted_json_and_explicit_lineage(db_session) ->
 @pytest.mark.asyncio
 async def test_ready_rows_are_immutable_at_repository_event_boundary(db_session) -> None:
     document = _document()
-    await save_shared_lesson_document(
-        db_session, path_lesson_id="path-lesson-1", document=document
-    )
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
     await db_session.execute(
         update(SharedLessonDocumentModel)
         .where(SharedLessonDocumentModel.id == document.id)
@@ -196,4 +273,85 @@ async def test_trusted_runtime_adapters_recompute_source_and_artifact_identity(d
         await verify_shared_lesson_source(
             db_session,
             source.model_copy(update={"source_hash": "b" * 64}),
+        )
+
+
+@pytest.mark.asyncio
+async def test_ready_promotion_requires_approved_source_and_final_qa(db_session) -> None:
+    source, document = _approved_source_and_document()
+    assembly = _ready_assembly(document)
+
+    with pytest.raises(SharedLessonDocumentNotFound, match="draft must be persisted"):
+        await promote_shared_lesson_document(
+            db_session,
+            path_lesson_id="path-lesson-1",
+            source=source,
+            assembly=assembly,
+        )
+
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
+    promoted = await promote_shared_lesson_document(
+        db_session,
+        path_lesson_id="path-lesson-1",
+        source=source,
+        assembly=assembly,
+    )
+    assert promoted.status == "ready"
+
+    replay = await promote_shared_lesson_document(
+        db_session,
+        path_lesson_id="path-lesson-1",
+        source=source,
+        assembly=assembly,
+    )
+    assert replay == promoted
+
+
+@pytest.mark.asyncio
+async def test_ready_promotion_blocks_failed_qa_required_media_and_lineage_conflict(
+    db_session,
+) -> None:
+    source, document = _approved_source_and_document()
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
+
+    blocked = SharedLessonAssemblyResult(
+        document=document,
+        qa=DocumentQAResult(
+            document_id=document.id,
+            document_revision=document.revision,
+            issues=(
+                {
+                    "issue_code": "required_media_missing",
+                    "affected_section_id": "section-1",
+                    "explanation": "figure is not ready",
+                    "required_correction": "generate the figure",
+                },
+            ),
+        ),
+        status="blocked",
+    )
+    with pytest.raises(SharedLessonDocumentReadinessError, match="final deterministic QA"):
+        await promote_shared_lesson_document(
+            db_session,
+            path_lesson_id="path-lesson-1",
+            source=source,
+            assembly=blocked,
+            required_media_by_section={"section-1": ("figure-1",)},
+        )
+
+    with pytest.raises(SharedLessonDocumentReadinessError, match="required media"):
+        await promote_shared_lesson_document(
+            db_session,
+            path_lesson_id="path-lesson-1",
+            source=source,
+            assembly=_ready_assembly(document),
+            required_media_by_section={"section-1": ("figure-1",)},
+        )
+
+    with pytest.raises(SharedLessonDocumentReadinessError, match="approved Teaching Plan"):
+        await promote_shared_lesson_document(
+            db_session,
+            path_lesson_id="path-lesson-1",
+            source=source.model_copy(update={"content_hash": "b" * 64}),
+            assembly=_ready_assembly(document),
         )
