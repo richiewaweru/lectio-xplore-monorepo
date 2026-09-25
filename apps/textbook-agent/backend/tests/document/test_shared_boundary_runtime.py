@@ -11,7 +11,7 @@ from curriculum.teaching_plan.models import (
     TeachingPlanSection,
     TeachingRevisionRecord,
 )
-import document.shared_lesson.boundary_runtime as boundary_runtime
+from document.shared_lesson import boundary_runtime
 from document.shared_lesson.boundary import BoundaryValidationResult
 from document.shared_lesson.boundary_runtime import (
     BoundaryCheckpointError,

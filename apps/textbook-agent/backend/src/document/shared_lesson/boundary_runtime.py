@@ -15,7 +15,7 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
@@ -96,21 +96,6 @@ class BoundaryRuntimeOutcome(BaseModel):
     preserved_ready_siblings: bool = False
 
 
-class BoundaryRepairReplacement(Protocol):
-    """Optional application adapter for admitting a linked writer successor."""
-
-    async def __call__(
-        self,
-        *,
-        target_section_id: str,
-        predecessor_work_item_id: str,
-        request: SectionWriterRequest,
-        source: SourceIdentity,
-        run_id: str,
-    ) -> Any:
-        """Admit a changed writer output as a linked replacement."""
-
-
 @dataclass(frozen=True)
 class BoundaryWorkItemJob:
     session: Any
@@ -122,7 +107,6 @@ class BoundaryWorkItemJob:
     writer_requests: Mapping[str, SectionWriterRequest]
     semantic_validator: BoundarySemanticValidator | None = None
     repair_engine: BoundaryRepairEngine | None = None
-    replacement_admitter: BoundaryRepairReplacement | None = None
     status: str = "queued"
     lease_seconds: int = 300
 
@@ -502,7 +486,7 @@ async def execute_boundary_work_item(
             _validate_checkpoint_payload(checkpoint.payload, work)
     except LeaseLostError:
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - persist unknown checkpoint failures as typed failures.
         failure = _failure_for_exception(exc)
         await fail_work_item(
             job.session,
@@ -532,7 +516,7 @@ async def execute_boundary_work_item(
         )
     except LeaseLostError:
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - persist unknown validator failures as typed failures.
         failure = _failure_for_exception(exc)
         await fail_work_item(
             job.session,
@@ -709,7 +693,6 @@ __all__ = [
     "BOUNDARY_STAGE",
     "MAX_CONCURRENT_BOUNDARIES",
     "BoundaryCheckpointError",
-    "BoundaryRepairReplacement",
     "BoundaryRuntimeError",
     "BoundaryRuntimeOutcome",
     "BoundarySourceConflict",
