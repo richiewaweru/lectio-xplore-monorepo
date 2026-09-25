@@ -8,11 +8,13 @@ from sqlalchemy import select, update
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import (
     TeachingPlan,
+    TeachingPlanBlock,
     TeachingPlanSection,
     TeachingRevisionRecord,
 )
 from document.shared_lesson import build_shared_lesson_document
 from document.shared_lesson.assembly import SharedLessonAssemblyResult
+from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.qa import DocumentQAResult
 from document.shared_lesson.repository import (
     SharedLessonDocumentConflict,
@@ -73,7 +75,15 @@ def _approved_source_and_document(*, include_figure: bool = False):
         avoid_repeating=[],
         bridge_from_previous=None,
         exit_state=["Learner can explain how plants make food"],
-        blocks=[],
+        blocks=[
+            TeachingPlanBlock(
+                id="block-1",
+                position=0,
+                intent="Explain photosynthesis",
+                brief="Explain how plants make food",
+                evidence="Learner can explain how plants make food",
+            )
+        ],
     )
     plan = TeachingPlan(
         arc="Teach photosynthesis",
@@ -109,7 +119,10 @@ def _approved_source_and_document(*, include_figure: bool = False):
         {
             "id": "paragraph-1",
             "kind": "paragraph",
-            "display": {"text": "Plants use light to make food."},
+            "display": {
+                "text": "Learner understands how plants make food and can explain how plants make food."
+            },
+            "teaching_block_id": "block-1",
         }
     ]
     if include_figure:
@@ -119,6 +132,7 @@ def _approved_source_and_document(*, include_figure: bool = False):
                 "kind": "figure",
                 "display": {"caption": "A plant using light"},
                 "accessibility": {"alt_text": "A plant using light"},
+                "teaching_block_id": "block-1",
             }
         )
     document = build_shared_lesson_document(
@@ -144,6 +158,27 @@ def _ready_assembly(document):
         qa=DocumentQAResult(document_id=document.id, document_revision=document.revision),
         status="ready",
     )
+
+
+def _expected_shapes(*, include_figure: bool = False):
+    shapes = [
+        ExpectedNodeShape(
+            id="paragraph-1",
+            kind="paragraph",
+            teaching_block_id="block-1",
+            semantic_role="explanation",
+        )
+    ]
+    if include_figure:
+        shapes.append(
+            ExpectedNodeShape(
+                id="figure-1",
+                kind="figure",
+                teaching_block_id="block-1",
+                semantic_role="explanation",
+            )
+        )
+    return {"section-1": tuple(shapes)}
 
 
 @pytest.mark.asyncio
@@ -297,6 +332,7 @@ async def test_ready_promotion_requires_approved_source_and_final_qa(db_session)
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=assembly,
+            expected_shapes=_expected_shapes(),
         )
 
     await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
@@ -305,6 +341,7 @@ async def test_ready_promotion_requires_approved_source_and_final_qa(db_session)
         path_lesson_id="path-lesson-1",
         source=source,
         assembly=assembly,
+        expected_shapes=_expected_shapes(),
     )
     assert promoted.status == "ready"
 
@@ -313,6 +350,7 @@ async def test_ready_promotion_requires_approved_source_and_final_qa(db_session)
         path_lesson_id="path-lesson-1",
         source=source,
         assembly=assembly,
+        expected_shapes=_expected_shapes(),
     )
     assert replay == promoted
 
@@ -346,6 +384,7 @@ async def test_ready_promotion_blocks_failed_qa_required_media_and_lineage_confl
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=blocked,
+            expected_shapes=_expected_shapes(),
             required_media_by_section={"section-1": ("figure-1",)},
         )
 
@@ -355,6 +394,7 @@ async def test_ready_promotion_blocks_failed_qa_required_media_and_lineage_confl
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=_ready_assembly(document),
+            expected_shapes=_expected_shapes(),
             required_media_by_section={"section-1": ("figure-1",)},
         )
 
@@ -364,6 +404,7 @@ async def test_ready_promotion_blocks_failed_qa_required_media_and_lineage_confl
             path_lesson_id="path-lesson-1",
             source=source.model_copy(update={"content_hash": "b" * 64}),
             assembly=_ready_assembly(document),
+            expected_shapes=_expected_shapes(),
         )
 
 
@@ -380,6 +421,7 @@ async def test_ready_promotion_derives_required_figures_when_media_map_is_omitte
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=_ready_assembly(document),
+            expected_shapes=_expected_shapes(include_figure=True),
         )
 
     with pytest.raises(SharedLessonDocumentReadinessError, match="does not match"):
@@ -388,5 +430,30 @@ async def test_ready_promotion_derives_required_figures_when_media_map_is_omitte
             path_lesson_id="path-lesson-1",
             source=source,
             assembly=_ready_assembly(document),
+            expected_shapes=_expected_shapes(include_figure=True),
             required_media_by_section={"section-1": ()},
+        )
+
+
+@pytest.mark.asyncio
+async def test_ready_promotion_recomputes_qa_instead_of_trusting_forged_assembly(
+    db_session,
+) -> None:
+    source, valid_document = _approved_source_and_document()
+    payload = valid_document.model_dump(mode="json")
+    payload["sections"][0]["nodes"][0]["id"] = "forged-node"
+    forged_document = build_shared_lesson_document(payload)
+    await save_shared_lesson_document(
+        db_session, path_lesson_id="path-lesson-1", document=forged_document
+    )
+
+    with pytest.raises(
+        SharedLessonDocumentReadinessError, match="recomputed final deterministic QA"
+    ):
+        await promote_shared_lesson_document(
+            db_session,
+            path_lesson_id="path-lesson-1",
+            source=source,
+            assembly=_ready_assembly(forged_document),
+            expected_shapes=_expected_shapes(),
         )

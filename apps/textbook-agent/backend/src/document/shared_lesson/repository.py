@@ -21,6 +21,7 @@ from document.shared_lesson.media import (
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
 from document.shared_lesson.qa import DocumentQAError
+from document.shared_lesson.qa import qa_shared_lesson_document
 from document.shared_lesson.runtime import (
     SectionRuntimeError,
     TeachingPlanSource,
@@ -301,6 +302,9 @@ async def promote_shared_lesson_document(
     path_lesson_id: str,
     source: TeachingPlanSource,
     assembly: SharedLessonAssemblyResult,
+    expected_shapes: Mapping[str, Sequence[Any]],
+    approved_source_ids: Sequence[str] = (),
+    source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
     media_results: Sequence[FigureMediaResult] = (),
 ) -> StoredSharedLessonDocument:
@@ -308,10 +312,13 @@ async def promote_shared_lesson_document(
 
     The caller must provide the exact approved Teaching Plan snapshot and the
     immutable assembly result produced by ``assemble_shared_lesson_document``.
-    Source identity and content hashes are recomputed here.  READY is
-    idempotent for the same artifact, while a different artifact at the same
-    identity is a hard conflict.  This function only flushes; transaction
-    ownership stays with the caller.
+    The final deterministic QA is recomputed here from the approved plan and
+    the exact code-owned accepted composition shapes.  The assembly's QA
+    result is therefore evidence, never the authority for READY. Source
+    identity and content hashes are recomputed here. READY is idempotent for
+    the same artifact, while a different artifact at the same identity is a
+    hard conflict. This function only flushes; transaction ownership stays
+    with the caller.
     """
     if not path_lesson_id:
         raise ValueError("path_lesson_id must not be blank")
@@ -337,6 +344,26 @@ async def promote_shared_lesson_document(
         raise SharedLessonDocumentReadinessError(
             f"assembled SharedLessonDocument source lineage is invalid: {exc}"
         ) from exc
+
+    recomputed_qa = qa_shared_lesson_document(
+        document=document,
+        teaching_plan_sections=tuple(source.plan.sections),
+        expected_shapes=expected_shapes,
+        expected_title=source.plan.learner_title,
+        approved_source_ids=approved_source_ids,
+        source_facts_by_section=source_facts_by_section,
+        # Figure media has a separate identity gate below.  The media map
+        # accepted by assembly may use asset IDs, while the immutable document
+        # contains figure node IDs, so feeding it back here would conflate two
+        # different identities.
+        required_media_by_section={},
+        available_media_ids=(),
+    )
+    if not recomputed_qa.ready:
+        raise SharedLessonDocumentReadinessError(
+            "recomputed final deterministic QA failed: "
+            + "; ".join(issue.issue_code for issue in recomputed_qa.issues)
+        )
 
     required_media = _document_required_media(document)
     if required_media_by_section is not None and not _same_required_media_identity(
