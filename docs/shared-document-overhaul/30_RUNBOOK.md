@@ -19,7 +19,7 @@
 - Phase 0 live-smoke recheck: frontend/backend listeners respond at `127.0.0.1:5173`/`:8000`, `/units` and `/login` return 200, `/health` responds, and direct/proxied `/api/v1/auth/me` return the expected unauthenticated 401. Backend and frontend Google client IDs match (values not recorded). The configured backend `FRONTEND_ORIGIN` is `http://localhost:5173`; the Google OAuth client's Authorized JavaScript origins must include that exact origin. There is no repository-supported local auth bypass. User action for the external OAuth client was requested; authenticated smoke remains pending.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–5 PASS; Phase 6A writer is integrated, while Phase 6B durable section execution remains isolated and blocked by a demonstrated pending-plan approval admission gap. Phase 7A continuity/QA, Phase 7B assembly, Phase 8A media adapter, Phase 10A Learn adapter and Phase 11A Print adapter are committed in isolated worktrees (not integrated or PASS); Phase 9 and remaining Phase 10–16 cutovers NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
+- Phase status (2026-09-25): Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–6 PASS. Phase 7 continuity, assembly, bounded boundary repair, and draft/READY persistence packages and Phase 8 early media contract are committed in isolated worktrees but not integrated or PASS. Generic active-leaf replacement is also isolated. Phase 10A Learn and Phase 11A Print pure adapters are isolated; no route cutover has occurred. Phase 9 and remaining Phase 10–16 cutovers are NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke.
 
 ## Parallel work allocation
 
@@ -192,6 +192,10 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 - Writer commit `5c17a42a` integrated as `b38e138a`, with repository lint correction `afbb0809`; writer/composer focused tests 26 PASS, scoped Ruff/format and architecture guard PASS. Runtime commits `22f97b93` and `e929fdb0`, and real SQLite integration-test commit `f4cd41f8` remain isolated. Runtime focused tests 35 PASS before the database package; database/runtime regression subset 60 PASS with the deliberate pending-plan failure excluded. Ruff and architecture guard PASS in the isolated runtime worktree.
 - Approval-boundary failure: `test_shared_document_admission_rejects_hashed_pending_teaching_revision` fails with `DID NOT RAISE SectionRuntimeError`. A correctly hashed pending `TeachingRevisionRecord` currently admits a queued shared-document run because `TeachingPlanSource` checks ID/revision/hash but carries no approval record or status. Sol assigned a bounded runtime/source correction; Phase 6 cannot PASS until this test and the full gate pass.
 - Isolated correction `ad86a657` requires an approved TeachingRevisionRecord and recomputes the record/source plan hashes. The strict pending-revision test and 12 focused runtime/SQLite tests pass. Sol identified a separate post-claim checkpoint error path that can leave an item running until lease expiry; a bounded correction and failure test are in progress before integration.
+- Integrated runtime, concurrency, SQLite integration, approved-source, and post-claim checkpoint corrections: `7719c3f0`, `21c9564f`, `63b7b030`, `1c2b9749`, `2f5b7245`, and formatting `0cb80401`. The approved-source gate requires an approved `TeachingRevisionRecord`, recomputes record and source plan hashes, and rejects v1 plans. An invalid checkpoint after claim records terminal failure while healthy sibling output remains intact. Focused combined suite: 95 passed; Ruff, format, architecture, and diff checks PASS.
+- First full verifier attempt: page tests 64 PASS, page check PASS, backend 1,552 passed/5 skipped/2 deselected, frontend check 0 errors/5 existing warnings, frontend build and PDF fixture gate PASS. Frontend Vitest failed when its worker exhausted native memory, so the command exited 1. A stale local Vite dev process with approximately 25 GB private committed memory was stopped; standalone frontend tests then passed 57 files/227 tests. The dev server was restarted under a supervised session and `/login` returned HTTP 200. This attempt does not count as a phase gate.
+- Clean full rerun at `0cb80401`: `powershell -ExecutionPolicy Bypass -File scripts/verify-phase.ps1 -Phase full` exited 0 (`Verification passed for phase: full`). Page tests 64 PASS and page check 0 errors/warnings; backend 1,552 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings; frontend tests 57 files/227 tests; frontend build PASS; PDF fixtures 6/6/5/5/5 pages PASS; clean-worktree check PASS.
+- Post-gate: `pnpm program:domain-guards` PASS (0 violations, 8 tests); `uv run python ../tools/agent/check_architecture.py` PASS (0 violations); `uv run alembic current` reports applied PostgreSQL head `20260924_0044`; `git diff --check` PASS and main worktree clean. C: had approximately 11.0 GB free. Phase 6 status: **PASS**. No Phase 7 or 8 package is counted as integrated by this gate.
 
 ## Phase 9/15 quality-proof preflight
 
@@ -212,10 +216,10 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 - [ ] 0 Baseline
 - [x] 1 Generic runtime (PASS: additive persistence and HTTP)
 - [x] 2 Teaching Plan (PASS: v2 contract, semantic review, hash-bound approval, full gate)
-- [ ] 3 SharedDocument contract
-- [ ] 4 Shared tasks
-- [ ] 5 Section Composer
-- [ ] 6 Section Writer
+- [x] 3 SharedDocument contract
+- [x] 4 Shared tasks
+- [x] 5 Section Composer
+- [x] 6 Section Writer (PASS: durable execution and full gate)
 - [ ] 7 Continuity/QA
 - [ ] 8 Media
 - [ ] 9 Shadow proof
