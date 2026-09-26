@@ -429,7 +429,11 @@ async def author_shared_tasks(
     if selected_engine is None:
         selected_engine = AuthoringEngine(
             registry=_registry(),
-            provider=provider or LLMAuthoringProvider(node_name=SHARED_TASK_AUTHORING),
+            provider=provider
+            or LLMAuthoringProvider(
+                node_name=SHARED_TASK_AUTHORING,
+                output_type=SharedTaskDraftEnvelope,
+            ),
             max_repair_attempts=1,
             max_provider_calls=2,
             budget_ledger=budget_ledger,

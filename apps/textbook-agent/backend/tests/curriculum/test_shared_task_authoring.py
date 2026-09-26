@@ -8,6 +8,7 @@ from curriculum.lesson_sourcebook.models import LessonSourcebook, SourcebookEntr
 from curriculum.shared_task_authoring import (
     ApprovedItemSnapshot,
     SharedTaskAuthoringError,
+    SharedTaskDraftEnvelope,
     author_shared_tasks,
 )
 from curriculum.teaching_plan.models import (
@@ -152,6 +153,29 @@ async def test_author_shared_tasks_binds_exact_lineage_and_ids() -> None:
     assert "classify-items" in instructions and "correct_placements" in instructions
     assert "order-items and reconstruct-order" in instructions
     assert "enter-number" in instructions and "enter-text" in instructions
+
+
+@pytest.mark.asyncio
+async def test_shared_task_llm_provider_uses_closed_provider_output_type(monkeypatch) -> None:
+    import infra.authoring.structured_provider as structured_provider
+
+    captured: dict[str, Any] = {}
+
+    async def one_dispatch(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        return _task()
+
+    monkeypatch.setattr(structured_provider, "run_structured_agent", one_dispatch)
+    plan = _plan()
+
+    tasks = await author_shared_tasks(
+        plan,
+        _sourcebook(plan),
+        approved_item_snapshot=_items_snapshot(plan),
+    )
+
+    assert [task.id for task in tasks] == ["task-block-a"]
+    assert captured["output_type"] is SharedTaskDraftEnvelope
 
 
 @pytest.mark.asyncio
