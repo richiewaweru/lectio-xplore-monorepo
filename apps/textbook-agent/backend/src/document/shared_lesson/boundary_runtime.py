@@ -677,6 +677,11 @@ async def execute_boundary_work_item(
             preserved_ready_siblings=True,
         )
 
+    # Make the lease and compatible checkpoint visible before any external
+    # semantic-review or repair provider work begins. The final writer recheck
+    # and fenced completion below still decide whether the result can commit.
+    await job.session.commit()
+
     try:
         previous_plan, next_plan = _plan_pair(job.source, job.previous_section, job.next_section)
         result = await validate_and_repair_boundary(

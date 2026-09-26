@@ -3,6 +3,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from test_shared_boundary_dispatcher import _ready_writers
+from test_shared_writer_admission import _seed_ready_composer_run
 
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import (
@@ -12,7 +14,7 @@ from curriculum.teaching_plan.models import (
     TeachingRevisionRecord,
 )
 from document.shared_lesson import boundary_runtime
-from document.shared_lesson.boundary import BoundaryValidationResult
+from document.shared_lesson.boundary import BoundarySemanticVerdict, BoundaryValidationResult
 from document.shared_lesson.boundary_runtime import (
     BoundaryCheckpointError,
     BoundarySourceConflict,
@@ -22,6 +24,7 @@ from document.shared_lesson.boundary_runtime import (
     _logical_item_key,
     _validate_checkpoint_payload,
     accepted_section_output_hash,
+    admit_boundary_work_item,
 )
 from document.shared_lesson.composer import (
     CompositionChoice,
@@ -29,6 +32,11 @@ from document.shared_lesson.composer import (
 )
 from document.shared_lesson.models import ParagraphDisplay, ParagraphNode, SharedSection
 from document.shared_lesson.runtime import TeachingPlanSource, make_section_writer_request
+from document.shared_lesson.section_sources import build_section_sources
+from document.shared_lesson.semantic_inputs import load_verified_semantic_inputs
+from document.shared_lesson.work_item_inputs import load_verified_shared_lesson_inputs
+from infra.database.models import GenerationWorkItemModel
+from infra.execution.leases import LeaseLostError
 
 
 def _section(section_id: str, position: int, text: str) -> SharedSection:
@@ -248,6 +256,9 @@ async def test_replacement_during_validation_cannot_make_boundary_ready(monkeypa
         async def scalar(self, _statement):
             return "run-1"
 
+        async def commit(self):
+            return None
+
     async def claim(*_args, **_kwargs):
         return item
 
@@ -289,3 +300,88 @@ async def test_replacement_during_validation_cannot_make_boundary_ready(monkeypa
     assert result.error_code == "boundary_source_changed_before_commit"
     assert failed == ["boundary_source_changed_before_commit"]
     assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_provider_sees_committed_lease_checkpoint_and_stale_result_is_fenced(
+    db_session, db_session_factory
+) -> None:
+    owner, run_id, source = await _seed_ready_composer_run(db_session)
+    admissions = await _ready_writers(db_session, owner, run_id, source)
+    semantic = await load_verified_semantic_inputs(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+    )
+    section_sources = tuple(
+        source_item
+        for section in source.plan.sections
+        for source_item in build_section_sources(semantic, section)
+    )
+    verified = await load_verified_shared_lesson_inputs(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        tasks=semantic.tasks,
+        sources=section_sources,
+    )
+    sections = {section.id: section for section in verified.sections}
+    writer_requests = {admission.section.slot_id: admission.request for admission in admissions}
+    writer_identities = {
+        admission.section.slot_id: admission.composition_identity for admission in admissions
+    }
+    previous_id, next_id = tuple(section.slot_id for section in source.plan.sections)
+    admitted = await admit_boundary_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        previous_section=sections[previous_id],
+        next_section=sections[next_id],
+        previous_composition_identity=writer_identities[previous_id],
+        next_composition_identity=writer_identities[next_id],
+    )
+    await db_session.commit()
+
+    observed = False
+
+    async def stale_provider_result(_request):
+        nonlocal observed
+        async with db_session_factory() as observer:
+            item = await observer.get(GenerationWorkItemModel, admitted.record.id)
+            assert item is not None
+            assert item.status == "running"
+            assert item.lease_token is not None and item.lease_token >= 1
+            assert item.checkpoint_json is not None
+            observed = True
+            # Simulate a newer claimant taking the lease while the provider is
+            # computing. Its result must fail the original fencing token.
+            item.lease_token += 1
+            await observer.commit()
+        return BoundarySemanticVerdict(status="pass")
+
+    async with db_session_factory() as worker_session:
+        with pytest.raises(LeaseLostError):
+            await boundary_runtime.execute_boundary_work_item(
+                boundary_runtime.BoundaryWorkItemJob(
+                    session=worker_session,
+                    work_item_id=admitted.record.id,
+                    worker_id="boundary-runtime-test",
+                    source=source,
+                    previous_section=sections[previous_id],
+                    next_section=sections[next_id],
+                    writer_requests=writer_requests,
+                    semantic_validator=stale_provider_result,
+                )
+            )
+        await worker_session.rollback()
+
+    assert observed is True
+    async with db_session_factory() as verifier:
+        item = await verifier.get(GenerationWorkItemModel, admitted.record.id)
+        assert item is not None
+        assert item.status == "running"
+        assert item.lease_token == 2
+        assert item.checkpoint_json is not None
