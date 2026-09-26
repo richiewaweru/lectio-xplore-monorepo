@@ -146,6 +146,12 @@ async def test_author_shared_tasks_binds_exact_lineage_and_ids() -> None:
     assert tasks[0].approved_source_ids == ["item-a"]
     assert provider.calls[0].capability_id == "shared_task_authoring"
     assert provider.calls[0].is_repair is False
+    instructions = provider.calls[0].prompt
+    assert "Copy expected_evidence and difficulty byte-for-byte" in instructions
+    assert "select-one" in instructions and "single_choice" in instructions
+    assert "classify-items" in instructions and "correct_placements" in instructions
+    assert "order-items and reconstruct-order" in instructions
+    assert "enter-number" in instructions and "enter-text" in instructions
 
 
 @pytest.mark.asyncio

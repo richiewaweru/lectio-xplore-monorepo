@@ -195,6 +195,7 @@ def runtime_mocks(monkeypatch):
     failures: list[Any] = []
     completed: list[Any] = []
     checkpoints: list[Any] = []
+    events: list[Any] = []
 
     async def claim(*_args, **_kwargs):
         return item
@@ -211,6 +212,9 @@ def runtime_mocks(monkeypatch):
     async def fail(*_args, **kwargs):
         failures.append(kwargs["failure"])
 
+    async def append(*_args, **kwargs):
+        events.append(kwargs)
+
     async def load_sourcebook(*_args, **_kwargs):
         return SimpleNamespace(sourcebook=sourcebook, sourcebook_output_hash=sourcebook_hash)
 
@@ -226,6 +230,7 @@ def runtime_mocks(monkeypatch):
     monkeypatch.setattr(task_runtime, "persist_checkpoint", persist_checkpoint)
     monkeypatch.setattr(task_runtime, "complete_work_item", complete)
     monkeypatch.setattr(task_runtime, "fail_work_item", fail)
+    monkeypatch.setattr(task_runtime, "append_event", append)
     monkeypatch.setattr(task_runtime, "load_verified_sourcebook_input", load_sourcebook)
     monkeypatch.setattr(task_runtime, "_load_item_run_id", load_item_run_id)
 
@@ -237,6 +242,7 @@ def runtime_mocks(monkeypatch):
         sourcebook_hash=sourcebook_hash,
         snapshot_hash=approved_item_snapshot_hash(snapshot),
         failures=failures,
+        events=events,
         completed=completed,
         checkpoints=checkpoints,
         snapshot_loader=snapshot_loader,
@@ -282,6 +288,49 @@ async def test_invalid_provider_response_is_bounded_and_recoverable(runtime_mock
     assert outcome.tasks[0].prompt == "Repaired task."
     assert len(provider.calls) == 2
     assert runtime_mocks.failures == []
+
+
+@pytest.mark.asyncio
+async def test_repair_exhaustion_persists_only_redacted_validation_diagnostics(runtime_mocks):
+    sensitive_values = (
+        "PRIVATE_LEARNER_RESPONSE",
+        "PRIVATE_APPROVED_TEXT",
+        "secret-api-key-value",
+    )
+    malformed = {
+        "tasks": [
+            {
+                "prompt": sensitive_values[0],
+                "response": {
+                    "type": "single_choice",
+                    "options": [{"id": sensitive_values[1], "text": sensitive_values[2]}],
+                },
+                "evaluation": {
+                    "type": "exact_match",
+                    "correct_option_id": sensitive_values[1],
+                },
+                "expected_evidence": "Learner selects the correct idea.",
+                "difficulty": "guided",
+            }
+        ]
+    }
+    provider = _Provider(malformed, malformed)
+
+    outcome = await task_runtime.execute_shared_task_work_item(_job(runtime_mocks, provider))
+
+    assert outcome.error_code == "shared_task_invalid_output"
+    assert len(provider.calls) == 2
+    assert len(runtime_mocks.events) == 1
+    event = runtime_mocks.events[0]
+    assert event["event_type"] == "shared_task_validation_failed"
+    assert event["error_code"] == "REPAIR_EXHAUSTED"
+    diagnostics = str(event["safe_payload"])
+    assert "validation_paths" in diagnostics
+    assert "tasks" in diagnostics
+    assert all(value not in diagnostics for value in sensitive_values)
+    assert "message" not in event["safe_payload"]
+    assert runtime_mocks.failures[0].error_code == "shared_task_invalid_output"
+    assert runtime_mocks.failures[0].recovery_action == "retry"
 
 
 @pytest.mark.asyncio

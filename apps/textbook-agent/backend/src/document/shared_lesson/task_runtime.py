@@ -9,6 +9,7 @@ and final semantic reload remain in :mod:`semantic_inputs`.
 from __future__ import annotations
 
 import inspect
+import re
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -50,6 +51,7 @@ from infra.generation_runtime import (
     SourceIdentity,
     SourceVerificationError,
     WorkItemFailure,
+    append_event,
     claim_work_item,
     complete_work_item,
     fail_work_item,
@@ -73,6 +75,70 @@ class SharedTaskCheckpointError(SharedTaskRuntimeError):
 
 class SharedTaskProviderOutputError(SharedTaskRuntimeError):
     """The task provider did not satisfy the closed semantic contract."""
+
+
+_SAFE_VALIDATION_FIELDS = frozenset(
+    {
+        "tasks",
+        "prompt",
+        "response",
+        "evaluation",
+        "feedback",
+        "expected_evidence",
+        "difficulty",
+        "type",
+        "options",
+        "id",
+        "key",
+        "text",
+        "answer_lines",
+        "items",
+        "correct_order",
+        "order",
+        "values",
+        "answers",
+        "categories",
+        "correct_placements",
+        "pairs",
+        "left",
+        "right",
+        "correct_option_id",
+        "correct_option_ids",
+        "correct_key",
+        "correct_keys",
+        "accepted_answers",
+        "criteria",
+        "rubric",
+        "value",
+        "tolerance",
+        "unit",
+        "review_guidance",
+    }
+)
+
+
+def _safe_validation_path(path: str) -> str:
+    """Keep only schema field names and numeric indices from validator paths."""
+    parts = re.split(r"[.\[\]]+", path)
+    safe_parts = [
+        part if part.isdigit() or part in _SAFE_VALIDATION_FIELDS else "field"
+        for part in parts[:12]
+        if part
+    ]
+    return ".".join(safe_parts) or "payload"
+
+
+def _safe_authoring_diagnostics(exc: AuthoringEngineError) -> dict[str, Any]:
+    return {
+        "error_code": exc.code,
+        "validation_paths": sorted(
+            {
+                _safe_validation_path(error.path)
+                for error in exc.errors
+                if error.path
+            }
+        ),
+    }
 
 
 ApprovedItemSnapshotLoader = Callable[
@@ -372,6 +438,18 @@ async def _fail_after_claim(
     now: Any = None,
 ) -> SharedTaskRuntimeOutcome:
     failure = _failure_for_exception(exc)
+    if isinstance(exc, AuthoringEngineError) and exc.code in {
+        "INVALID_PAYLOAD",
+        "REPAIR_EXHAUSTED",
+    }:
+        await append_event(
+            job.session,
+            run_id=item.run_id,
+            work_item_id=item.id,
+            event_type="shared_task_validation_failed",
+            error_code=exc.code,
+            safe_payload=_safe_authoring_diagnostics(exc),
+        )
     await fail_work_item(
         job.session,
         work_item_id=item.id,
