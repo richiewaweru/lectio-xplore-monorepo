@@ -129,16 +129,112 @@ def _safe_validation_path(path: str) -> str:
 
 
 def _safe_authoring_diagnostics(exc: AuthoringEngineError) -> dict[str, Any]:
+    issue_codes = sorted({_safe_validation_issue_code(error) for error in exc.errors})
+    failure_kinds = {code.partition("_")[0] for code in issue_codes}
+    failure_kind = (
+        next(iter(failure_kinds))
+        if len(failure_kinds) == 1
+        else "mixed" if failure_kinds else "unknown"
+    )
     return {
         "error_code": exc.code,
+        "exception_type": type(exc).__name__,
+        "failure_kind": failure_kind,
+        "validation_issue_codes": issue_codes,
         "validation_paths": sorted(
-            {
-                _safe_validation_path(error.path)
-                for error in exc.errors
-                if error.path
-            }
+            {_safe_validation_path(error.path) for error in exc.errors}
         ),
     }
+
+
+def _safe_validation_issue_code(error: Any) -> str:
+    """Project validator text onto a closed diagnostic vocabulary.
+
+    Messages can contain provider text, learner content, task IDs, or approved
+    source text. Inspect them only to select a fixed code; never persist them.
+    """
+    message = str(getattr(error, "message", "")).strip()
+    normalized = message.lower()
+
+    if any(
+        normalized.startswith(prefix)
+        for prefix in (
+            "expecting value",
+            "expecting property name enclosed in double quotes",
+            "unterminated string",
+            "invalid \\escape",
+            "invalid control character",
+            "extra data",
+        )
+    ) or "could not be parsed" in normalized:
+        return "parse_invalid_json"
+
+    if message == "required":
+        return "schema_required_field_missing"
+    if message == "unexpected property":
+        return "schema_unexpected_property"
+    if normalized.startswith("expected "):
+        return "schema_value_mismatch"
+    if normalized.startswith(("minlength ", "minitems ", "maxitems ")):
+        return "schema_constraint_violation"
+    if message == "duplicate item":
+        return "schema_duplicate_item"
+
+    if "provider must return exactly" in normalized:
+        return "semantic_task_count_mismatch"
+    if "expected_evidence must match" in normalized:
+        return "semantic_approved_evidence_mismatch"
+    if "difficulty must match" in normalized:
+        return "semantic_approved_difficulty_mismatch"
+    if "failed canonical model validation" in normalized:
+        return "semantic_task_model_invalid"
+    if "failed the closed semantic contract" in normalized:
+        return "semantic_contract_violation"
+
+    semantic_markers = (
+        ("uses an unsupported learner action", "semantic_action_unsupported"),
+        ("requires response type", "semantic_response_type_mismatch"),
+        ("response contains unsupported fields", "semantic_response_fields_unsupported"),
+        ("choice response requires at least two options", "semantic_choice_options_missing"),
+        ("choice options require unique ids", "semantic_choice_options_invalid"),
+        ("choice option ids must be unique", "semantic_choice_option_ids_duplicate"),
+        ("single-choice evaluation requires", "semantic_choice_answer_missing"),
+        ("choice evaluation requires", "semantic_choice_answer_missing"),
+        ("evaluation references unknown option ids", "semantic_choice_answer_unknown"),
+        ("classification response requires", "semantic_classification_field_missing"),
+        ("placements must cover every classified item", "semantic_classification_coverage_mismatch"),
+        ("placements reference undeclared categories", "semantic_classification_category_unknown"),
+        ("mapping evaluation must preserve correct_placements", "semantic_classification_evaluation_mismatch"),
+        ("matching response requires", "semantic_matching_pairs_invalid"),
+        ("ordered response requires", "semantic_ordered_items_invalid"),
+        ("answer order must contain exactly", "semantic_ordered_answer_mismatch"),
+        ("missing-values response requires", "semantic_missing_values_invalid"),
+        ("evaluation must use a supported semantic type", "semantic_evaluation_type_unsupported"),
+        ("evaluation contains unsupported fields", "semantic_evaluation_fields_unsupported"),
+        ("evaluation type", "semantic_evaluation_type_mismatch"),
+        ("evaluation requires meaningful criteria", "semantic_rubric_missing"),
+        ("rubric criteria must be meaningful", "semantic_rubric_invalid"),
+        ("evaluation requires an answer", "semantic_evaluation_answer_missing"),
+        ("evaluation requires correct keys", "semantic_evaluation_keys_missing"),
+        ("numeric evaluation requires", "semantic_numeric_answer_invalid"),
+        ("numeric tolerance must be finite", "semantic_numeric_tolerance_invalid"),
+        ("accepted-answers evaluation requires", "semantic_accepted_answers_missing"),
+        ("evaluation must preserve missing-value answers", "semantic_missing_values_answer_mismatch"),
+        ("teacher-review evaluation requires", "semantic_review_guidance_missing"),
+        ("mapping evaluation requires", "semantic_mapping_answer_missing"),
+        ("ordered-match evaluation requires", "semantic_ordered_answer_missing"),
+    )
+    for marker, issue_code in semantic_markers:
+        if marker in normalized:
+            return issue_code
+
+    # A root-path, non-JSON error is a provider/schema-envelope failure (for
+    # example a structured-output decoder diagnostic). Other unrecognized
+    # messages from the task validator are semantic failures. Both are safely
+    # categorized without retaining free text.
+    if not getattr(error, "path", ""):
+        return "schema_payload_invalid"
+    return "semantic_contract_violation"
 
 
 ApprovedItemSnapshotLoader = Callable[

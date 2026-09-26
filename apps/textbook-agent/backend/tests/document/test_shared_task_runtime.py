@@ -20,7 +20,12 @@ from curriculum.teaching_plan.models import (
 )
 from document.shared_lesson import task_runtime
 from document.shared_lesson.runtime import TeachingPlanSource
-from infra.authoring import AuthoringProviderCall, AuthoringProviderTerminalError
+from infra.authoring import (
+    AuthoringEngineError,
+    AuthoringProviderCall,
+    AuthoringProviderTerminalError,
+    AuthoringValidationError,
+)
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import LeaseLostError
 
@@ -327,10 +332,56 @@ async def test_repair_exhaustion_persists_only_redacted_validation_diagnostics(r
     diagnostics = str(event["safe_payload"])
     assert "validation_paths" in diagnostics
     assert "tasks" in diagnostics
+    assert event["safe_payload"]["exception_type"] == "AuthoringEngineError"
+    assert event["safe_payload"]["failure_kind"] == "semantic"
+    assert event["safe_payload"]["validation_issue_codes"] == [
+        "semantic_choice_options_missing"
+    ]
     assert all(value not in diagnostics for value in sensitive_values)
     assert "message" not in event["safe_payload"]
     assert runtime_mocks.failures[0].error_code == "shared_task_invalid_output"
     assert runtime_mocks.failures[0].recovery_action == "retry"
+
+
+def test_safe_authoring_diagnostics_distinguish_parse_schema_and_semantic_failures():
+    parse_error = AuthoringEngineError(
+        "REPAIR_EXHAUSTED",
+        "output failed",
+        stage="repair",
+        errors=[AuthoringValidationError("", "Expecting value: line 1 column 1 (char 0)")],
+    )
+    schema_error = AuthoringEngineError(
+        "REPAIR_EXHAUSTED",
+        "output failed",
+        stage="repair",
+        errors=[AuthoringValidationError("tasks[0].response", "required")],
+    )
+    semantic_error = AuthoringEngineError(
+        "REPAIR_EXHAUSTED",
+        "output failed",
+        stage="repair",
+        errors=[
+            AuthoringValidationError(
+                "tasks[0]",
+                "task PRIVATE_APPROVED_TEXT failed canonical model validation",
+            )
+        ],
+    )
+
+    parse = task_runtime._safe_authoring_diagnostics(parse_error)
+    schema = task_runtime._safe_authoring_diagnostics(schema_error)
+    semantic = task_runtime._safe_authoring_diagnostics(semantic_error)
+
+    assert parse["failure_kind"] == "parse"
+    assert parse["validation_issue_codes"] == ["parse_invalid_json"]
+    assert parse["validation_paths"] == ["payload"]
+    assert schema["failure_kind"] == "schema"
+    assert schema["validation_issue_codes"] == ["schema_required_field_missing"]
+    assert schema["validation_paths"] == ["tasks.0.response"]
+    assert semantic["failure_kind"] == "semantic"
+    assert semantic["validation_issue_codes"] == ["semantic_task_model_invalid"]
+    assert semantic["validation_paths"] == ["tasks.0"]
+    assert "PRIVATE_APPROVED_TEXT" not in str(semantic)
 
 
 @pytest.mark.asyncio
