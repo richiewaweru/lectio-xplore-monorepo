@@ -22,6 +22,7 @@ from curriculum.teaching_plan.revisions import TeachingRevisionStore
 from document.shared_lesson.approved_source import (
     ApprovedSourceVerificationError,
     load_approved_item_snapshot,
+    load_current_approved_teaching_plan_source,
     make_approved_source_verifier,
 )
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
@@ -206,6 +207,72 @@ async def test_verifier_locks_and_returns_exact_approved_identity(db_session) ->
     )
     assert refreshed is not None
     assert refreshed.chunked_state_json == before
+
+
+@pytest.mark.asyncio
+async def test_current_source_loader_returns_exact_approved_source_without_mutation(
+    db_session,
+) -> None:
+    generation, lesson, _provenance, expected = await _prepared(db_session)
+    before = deepcopy(generation.chunked_state_json)
+
+    loaded = await load_current_approved_teaching_plan_source(
+        session=db_session,
+        owner_user_id="source-owner",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=generation.id,
+    )
+
+    assert loaded == expected
+    refreshed = await db_session.scalar(
+        select(GenerationModel).where(GenerationModel.id == generation.id)
+    )
+    assert refreshed is not None
+    assert refreshed.chunked_state_json == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("case", ["owner", "path", "pack", "provenance"])
+async def test_current_source_loader_rejects_owner_path_and_current_lineage(
+    db_session, case: str
+) -> None:
+    generation, lesson, provenance, _source = await _prepared(db_session)
+    owner = "source-owner"
+    path = lesson.id
+    if case == "owner":
+        owner = "different-owner"
+    elif case == "path":
+        path = "missing-lesson"
+    elif case == "pack":
+        lesson.pack_id = "newer-preparation"
+    else:
+        provenance.invalidated_at = _now()
+
+    with pytest.raises(ApprovedSourceVerificationError):
+        await load_current_approved_teaching_plan_source(
+            session=db_session,
+            owner_user_id=owner,
+            path_lesson_id=path,
+            preparation_generation_id=generation.id,
+        )
+
+
+@pytest.mark.asyncio
+async def test_current_source_loader_rejects_legacy_non_v2_approval(db_session) -> None:
+    generation, lesson, _provenance, _source = await _prepared(db_session)
+    tampered_state = deepcopy(generation.chunked_state_json)
+    page = tampered_state["page_document_v2"]
+    assert isinstance(page, dict)
+    page["teaching_revisions"][0]["plan"]["contract_version"] = 1
+    generation.chunked_state_json = tampered_state
+
+    with pytest.raises(ApprovedSourceVerificationError):
+        await load_current_approved_teaching_plan_source(
+            session=db_session,
+            owner_user_id="source-owner",
+            path_lesson_id=lesson.id,
+            preparation_generation_id=generation.id,
+        )
 
 
 @pytest.mark.asyncio

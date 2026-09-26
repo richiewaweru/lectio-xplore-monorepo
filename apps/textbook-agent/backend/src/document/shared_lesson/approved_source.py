@@ -43,6 +43,137 @@ class ApprovedSourceVerificationError(ValueError):
     code = "APPROVED_SOURCE_UNAVAILABLE"
 
 
+async def load_current_approved_teaching_plan_source(
+    *,
+    session: AsyncSession,
+    owner_user_id: str,
+    path_lesson_id: str,
+    preparation_generation_id: str,
+) -> TeachingPlanSource:
+    """Load the exact approved Teaching Plan pinned by current preparation.
+
+    The caller supplies only the owner and preparation/path identities.  The
+    returned plan and revision record are reconstructed from the persisted
+    approval ledger while the generation, path lesson, and provenance rows are
+    locked for a consistent read.  No caller-supplied plan or hash participates
+    in this loader.
+    """
+
+    if not owner_user_id or not path_lesson_id or not preparation_generation_id:
+        raise ValueError("approved-source loader bindings must be non-empty")
+
+    generation = await session.scalar(
+        select(GenerationModel)
+        .where(GenerationModel.id == preparation_generation_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if generation is None or generation.user_id != owner_user_id:
+        raise ApprovedSourceVerificationError("preparation generation is unavailable to this owner")
+
+    lesson = await session.scalar(
+        select(PathLessonModel)
+        .join(PathVersionModel, PathVersionModel.id == PathLessonModel.path_version_id)
+        .join(UnitModel, UnitModel.id == PathVersionModel.unit_id)
+        .where(
+            PathLessonModel.id == path_lesson_id,
+            UnitModel.owner_id == owner_user_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if lesson is None:
+        raise ApprovedSourceVerificationError("path lesson is unavailable to this owner")
+    if lesson.pack_id != preparation_generation_id:
+        raise ApprovedSourceVerificationError(
+            "path lesson does not point at the current preparation generation"
+        )
+
+    provenance = await session.scalar(
+        select(LessonProvenanceModel)
+        .where(LessonProvenanceModel.pack_id == preparation_generation_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if provenance is None:
+        raise ApprovedSourceVerificationError("preparation path provenance is missing")
+    if provenance.invalidated_at is not None:
+        raise ApprovedSourceVerificationError("preparation path provenance is invalidated")
+    if (
+        provenance.path_lesson_id != path_lesson_id
+        or provenance.path_version_id != lesson.path_version_id
+        or provenance.path_lesson_revision != lesson.revision
+        or provenance.objective_hash != lesson.objective_hash
+    ):
+        raise ApprovedSourceVerificationError(
+            "preparation path provenance does not match the current lesson"
+        )
+
+    state = generation.chunked_state_json
+    if not isinstance(state, dict):
+        raise ApprovedSourceVerificationError("preparation state is unavailable")
+    page_state = state.get("page_document_v2")
+    if not isinstance(page_state, dict):
+        raise ApprovedSourceVerificationError(
+            "preparation state has no page_document_v2 Teaching Plan ledger"
+        )
+
+    # TeachingRevisionStore currently materializes narrow legacy state in its
+    # constructor.  Give it a copy so verification cannot mutate the ORM JSON
+    # value or create a false approval while reading it.
+    revision_state: dict[str, Any] = deepcopy(page_state)
+    review = revision_state.get("teaching_review")
+    if not isinstance(review, dict):
+        raise ApprovedSourceVerificationError("Teaching Plan review state is missing")
+    approved_raw = review.get("approved_revision")
+    if isinstance(approved_raw, bool) or approved_raw is None:
+        raise ApprovedSourceVerificationError("Teaching Plan approved_revision pointer is missing")
+    try:
+        approved_revision = int(approved_raw)
+    except (TypeError, ValueError) as exc:
+        raise ApprovedSourceVerificationError(
+            "Teaching Plan approved_revision pointer is invalid"
+        ) from exc
+    if approved_revision < 1:
+        raise ApprovedSourceVerificationError("Teaching Plan approved_revision pointer is invalid")
+
+    store = TeachingRevisionStore(revision_state)
+    record = store.get_revision(approved_revision)
+    if record is None:
+        raise ApprovedSourceVerificationError(
+            f"approved Teaching Plan revision {approved_revision} is missing"
+        )
+    if record.status != "approved":
+        raise ApprovedSourceVerificationError(
+            "approved_revision must select an approved Teaching Plan record"
+        )
+    if not record.content_hash:
+        raise ApprovedSourceVerificationError("approved Teaching Plan revision has no content hash")
+
+    try:
+        plan = TeachingPlan.model_validate(record.plan)
+    except (TypeError, ValueError) as exc:
+        raise ApprovedSourceVerificationError("approved Teaching Plan revision is invalid") from exc
+    if plan.contract_version != 2:
+        raise ApprovedSourceVerificationError(
+            "shared-document source requires an approved Teaching Plan V2 record"
+        )
+    try:
+        source = TeachingPlanSource(
+            plan=plan,
+            revision_record=record,
+            id=record.teaching_plan_id,
+            revision=record.revision,
+            content_hash=record.content_hash,
+        )
+        verify_teaching_plan_source(source)
+    except (TypeError, ValueError) as exc:
+        raise ApprovedSourceVerificationError(
+            "approved Teaching Plan source failed hash or identity verification"
+        ) from exc
+    return source
+
+
 def make_approved_source_verifier(
     *,
     owner_user_id: str,
@@ -61,125 +192,13 @@ def make_approved_source_verifier(
         raise ValueError("approved-source verifier bindings must be non-empty")
 
     async def verify(session: AsyncSession, requested: SourceIdentity) -> SourceIdentity:
-        generation = await session.scalar(
-            select(GenerationModel)
-            .where(GenerationModel.id == preparation_generation_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
+        source = await load_current_approved_teaching_plan_source(
+            session=session,
+            owner_user_id=owner_user_id,
+            path_lesson_id=path_lesson_id,
+            preparation_generation_id=preparation_generation_id,
         )
-        if generation is None or generation.user_id != owner_user_id:
-            raise ApprovedSourceVerificationError(
-                "preparation generation is unavailable to this owner"
-            )
-
-        lesson = await session.scalar(
-            select(PathLessonModel)
-            .join(PathVersionModel, PathVersionModel.id == PathLessonModel.path_version_id)
-            .join(UnitModel, UnitModel.id == PathVersionModel.unit_id)
-            .where(
-                PathLessonModel.id == path_lesson_id,
-                UnitModel.owner_id == owner_user_id,
-            )
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-        if lesson is None:
-            raise ApprovedSourceVerificationError("path lesson is unavailable to this owner")
-        if lesson.pack_id != preparation_generation_id:
-            raise ApprovedSourceVerificationError(
-                "path lesson does not point at the current preparation generation"
-            )
-
-        provenance = await session.scalar(
-            select(LessonProvenanceModel)
-            .where(LessonProvenanceModel.pack_id == preparation_generation_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-        if provenance is None:
-            raise ApprovedSourceVerificationError("preparation path provenance is missing")
-        if provenance.invalidated_at is not None:
-            raise ApprovedSourceVerificationError("preparation path provenance is invalidated")
-        if (
-            provenance.path_lesson_id != path_lesson_id
-            or provenance.path_version_id != lesson.path_version_id
-            or provenance.path_lesson_revision != lesson.revision
-            or provenance.objective_hash != lesson.objective_hash
-        ):
-            raise ApprovedSourceVerificationError(
-                "preparation path provenance does not match the current lesson"
-            )
-
-        state = generation.chunked_state_json
-        if not isinstance(state, dict):
-            raise ApprovedSourceVerificationError("preparation state is unavailable")
-        page_state = state.get("page_document_v2")
-        if not isinstance(page_state, dict):
-            raise ApprovedSourceVerificationError(
-                "preparation state has no page_document_v2 Teaching Plan ledger"
-            )
-
-        # TeachingRevisionStore currently materializes narrow legacy state in
-        # its constructor.  Give it a copy so verification cannot mutate the
-        # ORM JSON value or create a false approval while reading it.
-        revision_state: dict[str, Any] = deepcopy(page_state)
-        review = revision_state.get("teaching_review")
-        if not isinstance(review, dict):
-            raise ApprovedSourceVerificationError("Teaching Plan review state is missing")
-        approved_raw = review.get("approved_revision")
-        if isinstance(approved_raw, bool) or approved_raw is None:
-            raise ApprovedSourceVerificationError(
-                "Teaching Plan approved_revision pointer is missing"
-            )
-        try:
-            approved_revision = int(approved_raw)
-        except (TypeError, ValueError) as exc:
-            raise ApprovedSourceVerificationError(
-                "Teaching Plan approved_revision pointer is invalid"
-            ) from exc
-        if approved_revision < 1:
-            raise ApprovedSourceVerificationError(
-                "Teaching Plan approved_revision pointer is invalid"
-            )
-
-        store = TeachingRevisionStore(revision_state)
-        record = store.get_revision(approved_revision)
-        if record is None:
-            raise ApprovedSourceVerificationError(
-                f"approved Teaching Plan revision {approved_revision} is missing"
-            )
-        if record.status != "approved":
-            raise ApprovedSourceVerificationError(
-                "approved_revision must select an approved Teaching Plan record"
-            )
-        if not record.content_hash:
-            raise ApprovedSourceVerificationError(
-                "approved Teaching Plan revision has no content hash"
-            )
-
-        try:
-            plan = TeachingPlan.model_validate(record.plan)
-        except (TypeError, ValueError) as exc:
-            raise ApprovedSourceVerificationError(
-                "approved Teaching Plan revision is invalid"
-            ) from exc
-        if plan.contract_version != 2:
-            raise ApprovedSourceVerificationError(
-                "shared-document source requires an approved Teaching Plan V2 record"
-            )
-        try:
-            source = TeachingPlanSource(
-                plan=plan,
-                revision_record=record,
-                id=record.teaching_plan_id,
-                revision=record.revision,
-                content_hash=record.content_hash,
-            )
-            identity = verify_teaching_plan_source(source)
-        except (TypeError, ValueError) as exc:
-            raise ApprovedSourceVerificationError(
-                "approved Teaching Plan source failed hash or identity verification"
-            ) from exc
+        identity = verify_teaching_plan_source(source)
 
         if identity != requested:
             raise ApprovedSourceVerificationError(
@@ -206,12 +225,17 @@ async def load_approved_item_snapshot(
     never consults the mutable lesson packet or accepts caller-supplied items.
     """
 
-    verifier = make_approved_source_verifier(
+    source = await load_current_approved_teaching_plan_source(
+        session=session,
         owner_user_id=owner_user_id,
         path_lesson_id=path_lesson_id,
         preparation_generation_id=preparation_generation_id,
     )
-    await verifier(session, requested)
+    identity = verify_teaching_plan_source(source)
+    if identity != requested:
+        raise ApprovedSourceVerificationError(
+            "current approved Teaching Plan differs from the requested source identity"
+        )
 
     generation = await session.scalar(
         select(GenerationModel)
@@ -267,5 +291,6 @@ async def load_approved_item_snapshot(
 __all__ = [
     "ApprovedSourceVerificationError",
     "load_approved_item_snapshot",
+    "load_current_approved_teaching_plan_source",
     "make_approved_source_verifier",
 ]
