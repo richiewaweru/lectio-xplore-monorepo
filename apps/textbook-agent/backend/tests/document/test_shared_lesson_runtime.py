@@ -4,6 +4,10 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
+from test_shared_lesson_runtime_db import _admit_run as _admit_db_run
+from test_shared_lesson_runtime_db import _seed_build as _seed_db_build
+from test_shared_lesson_runtime_db import _source as _db_source
+from test_shared_lesson_runtime_db import _writer_request as _db_writer_request
 
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import (
@@ -32,7 +36,12 @@ from document.shared_lesson.runtime import (
     write_section_work_items,
 )
 from document.shared_lesson.writer import SectionWriteResult, SectionWriterRequest
+from infra.database.models import GenerationWorkItemModel
 from infra.generation_runtime import LeaseLostError
+
+
+async def _commit_noop() -> None:
+    return None
 
 
 def _approved_source(plan: TeachingPlan) -> TeachingPlanSource:
@@ -492,7 +501,7 @@ async def test_public_writer_batch_enforces_four_and_skips_ready_sibling(monkeyp
     monkeypatch.setattr("document.shared_lesson.runtime.write_section", fake_write)
     jobs = tuple(
         SectionWriterJob(
-            session=object(),
+            session=SimpleNamespace(commit=_commit_noop),
             work_item_id=f"write:{index}",
             worker_id=f"worker:{index}",
             source=source,
@@ -636,6 +645,11 @@ async def test_late_provider_result_cannot_complete_after_lease_is_lost(monkeypa
     )
     request = SectionWriterRequest(section=section, composition_plan=composition)
     calls = []
+    boundaries = []
+
+    class FakeSession:
+        async def commit(self):
+            boundaries.append("commit")
 
     async def fake_claim(*_args, **_kwargs):
         return SimpleNamespace(lease_token=9)
@@ -647,6 +661,7 @@ async def test_late_provider_result_cannot_complete_after_lease_is_lost(monkeypa
         return None
 
     async def fake_write(*, request, provider):
+        boundaries.append("provider")
         await provider({"draft": True})
         return SectionWriteResult(
             section_slot_id=request.section.slot_id,
@@ -677,7 +692,7 @@ async def test_late_provider_result_cannot_complete_after_lease_is_lost(monkeypa
 
     with pytest.raises(LeaseLostError, match="live lease"):
         await _write_section_work_item(
-            "session",
+            FakeSession(),
             work_item_id="write:orient",
             worker_id="worker-1",
             source=source,
@@ -686,3 +701,100 @@ async def test_late_provider_result_cannot_complete_after_lease_is_lost(monkeypa
             provider_semaphore=asyncio.Semaphore(MAX_CONCURRENT_SECTION_WRITERS),
         )
     assert calls == ["fenced"]
+    assert boundaries == ["commit", "provider"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("worker_kind", ["composer", "writer"])
+async def test_provider_observes_committed_claim_and_writer_checkpoint(
+    db_session, db_session_factory, monkeypatch, worker_kind
+):
+    source = _db_source()
+    owner_id, lesson_id = await _seed_db_build(db_session, suffix=f"provider-boundary-{worker_kind}")
+    _build, (run, composition_items) = await _admit_db_run(
+        db_session,
+        owner_id=owner_id,
+        lesson_id=lesson_id,
+        source=source,
+        request_key=f"provider-boundary-{worker_kind}-request",
+    )
+    section = source.plan.sections[0]
+    request = _db_writer_request(section)
+    composition = request.composition_plan
+    if worker_kind == "composer":
+        item = next(item for item in composition_items if item.item_key == "compose:orient")
+    else:
+        from document.shared_lesson.runtime import admit_writer_work_item
+
+        item = await admit_writer_work_item(
+            db_session,
+            run_id=run.id,
+            section=section,
+            request=request,
+        )
+    await db_session.commit()
+    observed = []
+
+    async def provider(_payload):
+        async with db_session_factory() as separate_session:
+            persisted = await separate_session.get(GenerationWorkItemModel, item.id)
+            assert persisted is not None
+            assert persisted.status == "running"
+            assert persisted.lease_owner == f"provider-{worker_kind}"
+            if worker_kind == "writer":
+                assert persisted.checkpoint_json is not None
+                assert persisted.checkpoint_json["payload"]["plan"] == composition.model_dump(
+                    mode="json"
+                )
+            else:
+                assert persisted.checkpoint_json is None
+        observed.append(True)
+        return {"choices": []}
+
+    if worker_kind == "composer":
+        async def compose(*, provider, **_kwargs):
+            await provider({"compose": True})
+            return composition
+
+        monkeypatch.setattr("document.shared_lesson.runtime.compose_section", compose)
+        await compose_section_work_item(
+            db_session,
+            work_item_id=item.id,
+            worker_id="provider-composer",
+            source=source,
+            section=section,
+            tasks=(),
+            provider=provider,
+        )
+    else:
+        async def write(*, request, provider):
+            await provider({"write": True})
+            return SectionWriteResult(
+                section_slot_id=request.section.slot_id,
+                title="Start here",
+                nodes=(
+                    ParagraphNode(
+                        id="node-1",
+                        teaching_block_id=request.section.blocks[0].id,
+                        display=ParagraphDisplay(text="A complete section."),
+                    ),
+                ),
+            )
+
+        monkeypatch.setattr("document.shared_lesson.runtime.write_section", write)
+        await _write_section_work_item(
+            db_session,
+            work_item_id=item.id,
+            worker_id="provider-writer",
+            source=source,
+            request=request,
+            provider=provider,
+            provider_semaphore=asyncio.Semaphore(1),
+        )
+    assert observed == [True]
+    await db_session.commit()
+    async with db_session_factory() as separate_session:
+        persisted = await separate_session.get(GenerationWorkItemModel, item.id)
+        assert persisted is not None
+        assert persisted.status == "ready"
+        assert persisted.checkpoint_json is not None

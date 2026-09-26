@@ -368,6 +368,9 @@ async def compose_section_work_item(
             compatibility=compatibility,
         )
         if checkpoint is None:
+            # The provider call can be slow. Persist the claim first so no
+            # database transaction or lock remains open while composing.
+            await session.commit()
             plan = await compose_section(
                 section=section,
                 tasks=task_slice,
@@ -533,6 +536,9 @@ async def _write_section_work_item(
             except SectionRuntimeError as exc:
                 raise CheckpointPayloadError(str(exc)) from exc
 
+        # Publish both the claim and its compatible composition checkpoint
+        # before the writer makes any provider call.
+        await session.commit()
         if provider is None:
             from document.shared_lesson.writer import _default_provider
 
