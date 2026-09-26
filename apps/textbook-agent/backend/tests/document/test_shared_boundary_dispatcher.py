@@ -142,13 +142,31 @@ async def test_boundary_aggregate_deadline_fails_recoverably_before_lease_expiry
             provider_cancelled.set()
             await release_provider.wait()
         provider_finished.set()
-        return BoundarySemanticVerdict(status="pass")
+        return BoundarySemanticVerdict(
+            status="issue",
+            issue=ContinuityIssue(
+                issue_code="late_boundary_issue",
+                affected_section_id=_request.next_plan.slot_id,
+                explanation="The late review found a boundary issue.",
+                required_correction="Clarify the boundary in the affected section.",
+            ),
+        )
+
+    class LateRepair:
+        calls = 0
+
+        async def repair_section(self, _request):
+            self.calls += 1
+            raise AssertionError("deadline must prevent a late repair call")
+
+    repair = LateRepair()
 
     result = await boundary_dispatcher.dispatch_shared_document_boundaries(
         db_session_factory,
         run_id=run_id,
         owner_user_id=owner,
         semantic_validator=slow_semantic_review,
+        repair_engine=repair,
         lease_seconds=1,
     )
 
@@ -166,6 +184,7 @@ async def test_boundary_aggregate_deadline_fails_recoverably_before_lease_expiry
         assert writer is not None and writer.status == "ready"
     release_provider.set()
     await asyncio.wait_for(provider_finished.wait(), timeout=0.2)
+    assert repair.calls == 0
 
 
 @pytest.mark.asyncio

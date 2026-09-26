@@ -23,9 +23,11 @@ from sqlalchemy import select
 
 from curriculum.teaching_plan.models import TeachingPlanSection
 from document.shared_lesson.boundary import (
+    _WriterBoundaryRepairEngine,
     BoundaryRepairEngine,
     BoundarySemanticValidator,
     BoundaryValidationResult,
+    default_boundary_semantic_validator,
     validate_and_repair_boundary,
 )
 from document.shared_lesson.models import SharedSection
@@ -101,6 +103,28 @@ def _cancel_detached_validation_task(task: asyncio.Task[Any]) -> None:
     if not task.done():
         task.cancel()
         task.add_done_callback(_consume_detached_validation_task)
+
+
+async def _await_before_boundary_deadline(awaitable: Awaitable[Any], *, deadline: float) -> Any:
+    """Reject late provider returns before the validator can start another call."""
+    loop = asyncio.get_running_loop()
+    if loop.time() >= deadline:
+        raise BoundaryValidationDeadlineExceeded
+    result = await awaitable
+    if loop.time() >= deadline:
+        raise BoundaryValidationDeadlineExceeded
+    return result
+
+
+class _DeadlineBoundedBoundaryRepair:
+    def __init__(self, engine: BoundaryRepairEngine, *, deadline: float) -> None:
+        self._engine = engine
+        self._deadline = deadline
+
+    async def repair_section(self, request: Any) -> Any:
+        return await _await_before_boundary_deadline(
+            self._engine.repair_section(request), deadline=self._deadline
+        )
 
 
 async def _run_boundary_validation_before_deadline(
@@ -758,14 +782,26 @@ async def execute_boundary_work_item(
 
     try:
         previous_plan, next_plan = _plan_pair(job.source, job.previous_section, job.next_section)
+
+        semantic_dispatch = job.semantic_validator or default_boundary_semantic_validator
+
+        async def bounded_semantic_validator(request: Any) -> Any:
+            return await _await_before_boundary_deadline(
+                semantic_dispatch(request), deadline=validation_deadline
+            )
+
+        bounded_repair_engine = _DeadlineBoundedBoundaryRepair(
+            job.repair_engine or _WriterBoundaryRepairEngine(),
+            deadline=validation_deadline,
+        )
         result = await _run_boundary_validation_before_deadline(
             lambda: validate_and_repair_boundary(
                 previous_section=job.previous_section,
                 previous_plan=previous_plan,
                 next_section=job.next_section,
                 next_plan=next_plan,
-                semantic_validator=job.semantic_validator,
-                repair_engine=job.repair_engine,
+                semantic_validator=bounded_semantic_validator,
+                repair_engine=bounded_repair_engine,
                 writer_requests=job.writer_requests,
             ),
             deadline=validation_deadline,
