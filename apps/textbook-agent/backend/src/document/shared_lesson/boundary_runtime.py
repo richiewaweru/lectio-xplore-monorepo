@@ -882,7 +882,27 @@ async def execute_boundary_work_items(
                     preserved_ready_siblings=True,
                 )
 
-    return tuple(await asyncio.gather(*(run_one(job) for job in jobs)))
+    tasks = [asyncio.create_task(run_one(job)) for job in jobs]
+    try:
+        # A raw gather propagates the first unexpected exception immediately,
+        # while sibling jobs may still be using their AsyncSessions. The
+        # dispatcher's AsyncExitStack would then close those sessions under
+        # their in-flight database operations and mask the original error.
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+    except asyncio.CancelledError:
+        # Cancellation must settle every job before its owner closes the
+        # sessions. Runtime provider calls are bounded by their configured
+        # timeout, and DB work is awaited by each task before it can settle.
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
+    for result in results:
+        if isinstance(result, BaseException):
+            raise result
+    return tuple(results)
 
 
 __all__ = [

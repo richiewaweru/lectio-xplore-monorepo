@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -176,6 +177,80 @@ def test_writer_composition_identity_matches_runtime_canonical_hash() -> None:
     second = _composition_identity_from_request(request.model_copy(deep=True))
     assert first == second
     assert len(first) == 64
+
+
+@pytest.mark.asyncio
+async def test_boundary_batch_settles_siblings_before_reraising_unexpected_error(
+    monkeypatch,
+) -> None:
+    original = RuntimeError("unexpected boundary persistence defect")
+    sibling_settled = asyncio.Event()
+
+    async def execute(job):
+        if job.work_item_id == "first":
+            raise original
+        await asyncio.sleep(0.02)
+        sibling_settled.set()
+        return boundary_runtime.BoundaryRuntimeOutcome(work_item_id=job.work_item_id)
+
+    monkeypatch.setattr(boundary_runtime, "execute_boundary_work_item", execute)
+    jobs = tuple(
+        boundary_runtime.BoundaryWorkItemJob(
+            session=object(),
+            work_item_id=work_item_id,
+            worker_id="boundary-batch-test",
+            source=SimpleNamespace(),
+            previous_section=SimpleNamespace(),
+            next_section=SimpleNamespace(),
+            writer_requests={},
+        )
+        for work_item_id in ("first", "sibling")
+    )
+
+    with pytest.raises(RuntimeError) as raised:
+        await boundary_runtime.execute_boundary_work_items(jobs, concurrency=2)
+
+    assert raised.value is original
+    assert sibling_settled.is_set()
+
+
+@pytest.mark.asyncio
+async def test_boundary_batch_cancellation_settles_sibling_tasks(monkeypatch) -> None:
+    sibling_cancelled = asyncio.Event()
+    started = asyncio.Event()
+
+    async def execute(job):
+        if job.work_item_id == "sibling":
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                sibling_cancelled.set()
+                raise
+        await started.wait()
+        await asyncio.Future()
+
+    monkeypatch.setattr(boundary_runtime, "execute_boundary_work_item", execute)
+    jobs = tuple(
+        boundary_runtime.BoundaryWorkItemJob(
+            session=object(),
+            work_item_id=work_item_id,
+            worker_id="boundary-cancel-test",
+            source=SimpleNamespace(),
+            previous_section=SimpleNamespace(),
+            next_section=SimpleNamespace(),
+            writer_requests={},
+        )
+        for work_item_id in ("cancel", "sibling")
+    )
+    task = asyncio.create_task(boundary_runtime.execute_boundary_work_items(jobs, concurrency=2))
+    await started.wait()
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert sibling_cancelled.is_set()
 
 
 @pytest.mark.asyncio
