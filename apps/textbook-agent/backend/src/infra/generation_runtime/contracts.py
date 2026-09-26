@@ -224,6 +224,21 @@ class WorkItemFailure(Contract):
         return self.error_class in _RETRYABLE_ERROR_CLASSES
 
 
+class RunFailure(Contract):
+    """Safe, closed failure input for a Run-level terminal transition."""
+
+    error_code: str = Field(min_length=1, max_length=128)
+    error_class: ErrorClass
+    safe_summary: str = Field(min_length=1, max_length=512)
+
+    @field_validator("error_class")
+    @classmethod
+    def cancellation_uses_dedicated_transition(cls, value: ErrorClass) -> ErrorClass:
+        if value == ErrorClass.CANCELLED:
+            raise ValueError("cancellation uses the dedicated cancellation lifecycle")
+        return value
+
+
 class BuildAdmission(Contract):
     owner_user_id: str
     path_lesson_id: str

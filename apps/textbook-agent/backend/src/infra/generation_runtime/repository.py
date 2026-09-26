@@ -32,6 +32,7 @@ from infra.generation_runtime.contracts import (
     ErrorClass,
     RecoveryAction,
     RunAdmission,
+    RunFailure,
     RunFinalization,
     RuntimeCheckpoint,
     RuntimeCheckpointCompatibility,
@@ -1438,6 +1439,107 @@ async def cancel_run(
             event_type="run_cancelled",
             error_code="cancelled",
             safe_payload={"error_class": ErrorClass.CANCELLED.value},
+        )
+    await session.refresh(run)
+    return run
+
+
+async def fail_run_terminal(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    owner_user_id: str,
+    failure: RunFailure,
+    now: datetime | None = None,
+) -> GenerationRunModel:
+    """Fail an active Run when a dependency transition cannot admit a WorkItem."""
+    if not isinstance(failure, RunFailure):
+        failure = RunFailure.model_validate(failure)
+    current_time = _utcnow(now)
+    visible = await session.scalar(
+        select(GenerationRunModel).where(
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+        )
+    )
+    if visible is None:
+        raise RunNotFound("generation run is unavailable to this owner")
+    if visible.status not in {"queued", "running"}:
+        raise InvalidRunTransition("only an active run can fail terminally")
+
+    await _serialize_run_build_on_sqlite(session, run_id=run_id)
+    all_items = list(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel)
+                .where(GenerationWorkItemModel.run_id == run_id)
+                .order_by(GenerationWorkItemModel.id)
+                .with_for_update()
+            )
+        ).all()
+    )
+    items = active_work_items(all_items)
+    run = await session.scalar(
+        select(GenerationRunModel)
+        .where(
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if run is None:
+        raise RunNotFound("generation run is unavailable to this owner")
+    if run.status not in {"queued", "running"}:
+        raise InvalidRunTransition("run became terminal before failure")
+    current_item_ids = list(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel.id)
+                .where(GenerationWorkItemModel.run_id == run_id)
+                .order_by(GenerationWorkItemModel.id)
+            )
+        ).all()
+    )
+    if current_item_ids != [item.id for item in all_items]:
+        raise InvalidRunTransition(
+            "work-item set changed during terminal failure; retry after admission settles"
+        )
+    if any(item.status in {"queued", "running"} for item in items):
+        raise InvalidRunTransition("a run with active work items cannot fail terminally")
+
+    async with session.begin_nested():
+        result = await session.execute(
+            update(GenerationRunModel)
+            .where(
+                GenerationRunModel.id == run_id,
+                GenerationRunModel.owner_user_id == owner_user_id,
+                GenerationRunModel.status.in_({"queued", "running"}),
+            )
+            .values(
+                status="failed_terminal",
+                error_code=failure.error_code,
+                error_class=str(failure.error_class),
+                error_summary=failure.safe_summary,
+                recovery_action=RecoveryAction.NONE.value,
+                completed_at=current_time,
+                updated_at=current_time,
+            )
+            .execution_options(synchronize_session=False)
+        )
+        if result.rowcount != 1:
+            raise InvalidRunTransition("run changed before terminal failure committed")
+        await session.refresh(run)
+        await append_event(
+            session,
+            run_id=run_id,
+            event_type="run_failed",
+            error_code=failure.error_code,
+            safe_payload={
+                "error_class": str(failure.error_class),
+                "safe_summary": failure.safe_summary,
+                "recovery_action": RecoveryAction.NONE.value,
+            },
         )
     await session.refresh(run)
     return run
