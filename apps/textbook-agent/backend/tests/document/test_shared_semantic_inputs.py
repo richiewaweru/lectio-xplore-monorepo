@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import update
 
 from curriculum.lesson_sourcebook import LessonSourcebook, SourcebookEntry
@@ -16,8 +17,10 @@ from curriculum.teaching_plan.models import (
 from document.shared_lesson.runtime import TeachingPlanSource
 from document.shared_lesson.semantic_inputs import (
     SemanticInputError,
+    VerifiedSourcebookInput,
     admit_shared_task_work_item,
     admit_sourcebook_work_item,
+    load_verified_sourcebook_input,
     load_verified_semantic_inputs,
 )
 from infra.database.models import (
@@ -279,6 +282,120 @@ async def test_semantic_admission_is_idempotent_and_requires_sourcebook_first(db
 
 
 @pytest.mark.asyncio
+async def test_sourcebook_loader_accepts_ready_leaf_before_tasks_exist(db_session) -> None:
+    source = _source()
+    owner, run_id = await _seed_run(db_session, source, suffix="sourcebook-only")
+    sourcebook = await admit_sourcebook_work_item(
+        db_session, run_id=run_id, owner_user_id=owner, source=source
+    )
+    payload = _sourcebook(source).model_dump(mode="json")
+    await _ready(db_session, sourcebook.record, payload)
+
+    verified = await load_verified_sourcebook_input(
+        db_session, run_id=run_id, owner_user_id=owner, source=source
+    )
+
+    assert isinstance(verified, VerifiedSourcebookInput)
+    assert verified.sourcebook_output_hash == content_hash(payload)
+    assert verified.work_item_id == sourcebook.record.id
+    with pytest.raises(ValidationError):
+        verified.work_item_id = "forged"
+
+
+@pytest.mark.asyncio
+async def test_sourcebook_loader_rejects_missing_leaf_and_owner_mismatch(db_session) -> None:
+    source = _source()
+    owner, run_id = await _seed_run(db_session, source, suffix="sourcebook-missing")
+    with pytest.raises(SemanticInputError, match="sourcebook"):
+        await load_verified_sourcebook_input(
+            db_session, run_id=run_id, owner_user_id=owner, source=source
+        )
+    with pytest.raises(SemanticInputError, match="unavailable to this owner"):
+        await load_verified_sourcebook_input(
+            db_session, run_id=run_id, owner_user_id="other-owner", source=source
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("kind", "match"),
+    [
+        ("duplicate", "entry IDs must be unique"),
+        ("stale", "bound to a different approved Teaching Plan"),
+        ("forged", "output hash does not match output"),
+        ("input", "input identity is stale"),
+        ("definition", "definition identity is stale"),
+        ("composition", "invalid composition identity"),
+    ],
+)
+async def test_sourcebook_loader_rejects_invalid_ready_output(db_session, kind, match) -> None:
+    source = _source()
+    owner, run_id = await _seed_run(db_session, source, suffix=f"sourcebook-{kind}")
+    sourcebook = await admit_sourcebook_work_item(
+        db_session, run_id=run_id, owner_user_id=owner, source=source
+    )
+    payload = _sourcebook(source, duplicate_entry=kind == "duplicate")
+    if kind == "stale":
+        payload = payload.model_copy(update={"teaching_plan_hash": "f" * 64})
+    payload_json = payload.model_dump(mode="json")
+    await _ready(db_session, sourcebook.record, payload_json)
+    if kind == "forged":
+        await db_session.execute(
+            update(GenerationWorkItemModel)
+            .where(GenerationWorkItemModel.id == sourcebook.record.id)
+            .values(output_hash="f" * 64)
+        )
+        await db_session.commit()
+    if kind == "input":
+        await db_session.execute(
+            update(GenerationWorkItemModel)
+            .where(GenerationWorkItemModel.id == sourcebook.record.id)
+            .values(input_hash="f" * 64)
+        )
+        await db_session.commit()
+    if kind == "definition":
+        await db_session.execute(
+            update(GenerationWorkItemModel)
+            .where(GenerationWorkItemModel.id == sourcebook.record.id)
+            .values(definition_hash="f" * 64)
+        )
+        await db_session.commit()
+    if kind == "composition":
+        await db_session.execute(
+            update(GenerationWorkItemModel)
+            .where(GenerationWorkItemModel.id == sourcebook.record.id)
+            .values(composition_identity="forged-composition")
+        )
+        await db_session.commit()
+
+    with pytest.raises(SemanticInputError, match=match):
+        await load_verified_sourcebook_input(
+            db_session, run_id=run_id, owner_user_id=owner, source=source
+        )
+
+
+@pytest.mark.asyncio
+async def test_task_admission_revalidates_sourcebook_contract(db_session) -> None:
+    source = _source()
+    owner, run_id = await _seed_run(db_session, source, suffix="task-sourcebook-contract")
+    sourcebook = await admit_sourcebook_work_item(
+        db_session, run_id=run_id, owner_user_id=owner, source=source
+    )
+    stale_payload = _sourcebook(source).model_copy(update={"teaching_plan_hash": "f" * 64})
+    payload = stale_payload.model_dump(mode="json")
+    await _ready(db_session, sourcebook.record, payload)
+
+    with pytest.raises(SemanticInputError, match="bound to a different approved Teaching Plan"):
+        await admit_shared_task_work_item(
+            db_session,
+            run_id=run_id,
+            owner_user_id=owner,
+            source=source,
+            sourcebook_output_hash=content_hash(payload),
+        )
+
+
+@pytest.mark.asyncio
 async def test_reload_validates_exact_sourcebook_and_task_lineage(db_session) -> None:
     source = _source()
     owner, run_id = await _seed_run(db_session, source)
@@ -377,13 +494,18 @@ async def test_reload_uses_active_sourcebook_replacement_and_preserves_task_sibl
                 run_id=run_id,
                 item_key="sourcebook:repair-1",
                 stage="sourcebook_generation",
-                input_hash="changed-sourcebook-input",
-                definition_hash="changed-sourcebook-definition",
+                input_hash=sourcebook.record.input_hash,
+                definition_hash=sourcebook.record.definition_hash,
+                composition_identity="sourcebook-repair-1",
             ),
         ),
     )
     await db_session.commit()
     await _ready(db_session, replacement, sourcebook_payload)
+    sourcebook_verified = await load_verified_sourcebook_input(
+        db_session, run_id=run_id, owner_user_id=owner, source=source
+    )
+    assert sourcebook_verified.work_item_id == replacement.id
     verified = await load_verified_semantic_inputs(
         db_session, run_id=run_id, owner_user_id=owner, source=source
     )

@@ -84,6 +84,20 @@ class VerifiedSemanticInputs(BaseModel):
         object.__setattr__(self, "work_item_ids", _FrozenMap(self.work_item_ids))
 
 
+class VerifiedSourcebookInput(BaseModel):
+    """Closed, lineage-bound sourcebook input for downstream authoring."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    run_id: str = Field(min_length=1)
+    owner_user_id: str = Field(min_length=1)
+    source: TeachingPlanSource
+    sourcebook: LessonSourcebook
+    sourcebook_output_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    work_item_id: str = Field(min_length=1)
+
+
 def _source_identity(source: TeachingPlanSource) -> SourceIdentity:
     try:
         return verify_teaching_plan_source(source)
@@ -200,6 +214,38 @@ def _active_semantic_items(
     return selected
 
 
+def _assert_active_sourcebook_chain(
+    items: Iterable[GenerationWorkItemModel],
+    *,
+    run_id: str,
+) -> GenerationWorkItemModel:
+    """Select exactly one current sourcebook leaf after validating all chains."""
+    materialized = tuple(items)
+    by_id = {item.id: item for item in materialized}
+    if len(by_id) != len(materialized):
+        raise SemanticInputError("semantic WorkItem identities are not unique")
+    for item in materialized:
+        if item.run_id != run_id:
+            raise SemanticInputError("semantic WorkItem belongs to a different Run")
+
+    active = active_work_items(materialized)
+    if len({item.id for item in active}) != len(active):
+        raise SemanticInputError("semantic WorkItem identities are not unique")
+    active_keys = [item.item_key for item in active]
+    if len(active_keys) != len(set(active_keys)):
+        raise SemanticInputError("duplicate active semantic WorkItem")
+
+    # Resolve every row so a malformed historical replacement cannot be hidden
+    # behind an otherwise valid leaf.
+    logical_keys = {item.id: _root_key(item, by_id) for item in materialized}
+    sourcebook_leaves = [item for item in active if logical_keys[item.id] == SOURCEBOOK_ITEM_KEY]
+    if not sourcebook_leaves:
+        raise SemanticInputError("missing active semantic WorkItems: ['sourcebook']")
+    if len(sourcebook_leaves) != 1:
+        raise SemanticInputError("duplicate active semantic WorkItem 'sourcebook'")
+    return sourcebook_leaves[0]
+
+
 def _verify_work_item_output(
     item: GenerationWorkItemModel,
     *,
@@ -215,6 +261,28 @@ def _verify_work_item_output(
     if observed != item.output_hash:
         raise SemanticInputError(f"{expected_key} WorkItem output hash does not match output")
     return item.output_json, observed
+
+
+def _verify_sourcebook_work_item(
+    item: GenerationWorkItemModel,
+    *,
+    source: TeachingPlanSource,
+) -> tuple[LessonSourcebook, str]:
+    raw, output_hash = _verify_work_item_output(item, expected_key=SOURCEBOOK_ITEM_KEY)
+    if item.stage != SOURCEBOOK_STAGE:
+        raise SemanticInputError("sourcebook WorkItem has an invalid stage")
+    if item.input_hash != _sourcebook_input_hash(source):
+        raise SemanticInputError("sourcebook WorkItem input identity is stale")
+    if item.definition_hash != _stable_hash(SOURCEBOOK_DEFINITION):
+        raise SemanticInputError("sourcebook WorkItem definition identity is stale")
+    if item.replaces_work_item_id is None and item.composition_identity is not None:
+        raise SemanticInputError("sourcebook WorkItem has an invalid composition identity")
+    try:
+        sourcebook = LessonSourcebook.model_validate(raw)
+    except (TypeError, ValueError) as exc:
+        raise SemanticInputError("sourcebook WorkItem output is malformed") from exc
+    _validate_sourcebook(source, sourcebook)
+    return sourcebook, output_hash
 
 
 def _validate_sourcebook(
@@ -336,7 +404,7 @@ async def admit_shared_task_work_item(
     sourcebook_item = selected.get(SOURCEBOOK_ITEM_KEY)
     if sourcebook_item is None:
         raise SemanticInputError("shared tasks require an admitted sourcebook WorkItem")
-    _raw, actual_hash = _verify_work_item_output(sourcebook_item, expected_key=SOURCEBOOK_ITEM_KEY)
+    _sourcebook, actual_hash = _verify_sourcebook_work_item(sourcebook_item, source=source)
     if actual_hash != sourcebook_output_hash:
         raise SemanticInputError("shared task dependency hash differs from ready sourcebook")
     return await add_work_item(
@@ -353,18 +421,15 @@ async def admit_shared_task_work_item(
     )
 
 
-async def load_verified_semantic_inputs(
-    session: AsyncSession,
+async def _load_verified_sourcebook_input_from_run(
+    run: GenerationRunModel,
     *,
-    run_id: str,
     owner_user_id: str,
     source: TeachingPlanSource,
-) -> VerifiedSemanticInputs:
-    """Reload accepted sourcebook/tasks without mutating durable state."""
-    run = await get_run_status(session, run_id=run_id, owner_user_id=owner_user_id)
-    if run is None:
-        raise SemanticInputError("SharedDocument Run is unavailable to this owner")
+) -> VerifiedSourcebookInput:
     identity = _source_identity(source)
+    if run.run_type != "shared_document":
+        raise SemanticInputError("semantic inputs require a SharedDocument Run")
     persisted = (
         run.source_artifact_type,
         run.source_artifact_id,
@@ -377,23 +442,62 @@ async def load_verified_semantic_inputs(
         identity.source_revision,
         identity.source_hash,
     )
-    if run.run_type != "shared_document":
-        raise SemanticInputError("semantic inputs require a SharedDocument Run")
     if persisted != observed:
         raise SemanticInputError("semantic input source differs from the admitted Run")
+
+    sourcebook_item = _assert_active_sourcebook_chain(run.work_items, run_id=run.id)
+    sourcebook, sourcebook_hash = _verify_sourcebook_work_item(sourcebook_item, source=source)
+    return VerifiedSourcebookInput(
+        run_id=run.id,
+        owner_user_id=owner_user_id,
+        source=source,
+        sourcebook=sourcebook,
+        sourcebook_output_hash=sourcebook_hash,
+        work_item_id=sourcebook_item.id,
+    )
+
+
+async def load_verified_sourcebook_input(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    owner_user_id: str,
+    source: TeachingPlanSource,
+) -> VerifiedSourcebookInput:
+    """Reload the exact active READY sourcebook leaf without requiring tasks."""
+    run = await get_run_status(session, run_id=run_id, owner_user_id=owner_user_id)
+    if run is None:
+        raise SemanticInputError("SharedDocument Run is unavailable to this owner")
+    return await _load_verified_sourcebook_input_from_run(
+        run,
+        owner_user_id=owner_user_id,
+        source=source,
+    )
+
+
+async def load_verified_semantic_inputs(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    owner_user_id: str,
+    source: TeachingPlanSource,
+) -> VerifiedSemanticInputs:
+    """Reload accepted sourcebook/tasks without mutating durable state."""
+    run = await get_run_status(session, run_id=run_id, owner_user_id=owner_user_id)
+    if run is None:
+        raise SemanticInputError("SharedDocument Run is unavailable to this owner")
+    verified_sourcebook = await _load_verified_sourcebook_input_from_run(
+        run,
+        owner_user_id=owner_user_id,
+        source=source,
+    )
     selected = _active_semantic_items(run.work_items)
     sourcebook_item = selected.get(SOURCEBOOK_ITEM_KEY)
     task_item = selected.get(TASK_ITEM_KEY)
-    if sourcebook_item is None:
-        raise SemanticInputError("missing active semantic WorkItems: ['sourcebook']")
-    sourcebook_raw, sourcebook_hash = _verify_work_item_output(
-        sourcebook_item, expected_key=SOURCEBOOK_ITEM_KEY
-    )
-    try:
-        sourcebook = LessonSourcebook.model_validate(sourcebook_raw)
-    except (TypeError, ValueError) as exc:
-        raise SemanticInputError("sourcebook WorkItem output is malformed") from exc
-    _validate_sourcebook(source, sourcebook)
+    if sourcebook_item is None or sourcebook_item.id != verified_sourcebook.work_item_id:
+        raise SemanticInputError("active sourcebook WorkItem changed during semantic reload")
+    sourcebook = verified_sourcebook.sourcebook
+    sourcebook_hash = verified_sourcebook.sourcebook_output_hash
     if task_item is None:
         raise SemanticInputError("missing active semantic WorkItems: ['shared_tasks']")
     task_raw, task_hash = _verify_work_item_output(task_item, expected_key=TASK_ITEM_KEY)
@@ -422,8 +526,10 @@ __all__ = [
     "TASK_ITEM_KEY",
     "TASK_STAGE",
     "SemanticInputError",
+    "VerifiedSourcebookInput",
     "VerifiedSemanticInputs",
     "admit_shared_task_work_item",
     "admit_sourcebook_work_item",
+    "load_verified_sourcebook_input",
     "load_verified_semantic_inputs",
 ]
