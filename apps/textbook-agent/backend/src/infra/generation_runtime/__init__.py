@@ -59,6 +59,7 @@ from infra.generation_runtime.repository import (
     reconcile_expired_work_item,
     replace_work_item,
     retry_work_item,
+    retry_work_items,
 )
 
 __all__ = [
@@ -118,4 +119,5 @@ __all__ = [
     "reconcile_expired_work_item",
     "replace_work_item",
     "retry_work_item",
+    "retry_work_items",
 ]

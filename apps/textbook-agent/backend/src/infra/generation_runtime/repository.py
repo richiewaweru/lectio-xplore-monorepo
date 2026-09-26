@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -845,120 +845,194 @@ async def retry_work_item(
     now: datetime | None = None,
 ) -> GenerationWorkItemModel:
     """Queue one failed-recoverable item without changing healthy siblings/checkpoints."""
-    current_time = _utcnow(now)
-    item = await session.scalar(
-        select(GenerationWorkItemModel)
+    run_id = await session.scalar(
+        select(GenerationWorkItemModel.run_id)
         .join(GenerationRunModel, GenerationRunModel.id == GenerationWorkItemModel.run_id)
         .where(
             GenerationWorkItemModel.id == work_item_id,
             GenerationRunModel.owner_user_id == owner_user_id,
-            _active_leaf_clause(),
         )
-        .with_for_update(skip_locked=True, of=GenerationWorkItemModel)
     )
-    if item is None:
-        owned_item_id = await session.scalar(
-            select(GenerationWorkItemModel.id)
-            .join(GenerationRunModel, GenerationRunModel.id == GenerationWorkItemModel.run_id)
-            .where(
-                GenerationWorkItemModel.id == work_item_id,
-                GenerationRunModel.owner_user_id == owner_user_id,
-            )
+    if run_id is None:
+        raise WorkItemNotFound("generation work item does not exist")
+    items = await retry_work_items(
+        session,
+        run_id=run_id,
+        work_item_ids=(work_item_id,),
+        owner_user_id=owner_user_id,
+        now=now,
+    )
+    return items[0]
+
+
+async def retry_work_items(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    work_item_ids: Sequence[str],
+    owner_user_id: str,
+    now: datetime | None = None,
+) -> tuple[GenerationWorkItemModel, ...]:
+    """Atomically retry failed leaves and reopen their Run once.
+
+    A failed-recoverable Run requires all active failed leaves in the same
+    retry batch. Healthy siblings and checkpoints remain untouched.
+    """
+    current_time = _utcnow(now)
+    requested_ids = tuple(work_item_ids)
+    requested_set = set(requested_ids)
+    if not requested_ids:
+        raise InvalidWorkItemTransition("at least one work item is required for retry")
+    if len(requested_set) != len(requested_ids):
+        raise InvalidWorkItemTransition("work item retry IDs must be unique")
+
+    visible_run_id = await session.scalar(
+        select(GenerationRunModel.id).where(
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
         )
-        if owned_item_id is None:
-            raise WorkItemNotFound("generation work item does not exist")
-        raise WorkItemUnavailable("work-item row is locked by another transaction")
-    if item.status != "failed_recoverable":
-        raise InvalidWorkItemTransition("only failed_recoverable work items can be retried")
-    if item.error_class not in {
-        "validation",
-        "provider_transport",
-        "provider_output",
-    }:
-        raise InvalidWorkItemTransition("this failure class is not eligible for targeted retry")
-    if item.recovery_action != RecoveryAction.RETRY.value:
-        raise InvalidWorkItemTransition("work item recovery action does not allow targeted retry")
-    if item.attempt >= item.max_attempts:
-        raise AttemptLimitExceeded("work item has no remaining retry attempts")
+    )
+    if visible_run_id is None:
+        raise RunNotFound("generation run is unavailable to this owner")
+
+    items = list(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel)
+                .join(GenerationRunModel, GenerationRunModel.id == GenerationWorkItemModel.run_id)
+                .where(
+                    GenerationWorkItemModel.id.in_(requested_set),
+                    GenerationWorkItemModel.run_id == run_id,
+                    GenerationRunModel.owner_user_id == owner_user_id,
+                    _active_leaf_clause(),
+                )
+                .order_by(GenerationWorkItemModel.id)
+                .with_for_update(skip_locked=True, of=GenerationWorkItemModel)
+            )
+        ).all()
+    )
+    if len(items) != len(requested_ids):
+        owned_rows = list(
+            (
+                await session.execute(
+                    select(GenerationWorkItemModel.id, GenerationWorkItemModel.run_id)
+                    .join(GenerationRunModel, GenerationRunModel.id == GenerationWorkItemModel.run_id)
+                    .where(
+                        GenerationWorkItemModel.id.in_(requested_set),
+                        GenerationRunModel.owner_user_id == owner_user_id,
+                    )
+                )
+            ).all()
+        )
+        owned_ids = {row.id for row in owned_rows}
+        if owned_ids != requested_set:
+            raise WorkItemNotFound("one or more generation work items do not exist")
+        if any(row.run_id != run_id for row in owned_rows):
+            raise InvalidWorkItemTransition(
+                "all retried work items must belong to the specified Run"
+            )
+        raise WorkItemUnavailable("a work-item row is locked or is not an active leaf")
 
     run = await _lock_run_for_item(
         session,
-        run_id=item.run_id,
+        run_id=run_id,
         allow_failed_recoverable=True,
     )
     if run.owner_user_id != owner_user_id:
-        raise RunNotFound("generation work item is unavailable to this owner")
+        raise RunNotFound("generation run is unavailable to this owner")
     if run.status not in {"queued", "running", "failed_recoverable"}:
-        raise InvalidWorkItemTransition("parent generation run cannot be retried")
+        raise InvalidWorkItemTransition("parent generation Run cannot be retried")
 
-    prior_attempt = item.attempt
-    prior_token = item.lease_token or 0
-    retryable_run = (
-        select(GenerationRunModel.id)
-        .where(
-            GenerationRunModel.id == item.run_id,
-            GenerationRunModel.owner_user_id == owner_user_id,
-            GenerationRunModel.status.in_({"queued", "running", "failed_recoverable"}),
+    if run.status == "failed_recoverable":
+        failed_ids = set(
+            (
+                await session.scalars(
+                    select(GenerationWorkItemModel.id).where(
+                        GenerationWorkItemModel.run_id == run_id,
+                        GenerationWorkItemModel.status.in_(
+                            {"failed_recoverable", "failed_terminal"}
+                        ),
+                        _active_leaf_clause(),
+                    )
+                )
+            ).all()
         )
-        .exists()
-    )
+        if failed_ids != requested_set:
+            raise InvalidRunTransition(
+                "all active failed work items must be retried together to reopen the Run"
+            )
+
+    for item in items:
+        if item.status != "failed_recoverable":
+            raise InvalidWorkItemTransition("only failed_recoverable work items can be retried")
+        if item.error_class not in {"validation", "provider_transport", "provider_output"}:
+            raise InvalidWorkItemTransition(
+                "this failure class is not eligible for targeted retry"
+            )
+        if item.recovery_action != RecoveryAction.RETRY.value:
+            raise InvalidWorkItemTransition(
+                "work item recovery action does not allow targeted retry"
+            )
+        if item.attempt >= item.max_attempts:
+            raise AttemptLimitExceeded("work item has no remaining retry attempts")
+
+    await _serialize_run_build_on_sqlite(session, run_id=run_id)
     async with session.begin_nested():
-        result = await _execute_fenced_update(
-            session,
-            update(GenerationWorkItemModel)
-            .where(
-                GenerationWorkItemModel.id == item.id,
-                GenerationWorkItemModel.run_id == item.run_id,
-                GenerationWorkItemModel.status == "failed_recoverable",
-                GenerationWorkItemModel.attempt == prior_attempt,
-                GenerationWorkItemModel.attempt < GenerationWorkItemModel.max_attempts,
-                GenerationWorkItemModel.error_class.in_(
-                    {"validation", "provider_transport", "provider_output"}
-                ),
-                GenerationWorkItemModel.recovery_action == RecoveryAction.RETRY.value,
-                _active_leaf_clause(),
-                (
-                    GenerationWorkItemModel.lease_token.is_(None)
-                    if item.lease_token is None
-                    else GenerationWorkItemModel.lease_token == item.lease_token
-                ),
-                retryable_run,
+        for item in items:
+            prior_attempt = item.attempt
+            prior_token = item.lease_token or 0
+            result = await _execute_fenced_update(
+                session,
+                update(GenerationWorkItemModel)
+                .where(
+                    GenerationWorkItemModel.id == item.id,
+                    GenerationWorkItemModel.run_id == run_id,
+                    GenerationWorkItemModel.status == "failed_recoverable",
+                    GenerationWorkItemModel.attempt == prior_attempt,
+                    GenerationWorkItemModel.attempt < GenerationWorkItemModel.max_attempts,
+                    GenerationWorkItemModel.error_class.in_(
+                        {"validation", "provider_transport", "provider_output"}
+                    ),
+                    GenerationWorkItemModel.recovery_action == RecoveryAction.RETRY.value,
+                    _active_leaf_clause(),
+                )
+                .values(
+                    status="queued",
+                    attempt=prior_attempt + 1,
+                    lease_owner=None,
+                    lease_token=prior_token + 1,
+                    lease_expires_at=None,
+                    error_code=None,
+                    error_class=None,
+                    error_summary=None,
+                    recovery_action=None,
+                    output_json=None,
+                    output_hash=None,
+                    completed_at=None,
+                    updated_at=current_time,
+                )
+                .execution_options(synchronize_session=False),
             )
-            .values(
-                status="queued",
-                attempt=prior_attempt + 1,
-                lease_owner=None,
-                lease_token=prior_token + 1,
-                lease_expires_at=None,
-                error_code=None,
-                error_class=None,
-                error_summary=None,
-                recovery_action=None,
-                output_json=None,
-                output_hash=None,
-                completed_at=None,
-                updated_at=current_time,
+            if result.rowcount != 1:
+                raise InvalidWorkItemTransition("work item or parent Run changed before retry")
+        await session.flush()
+        for item in items:
+            await session.refresh(item)
+            await append_event(
+                session,
+                run_id=run_id,
+                work_item_id=item.id,
+                event_type="work_item_retry_queued",
+                safe_payload={
+                    "from_attempt": item.attempt - 1,
+                    "attempt": item.attempt,
+                    "recovery_action": RecoveryAction.RETRY.value,
+                },
             )
-            .execution_options(synchronize_session=False),
-        )
-        if result.rowcount != 1:
-            raise InvalidWorkItemTransition("work-item or parent run changed before retry")
-        await session.refresh(item)
-        await session.refresh(run)
-        await append_event(
-            session,
-            run_id=run.id,
-            work_item_id=item.id,
-            event_type="work_item_retry_queued",
-            safe_payload={
-                "from_attempt": prior_attempt,
-                "attempt": item.attempt,
-                "recovery_action": RecoveryAction.RETRY.value,
-            },
-        )
         await _refresh_run_lifecycle(session, run=run, now=current_time)
-    await session.refresh(item)
-    return item
+    for item in items:
+        await session.refresh(item)
+    return tuple(items)
 
 
 async def reconcile_expired_work_item(

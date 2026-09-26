@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -28,6 +29,7 @@ from infra.generation_runtime.repository import (
     cancel_run,
     get_run_status,
     retry_work_item,
+    retry_work_items,
 )
 
 router = APIRouter(prefix="/api/v1/generation", tags=["generation-runtime"])
@@ -35,6 +37,10 @@ router = APIRouter(prefix="/api/v1/generation", tags=["generation-runtime"])
 _ACTIVE_ITEM_STATUSES = frozenset({"queued", "running"})
 _FAILED_ITEM_STATUSES = frozenset({"failed_recoverable", "failed_terminal"})
 _RETRYABLE_ERROR_CLASSES = frozenset({"validation", "provider_transport", "provider_output"})
+
+
+class RetryRunWorkItemsRequest(BaseModel):
+    work_item_ids: list[str] = Field(min_length=1)
 
 
 def _safe_error(record: Any) -> dict[str, str] | None:
@@ -251,6 +257,37 @@ async def retry_work_item_route(
                 owner_user_id=current_user.id,
             )
             run_id = item.run_id
+    except (RunNotFound, WorkItemNotFound):
+        raise _not_found() from None
+    except (
+        InvalidRunTransition,
+        InvalidWorkItemTransition,
+        AttemptLimitExceeded,
+        WorkItemUnavailable,
+    ) as exc:
+        raise _conflict(exc) from None
+
+    run = await get_run_status(session, run_id=run_id, owner_user_id=current_user.id)
+    if run is None:
+        raise _not_found()
+    return _run_status(run)
+
+
+@router.post("/runs/{run_id}/retry")
+async def retry_run_work_items_route(
+    run_id: str,
+    request: RetryRunWorkItemsRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    try:
+        async with session.begin():
+            await retry_work_items(
+                session,
+                run_id=run_id,
+                work_item_ids=request.work_item_ids,
+                owner_user_id=current_user.id,
+            )
     except (RunNotFound, WorkItemNotFound):
         raise _not_found() from None
     except (

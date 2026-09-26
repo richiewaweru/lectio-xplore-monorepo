@@ -63,6 +63,7 @@ from infra.generation_runtime import (
     reconcile_expired_work_item,
     replace_work_item,
     retry_work_item,
+    retry_work_items,
 )
 
 
@@ -1211,6 +1212,174 @@ async def test_targeted_retry_preserves_ready_sibling_and_checkpoint(db_session)
             output_hash=content_hash({"late": True}),
             now=now + timedelta(seconds=7),
         )
+
+
+@pytest.mark.asyncio
+async def test_batch_retry_reopens_run_atomically_and_preserves_ready_sibling(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session, suffix="batch-retry")
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    now = datetime(2026, 9, 10, tzinfo=UTC)
+    targets = [
+        await add_work_item(
+            db_session,
+            WorkItemAdmission(
+                run_id=admitted.record.id,
+                item_key=f"section:batch-{index}",
+                stage="section_writing",
+                input_hash="input-checkpoint",
+                definition_hash="definition-checkpoint",
+                composition_identity="section:checkpoint:v1",
+                max_attempts=3,
+            ),
+        )
+        for index in range(2)
+    ]
+    sibling = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:batch-healthy",
+            stage="section_writing",
+            input_hash="batch-sibling-input",
+            definition_hash="batch-sibling-definition",
+        ),
+    )
+    sibling_claim = await claim_work_item(
+        db_session,
+        work_item_id=sibling.record.id,
+        worker_id="batch-sibling-worker",
+        source=_source_identity(),
+        now=now,
+    )
+    sibling_output = {"section": "keep"}
+    await complete_work_item(
+        db_session,
+        work_item_id=sibling.record.id,
+        worker_id="batch-sibling-worker",
+        lease_token=sibling_claim.lease_token,
+        output_json=sibling_output,
+        output_hash=content_hash(sibling_output),
+        now=now + timedelta(seconds=1),
+    )
+    checkpoints = {}
+    for index, target in enumerate(targets):
+        claim = await claim_work_item(
+            db_session,
+            work_item_id=target.record.id,
+            worker_id=f"batch-worker-{index}",
+            source=_source_identity(),
+            now=now + timedelta(seconds=2 + index * 2),
+        )
+        checkpoints[target.record.id] = await persist_checkpoint(
+            db_session,
+            work_item_id=target.record.id,
+            worker_id=f"batch-worker-{index}",
+            lease_token=claim.lease_token,
+            compatibility=_checkpoint_compatibility(),
+            payload={"saved": index},
+            now=now + timedelta(seconds=3 + index * 2),
+        )
+        await fail_work_item(
+            db_session,
+            work_item_id=target.record.id,
+            worker_id=f"batch-worker-{index}",
+            lease_token=claim.lease_token,
+            failure=_failure(),
+            now=now + timedelta(seconds=4 + index * 2),
+        )
+
+    run = await db_session.get(GenerationRunModel, admitted.record.id)
+    assert run is not None and run.status == "failed_recoverable"
+    retried = await retry_work_items(
+        db_session,
+        run_id=run.id,
+        work_item_ids=[target.record.id for target in reversed(targets)],
+        owner_user_id=owner_id,
+        now=now + timedelta(seconds=10),
+    )
+    assert [item.id for item in retried] == sorted(target.record.id for target in targets)
+    assert all(item.status == "queued" and item.attempt == 2 for item in retried)
+    assert all(
+        item.checkpoint_json == checkpoints[item.id].model_dump(mode="json")
+        for item in retried
+    )
+    assert run.status == "queued"
+    await db_session.refresh(sibling.record)
+    assert sibling.record.status == "ready"
+    assert sibling.record.output_json == sibling_output
+    assert sibling.record.output_hash == content_hash(sibling_output)
+    events = list(
+        (
+            await db_session.scalars(
+                select(GenerationEventModel).where(
+                    GenerationEventModel.run_id == run.id,
+                    GenerationEventModel.event_type == "work_item_retry_queued",
+                )
+            )
+        ).all()
+    )
+    assert {event.work_item_id for event in events} == {target.record.id for target in targets}
+
+
+@pytest.mark.asyncio
+async def test_batch_retry_rejects_mixed_invalid_items_without_partial_changes(db_session) -> None:
+    owner_id, lesson_id = await _seed_lesson(db_session, suffix="batch-invalid")
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    now = datetime(2026, 9, 11, tzinfo=UTC)
+    target = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:batch-invalid-target",
+            stage="section_writing",
+            input_hash="invalid-target-input",
+            definition_hash="invalid-target-definition",
+        ),
+    )
+    sibling = await add_work_item(
+        db_session,
+        WorkItemAdmission(
+            run_id=admitted.record.id,
+            item_key="section:batch-invalid-sibling",
+            stage="section_writing",
+            input_hash="invalid-sibling-input",
+            definition_hash="invalid-sibling-definition",
+        ),
+    )
+    claim = await claim_work_item(
+        db_session,
+        work_item_id=target.record.id,
+        worker_id="batch-invalid-worker",
+        source=_source_identity(),
+        now=now,
+    )
+    await fail_work_item(
+        db_session,
+        work_item_id=target.record.id,
+        worker_id="batch-invalid-worker",
+        lease_token=claim.lease_token,
+        failure=_failure(),
+        now=now + timedelta(seconds=1),
+    )
+    with pytest.raises(InvalidWorkItemTransition):
+        await retry_work_items(
+            db_session,
+            run_id=admitted.record.id,
+            work_item_ids=[target.record.id, sibling.record.id],
+            owner_user_id=owner_id,
+            now=now + timedelta(seconds=2),
+        )
+    await db_session.refresh(target.record)
+    await db_session.refresh(sibling.record)
+    assert target.record.status == "failed_recoverable" and target.record.attempt == 1
+    assert sibling.record.status == "queued" and sibling.record.attempt == 1
+    retry_events = await db_session.scalar(
+        select(func.count(GenerationEventModel.id)).where(
+            GenerationEventModel.run_id == admitted.record.id,
+            GenerationEventModel.event_type == "work_item_retry_queued",
+        )
+    )
+    assert retry_events == 0
 
 
 @pytest.mark.asyncio
