@@ -156,6 +156,102 @@ async def test_author_shared_tasks_binds_exact_lineage_and_ids() -> None:
 
 
 @pytest.mark.asyncio
+async def test_select_one_requires_declared_single_choice_key_and_repairs_invalid_evaluation() -> None:
+    invalid = _task()
+    invalid["tasks"][0]["evaluation"] = {
+        "type": "rubric",
+        "criteria": ["Select the correct option."],
+    }
+    repaired = _task()
+    repaired["tasks"][0]["evaluation"] = {
+        "type": "choice_keys",
+        "correct_keys": ["a"],
+    }
+    provider = ScriptedProvider(invalid, repaired)
+
+    tasks = await author_shared_tasks(
+        _plan(),
+        _sourcebook(_plan()),
+        approved_item_snapshot=_items_snapshot(_plan()),
+        provider=provider,
+    )
+
+    instructions = provider.calls[0].prompt
+    assert "at least two options whose non-empty IDs are unique" in instructions
+    assert "exactly one correct key naming a declared option ID" in instructions
+    assert "Use no other evaluation type for select-one" in instructions
+    assert len(provider.calls) == 2
+    assert provider.calls[1].is_repair is True
+    assert tasks[0].response["type"] == "single_choice"
+    assert tasks[0].evaluation == {"type": "choice_keys", "correct_keys": ["a"]}
+
+
+@pytest.mark.asyncio
+async def test_missing_values_requires_same_nonempty_answers_in_bounded_repair() -> None:
+    plan = _plan()
+    block = plan.sections[0].blocks[0].model_copy(
+        update={
+            "learner_action": LearnerActionBrief(
+                action="complete-missing-values",
+                target="the key measurement",
+                purpose="Check the learner can supply the missing measurement",
+                expected_evidence="Learner supplies the approved missing measurement.",
+                difficulty="guided",
+            ),
+        }
+    )
+    plan = plan.model_copy(
+        update={"sections": [plan.sections[0].model_copy(update={"blocks": [block]})]}
+    )
+    invalid = {
+        "tasks": [
+            {
+                "prompt": "Complete the missing measurement.",
+                "response": {"type": "missing_values", "values": []},
+                "evaluation": {
+                    "type": "accepted_answers",
+                    "accepted_answers": [],
+                    "criteria": ["Supply the measurement."],
+                },
+                "expected_evidence": "Learner supplies the approved missing measurement.",
+                "difficulty": "guided",
+            }
+        ]
+    }
+    repaired = {
+        "tasks": [
+            {
+                "prompt": "Complete the missing measurement.",
+                "response": {"type": "missing_values", "values": [12.5]},
+                "evaluation": {
+                    "type": "accepted_answers",
+                    "accepted_answers": [12.5],
+                },
+                "expected_evidence": "Learner supplies the approved missing measurement.",
+                "difficulty": "guided",
+            }
+        ]
+    }
+    provider = ScriptedProvider(invalid, repaired)
+
+    tasks = await author_shared_tasks(
+        plan,
+        _sourcebook(plan),
+        approved_item_snapshot=_items_snapshot(plan),
+        provider=provider,
+    )
+
+    instructions = provider.calls[0].prompt
+    assert "non-empty list of non-empty strings or finite numbers" in instructions
+    assert "exactly matching response.values" in instructions
+    assert "include only fields allowed for those selected types" in instructions
+    assert len(provider.calls) == 2
+    assert provider.calls[1].is_repair is True
+    assert tasks[0].response["values"] == [12.5]
+    assert tasks[0].evaluation["accepted_answers"] == [12.5]
+
+
+@pytest.mark.asyncio
 async def test_shared_task_llm_provider_uses_closed_provider_output_type(monkeypatch) -> None:
     import infra.authoring.structured_provider as structured_provider
 
