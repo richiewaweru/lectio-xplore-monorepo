@@ -433,8 +433,19 @@ def validate_section_continuity(
                     [node.id for node in section.nodes if not isinstance(node, TaskAnchor)],
                 )
             )
+    must_establish = tuple(teaching_plan_section.must_establish or ())
     for statement in teaching_plan_section.avoid_repeating or ():
-        if _coverage(statement, text):
+        # Avoidance prose may mention the same topic labels as required new
+        # content.  Do not classify that required teaching as repetition when
+        # the accepted section also realizes detail that is unique to a
+        # must-establish requirement.
+        covered_required_detail = any(
+            _coverage(requirement, text)
+            and bool(unique_requirement_tokens := _tokens(requirement) - _tokens(statement))
+            and _coverage(" ".join(sorted(unique_requirement_tokens)), text)
+            for requirement in must_establish
+        )
+        if _coverage(statement, text) and not covered_required_detail:
             issues.append(
                 _issue(
                     "avoid_repeating_violated",

@@ -119,6 +119,51 @@ def test_valid_section_covers_plan_and_exact_composer_shape() -> None:
     assert issues == ()
 
 
+def test_avoid_repetition_does_not_reject_topic_terms_required_for_new_content() -> None:
+    section = _section(
+        text=(
+            "Glucose and oxygen are reactants; carbon dioxide, water, and ATP are products. "
+            "Reactants are taken in and used up, while products are released or produced."
+        )
+    )
+    plan = _plan(
+        "section-1",
+        title="Light and energy",
+        avoid=[
+            "Do not re-recall what glucose, oxygen, carbon dioxide, water, or ATP are; "
+            "that recall happened in the opening section"
+        ],
+        must=[
+            "Glucose and oxygen are reactants, while carbon dioxide, water, and ATP are products"
+        ],
+    )
+
+    issues = validate_section_continuity(
+        section=section,
+        teaching_plan_section=plan,
+        expected_nodes=_shape(),
+    )
+
+    assert "avoid_repeating_violated" not in {issue.issue_code for issue in issues}
+
+
+def test_avoid_repetition_still_rejects_repeated_content_without_required_detail() -> None:
+    section = _section(text="Light energy supports photosynthesis and plant growth.")
+    plan = _plan(
+        "section-1",
+        title="Light and energy",
+        avoid=["Light energy supports photosynthesis and plant growth"],
+    )
+
+    issues = validate_section_continuity(
+        section=section,
+        teaching_plan_section=plan,
+        expected_nodes=_shape(),
+    )
+
+    assert "avoid_repeating_violated" in {issue.issue_code for issue in issues}
+
+
 def test_shape_mismatch_reports_typed_issues_without_rewriting() -> None:
     section = _section()
     section = section.model_copy(
