@@ -16,7 +16,7 @@ from curriculum.prompts import (
 from print.generation.whole_lesson.validation import SPATIAL_PROCESS_REPRESENTATION_INTENTS
 
 V1_SHA256 = "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
-V2_SHA256 = "cd7e35ee89d3650802a4df80436c9c782cc7b96acde10b1ec936810db079ffba"
+V2_SHA256 = "a2f9291530011049bc8461fa60a5f29a34d249737a03954dda872d98cca86329"
 
 
 def _sha256(text: str) -> str:
@@ -77,3 +77,17 @@ def test_active_v2_prompt_requires_enriched_continuity_without_format_leaks() ->
         '"questions"',
     ):
         assert primitive not in output_schema
+
+
+def test_active_v2_prompt_binds_sourcebook_needs_to_stable_refs() -> None:
+    prompt = lesson_approach_planner_prompt()
+    output_schema = prompt.split("## OUTPUT", 1)[1].split("## SELF-CHECK", 1)[0]
+    normalized = " ".join(prompt.split())
+
+    assert '"sourcebook_needs": [str]' in output_schema
+    assert '"sourcebook_refs": [str]' in output_schema
+    assert "Whenever a block has one or more `sourcebook_needs`" in normalized
+    assert "give it one or more explicit `sourcebook_refs`" in normalized
+    assert "These exact refs become the approved sourcebook entry IDs" in normalized
+    assert "When a block has no sourcebook needs, set `sourcebook_refs` to `[]`" in normalized
+    assert "do not substitute evidence/provenance citations" in normalized

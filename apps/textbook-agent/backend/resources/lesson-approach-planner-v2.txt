@@ -339,6 +339,7 @@ JSON only. No preamble, no code fences, no commentary.
           "stimulus_dependencies": [str],
           "task_mode": "none" | "formative" | "assessment",
           "sourcebook_needs": [str],
+          "sourcebook_refs": [str],
           "learner_action": {
             "action": str,
             "target": str,
@@ -357,6 +358,15 @@ learner must do something that produces evidence. Never put Print form ids,
 Learn capability/component ids, page object ids, or interaction kinds here.
 `stimulus_dependencies` and `source_question_ids` are block provenance, not
 part of learner-task meaning.
+
+`sourcebook_needs` and `sourcebook_refs` are a paired contract. Whenever a
+block has one or more `sourcebook_needs`, give it one or more explicit
+`sourcebook_refs`. Each ref is a stable, non-empty, canonical identity for a
+sourcebook entry: use the same ref wherever the same entry is needed, and use
+distinct refs only for distinct entries. These exact refs become the approved
+sourcebook entry IDs; do not substitute evidence/provenance citations or make
+up a second identifier scheme. When a block has no sourcebook needs, set
+`sourcebook_refs` to `[]`. Never leave refs empty when needs are present.
 
 Sections appear in selected slot order, one output section per supplied slot.
 Do not output slot_id, block id, or position. The backend attaches the exact
