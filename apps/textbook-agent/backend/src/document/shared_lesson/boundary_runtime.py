@@ -56,6 +56,7 @@ from infra.generation_runtime import (
 BOUNDARY_STAGE = "continuity_validation"
 BOUNDARY_DEFINITION = "shared-boundary-runtime:v1"
 MAX_CONCURRENT_BOUNDARIES = 4
+BOUNDARY_VALIDATION_LEASE_FRACTION = 0.8
 
 
 class BoundaryRuntimeError(ValueError):
@@ -68,6 +69,10 @@ class BoundarySourceConflict(BoundaryRuntimeError):
 
 class BoundaryCheckpointError(BoundaryRuntimeError):
     """A persisted boundary checkpoint cannot be safely reused."""
+
+
+class BoundaryValidationDeadlineExceeded(TimeoutError):
+    """Aggregate semantic/repair work exceeded its fenced lease budget."""
 
 
 class BoundaryWorkOrder(BaseModel):
@@ -567,6 +572,13 @@ def _validate_item_binding(item: GenerationWorkItemModel, work: BoundaryWorkOrde
 
 
 def _failure_for_exception(exc: Exception) -> WorkItemFailure:
+    if isinstance(exc, BoundaryValidationDeadlineExceeded):
+        return WorkItemFailure(
+            error_code="boundary_validation_timeout",
+            error_class=ErrorClass.PROVIDER_TRANSPORT,
+            safe_summary="Boundary validation exceeded its aggregate deadline.",
+            recovery_action=RecoveryAction.RETRY,
+        )
     if isinstance(exc, (TimeoutError, ConnectionError)):
         return WorkItemFailure(
             error_code="boundary_provider_transport",
@@ -635,6 +647,13 @@ async def execute_boundary_work_item(
         lease_seconds=job.lease_seconds,
         now=now,
     )
+    # Keep a reserve inside the item lease for the final fenced recheck and
+    # failure/completion persistence.  All semantic review and targeted
+    # repair calls share this one aggregate deadline.
+    loop = asyncio.get_running_loop()
+    validation_deadline = loop.time() + (
+        job.lease_seconds * BOUNDARY_VALIDATION_LEASE_FRACTION
+    )
     try:
         _validate_item_binding(item, work)
         compatibility = _checkpoint_compatibility(source=identity, item=item)
@@ -684,15 +703,25 @@ async def execute_boundary_work_item(
 
     try:
         previous_plan, next_plan = _plan_pair(job.source, job.previous_section, job.next_section)
-        result = await validate_and_repair_boundary(
-            previous_section=job.previous_section,
-            previous_plan=previous_plan,
-            next_section=job.next_section,
-            next_plan=next_plan,
-            semantic_validator=job.semantic_validator,
-            repair_engine=job.repair_engine,
-            writer_requests=job.writer_requests,
-        )
+        remaining_seconds = validation_deadline - loop.time()
+        if remaining_seconds <= 0:
+            raise BoundaryValidationDeadlineExceeded
+        timeout = asyncio.timeout(remaining_seconds)
+        try:
+            async with timeout:
+                result = await validate_and_repair_boundary(
+                    previous_section=job.previous_section,
+                    previous_plan=previous_plan,
+                    next_section=job.next_section,
+                    next_plan=next_plan,
+                    semantic_validator=job.semantic_validator,
+                    repair_engine=job.repair_engine,
+                    writer_requests=job.writer_requests,
+                )
+        except TimeoutError as exc:
+            if timeout.expired():
+                raise BoundaryValidationDeadlineExceeded from exc
+            raise
     except LeaseLostError:
         raise
     except Exception as exc:  # noqa: BLE001 - persist unknown validator failures as typed failures.
