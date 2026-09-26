@@ -107,6 +107,22 @@ def test_unbound_response_action_is_rejected_before_fork() -> None:
     assert "TEACHING_UNBOUND_RESPONSE_ACTION" in errors[0]
 
 
+def test_unbound_response_action_is_legal_when_declared_formative() -> None:
+    plan = _plan(
+        _block(
+            task_mode="formative",
+            learner_action=LearnerActionBrief(
+                action="enter-text",
+                target="explanation",
+                purpose="articulate reasoning",
+                expected_evidence="short explanation",
+                difficulty="guided",
+            ),
+        )
+    )
+    assert _task_source_contract_errors(plan) == []
+
+
 def test_bound_source_without_action_is_rejected_before_fork() -> None:
     plan = _plan(_block(source_question_ids=["mc-1"]))
     errors = _task_source_contract_errors(plan)

@@ -459,6 +459,11 @@ async def test_teaching_multi_source_draft_repairs_to_one_approved_mcq() -> None
     assert "approved_item_ids" not in policy["allowed_evidence_refs"]
 
     repair = payloads[1]["repair"]
+    repair_instruction = repair["instruction"]
+    assert "task_mode='formative'" in repair_instruction
+    assert "source_question_ids empty" in repair_instruction
+    assert "task_mode='assessment'" in repair_instruction
+    assert "task_mode='none' only" in repair_instruction
     assert repair["previous_output"]["sections"][0]["blocks"][0][
         "source_question_ids"
     ] == item_ids

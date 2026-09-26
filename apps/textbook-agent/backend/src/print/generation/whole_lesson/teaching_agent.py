@@ -769,11 +769,16 @@ async def run_lesson_approach_planner(
                             "construct or concatenate IDs. Bind sources only inside "
                             "required_assessment_slots when that list is non-empty. Every "
                             "bound source must have a learner_action whose action appears "
-                            "in that source's allowed_actions. Do not emit an unbound "
-                            "response-bearing learner_action. Keep optional guided or "
-                            "independent practice passive when no structurally planned "
-                            "approved source belongs there. Remove forbidden terminology "
-                            "and use only allowed_evidence_refs."
+                            "in that source's allowed_actions. For every response-bearing "
+                            "learner_action, use task_mode='formative' and leave "
+                            "source_question_ids empty when it is an unbound in-lesson "
+                            "task; use task_mode='assessment' only when it binds an "
+                            "approved source_question_id. Use task_mode='none' only "
+                            "for passive, non-response actions. Do not invent approved "
+                            "source IDs or turn a valid formative task into an assessment. "
+                            "Keep optional guided or independent practice passive when no "
+                            "structurally planned approved source belongs there. Remove "
+                            "forbidden terminology and use only allowed_evidence_refs."
                         ),
                         "previous_output": previous_output,
                         "validation_errors": repair_errors,
