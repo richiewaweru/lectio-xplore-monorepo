@@ -7,10 +7,14 @@ import pytest
 from sqlalchemy import select
 from test_shared_lesson_approved_source import _prepared
 
+from curriculum.lesson_sourcebook.models import LessonSourcebook
 from document.shared_lesson import worker
 from document.shared_lesson.approved_source import ApprovedSourceVerificationError
 from document.shared_lesson.run_admission import admit_shared_document_run
-from document.shared_lesson.semantic_inputs import SemanticInputError
+from document.shared_lesson.semantic_inputs import (
+    SemanticInputError,
+    admit_shared_task_work_item,
+)
 from infra.database.models import GenerationEventModel, GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import SourceIdentity
@@ -288,7 +292,9 @@ async def test_ready_sourcebook_dependency_loss_fails_run_durably_and_stops_afte
 
 
 @pytest.mark.asyncio
-async def test_ready_sourcebook_approved_source_loss_fails_as_source_conflict(db_session, monkeypatch):
+async def test_ready_sourcebook_approved_source_loss_fails_as_source_conflict(
+    db_session, monkeypatch
+):
     generation, lesson, _provenance, source = await _prepared(db_session)
     admission, sourcebook = await _ready_sourcebook(
         db_session,
@@ -371,3 +377,146 @@ async def test_ready_sourcebook_programming_error_is_not_classified_as_source_co
     assert run is not None
     assert run.status == "queued"
     assert run.error_class is None
+
+
+async def _ready_semantic_dependencies(
+    db_session, *, source, lesson, generation, request_key, task_status="ready"
+):
+    admission = await _admitted(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key=request_key,
+    )
+    sourcebook_item = await db_session.get(
+        GenerationWorkItemModel, admission.sourcebook_work_item.id
+    )
+    assert sourcebook_item is not None
+    sourcebook = LessonSourcebook(
+        teaching_plan_id=source.id,
+        teaching_plan_revision=source.revision,
+        teaching_plan_hash=source.content_hash,
+        entries=[],
+    )
+    sourcebook_payload = sourcebook.model_dump(mode="json")
+    sourcebook_item.status = "ready"
+    sourcebook_item.output_json = sourcebook_payload
+    sourcebook_item.output_hash = content_hash(sourcebook_payload)
+    await db_session.commit()
+    task_admission = await admit_shared_task_work_item(
+        db_session,
+        run_id=admission.run.id,
+        owner_user_id=admission.run.owner_user_id,
+        source=source,
+        sourcebook_output_hash=sourcebook_item.output_hash,
+    )
+    task_item = await db_session.get(GenerationWorkItemModel, task_admission.record.id)
+    assert task_item is not None
+    task_item.status = task_status
+    task_item.output_json = []
+    task_item.output_hash = content_hash([])
+    run = await db_session.get(GenerationRunModel, admission.run.id)
+    assert run is not None
+    run.stage = "shared_task_generation"
+    await db_session.commit()
+    return admission, task_item
+
+
+@pytest.mark.asyncio
+async def test_ready_semantic_leaves_dispatch_sections_on_same_run_and_stop_after_restart(
+    db_session, monkeypatch
+):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, _task = await _ready_semantic_dependencies(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-section-stage",
+    )
+    for item_key, stage in (
+        ("compose:orient", "section_composition"),
+        ("write:orient", "section_writing"),
+    ):
+        item = GenerationWorkItemModel(
+            run_id=admission.run.id,
+            item_key=item_key,
+            stage=stage,
+            status="ready",
+            input_hash="i" * 64,
+            definition_hash="d" * 64,
+            output_json={"ready": True},
+            output_hash=content_hash({"ready": True}),
+        )
+        db_session.add(item)
+    await db_session.commit()
+    verifier = _bind_source_context(monkeypatch, source)
+    composer_provider = object()
+    writer_provider = object()
+    dispatched = []
+
+    class Dispatcher:
+        def __init__(self, session_factory, **kwargs):
+            assert session_factory is not None
+            assert kwargs["composer_provider"] is composer_provider
+            assert kwargs["writer_provider"] is writer_provider
+
+        async def run_one(self, **kwargs):
+            dispatched.append(kwargs)
+            return SimpleNamespace(
+                blocked=False,
+                writer_dispatched=len(source.plan.sections),
+                writer_preserved=0,
+            )
+
+    monkeypatch.setattr(worker, "SharedSectionDispatcher", Dispatcher)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id="worker-section-stage",
+        composer_provider=composer_provider,
+        writer_provider=writer_provider,
+    )
+
+    assert await instance.run_one(db_session)
+    assert len(dispatched) == 1
+    assert dispatched[0]["run_id"] == admission.run.id
+    assert dispatched[0]["owner_user_id"] == admission.run.owner_user_id
+    assert dispatched[0]["source"] == source
+    assert dispatched[0]["source_verifier"] is verifier
+    run = await db_session.get(GenerationRunModel, admission.run.id)
+    assert run is not None and run.stage == "section_writing"
+    assert run.status in {"queued", "running"}
+
+    restarted = worker.SharedDocumentWorker(
+        lambda: None, worker_id="worker-section-stage-restarted"
+    )
+    assert await restarted.run_one(db_session) is False
+    assert len(dispatched) == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_task_dependency_never_dispatches_sections(db_session, monkeypatch):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, _task = await _ready_semantic_dependencies(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-section-failed-task",
+        task_status="failed_recoverable",
+    )
+    _bind_source_context(monkeypatch, source)
+    dispatch_calls = []
+
+    class Dispatcher:
+        def __init__(self, *_args, **_kwargs):
+            dispatch_calls.append(True)
+
+    monkeypatch.setattr(worker, "SharedSectionDispatcher", Dispatcher)
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-failed-task")
+
+    assert await instance.run_one(db_session) is False
+    assert dispatch_calls == []
+    run = await db_session.get(GenerationRunModel, admission.run.id)
+    assert run is not None and run.stage == "shared_task_generation"

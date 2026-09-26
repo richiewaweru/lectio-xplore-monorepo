@@ -25,6 +25,7 @@ from document.shared_lesson.approved_source import (
     make_approved_source_verifier,
 )
 from document.shared_lesson.runtime import TeachingPlanSource
+from document.shared_lesson.section_dispatcher import SharedSectionDispatcher
 from document.shared_lesson.semantic_inputs import (
     SOURCEBOOK_ITEM_KEY,
     TASK_ITEM_KEY,
@@ -76,6 +77,7 @@ class _Candidate:
     path_lesson_id: str
     preparation_generation_id: str
     admit_tasks: bool = False
+    dispatch_sections: bool = False
 
 
 def _now(value: datetime | None = None) -> datetime:
@@ -123,6 +125,8 @@ class SharedDocumentWorker:
         worker_id: str | None = None,
         provider: AuthoringProvider | None = None,
         engine: AuthoringEngine | None = None,
+        composer_provider: Callable[[dict[str, Any]], Any] | None = None,
+        writer_provider: Callable[[dict[str, Any]], Any] | None = None,
         lease_seconds: int = 300,
         poll_interval_seconds: float = 0.25,
     ) -> None:
@@ -134,6 +138,8 @@ class SharedDocumentWorker:
         self.worker_id = worker_id or f"shared-document-{uuid.uuid4()}"
         self.provider = provider
         self.engine = engine
+        self.composer_provider = composer_provider
+        self.writer_provider = writer_provider
         self.lease_seconds = lease_seconds
         self.poll_interval_seconds = poll_interval_seconds
         self._stop = asyncio.Event()
@@ -238,6 +244,29 @@ class SharedDocumentWorker:
             await session.commit()
             return True
 
+        if candidate.dispatch_sections:
+            dispatcher = SharedSectionDispatcher(
+                self.session_factory,
+                worker_id=self.worker_id,
+                composer_provider=self.composer_provider,
+                writer_provider=self.writer_provider,
+                lease_seconds=self.lease_seconds,
+            )
+            outcome = await dispatcher.run_one(
+                run_id=candidate.run.id,
+                owner_user_id=candidate.run.owner_user_id,
+                source=source,
+                source_verifier=verifier,
+                session=session,
+                now=current,
+            )
+            if not outcome.blocked:
+                candidate.run.stage = "section_writing"
+            else:
+                candidate.run.stage = "section_composition"
+            await session.commit()
+            return True
+
         if candidate.item is None:
             return False
         status = "queued"
@@ -335,13 +364,47 @@ class SharedDocumentWorker:
                         preparation_generation_id=preparation_generation_id,
                         admit_tasks=True,
                     )
-                if _eligible(task, now):
+                if task is not None and _eligible(task, now):
                     return _Candidate(
                         run=run,
                         item=task,
                         path_lesson_id=path_lesson_id,
                         preparation_generation_id=preparation_generation_id,
                     )
+                if task is not None and task.status == "ready":
+                    section_items = [
+                        item for item in active if item.item_key.startswith(("compose:", "write:"))
+                    ]
+                    composer_items = [
+                        item for item in section_items if item.item_key.startswith("compose:")
+                    ]
+                    writer_items = [
+                        item for item in section_items if item.item_key.startswith("write:")
+                    ]
+                    initial_dispatch = run.stage == "shared_task_generation"
+                    section_work_eligible = any(_eligible(item, now) for item in section_items)
+                    writer_admission_needed = (
+                        bool(composer_items)
+                        and all(item.status == "ready" for item in composer_items)
+                        and not writer_items
+                    )
+                    composer_admission_needed = not composer_items and run.stage in {
+                        "shared_task_generation",
+                        "section_composition",
+                    }
+                    if (
+                        initial_dispatch
+                        or section_work_eligible
+                        or writer_admission_needed
+                        or composer_admission_needed
+                    ):
+                        return _Candidate(
+                            run=run,
+                            item=None,
+                            path_lesson_id=path_lesson_id,
+                            preparation_generation_id=preparation_generation_id,
+                            dispatch_sections=True,
+                        )
         return None
 
     async def _fail_admission_run(
