@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -291,7 +292,7 @@ async def finalize_shared_lesson_document_for_run(
         SharedLessonFinalizationError,
         SharedLessonInputError,
         SharedFigureMediaError,
-        ValueError,
+        ValidationError,
     ) as exc:
         return SharedLessonFinalizationDispatchOutcome(status="blocked", error=str(exc))
 

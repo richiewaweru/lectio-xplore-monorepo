@@ -208,6 +208,29 @@ async def test_finalization_dispatcher_blocks_stale_handoff_before_finalizer(mon
 
 
 @pytest.mark.asyncio
+async def test_finalization_dispatcher_propagates_unexpected_programming_error(monkeypatch):
+    async def broken_source_loader(**_kwargs):
+        raise ValueError("programming bug")
+
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.load_current_approved_teaching_plan_source",
+        broken_source_loader,
+    )
+    source, document = _approved_source_and_document()
+    source = _source_with_frozen_items(source)
+
+    with pytest.raises(ValueError, match="programming bug"):
+        await finalize_shared_lesson_document_for_run(
+            _Session([]),
+            run_id="run-1",
+            owner_user_id="owner-1",
+            path_lesson_id="path-lesson-1",
+            preparation_generation_id="generation-1",
+            handoff=_handoff(source, document),
+        )
+
+
+@pytest.mark.asyncio
 async def test_finalization_dispatcher_blocks_missing_or_forged_media(monkeypatch):
     source, document = _approved_source_and_document(include_figure=True)
     source = _source_with_frozen_items(source)
