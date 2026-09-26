@@ -24,6 +24,10 @@ from document.shared_lesson.approved_source import (
     load_current_approved_teaching_plan_source,
     make_approved_source_verifier,
 )
+from document.shared_lesson.post_section_pipeline import (
+    PostSectionPipelineOutcome,
+    run_post_section_pipeline,
+)
 from document.shared_lesson.runtime import TeachingPlanSource
 from document.shared_lesson.section_dispatcher import SharedSectionDispatcher
 from document.shared_lesson.semantic_inputs import (
@@ -78,6 +82,7 @@ class _Candidate:
     preparation_generation_id: str
     admit_tasks: bool = False
     dispatch_sections: bool = False
+    post_section: bool = False
 
 
 def _now(value: datetime | None = None) -> datetime:
@@ -127,6 +132,11 @@ class SharedDocumentWorker:
         engine: AuthoringEngine | None = None,
         composer_provider: Callable[[dict[str, Any]], Any] | None = None,
         writer_provider: Callable[[dict[str, Any]], Any] | None = None,
+        media_executor: Any = None,
+        boundary_semantic_validator: Any = None,
+        boundary_repair_engine: Any = None,
+        qa_semantic_validator: Any = None,
+        artifact_loader: Any = None,
         lease_seconds: int = 300,
         poll_interval_seconds: float = 0.25,
     ) -> None:
@@ -140,6 +150,11 @@ class SharedDocumentWorker:
         self.engine = engine
         self.composer_provider = composer_provider
         self.writer_provider = writer_provider
+        self.media_executor = media_executor
+        self.boundary_semantic_validator = boundary_semantic_validator
+        self.boundary_repair_engine = boundary_repair_engine
+        self.qa_semantic_validator = qa_semantic_validator
+        self.artifact_loader = artifact_loader
         self.lease_seconds = lease_seconds
         self.poll_interval_seconds = poll_interval_seconds
         self._stop = asyncio.Event()
@@ -205,6 +220,38 @@ class SharedDocumentWorker:
                 )
                 return True
             await self._fail_source_context(session, candidate, current)
+            return True
+
+        if candidate.post_section:
+            pipeline_run_id = candidate.run.id
+            pipeline_owner_user_id = candidate.run.owner_user_id
+            await session.rollback()
+            outcome: PostSectionPipelineOutcome = await run_post_section_pipeline(
+                self.session_factory,
+                run_id=pipeline_run_id,
+                owner_user_id=pipeline_owner_user_id,
+                path_lesson_id=candidate.path_lesson_id,
+                preparation_generation_id=candidate.preparation_generation_id,
+                media_executor=self.media_executor,
+                boundary_semantic_validator=self.boundary_semantic_validator,
+                boundary_repair_engine=self.boundary_repair_engine,
+                qa_semantic_validator=self.qa_semantic_validator,
+                artifact_loader=self.artifact_loader,
+                worker_id=self.worker_id,
+            )
+            if outcome.state == "blocked":
+                LOGGER.warning(
+                    "SharedDocument Run %s post-section pipeline blocked at %s: %s",
+                    pipeline_run_id,
+                    outcome.stage,
+                    outcome.error,
+                )
+                await self._terminalize_blocked_post_section(
+                    session,
+                    run_id=pipeline_run_id,
+                    owner_user_id=pipeline_owner_user_id,
+                    now=current,
+                )
             return True
 
         if candidate.admit_tasks:
@@ -405,6 +452,55 @@ class SharedDocumentWorker:
                             preparation_generation_id=preparation_generation_id,
                             dispatch_sections=True,
                         )
+                    if (
+                        run.stage == "section_writing"
+                        and composer_items
+                        and writer_items
+                        and all(item.status == "ready" for item in composer_items)
+                        and all(item.status == "ready" for item in writer_items)
+                    ):
+                        return _Candidate(
+                            run=run,
+                            item=None,
+                            path_lesson_id=path_lesson_id,
+                            preparation_generation_id=preparation_generation_id,
+                            post_section=True,
+                        )
+                    post_stages = {
+                        "continuity_validation",
+                        "media_generation",
+                        "document_qa",
+                        "document_finalization",
+                    }
+                    if run.stage in post_stages:
+                        post_items = [
+                            item
+                            for item in active
+                            if item.stage in post_stages
+                            or item.item_key.startswith(("boundary:", "media:", "document_qa:"))
+                        ]
+                        has_eligible_post_item = any(_eligible(item, now) for item in post_items)
+                        has_retryable_post_item = any(
+                            item.status == "failed_recoverable"
+                            and item.stage != run.stage
+                            for item in post_items
+                        )
+                        has_pending_post_item = any(
+                            item.status in {"queued", "running", "failed_recoverable"}
+                            for item in post_items
+                        )
+                        if (
+                            has_eligible_post_item
+                            or has_retryable_post_item
+                            or not has_pending_post_item
+                        ):
+                            return _Candidate(
+                                run=run,
+                                item=None,
+                                path_lesson_id=path_lesson_id,
+                                preparation_generation_id=preparation_generation_id,
+                                post_section=True,
+                            )
         return None
 
     async def _fail_admission_run(
@@ -434,6 +530,43 @@ class SharedDocumentWorker:
             await session.rollback()
             return
         await session.commit()
+
+    async def _terminalize_blocked_post_section(
+        self,
+        session: Any,
+        *,
+        run_id: str,
+        owner_user_id: str,
+        now: datetime,
+    ) -> None:
+        await session.rollback()
+        items = list(
+            (
+                await session.scalars(
+                    select(GenerationWorkItemModel).where(GenerationWorkItemModel.run_id == run_id)
+                )
+            ).all()
+        )
+        active = active_work_items(items)
+        if any(item.status in {"queued", "running", "failed_recoverable"} for item in active):
+            return
+        try:
+            await fail_run_terminal(
+                session,
+                run_id=run_id,
+                owner_user_id=owner_user_id,
+                failure=RunFailure(
+                    error_code="shared_document_post_section_blocked",
+                    error_class=ErrorClass.UNSUPPORTED_CONTRACT,
+                    safe_summary=(
+                        "The SharedDocument post-section stages could not produce a ready document."
+                    ),
+                ),
+                now=now,
+            )
+            await session.commit()
+        except (InvalidRunTransition, RunNotFound):
+            await session.rollback()
 
     async def _source_context(
         self,

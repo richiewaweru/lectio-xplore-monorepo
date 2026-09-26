@@ -424,9 +424,7 @@ async def _ready_semantic_dependencies(
 
 
 @pytest.mark.asyncio
-async def test_ready_semantic_leaves_dispatch_sections_on_same_run_and_stop_after_restart(
-    db_session, monkeypatch
-):
+async def test_ready_semantic_leaves_handoff_to_post_section_pipeline(db_session, monkeypatch):
     generation, lesson, _provenance, source = await _prepared(db_session)
     admission, _task = await _ready_semantic_dependencies(
         db_session,
@@ -435,6 +433,8 @@ async def test_ready_semantic_leaves_dispatch_sections_on_same_run_and_stop_afte
         generation=generation,
         request_key="worker-section-stage",
     )
+    run_id = admission.run.id
+    owner_user_id = admission.run.owner_user_id
     for item_key, stage in (
         ("compose:orient", "section_composition"),
         ("write:orient", "section_writing"),
@@ -471,6 +471,22 @@ async def test_ready_semantic_leaves_dispatch_sections_on_same_run_and_stop_afte
             )
 
     monkeypatch.setattr(worker, "SharedSectionDispatcher", Dispatcher)
+    pipeline_calls = []
+
+    async def finalize_pipeline(_session_factory, **kwargs):
+        pipeline_calls.append(kwargs)
+        run = await db_session.get(GenerationRunModel, run_id)
+        assert run is not None
+        run.stage = "document_finalization"
+        run.status = "ready"
+        run.output_artifact_type = "shared_lesson_document"
+        run.output_artifact_id = "shared-document:test"
+        run.output_revision = 1
+        run.output_hash = "h" * 64
+        await db_session.commit()
+        return SimpleNamespace(state="ready", stage="finalization", error=None)
+
+    monkeypatch.setattr(worker, "run_post_section_pipeline", finalize_pipeline)
     instance = worker.SharedDocumentWorker(
         lambda: None,
         worker_id="worker-section-stage",
@@ -480,19 +496,174 @@ async def test_ready_semantic_leaves_dispatch_sections_on_same_run_and_stop_afte
 
     assert await instance.run_one(db_session)
     assert len(dispatched) == 1
-    assert dispatched[0]["run_id"] == admission.run.id
-    assert dispatched[0]["owner_user_id"] == admission.run.owner_user_id
+    assert dispatched[0]["run_id"] == run_id
+    assert dispatched[0]["owner_user_id"] == owner_user_id
     assert dispatched[0]["source"] == source
     assert dispatched[0]["source_verifier"] is verifier
-    run = await db_session.get(GenerationRunModel, admission.run.id)
+    run = await db_session.get(GenerationRunModel, run_id)
     assert run is not None and run.stage == "section_writing"
     assert run.status in {"queued", "running"}
 
     restarted = worker.SharedDocumentWorker(
         lambda: None, worker_id="worker-section-stage-restarted"
     )
+    assert await restarted.run_one(db_session)
+    assert len(pipeline_calls) == 1
+    assert pipeline_calls[0]["run_id"] == run_id
+    assert pipeline_calls[0]["owner_user_id"] == owner_user_id
     assert await restarted.run_one(db_session) is False
     assert len(dispatched) == 1
+
+
+async def _ready_section_leaves_for_post_pipeline(db_session, admission):
+    for item_key, stage in (
+        ("compose:orient", "section_composition"),
+        ("write:orient", "section_writing"),
+    ):
+        db_session.add(
+            GenerationWorkItemModel(
+                run_id=admission.run.id,
+                item_key=item_key,
+                stage=stage,
+                status="ready",
+                input_hash="i" * 64,
+                definition_hash="d" * 64,
+                output_json={"ready": True},
+                output_hash=content_hash({"ready": True}),
+            )
+        )
+    run = await db_session.get(GenerationRunModel, admission.run.id)
+    assert run is not None
+    run.stage = "section_writing"
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pipeline_state", ["pending", "blocked"])
+async def test_post_section_pending_or_blocked_is_not_polled_again(
+    db_session, monkeypatch, pipeline_state
+):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, _task = await _ready_semantic_dependencies(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key=f"worker-post-{pipeline_state}",
+    )
+    run_id = admission.run.id
+    await _ready_section_leaves_for_post_pipeline(db_session, admission)
+    if pipeline_state == "pending":
+        db_session.add(
+            GenerationWorkItemModel(
+                run_id=run_id,
+                item_key="document_qa:post",
+                stage="document_qa",
+                status="running",
+                input_hash="i" * 64,
+                definition_hash="d" * 64,
+                lease_expires_at=datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=5),
+            )
+        )
+        await db_session.commit()
+    _bind_source_context(monkeypatch, source)
+    calls = []
+
+    async def pipeline(_session_factory, **kwargs):
+        calls.append(kwargs)
+        run = await db_session.get(GenerationRunModel, run_id)
+        assert run is not None
+        run.stage = "document_qa" if pipeline_state == "pending" else "document_finalization"
+        await db_session.commit()
+        return SimpleNamespace(state=pipeline_state, stage=run.stage, error="test gate")
+
+    monkeypatch.setattr(worker, "run_post_section_pipeline", pipeline)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id=f"worker-post-{pipeline_state}",
+        media_executor=object(),
+        boundary_semantic_validator=object(),
+        boundary_repair_engine=object(),
+        qa_semantic_validator=object(),
+    )
+    assert await instance.run_one(db_session)
+    assert await instance.run_one(db_session) is False
+    assert len(calls) == 1
+    assert calls[0]["media_executor"] is instance.media_executor
+    assert calls[0]["boundary_semantic_validator"] is instance.boundary_semantic_validator
+    assert calls[0]["boundary_repair_engine"] is instance.boundary_repair_engine
+    assert calls[0]["qa_semantic_validator"] is instance.qa_semantic_validator
+
+
+@pytest.mark.asyncio
+async def test_post_section_retries_failed_leaf_after_run_stage_advances(
+    db_session, monkeypatch
+):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, _task = await _ready_semantic_dependencies(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-post-stage-advance",
+    )
+    run_id = admission.run.id
+    await _ready_section_leaves_for_post_pipeline(db_session, admission)
+    db_session.add(
+        GenerationWorkItemModel(
+            run_id=run_id,
+            item_key="boundary:orient->practice",
+            stage="continuity_validation",
+            status="failed_recoverable",
+            input_hash="i" * 64,
+            definition_hash="d" * 64,
+        )
+    )
+    run = await db_session.get(GenerationRunModel, run_id)
+    assert run is not None
+    run.stage = "media_generation"
+    await db_session.commit()
+    _bind_source_context(monkeypatch, source)
+    calls = []
+
+    async def pipeline(_session_factory, **kwargs):
+        calls.append(kwargs)
+        run = await db_session.get(GenerationRunModel, run_id)
+        assert run is not None
+        run.stage = "continuity_validation"
+        await db_session.commit()
+        return SimpleNamespace(state="pending", stage=run.stage, error=None)
+
+    monkeypatch.setattr(worker, "run_post_section_pipeline", pipeline)
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-post-stage-advance")
+
+    assert await instance.run_one(db_session)
+    assert await instance.run_one(db_session) is False
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_cancelled_ready_sections_are_not_selected_for_post_pipeline(db_session, monkeypatch):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, _task = await _ready_semantic_dependencies(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-post-cancelled",
+    )
+    run_id = admission.run.id
+    await _ready_section_leaves_for_post_pipeline(db_session, admission)
+    run = await db_session.get(GenerationRunModel, run_id)
+    assert run is not None
+    run.status = "cancelled"
+    await db_session.commit()
+    calls = []
+    monkeypatch.setattr(worker, "run_post_section_pipeline", lambda *_a, **_k: calls.append(True))
+
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-post-cancelled")
+    assert await instance.run_one(db_session) is False
+    assert calls == []
 
 
 @pytest.mark.asyncio
