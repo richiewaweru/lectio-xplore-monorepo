@@ -1,0 +1,423 @@
+"""Same-Run deterministic assembly and semantic QA dispatch for shared lessons."""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping, Sequence
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import select
+
+from curriculum.shared_tasks.models import SharedTaskSpec
+from document.shared_lesson.assembly import (
+    SharedLessonAssemblyError,
+    assemble_shared_lesson_document,
+)
+from document.shared_lesson.composer import (
+    CompositionValidationError,
+    SectionCompositionPlan,
+    validate_composition_plan,
+)
+from document.shared_lesson.continuity import ExpectedNodeShape
+from document.shared_lesson.document_semantic import DocumentSemanticValidator
+from document.shared_lesson.media import (
+    FigureMediaResult,
+    ReadyFigureMediaResult,
+    SharedFigureMediaError,
+    bind_figure_media_to_document,
+    verify_bound_figure_media,
+)
+from document.shared_lesson.models import FigureNode, SharedLessonDocument, SharedSection
+from document.shared_lesson.qa import DocumentQAResult
+from document.shared_lesson.qa_runtime import (
+    DocumentQAOutcome,
+    DocumentQAWorkItemJob,
+    VerifiedDocumentQA,
+    admit_document_qa_work_item,
+    execute_document_qa_work_item,
+    load_verified_document_qa,
+)
+from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from infra.database.models import GenerationWorkItemModel
+from infra.execution.checkpoints import content_hash
+from infra.generation_runtime import active_work_items
+
+
+class SharedDocumentQADispatchError(ValueError):
+    """Verified inputs cannot produce one durable same-Run QA result."""
+
+
+class SharedDocumentQADispatchResult(BaseModel):
+    """Closed result containing the immutable document and durable QA PASS."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    run_id: str
+    work_item_id: str
+    document: SharedLessonDocument
+    deterministic_qa: DocumentQAResult
+    verified_qa: VerifiedDocumentQA
+
+
+def _by_section(
+    values: Mapping[str, Any] | Sequence[Any],
+    *,
+    identity: str,
+    expected: tuple[str, ...],
+    label: str,
+) -> dict[str, Any]:
+    if isinstance(values, Mapping):
+        result = dict(values)
+    else:
+        result = {}
+        for value in values:
+            key = getattr(value, identity, None)
+            if not isinstance(key, str) or not key:
+                raise SharedDocumentQADispatchError(f"{label} has an invalid section identity")
+            if key in result:
+                raise SharedDocumentQADispatchError(f"{label} contains duplicate section {key!r}")
+            result[key] = value
+    if tuple(result) != expected:
+        raise SharedDocumentQADispatchError(
+            f"{label} must cover approved sections in order; expected {expected!r}"
+        )
+    return result
+
+
+def _expected_shapes(
+    compositions: Mapping[str, SectionCompositionPlan],
+) -> dict[str, tuple[ExpectedNodeShape, ...]]:
+    return {
+        section_id: tuple(
+            ExpectedNodeShape(
+                id=item.id,
+                kind=item.kind,
+                teaching_block_id=item.teaching_block_id,
+                semantic_role=item.semantic_role,
+                task_spec_id=item.task_spec_id,
+            )
+            for item in composition.items
+        )
+        for section_id, composition in compositions.items()
+    }
+
+
+def _approved_source_ids(source: TeachingPlanSource) -> tuple[str, ...]:
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for section in source.plan.sections:
+        for block in section.blocks:
+            for source_id in block.sourcebook_refs:
+                if source_id not in seen:
+                    seen.add(source_id)
+                    ordered.append(source_id)
+    return tuple(ordered)
+
+
+def _required_media(document: SharedLessonDocument) -> dict[str, tuple[str, ...]]:
+    return {
+        section.id: tuple(node.id for node in section.nodes if isinstance(node, FigureNode))
+        for section in document.sections
+        if any(isinstance(node, FigureNode) for node in section.nodes)
+    }
+
+
+def _verify_media_inputs(
+    *,
+    document: SharedLessonDocument,
+    required_media_by_section: Mapping[str, Sequence[str]] | None,
+    media_results: Sequence[FigureMediaResult],
+) -> tuple[str, ...]:
+    expected = _required_media(document)
+    declared = {
+        section_id: tuple(figure_ids)
+        for section_id, figure_ids in (required_media_by_section or {}).items()
+        if figure_ids
+    }
+    if {key: set(value) for key, value in declared.items()} != {
+        key: set(value) for key, value in expected.items()
+    }:
+        raise SharedDocumentQADispatchError(
+            "required media declaration must match the assembled document figures"
+        )
+    expected_ids = {
+        (section_id, figure_id) for section_id, values in expected.items() for figure_id in values
+    }
+    supplied: dict[tuple[str, str], FigureMediaResult] = {}
+    for result in media_results:
+        if not isinstance(result, FigureMediaResult):
+            raise SharedDocumentQADispatchError(
+                "required media must use verified document-bound FigureMediaResult values"
+            )
+        identity = (result.section_id, result.figure_node_id)
+        if identity in supplied:
+            raise SharedDocumentQADispatchError(f"required media figure {identity!r} is duplicated")
+        try:
+            verify_bound_figure_media(result, document)
+        except SharedFigureMediaError as exc:
+            raise SharedDocumentQADispatchError(
+                f"required media figure {result.figure_node_id!r} is not verified"
+            ) from exc
+        if not result.required:
+            raise SharedDocumentQADispatchError(
+                f"required media figure {result.figure_node_id!r} is not marked required"
+            )
+        supplied[identity] = result
+    supplied_ids = set(supplied)
+    missing = sorted(expected_ids - supplied_ids)
+    unexpected = sorted(supplied_ids - expected_ids)
+    if missing:
+        raise SharedDocumentQADispatchError(f"required media is not ready for figures: {missing!r}")
+    if unexpected:
+        raise SharedDocumentQADispatchError(
+            f"media supplied for undeclared document figures: {unexpected!r}"
+        )
+    return tuple(sorted(result.figure_node_id for result in supplied.values()))
+
+
+async def _load_durable_media_results(
+    session_factory: Callable[[], Any],
+    *,
+    run_id: str,
+    document: SharedLessonDocument,
+    supplied: Sequence[FigureMediaResult],
+) -> tuple[FigureMediaResult, ...]:
+    """Rebuild caller media evidence from active READY media WorkItems."""
+    async with session_factory() as session:
+        rows = tuple(
+            (
+                await session.scalars(
+                    select(GenerationWorkItemModel)
+                    .where(
+                        GenerationWorkItemModel.run_id == run_id,
+                        GenerationWorkItemModel.stage == "media_generation",
+                    )
+                    .order_by(GenerationWorkItemModel.id)
+                )
+            ).all()
+        )
+    leaves = active_work_items(rows)
+    durable: dict[tuple[str, str], FigureMediaResult] = {}
+    for item in leaves:
+        if item.status != "ready" or item.output_json is None or not item.output_hash:
+            raise SharedDocumentQADispatchError(
+                "required media outputs must be active READY WorkItems"
+            )
+        if content_hash(item.output_json) != item.output_hash:
+            raise SharedDocumentQADispatchError("durable media output hash is invalid")
+        try:
+            ready = ReadyFigureMediaResult.model_validate(item.output_json)
+            if item.item_key != f"media:{ready.work_order_id}":
+                raise ValueError("media WorkItem identity differs from its output")
+            bound = bind_figure_media_to_document(ready, document)
+        except (TypeError, ValueError, SharedFigureMediaError) as exc:
+            raise SharedDocumentQADispatchError(
+                f"durable media output for WorkItem {item.id!r} is invalid"
+            ) from exc
+        identity = (bound.section_id, bound.figure_node_id)
+        if identity in durable:
+            raise SharedDocumentQADispatchError(
+                f"durable media outputs duplicate figure identity {identity!r}"
+            )
+        durable[identity] = bound
+
+    caller: dict[tuple[str, str], FigureMediaResult] = {}
+    for result in supplied:
+        identity = (result.section_id, result.figure_node_id)
+        if identity in caller:
+            raise SharedDocumentQADispatchError(
+                f"caller media evidence duplicates figure identity {identity!r}"
+            )
+        caller[identity] = result
+    if set(caller) != set(durable):
+        raise SharedDocumentQADispatchError(
+            "caller media evidence does not match durable READY media outputs"
+        )
+    for identity, result in caller.items():
+        if result != durable[identity]:
+            raise SharedDocumentQADispatchError(
+                f"caller media evidence differs from durable output for {identity!r}"
+            )
+    return tuple(durable.values())
+
+
+async def dispatch_shared_document_qa(
+    session_factory: Callable[[], Any],
+    *,
+    run_id: str,
+    owner_user_id: str,
+    source: TeachingPlanSource,
+    compositions: Mapping[str, SectionCompositionPlan] | Sequence[SectionCompositionPlan],
+    sections: Mapping[str, SharedSection] | Sequence[SharedSection],
+    tasks: Sequence[SharedTaskSpec] = (),
+    document_id: str,
+    document_revision: int,
+    created_at: datetime | str,
+    provenance: Mapping[str, Any] | None = None,
+    source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
+    required_media_by_section: Mapping[str, Sequence[str]] | None = None,
+    media_results: Sequence[FigureMediaResult] = (),
+    semantic_validator: DocumentSemanticValidator | None = None,
+    worker_id: str = "shared-document-qa-dispatcher",
+    max_attempts: int = 3,
+) -> SharedDocumentQADispatchResult:
+    """Assemble and execute exactly one semantic QA WorkItem on an existing Run."""
+    if not run_id.strip() or not owner_user_id.strip():
+        raise ValueError("run_id and owner_user_id must be non-empty")
+    if not worker_id.strip():
+        raise ValueError("worker_id must be non-empty")
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be positive")
+    if source_facts_by_section and any(source_facts_by_section.values()):
+        raise SharedDocumentQADispatchError(
+            "source facts require a verified durable source projection"
+        )
+    try:
+        verify_teaching_plan_source(source)
+    except ValueError as exc:
+        raise SharedDocumentQADispatchError("approved Teaching Plan source is invalid") from exc
+
+    section_ids = tuple(section.slot_id for section in source.plan.sections)
+    if not section_ids:
+        raise SharedDocumentQADispatchError("approved Teaching Plan has no sections")
+    composition_by_section = _by_section(
+        compositions,
+        identity="section_slot_id",
+        expected=section_ids,
+        label="compositions",
+    )
+    section_by_id = _by_section(
+        sections,
+        identity="id",
+        expected=section_ids,
+        label="sections",
+    )
+    try:
+        for plan_section in source.plan.sections:
+            validate_composition_plan(
+                plan=composition_by_section[plan_section.slot_id],
+                section=plan_section,
+                tasks=tuple(
+                    task
+                    for task in tasks
+                    if task.teaching_block_id in {block.id for block in plan_section.blocks}
+                ),
+            )
+    except (CompositionValidationError, TypeError, ValueError) as exc:
+        raise SharedDocumentQADispatchError("accepted composition is invalid") from exc
+
+    try:
+        assembly = assemble_shared_lesson_document(
+            document_id=document_id,
+            revision=document_revision,
+            source=source,
+            accepted_sections=section_by_id,
+            tasks=tasks,
+            provenance=provenance,
+            created_at=created_at,
+            expected_shapes=_expected_shapes(composition_by_section),
+            approved_source_ids=_approved_source_ids(source),
+            source_facts_by_section=None,
+            required_media_by_section={},
+            available_media_ids=(),
+        )
+    except SharedLessonAssemblyError as exc:
+        raise SharedDocumentQADispatchError(str(exc)) from exc
+    if not assembly.ready:
+        raise SharedDocumentQADispatchError(
+            "deterministic document QA failed: "
+            + ", ".join(issue.issue_code for issue in assembly.qa.issues)
+        )
+    durable_media = await _load_durable_media_results(
+        session_factory,
+        run_id=run_id,
+        document=assembly.document,
+        supplied=media_results,
+    )
+    _verify_media_inputs(
+        document=assembly.document,
+        required_media_by_section=required_media_by_section,
+        media_results=durable_media,
+    )
+    try:
+        assembly = assemble_shared_lesson_document(
+            document_id=document_id,
+            revision=document_revision,
+            source=source,
+            accepted_sections=section_by_id,
+            tasks=tasks,
+            provenance=provenance,
+            created_at=created_at,
+            expected_shapes=_expected_shapes(composition_by_section),
+            approved_source_ids=_approved_source_ids(source),
+            source_facts_by_section=None,
+            required_media_by_section=required_media_by_section,
+            available_media_ids=tuple(result.figure_node_id for result in durable_media),
+        )
+    except SharedLessonAssemblyError as exc:
+        raise SharedDocumentQADispatchError(str(exc)) from exc
+    if not assembly.ready:
+        raise SharedDocumentQADispatchError(
+            "deterministic document QA failed: "
+            + ", ".join(issue.issue_code for issue in assembly.qa.issues)
+        )
+
+    async with session_factory() as admission_session:
+        admitted = await admit_document_qa_work_item(
+            admission_session,
+            run_id=run_id,
+            owner_user_id=owner_user_id,
+            source=source,
+            document=assembly.document,
+            deterministic_qa=assembly.qa,
+            max_attempts=max_attempts,
+        )
+        await admission_session.commit()
+
+    if admitted.record.status == "queued":
+        async with session_factory() as execution_session:
+            outcome: DocumentQAOutcome = await execute_document_qa_work_item(
+                DocumentQAWorkItemJob(
+                    session=execution_session,
+                    work_item_id=admitted.record.id,
+                    worker_id=worker_id,
+                    owner_user_id=owner_user_id,
+                    source=source,
+                    document=assembly.document,
+                    deterministic_qa=assembly.qa,
+                    semantic_validator=semantic_validator,
+                )
+            )
+            await execution_session.commit()
+        if outcome.qa is None:
+            raise SharedDocumentQADispatchError(
+                outcome.error_summary or "document semantic QA did not produce a PASS"
+            )
+    elif admitted.record.status != "ready":
+        raise SharedDocumentQADispatchError(
+            f"document QA WorkItem is not dispatchable from {admitted.record.status!r}"
+        )
+
+    async with session_factory() as load_session:
+        verified = await load_verified_document_qa(
+            load_session,
+            run_id=run_id,
+            owner_user_id=owner_user_id,
+            source=source,
+            document=assembly.document,
+        )
+    return SharedDocumentQADispatchResult(
+        run_id=run_id,
+        work_item_id=verified.work_item_id,
+        document=assembly.document,
+        deterministic_qa=assembly.qa,
+        verified_qa=verified,
+    )
+
+
+__all__ = [
+    "SharedDocumentQADispatchError",
+    "SharedDocumentQADispatchResult",
+    "dispatch_shared_document_qa",
+]
