@@ -39,6 +39,7 @@ from infra.generation_runtime import (
     SourceIdentity,
     WorkItemFailure,
     admit_run,
+    cancel_run,
     claim_work_item,
     create_build,
     fail_work_item,
@@ -749,3 +750,53 @@ async def test_stale_worker_fence_cannot_commit_media(db_session) -> None:
                 recovery_action="retry",
             ),
         )
+
+
+@pytest.mark.asyncio
+async def test_media_provider_result_is_fenced_after_separate_session_cancellation(
+    db_session,
+    db_session_factory,
+) -> None:
+    owner, run_id = await _seed_run(db_session, suffix="cancel-during-provider")
+    work = _work(suffix="cancel-during-provider")
+    admitted = await admit_figure_media_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=SOURCE,
+        work=work,
+        accepted_section=_accepted_for(work),
+    )
+    await db_session.commit()
+
+    class CancellingExecutor:
+        calls = 0
+
+        async def execute_figure(self, _order):
+            self.calls += 1
+            async with db_session_factory() as observer:
+                await cancel_run(observer, run_id=run_id, owner_user_id=owner)
+                await observer.commit()
+            return [_block(work)]
+
+    executor = CancellingExecutor()
+    async with db_session_factory() as worker_session:
+        with pytest.raises(LeaseLostError):
+            await execute_figure_media_work_item(
+                MediaWorkItemJob(
+                    session=worker_session,
+                    work_item_id=admitted.record.id,
+                    worker_id="cancelled-media-worker",
+                    source=SOURCE,
+                    work=work,
+                    accepted_section=_accepted_for(work),
+                    executor=executor,
+                )
+            )
+
+    async with db_session_factory() as verifier:
+        row = await verifier.get(GenerationWorkItemModel, admitted.record.id)
+        assert row is not None
+        assert row.status == "cancelled"
+        assert row.output_json is None
+        assert executor.calls == 1

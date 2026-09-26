@@ -560,6 +560,11 @@ async def execute_figure_media_work_item(
             error_summary=failure.safe_summary,
         )
 
+    # The provider call must observe a durable claim and checkpoint.  Keeping
+    # this commit outside the checkpoint transaction lets cancellation or a
+    # lease takeover fence any late provider result before it can become ready.
+    await job.session.commit()
+
     try:
         blocks = await job.executor.execute_figure(job.work.work_order)
         media = bind_generated_figure(job.work, blocks)
