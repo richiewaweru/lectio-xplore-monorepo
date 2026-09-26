@@ -26,7 +26,7 @@ always eligible. Specialized form eligibility is exact:
 - `table` / `comparison` or `evidence`: it contains `compare`, `contrast`,
   `relationship`, `data`, or `evidence`.
 - `list` / `sequence` or `evidence`: it contains `sequence`, `step`, `stage`,
-  `set`, `category`, `example`, or `evidence`.
+  `set`, `category`, `example`, `evidence`, or `sort`.
 - `callout` / `misconception` or `safety_guidance`: it contains `misconception`,
   `mistake`, `warning`, `safety`, or `caution`. Use no more than one callout in
   the whole section.

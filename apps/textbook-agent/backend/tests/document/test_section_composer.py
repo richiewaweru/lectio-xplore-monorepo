@@ -174,6 +174,26 @@ def test_rejects_too_many_consecutive_paragraphs_and_unsuitable_forms() -> None:
         )
 
 
+def test_list_accepts_explicit_sorting_but_rejects_uncued_unrelated_block() -> None:
+    sorting_section = _section(
+        _block("b0", "classify", "Sort two cases using the stated criterion.")
+    )
+    sorting_plan = validate_and_build_composition(
+        section=sorting_section,
+        choices=[CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="sequence")],
+        tasks=[],
+    )
+    assert sorting_plan.items[0].kind == "list"
+
+    unrelated_section = _section(_block("b0", "explain", "Describe why the principle matters."))
+    with pytest.raises(CompositionValidationError, match="suitable semantic cues"):
+        validate_and_build_composition(
+            section=unrelated_section,
+            choices=[CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence")],
+            tasks=[],
+        )
+
+
 def test_rejects_block_node_ceiling_callout_ceiling_and_false_subsection() -> None:
     section = _section(_block("b0", "compare the evidence"))
     with pytest.raises(CompositionValidationError, match="exceeds 2 ordinary nodes"):

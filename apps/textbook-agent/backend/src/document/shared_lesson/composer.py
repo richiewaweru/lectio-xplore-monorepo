@@ -118,7 +118,7 @@ _KIND_CUES: dict[str, tuple[str, ...]] = {
         "image",
     ),
     "table": ("compare", "contrast", "relationship", "data", "evidence"),
-    "list": ("sequence", "step", "stage", "set", "category", "example", "evidence"),
+    "list": ("sequence", "step", "stage", "set", "category", "example", "evidence", "sort"),
 }
 
 
