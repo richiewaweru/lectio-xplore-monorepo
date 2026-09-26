@@ -78,17 +78,33 @@ def _run_status(run: GenerationRunModel) -> dict[str, Any]:
     active_stages = sorted(
         {item.stage for item in current_items if item.status in _ACTIVE_ITEM_STATUSES}
     )
+    def retry_eligible(item: GenerationWorkItemModel) -> bool:
+        return (
+            item.status == "failed_recoverable"
+            and item.recovery_action == "retry"
+            and item.error_class in _RETRYABLE_ERROR_CLASSES
+            and item.attempt < item.max_attempts
+        )
+
+    failed_items = [item for item in current_items if item.status in _FAILED_ITEM_STATUSES]
+    failed_run_with_multiple_failures = (
+        run.status == "failed_recoverable" and len(failed_items) > 1
+    )
+    batch_retry = (
+        failed_run_with_multiple_failures
+        and all(retry_eligible(item) for item in failed_items)
+    )
     run_actions = ["cancel"] if run.status in {"queued", "running", "failed_recoverable"} else []
+    if batch_retry:
+        run_actions.append("retry")
     work_items = []
     for item in items:
         is_current = item.id in current_ids
         can_retry = (
             is_current
-            and item.status == "failed_recoverable"
-            and item.recovery_action == "retry"
-            and item.error_class in _RETRYABLE_ERROR_CLASSES
-            and item.attempt < item.max_attempts
+            and retry_eligible(item)
             and run.status in {"queued", "running", "failed_recoverable"}
+            and not failed_run_with_multiple_failures
         )
         actions = ["retry"] if can_retry else []
         item_status: dict[str, Any] = {
@@ -144,6 +160,14 @@ def _run_status(run: GenerationRunModel) -> dict[str, Any]:
         "links": {
             "status": f"/api/v1/generation/runs/{run.id}",
             "build": f"/api/v1/generation/builds/{run.build_id}",
+            **(
+                {
+                    "retry": f"/api/v1/generation/runs/{run.id}/retry",
+                    "retry_work_item_ids": [item.id for item in failed_items],
+                }
+                if batch_retry
+                else {}
+            ),
             **(
                 {"cancel": f"/api/v1/generation/runs/{run.id}/cancel"}
                 if "cancel" in run_actions
