@@ -157,14 +157,16 @@ def _run_status(run: GenerationRunModel) -> dict[str, Any]:
         "latest_error": _latest_error(run, list(current_items)),
         "work_items": work_items,
         "allowed_actions": run_actions,
+        **(
+            {"retry_work_item_ids": [item.id for item in failed_items]}
+            if batch_retry
+            else {}
+        ),
         "links": {
             "status": f"/api/v1/generation/runs/{run.id}",
             "build": f"/api/v1/generation/builds/{run.build_id}",
             **(
-                {
-                    "retry": f"/api/v1/generation/runs/{run.id}/retry",
-                    "retry_work_item_ids": [item.id for item in failed_items],
-                }
+                {"retry": f"/api/v1/generation/runs/{run.id}/retry"}
                 if batch_retry
                 else {}
             ),

@@ -68,7 +68,7 @@ def test_multiple_eligible_failed_leaves_expose_only_atomic_run_retry() -> None:
 
     assert status["allowed_actions"] == ["cancel", "retry"]
     assert status["links"]["retry"] == "/api/v1/generation/runs/run-1/retry"
-    assert status["links"]["retry_work_item_ids"] == ["failed-a", "failed-b"]
+    assert status["retry_work_item_ids"] == ["failed-a", "failed-b"]
     assert items["failed-a"]["allowed_actions"] == []
     assert items["failed-a"]["links"] == {}
     assert items["failed-b"]["allowed_actions"] == []
@@ -85,6 +85,7 @@ def test_multiple_failed_leaves_without_full_eligibility_expose_no_retry() -> No
 
     assert status["allowed_actions"] == ["cancel"]
     assert "retry" not in status["links"]
+    assert "retry_work_item_ids" not in status
     assert all(item["allowed_actions"] == [] for item in status["work_items"])
     assert all("retry" not in item["links"] for item in status["work_items"])
 
