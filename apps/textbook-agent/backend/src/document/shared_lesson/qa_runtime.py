@@ -557,6 +557,13 @@ async def execute_document_qa_work_item(
                 deterministic_qa=job.deterministic_qa,
             )
 
+        # The provider call is deliberately outside the database transaction.
+        # Persist the lease claim and its compatible checkpoint first so a
+        # separate worker can observe the durable fence, and so cancellation
+        # or lease expiry can prevent a late provider result from becoming
+        # ready output.
+        await job.session.commit()
+
         semantic = await qa_shared_lesson_document_semantics(
             document=job.document,
             teaching_plan_sections=tuple(_teaching_plan_sections(job.source)),
