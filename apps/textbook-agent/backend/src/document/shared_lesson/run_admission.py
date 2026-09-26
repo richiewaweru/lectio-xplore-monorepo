@@ -8,6 +8,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import UserModel
+from curriculum.teaching_plan.models import validate_sourcebook_need_refs
 from document.shared_lesson.approved_source import (
     load_approved_item_snapshot,
     load_current_approved_teaching_plan_source,
@@ -34,6 +35,12 @@ from infra.generation_runtime import (
 
 class SharedRunAdmissionError(ValueError):
     """The owner-scoped SharedDocument admission request is invalid."""
+
+
+class SharedSourcebookContractError(SharedRunAdmissionError):
+    """The approved Teaching Plan has sourcebook needs without approved refs."""
+
+    code = "SOURCEBOOK_PLAN_CONTRACT"
 
 
 @dataclass(frozen=True)
@@ -167,6 +174,12 @@ async def admit_shared_document_run(
         preparation_generation_id=preparation_generation_id,
     )
     identity = _source_identity(source)
+    try:
+        validate_sourcebook_need_refs(source.plan)
+    except ValueError as exc:
+        raise SharedSourcebookContractError(
+            "approved Teaching Plan sourcebook needs require approved sourcebook refs"
+        ) from exc
     # Verify the immutable assessment snapshot before any Build/Run mutation.
     await load_approved_item_snapshot(
         session=session,
@@ -219,4 +232,9 @@ async def admit_shared_document_run(
     )
 
 
-__all__ = ["SharedRunAdmissionError", "SharedRunAdmissionResult", "admit_shared_document_run"]
+__all__ = [
+    "SharedRunAdmissionError",
+    "SharedRunAdmissionResult",
+    "SharedSourcebookContractError",
+    "admit_shared_document_run",
+]

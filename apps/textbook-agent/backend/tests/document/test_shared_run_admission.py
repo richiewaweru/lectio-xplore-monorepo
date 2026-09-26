@@ -13,6 +13,7 @@ from document.shared_lesson import run_admission
 from document.shared_lesson.approved_source import ApprovedSourceVerificationError
 from document.shared_lesson.run_admission import (
     SharedRunAdmissionResult,
+    SharedSourcebookContractError,
     admit_shared_document_run,
 )
 from infra.database.models import GenerationBuildModel, GenerationRunModel, GenerationWorkItemModel
@@ -97,6 +98,54 @@ async def test_duplicate_request_reuses_build_run_and_sourcebook_item(db_session
         )
         == 1
     )
+
+
+@pytest.mark.asyncio
+async def test_sourcebook_needs_without_refs_reject_admission_before_build_mutation(
+    db_session,
+    monkeypatch,
+) -> None:
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    section = source.plan.sections[0]
+    block = section.blocks[0].model_copy(
+        update={"sourcebook_needs": ["a worked example"], "sourcebook_refs": []}
+    )
+    plan = source.plan.model_copy(
+        update={"sections": [section.model_copy(update={"blocks": [block]})]}
+    )
+    digest = teaching_plan_content_hash(plan)
+    variant = source.model_copy(
+        update={
+            "plan": plan,
+            "content_hash": digest,
+            "revision_record": source.revision_record.model_copy(
+                update={"content_hash": digest, "plan": plan.model_dump(mode="json")}
+            ),
+        }
+    )
+    monkeypatch.setattr(
+        run_admission,
+        "load_current_approved_teaching_plan_source",
+        lambda **_kwargs: _resolved(variant),
+    )
+    monkeypatch.setattr(
+        run_admission,
+        "load_approved_item_snapshot",
+        lambda **_kwargs: _snapshot(variant),
+    )
+
+    with pytest.raises(SharedSourcebookContractError, match="sourcebook needs require"):
+        await admit_shared_document_run(
+            db_session,
+            owner_user_id="source-owner",
+            path_lesson_id=lesson.id,
+            preparation_generation_id=generation.id,
+            request_key="sourcebook-contract-request",
+        )
+
+    assert await db_session.scalar(select(func.count()).select_from(GenerationBuildModel)) == 0
+    assert await db_session.scalar(select(func.count()).select_from(GenerationRunModel)) == 0
+    assert await db_session.scalar(select(func.count()).select_from(GenerationWorkItemModel)) == 0
 
 
 @pytest.mark.asyncio
