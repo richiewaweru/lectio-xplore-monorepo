@@ -199,7 +199,7 @@ async def test_duplicate_admission_reuses_frozen_figure_identity(
 ):
     source = _source()
     accepted = _accepted()
-    readiness = media_dispatcher.MediaReadiness(ready=False, required_count=2, ready_count=0)
+    readiness = media_dispatcher.MediaReadiness(ready=True, required_count=2, ready_count=2)
     verifier = _bind(monkeypatch, accepted=accepted, source=source, readiness=readiness)
     calls = []
 
@@ -222,13 +222,14 @@ async def test_duplicate_admission_reuses_frozen_figure_identity(
         worker_id="media-duplicate",
         executor=SimpleNamespace(),
     )
-    await dispatcher.run_one(
+    first_result = await dispatcher.run_one(
         session=db_session,
         run_id="media-run",
         owner_user_id="media-owner",
         source=source,
         source_verifier=verifier,
     )
+    assert first_result.readiness.ready is True
     first = tuple(calls)
     await dispatcher.run_one(
         session=db_session,

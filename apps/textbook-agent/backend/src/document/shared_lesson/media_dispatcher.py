@@ -201,6 +201,27 @@ class SharedMediaDispatcher:
             )
             admissions.append((work, section, admitted.record))
         await session.commit()
+        # Stage sessions update these rows independently. Refresh the
+        # admission-session view before deciding which queued/expired leaves
+        # to dispatch; expire_on_commit=False must not hide a prior READY
+        # result or resurrect an already-fenced lease.
+        if admissions:
+            await session.rollback()
+            item_ids = tuple(item.id for _work, _section, item in admissions)
+            fresh_items = list(
+                (
+                    await session.scalars(
+                        select(GenerationWorkItemModel)
+                        .where(GenerationWorkItemModel.id.in_(item_ids))
+                        .execution_options(populate_existing=True)
+                    )
+                ).all()
+            )
+            fresh_by_id = {item.id: item for item in fresh_items}
+            admissions = [
+                (work, section, fresh_by_id.get(item.id, item))
+                for work, section, item in admissions
+            ]
 
         current = now or datetime.now(UTC).replace(tzinfo=None)
         if current.tzinfo is not None:
@@ -238,10 +259,12 @@ class SharedMediaDispatcher:
         media_items = list(
             (
                 await session.scalars(
-                    select(GenerationWorkItemModel).where(
+                    select(GenerationWorkItemModel)
+                    .where(
                         GenerationWorkItemModel.run_id == run_id,
                         GenerationWorkItemModel.stage == MEDIA_STAGE,
                     )
+                    .execution_options(populate_existing=True)
                 )
             ).all()
         )
