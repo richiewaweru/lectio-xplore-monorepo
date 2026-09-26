@@ -237,6 +237,51 @@ def _parse_writer(
     return result.as_shared_section(section_id=section.slot_id, position=position), output_hash
 
 
+def _partition_section_sources(
+    source: TeachingPlanSource,
+    sources: Sequence[SectionSource],
+) -> dict[str, tuple[SectionSource, ...]]:
+    """Partition a verified source union into approved per-section slices."""
+
+    by_id: dict[str, SectionSource] = {}
+    for projected in sources:
+        if projected.id in by_id:
+            previous = by_id[projected.id]
+            if previous != projected:
+                _fail(f"sourcebook source {projected.id!r} has conflicting projections")
+            _fail(f"sourcebook source {projected.id!r} is duplicated")
+        by_id[projected.id] = projected
+
+    section_refs: dict[str, tuple[str, ...]] = {}
+    ordered_refs: list[str] = []
+    for section in source.plan.sections:
+        refs: list[str] = []
+        seen: set[str] = set()
+        for block in section.blocks:
+            for ref in block.sourcebook_refs:
+                if not isinstance(ref, str) or not ref.strip():
+                    _fail(f"section {section.slot_id!r} contains an empty sourcebook reference")
+                if ref in seen:
+                    continue
+                seen.add(ref)
+                refs.append(ref)
+                if ref not in ordered_refs:
+                    ordered_refs.append(ref)
+        section_refs[section.slot_id] = tuple(refs)
+
+    missing = [ref for ref in ordered_refs if ref not in by_id]
+    if missing:
+        _fail(f"verified source union is missing sourcebook refs {missing!r}")
+    expected = set(ordered_refs)
+    unreferenced = [source_id for source_id in by_id if source_id not in expected]
+    if unreferenced:
+        _fail(f"verified source union has unreferenced source entries {unreferenced!r}")
+
+    return {
+        section_id: tuple(by_id[ref] for ref in refs) for section_id, refs in section_refs.items()
+    }
+
+
 async def load_verified_shared_lesson_inputs(
     session: AsyncSession,
     *,
@@ -308,6 +353,8 @@ async def load_verified_shared_lesson_inputs(
         extra = sorted(set(active_by_key) - expected_keys)
         _fail(f"shared lesson work-item set mismatch; missing={missing!r}, extra={extra!r}")
 
+    sources_by_section = _partition_section_sources(source, sources)
+
     compositions: list[SectionCompositionPlan] = []
     sections: list[SharedSection] = []
     composition_hashes: dict[str, str] = {}
@@ -326,7 +373,7 @@ async def load_verified_shared_lesson_inputs(
             section=section,
             composition=composition,
             tasks=tasks,
-            sources=sources,
+            sources=sources_by_section[section.slot_id],
             position=position,
         )
         compositions.append(composition)

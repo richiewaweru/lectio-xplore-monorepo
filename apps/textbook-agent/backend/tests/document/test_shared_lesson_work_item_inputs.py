@@ -19,9 +19,10 @@ from document.shared_lesson.work_item_inputs import (
     SharedLessonInputError,
     _assert_active_chain,
     _parse_output,
+    _partition_section_sources,
     load_verified_shared_lesson_inputs,
 )
-from document.shared_lesson.writer import SectionWriteResult
+from document.shared_lesson.writer import SectionSource, SectionWriteResult
 from infra.database.models import (
     ConceptModel,
     GenerationBuildModel,
@@ -120,6 +121,30 @@ def _section_outputs(source: TeachingPlanSource):
         )
         outputs.append((composition, result))
     return tuple(outputs)
+
+
+def _source_with_refs() -> TeachingPlanSource:
+    original = _source()
+    sections = tuple(
+        section.model_copy(
+            update={
+                "blocks": [
+                    section.blocks[0].model_copy(
+                        update={"sourcebook_refs": [f"ref-{section.slot_id}"]}
+                    ),
+                ]
+            }
+        )
+        for section in original.plan.sections
+    )
+    plan = original.plan.model_copy(update={"sections": list(sections)})
+    digest = teaching_plan_content_hash(plan)
+    record = original.revision_record.model_copy(
+        update={"plan": plan.model_dump(mode="json"), "content_hash": digest}
+    )
+    return original.model_copy(
+        update={"plan": plan, "revision_record": record, "content_hash": digest}
+    )
 
 
 async def _seed_run(session, source: TeachingPlanSource, *, suffix: str = "main"):
@@ -264,6 +289,51 @@ async def test_loader_uses_writer_admission_hash_for_unicode_section_identity(db
     )
 
     assert tuple(item.section_slot_id for item in bundle.compositions) == ("orient", "explain-é")
+
+
+@pytest.mark.asyncio
+async def test_loader_partitions_source_union_by_section_first_use(db_session, monkeypatch) -> None:
+    source = _source_with_refs()
+    owner, run_id, _ = await _seed_run(db_session, source, suffix="source-slices")
+    supplied = tuple(
+        SectionSource(id=ref, kind="sourcebook_entry", text=f"Facts for {ref}")
+        for ref in ("ref-explain", "ref-orient")
+    )
+    seen: dict[str, tuple[str, ...]] = {}
+    import document.shared_lesson.work_item_inputs as inputs_module
+
+    original = inputs_module.make_section_writer_request
+
+    def capture_request(**kwargs):
+        seen[kwargs["section"].slot_id] = tuple(item.id for item in kwargs["sources"])
+        return original(**kwargs)
+
+    monkeypatch.setattr(inputs_module, "make_section_writer_request", capture_request)
+    await load_verified_shared_lesson_inputs(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        sources=supplied,
+    )
+
+    assert seen == {"orient": ("ref-orient",), "explain": ("ref-explain",)}
+
+
+def test_partition_section_sources_rejects_missing_duplicate_and_unreferenced() -> None:
+    source = _source_with_refs()
+    orient = SectionSource(id="ref-orient", kind="sourcebook_entry", text="Orient")
+    explain = SectionSource(id="ref-explain", kind="sourcebook_entry", text="Explain")
+
+    with pytest.raises(SharedLessonInputError, match="missing"):
+        _partition_section_sources(source, (orient,))
+    with pytest.raises(SharedLessonInputError, match="duplicated"):
+        _partition_section_sources(source, (orient, orient, explain))
+    with pytest.raises(SharedLessonInputError, match="unreferenced"):
+        _partition_section_sources(
+            source,
+            (orient, explain, SectionSource(id="forged", kind="sourcebook_entry", text="x")),
+        )
 
 
 @pytest.mark.asyncio
