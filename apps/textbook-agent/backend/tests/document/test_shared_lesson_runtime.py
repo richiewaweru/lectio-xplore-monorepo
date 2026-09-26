@@ -470,6 +470,105 @@ async def test_writer_timeout_records_failure_without_awaiting_cancel_resistant_
 
 
 @pytest.mark.asyncio
+async def test_detached_writer_retains_shared_provider_cap_across_batches(monkeypatch) -> None:
+    source = _source()
+    composition_plan = SimpleNamespace(model_dump=lambda **_kwargs: {"items": []})
+    slow_request = SimpleNamespace(
+        tag="slow",
+        composition_plan=composition_plan,
+        model_dump=lambda **_kwargs: {"section": "slow"},
+    )
+    fast_request = SimpleNamespace(
+        tag="fast",
+        composition_plan=composition_plan,
+        model_dump=lambda **_kwargs: {"section": "fast"},
+    )
+    slow_cancelled = asyncio.Event()
+    release_slow_provider = asyncio.Event()
+    slow_provider_finished = asyncio.Event()
+    fast_writer_started = asyncio.Event()
+    fast_provider_started = asyncio.Event()
+    failures = []
+    lease_tokens = 0
+
+    async def fake_claim(*_args, **_kwargs):
+        nonlocal lease_tokens
+        lease_tokens += 1
+        return SimpleNamespace(lease_token=lease_tokens)
+
+    async def fake_no_checkpoint(*_args, **_kwargs):
+        return None
+
+    async def fake_fail(_session, **kwargs):
+        failures.append(kwargs["failure"])
+
+    async def fake_complete(*_args, **_kwargs):
+        return None
+
+    async def cancellation_resistant_provider(payload):
+        if payload["tag"] == "fast":
+            fast_provider_started.set()
+            return {"nodes": []}
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            slow_cancelled.set()
+            await release_slow_provider.wait()
+        slow_provider_finished.set()
+        return {"nodes": []}
+
+    async def fake_write(*, request, provider):
+        if request.tag == "fast":
+            fast_writer_started.set()
+        await provider({"tag": request.tag})
+        return SimpleNamespace(model_dump=lambda **_kwargs: {"nodes": []})
+
+    monkeypatch.setattr(
+        "document.shared_lesson.runtime.MAX_CONCURRENT_SECTION_WRITERS", 1
+    )
+    monkeypatch.setattr("document.shared_lesson.runtime.claim_work_item", fake_claim)
+    monkeypatch.setattr(
+        "document.shared_lesson.runtime.load_compatible_checkpoint", fake_no_checkpoint
+    )
+    monkeypatch.setattr("document.shared_lesson.runtime.persist_checkpoint", fake_no_checkpoint)
+    monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.complete_work_item", fake_complete)
+    monkeypatch.setattr("document.shared_lesson.runtime.write_section", fake_write)
+    monkeypatch.setattr("document.shared_lesson.runtime.SECTION_WRITER_TIMEOUT_SECONDS", 0.02)
+
+    def job(item_id, request):
+        return SectionWriterJob(
+            session=SimpleNamespace(commit=_commit_noop),
+            work_item_id=item_id,
+            worker_id=f"worker:{item_id}",
+            source=source,
+            request=request,
+            status="queued",
+            provider=cancellation_resistant_provider,
+        )
+
+    first = await write_section_work_items((job("write:slow", slow_request),))
+    assert isinstance(first[0].error, TimeoutError)
+    assert len(failures) == 1
+    await asyncio.wait_for(slow_cancelled.wait(), timeout=0.1)
+
+    monkeypatch.setattr("document.shared_lesson.runtime.SECTION_WRITER_TIMEOUT_SECONDS", 1)
+    second_batch = asyncio.create_task(
+        write_section_work_items((job("write:fast", fast_request),))
+    )
+    await asyncio.wait_for(fast_writer_started.wait(), timeout=0.1)
+    await asyncio.sleep(0.02)
+    assert fast_provider_started.is_set() is False
+    assert second_batch.done() is False
+
+    release_slow_provider.set()
+    second = await asyncio.wait_for(second_batch, timeout=0.5)
+    await asyncio.wait_for(slow_provider_finished.wait(), timeout=0.1)
+    assert second[0].result is not None
+    assert fast_provider_started.is_set()
+
+
+@pytest.mark.asyncio
 async def test_pending_source_is_rejected_before_work_item_claim(monkeypatch) -> None:
     source = _source()
     pending_plan = source.plan.model_copy(update={"approval_status": "pending"})

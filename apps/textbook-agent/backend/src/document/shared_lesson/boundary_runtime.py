@@ -13,7 +13,8 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-from collections.abc import Mapping, Sequence
+import weakref
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -57,6 +58,9 @@ BOUNDARY_STAGE = "continuity_validation"
 BOUNDARY_DEFINITION = "shared-boundary-runtime:v1"
 MAX_CONCURRENT_BOUNDARIES = 4
 BOUNDARY_VALIDATION_LEASE_FRACTION = 0.8
+_BOUNDARY_VALIDATION_SEMAPHORES: weakref.WeakKeyDictionary[
+    asyncio.AbstractEventLoop, asyncio.Semaphore
+] = weakref.WeakKeyDictionary()
 
 
 class BoundaryRuntimeError(ValueError):
@@ -73,6 +77,57 @@ class BoundaryCheckpointError(BoundaryRuntimeError):
 
 class BoundaryValidationDeadlineExceeded(TimeoutError):
     """Aggregate semantic/repair work exceeded its fenced lease budget."""
+
+
+def _boundary_validation_semaphore() -> asyncio.Semaphore:
+    """Share the provider cap across dispatches for this worker event loop."""
+    loop = asyncio.get_running_loop()
+    semaphore = _BOUNDARY_VALIDATION_SEMAPHORES.get(loop)
+    if semaphore is None:
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_BOUNDARIES)
+        _BOUNDARY_VALIDATION_SEMAPHORES[loop] = semaphore
+    return semaphore
+
+
+def _consume_detached_validation_task(task: asyncio.Task[Any]) -> None:
+    try:
+        task.exception()
+    except asyncio.CancelledError:
+        pass
+
+
+def _cancel_detached_validation_task(task: asyncio.Task[Any]) -> None:
+    """Cancel provider-only work without awaiting a cancellation-resistant call."""
+    if not task.done():
+        task.cancel()
+        task.add_done_callback(_consume_detached_validation_task)
+
+
+async def _run_boundary_validation_before_deadline(
+    validator: Callable[[], Awaitable[BoundaryValidationResult]],
+    *,
+    deadline: float,
+) -> BoundaryValidationResult:
+    """Run session-free provider work under the shared cap and an aggregate deadline."""
+    loop = asyncio.get_running_loop()
+    remaining = deadline - loop.time()
+    if remaining <= 0:
+        raise BoundaryValidationDeadlineExceeded
+
+    async def run_limited() -> BoundaryValidationResult:
+        async with _boundary_validation_semaphore():
+            return await validator()
+
+    task = asyncio.create_task(run_limited(), name="shared-boundary-validation")
+    try:
+        done, _pending = await asyncio.wait({task}, timeout=remaining)
+    except BaseException:
+        _cancel_detached_validation_task(task)
+        raise
+    if not done:
+        _cancel_detached_validation_task(task)
+        raise BoundaryValidationDeadlineExceeded
+    return task.result()
 
 
 class BoundaryWorkOrder(BaseModel):
@@ -703,25 +758,18 @@ async def execute_boundary_work_item(
 
     try:
         previous_plan, next_plan = _plan_pair(job.source, job.previous_section, job.next_section)
-        remaining_seconds = validation_deadline - loop.time()
-        if remaining_seconds <= 0:
-            raise BoundaryValidationDeadlineExceeded
-        timeout = asyncio.timeout(remaining_seconds)
-        try:
-            async with timeout:
-                result = await validate_and_repair_boundary(
-                    previous_section=job.previous_section,
-                    previous_plan=previous_plan,
-                    next_section=job.next_section,
-                    next_plan=next_plan,
-                    semantic_validator=job.semantic_validator,
-                    repair_engine=job.repair_engine,
-                    writer_requests=job.writer_requests,
-                )
-        except TimeoutError as exc:
-            if timeout.expired():
-                raise BoundaryValidationDeadlineExceeded from exc
-            raise
+        result = await _run_boundary_validation_before_deadline(
+            lambda: validate_and_repair_boundary(
+                previous_section=job.previous_section,
+                previous_plan=previous_plan,
+                next_section=job.next_section,
+                next_plan=next_plan,
+                semantic_validator=job.semantic_validator,
+                repair_engine=job.repair_engine,
+                writer_requests=job.writer_requests,
+            ),
+            deadline=validation_deadline,
+        )
     except LeaseLostError:
         raise
     except Exception as exc:  # noqa: BLE001 - persist unknown validator failures as typed failures.

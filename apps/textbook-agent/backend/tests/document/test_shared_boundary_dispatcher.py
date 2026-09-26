@@ -132,12 +132,16 @@ async def test_boundary_aggregate_deadline_fails_recoverably_before_lease_expiry
     admissions = await _ready_writers(db_session, owner, run_id, source)
     _patch_approved_source(monkeypatch, source)
     provider_cancelled = asyncio.Event()
+    release_provider = asyncio.Event()
+    provider_finished = asyncio.Event()
 
     async def slow_semantic_review(_request):
         try:
-            await asyncio.sleep(2)
-        finally:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
             provider_cancelled.set()
+            await release_provider.wait()
+        provider_finished.set()
         return BoundarySemanticVerdict(status="pass")
 
     result = await boundary_dispatcher.dispatch_shared_document_boundaries(
@@ -151,7 +155,8 @@ async def test_boundary_aggregate_deadline_fails_recoverably_before_lease_expiry
     assert result.state == "pending_repair"
     assert len(result.pending_repair_work_item_ids) == 1
     assert result.outcomes[0].error_code == "boundary_validation_timeout"
-    assert provider_cancelled.is_set()
+    await asyncio.wait_for(provider_cancelled.wait(), timeout=0.1)
+    assert provider_finished.is_set() is False
     boundary = await db_session.get(
         GenerationWorkItemModel, result.pending_repair_work_item_ids[0]
     )
@@ -159,6 +164,8 @@ async def test_boundary_aggregate_deadline_fails_recoverably_before_lease_expiry
     for admission in admissions:
         writer = await db_session.get(GenerationWorkItemModel, admission.work_item_id)
         assert writer is not None and writer.status == "ready"
+    release_provider.set()
+    await asyncio.wait_for(provider_finished.wait(), timeout=0.2)
 
 
 @pytest.mark.asyncio

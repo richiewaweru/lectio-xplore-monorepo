@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import weakref
 from types import SimpleNamespace
 
 import pytest
@@ -251,6 +252,64 @@ async def test_boundary_batch_cancellation_settles_sibling_tasks(monkeypatch) ->
         await task
 
     assert sibling_cancelled.is_set()
+
+
+@pytest.mark.asyncio
+async def test_detached_boundary_validator_retains_shared_cap_across_dispatches(monkeypatch) -> None:
+    monkeypatch.setattr(boundary_runtime, "MAX_CONCURRENT_BOUNDARIES", 1)
+    monkeypatch.setattr(
+        boundary_runtime,
+        "_BOUNDARY_VALIDATION_SEMAPHORES",
+        weakref.WeakKeyDictionary(),
+    )
+    loop = asyncio.get_running_loop()
+    release = asyncio.Event()
+    cancelled = asyncio.Event()
+    provider_started = 0
+    previous = _section("s1", 0, "The first idea.")
+    following = _section("s2", 1, "The second idea.")
+    result = BoundaryValidationResult(
+        status="pass",
+        previous_section=previous,
+        next_section=following,
+        semantic_calls=1,
+    )
+
+    async def cancellation_resistant_validator():
+        nonlocal provider_started
+        provider_started += 1
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.set()
+            await release.wait()
+        return result
+
+    async def next_dispatch_validator():
+        nonlocal provider_started
+        provider_started += 1
+        return result
+
+    with pytest.raises(boundary_runtime.BoundaryValidationDeadlineExceeded):
+        await boundary_runtime._run_boundary_validation_before_deadline(
+            cancellation_resistant_validator,
+            deadline=loop.time() + 0.02,
+        )
+
+    await asyncio.wait_for(cancelled.wait(), timeout=0.1)
+    second_dispatch = asyncio.create_task(
+        boundary_runtime._run_boundary_validation_before_deadline(
+            next_dispatch_validator,
+            deadline=loop.time() + 1,
+        )
+    )
+    await asyncio.sleep(0.02)
+    assert provider_started == 1
+    assert second_dispatch.done() is False
+
+    release.set()
+    assert await second_dispatch == result
+    assert provider_started == 2
 
 
 @pytest.mark.asyncio

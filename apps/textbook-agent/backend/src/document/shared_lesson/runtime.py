@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import weakref
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -70,6 +71,9 @@ SECTION_WRITER_LEASE_SECONDS = 360
 SECTION_WRITER_TIMEOUT_SECONDS = 300
 _COMPOSER_DEFINITION = "shared-section-composer:v1"
 _WRITER_DEFINITION = "shared-section-writer:v1"
+_SECTION_PROVIDER_SEMAPHORES: weakref.WeakKeyDictionary[
+    asyncio.AbstractEventLoop, asyncio.Semaphore
+] = weakref.WeakKeyDictionary()
 
 
 class SectionRuntimeError(ValueError):
@@ -612,7 +616,7 @@ async def write_section_work_items(
     ids = [job.work_item_id for job in selected]
     if len(ids) != len(set(ids)):
         raise SectionRuntimeError("writer batch contains duplicate work item IDs")
-    semaphore = asyncio.Semaphore(MAX_CONCURRENT_SECTION_WRITERS)
+    semaphore = _section_provider_semaphore()
 
     async def run_one(job: SectionWriterJob) -> SectionWriterOutcome:
         if job.status == "ready":
@@ -640,6 +644,16 @@ async def write_section_work_items(
         return SectionWriterOutcome(work_item_id=job.work_item_id, result=result)
 
     return tuple(await asyncio.gather(*(run_one(job) for job in selected)))
+
+
+def _section_provider_semaphore() -> asyncio.Semaphore:
+    """Share the provider cap across batches for this worker event loop."""
+    loop = asyncio.get_running_loop()
+    semaphore = _SECTION_PROVIDER_SEMAPHORES.get(loop)
+    if semaphore is None:
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_SECTION_WRITERS)
+        _SECTION_PROVIDER_SEMAPHORES[loop] = semaphore
+    return semaphore
 
 
 def _bounded_section_provider(
