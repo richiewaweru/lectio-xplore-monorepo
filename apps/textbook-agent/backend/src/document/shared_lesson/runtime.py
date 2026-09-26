@@ -40,6 +40,7 @@ from document.shared_lesson.writer import (
     write_section,
 )
 from infra.execution.checkpoints import content_hash
+from infra.database.models import GenerationWorkItemModel
 from infra.generation_runtime import (
     CheckpointCompatibilityError,
     CheckpointIntegrityError,
@@ -647,8 +648,11 @@ async def write_section_work_items(
             raise
         except Exception as exc:  # noqa: BLE001 - isolate section failures and finish siblings.
             # _write_section_work_item records typed failures before raising.
-            # Commit here so its Run/item locks are released while siblings
-            # continue, including siblings waiting on the shared Run row.
+            # Commit only when a fresh read proves that failure was recorded.
+            fresh = await job.session.get(GenerationWorkItemModel, job.work_item_id)
+            if fresh is None or fresh.status not in {"failed_recoverable", "failed_terminal"}:
+                await _settle_writer_job_session(job.session, commit=False)
+                raise
             try:
                 await _settle_writer_job_session(job.session, commit=True)
             except BaseException:

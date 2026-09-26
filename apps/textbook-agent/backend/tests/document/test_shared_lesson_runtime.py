@@ -505,6 +505,9 @@ async def test_detached_writer_retains_shared_provider_cap_across_batches(monkey
     async def fake_complete(*_args, **_kwargs):
         return None
 
+    async def fake_failed_item(*_args, **_kwargs):
+        return SimpleNamespace(status="failed_recoverable")
+
     async def cancellation_resistant_provider(payload):
         if payload["tag"] == "fast":
             fast_provider_started.set()
@@ -538,7 +541,7 @@ async def test_detached_writer_retains_shared_provider_cap_across_batches(monkey
 
     def job(item_id, request):
         return SectionWriterJob(
-            session=SimpleNamespace(commit=_commit_noop),
+            session=SimpleNamespace(commit=_commit_noop, get=fake_failed_item),
             work_item_id=item_id,
             worker_id=f"worker:{item_id}",
             source=source,
@@ -802,6 +805,47 @@ async def test_writer_job_commits_before_sibling_finishes(monkeypatch) -> None:
 
     assert all(outcome.result is not None for outcome in outcomes)
     assert set(commits) == {"first", "second"}
+
+
+@pytest.mark.asyncio
+async def test_writer_unrecorded_exception_rolls_back_and_propagates(monkeypatch) -> None:
+    original = RuntimeError("unexpected failure before typed failure persistence")
+
+    class Session:
+        committed = False
+        rolled_back = False
+
+        async def get(self, _model, _work_item_id):
+            return SimpleNamespace(status="running")
+
+        async def commit(self):
+            self.committed = True
+
+        async def rollback(self):
+            self.rolled_back = True
+
+    async def fail_before_recording(*_args, **_kwargs):
+        raise original
+
+    monkeypatch.setattr(
+        "document.shared_lesson.runtime._write_section_work_item", fail_before_recording
+    )
+    session = Session()
+    job = SectionWriterJob(
+        session=session,
+        work_item_id="write:unexpected",
+        worker_id="writer-failure-test",
+        source=SimpleNamespace(),
+        request=SimpleNamespace(),
+        status="queued",
+    )
+
+    with pytest.raises(RuntimeError) as raised:
+        await write_section_work_items((job,))
+
+    assert raised.value is original
+    assert session.rolled_back
+    assert not session.committed
 
 
 def test_writer_checkpoint_must_match_exact_composition_identity() -> None:
