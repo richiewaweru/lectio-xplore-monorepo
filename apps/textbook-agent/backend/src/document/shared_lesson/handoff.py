@@ -225,6 +225,7 @@ async def handoff_accepted_sections_to_document(
     expected_title: str | None = None,
     expected_content_hash: str | None = None,
     semantic_validator: DocumentSemanticValidator | None = None,
+    verified_semantic_qa: DocumentSemanticQAResult | None = None,
 ) -> SharedLessonHandoffEvidence:
     """Validate accepted section contracts, assemble, and run semantic QA.
 
@@ -233,6 +234,11 @@ async def handoff_accepted_sections_to_document(
     produces blocked evidence while preserving the immutable accepted document
     for a targeted correction at the owning work item.
     """
+    if verified_semantic_qa is not None and semantic_validator is not None:
+        raise SharedLessonHandoffError(
+            "verified semantic QA cannot be combined with semantic_validator"
+        )
+
     try:
         identity = verify_teaching_plan_source(source)
     except SectionRuntimeError as exc:
@@ -313,12 +319,41 @@ async def handoff_accepted_sections_to_document(
     except SharedLessonAssemblyError as exc:
         raise SharedLessonHandoffError(str(exc)) from exc
 
-    semantic = await qa_shared_lesson_document_semantics(
-        document=assembly.document,
-        teaching_plan_sections=plan_sections,
-        deterministic=assembly.qa,
-        semantic_validator=semantic_validator,
-    )
+    if verified_semantic_qa is None:
+        semantic = await qa_shared_lesson_document_semantics(
+            document=assembly.document,
+            teaching_plan_sections=plan_sections,
+            deterministic=assembly.qa,
+            semantic_validator=semantic_validator,
+        )
+    else:
+        if not isinstance(verified_semantic_qa, DocumentSemanticQAResult):
+            raise SharedLessonHandoffError(
+                "verified semantic QA must use the closed semantic contract"
+            )
+        if not assembly.qa.ready:
+            raise SharedLessonHandoffError(
+                "verified semantic QA cannot bypass deterministic document issues"
+            )
+        if verified_semantic_qa.semantic_calls != 1:
+            raise SharedLessonHandoffError(
+                "verified semantic QA must represent exactly one semantic call"
+            )
+        if verified_semantic_qa.deterministic_skipped_semantic:
+            raise SharedLessonHandoffError(
+                "verified semantic QA cannot be marked as deterministic-only"
+            )
+        if verified_semantic_qa.status not in {"pass", "issue"}:
+            raise SharedLessonHandoffError("verified semantic QA status must be pass or issue")
+        if verified_semantic_qa.status == "pass" and verified_semantic_qa.issues:
+            raise SharedLessonHandoffError(
+                "a passing verified semantic QA result cannot carry issues"
+            )
+        if verified_semantic_qa.status == "issue" and not verified_semantic_qa.issues:
+            raise SharedLessonHandoffError(
+                "a blocked verified semantic QA result must carry issues"
+            )
+        semantic = verified_semantic_qa
     if (
         semantic.document_id != assembly.document.id
         or semantic.document_revision != assembly.document.revision

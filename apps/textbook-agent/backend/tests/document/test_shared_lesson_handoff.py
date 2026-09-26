@@ -118,6 +118,7 @@ async def _handoff(
     composition: SectionCompositionPlan | None = None,
     section: SharedSection | None = None,
     semantic_validator=None,
+    verified_semantic_qa=None,
 ):
     default_source, default_composition, default_section = _accepted()
     return await handoff_accepted_sections_to_document(
@@ -128,6 +129,7 @@ async def _handoff(
         document_revision=1,
         created_at=datetime(2026, 9, 25, 12, tzinfo=UTC),
         semantic_validator=semantic_validator,
+        verified_semantic_qa=verified_semantic_qa,
     )
 
 
@@ -261,3 +263,51 @@ async def test_handoff_success_binds_source_document_and_exact_shapes() -> None:
     )
     with pytest.raises(TypeError):
         evidence.expected_shapes["explain"] = ()
+
+
+@pytest.mark.asyncio
+async def test_handoff_reuses_verified_semantic_qa_without_another_provider_call(
+    monkeypatch,
+) -> None:
+    calls = 0
+
+    async def reviewer(_request):
+        nonlocal calls
+        calls += 1
+        return DocumentSemanticVerdict(status="pass")
+
+    initial = await _handoff(semantic_validator=reviewer)
+    assert calls == 1
+
+    async def unexpected_provider_call(**_kwargs):
+        raise AssertionError("verified semantic QA must not call the provider")
+
+    monkeypatch.setattr(handoff, "qa_shared_lesson_document_semantics", unexpected_provider_call)
+    replayed = await _handoff(verified_semantic_qa=initial.semantic_qa)
+
+    assert calls == 1
+    assert replayed.semantic_qa == initial.semantic_qa
+    assert replayed.ready
+
+
+@pytest.mark.asyncio
+async def test_handoff_rejects_stale_or_forged_verified_semantic_qa() -> None:
+    initial = await _handoff()
+    forged = initial.semantic_qa.model_copy(update={"document_hash": "d" * 64})
+
+    with pytest.raises(SharedLessonHandoffError, match="stale"):
+        await _handoff(verified_semantic_qa=forged)
+
+
+@pytest.mark.asyncio
+async def test_handoff_rejects_verified_qa_with_second_validator() -> None:
+    initial = await _handoff()
+
+    async def reviewer(_request):
+        return DocumentSemanticVerdict(status="pass")
+
+    with pytest.raises(SharedLessonHandoffError, match="combined"):
+        await _handoff(
+            verified_semantic_qa=initial.semantic_qa,
+            semantic_validator=reviewer,
+        )
