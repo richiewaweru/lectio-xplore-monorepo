@@ -20,6 +20,7 @@ from document.shared_lesson.composer_admission import (
     admit_composer_work_items,
 )
 from document.shared_lesson.runtime import (
+    SECTION_WRITER_LEASE_SECONDS,
     SectionWriterJob,
     TeachingPlanSource,
     compose_section_work_item,
@@ -90,16 +91,23 @@ class SharedSectionDispatcher:
         composer_provider: Callable[[dict[str, Any]], Any] | None = None,
         writer_provider: Callable[[dict[str, Any]], Any] | None = None,
         lease_seconds: int = 300,
+        writer_lease_seconds: int | None = None,
     ) -> None:
         if not worker_id.strip():
             raise ValueError("worker_id must be non-empty")
         if lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
+        if writer_lease_seconds is not None and writer_lease_seconds <= 0:
+            raise ValueError("writer_lease_seconds must be positive")
         self.session_factory = session_factory
         self.worker_id = worker_id
         self.composer_provider = composer_provider
         self.writer_provider = writer_provider
         self.lease_seconds = lease_seconds
+        self.writer_lease_seconds = max(
+            lease_seconds,
+            writer_lease_seconds or SECTION_WRITER_LEASE_SECONDS,
+        )
 
     async def run_one(
         self,
@@ -335,7 +343,7 @@ class SharedSectionDispatcher:
                     request=admission.request,
                     status="queued",
                     provider=self.writer_provider,
-                    lease_seconds=self.lease_seconds,
+                    lease_seconds=self.writer_lease_seconds,
                 )
                 for admission, stage_session, item in selected
             ]

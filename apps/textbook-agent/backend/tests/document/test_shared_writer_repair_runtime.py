@@ -18,6 +18,7 @@ from document.shared_lesson.boundary import BoundaryValidationResult
 from document.shared_lesson.composer import CompositionChoice, validate_and_build_composition
 from document.shared_lesson.continuity import ContinuityIssue
 from document.shared_lesson.models import ParagraphDisplay, ParagraphNode, SharedSection
+from document.shared_lesson import writer as shared_writer
 from document.shared_lesson.runtime import (
     TeachingPlanSource,
     _stable_hash,
@@ -30,6 +31,28 @@ from infra.generation_runtime import (
     RuntimeCheckpoint,
     RuntimeCheckpointCompatibility,
 )
+from infra.execution.timeouts import V3_TIMEOUTS
+
+
+@pytest.mark.asyncio
+async def test_shared_writer_default_provider_uses_section_writer_timeout(monkeypatch) -> None:
+    from infra.authoring import structured_provider
+
+    captured = {}
+
+    async def run_structured_agent(**kwargs):
+        captured.update(kwargs)
+        return {"nodes": []}
+
+    monkeypatch.setattr(structured_provider, "run_structured_agent", run_structured_agent)
+    await shared_writer._default_provider({"section_slot_id": "s1"})
+
+    policy = captured["retry_policy"]
+    assert captured["node_name"] == "shared_section_writer"
+    assert policy.max_attempts == 1
+    assert policy.call_timeout_seconds == float(V3_TIMEOUTS["section_writer"])
+    assert policy.call_timeout_seconds == 90
+    assert structured_provider._NODE_TIMEOUT_KEYS["shared_section_writer"] == "section_writer"
 
 
 def _source() -> TeachingPlanSource:

@@ -476,6 +476,7 @@ async def _default_provider(payload: dict[str, Any]) -> Any:
 
     from core.prompts import effective_prompt_text
     from infra.authoring.structured_provider import run_structured_agent
+    from infra.execution.timeouts import V3_TIMEOUTS
 
     return await run_structured_agent(
         node_name="shared_section_writer",
@@ -486,7 +487,10 @@ async def _default_provider(payload: dict[str, Any]) -> Any:
         output_type=SectionWriterDraft,
         repair_attempts=0,
         retries={"output": 0},
-        retry_policy=RetryPolicy(max_attempts=1),
+        retry_policy=RetryPolicy(
+            max_attempts=1,
+            call_timeout_seconds=float(V3_TIMEOUTS["section_writer"]),
+        ),
     )
 
 

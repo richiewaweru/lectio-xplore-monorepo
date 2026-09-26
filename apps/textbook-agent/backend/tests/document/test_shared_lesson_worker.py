@@ -199,6 +199,51 @@ async def test_expired_lease_is_selected_but_cancelled_run_is_not(db_session, mo
 
 
 @pytest.mark.asyncio
+async def test_worker_passes_writer_specific_lease_without_changing_other_stage_lease(
+    db_session, monkeypatch
+):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission = await _admitted(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-writer-lease",
+    )
+    captured = {}
+
+    class Dispatcher:
+        def __init__(self, _factory, **kwargs):
+            captured.update(kwargs)
+
+        async def run_one(self, **_kwargs):
+            return SimpleNamespace(blocked=True)
+
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-lease")
+    candidate = worker._Candidate(
+        run=admission.run,
+        item=None,
+        path_lesson_id=lesson.id,
+        preparation_generation_id=generation.id,
+        dispatch_sections=True,
+    )
+
+    async def find_candidate(_session, _now):
+        return candidate
+
+    async def source_context(_session, _candidate):
+        return source, lambda *_args: _identity(source), None
+
+    monkeypatch.setattr(instance, "_find_candidate", find_candidate)
+    monkeypatch.setattr(instance, "_source_context", source_context)
+    monkeypatch.setattr(worker, "SharedSectionDispatcher", Dispatcher)
+
+    assert await instance.run_one(db_session)
+    assert captured["lease_seconds"] == 300
+    assert captured["writer_lease_seconds"] == 360
+
+
+@pytest.mark.asyncio
 async def test_stale_source_context_fails_claimed_item_without_provider_call(
     db_session, monkeypatch
 ):

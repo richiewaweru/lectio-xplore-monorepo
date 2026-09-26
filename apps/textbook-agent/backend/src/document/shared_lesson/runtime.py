@@ -64,6 +64,7 @@ from infra.generation_runtime import (
 )
 
 MAX_CONCURRENT_SECTION_WRITERS = 4
+SECTION_WRITER_LEASE_SECONDS = 360
 _COMPOSER_DEFINITION = "shared-section-composer:v1"
 _WRITER_DEFINITION = "shared-section-writer:v1"
 
@@ -99,7 +100,7 @@ class SectionWriterJob:
     request: SectionWriterRequest
     status: str
     provider: Callable[[dict[str, Any]], Awaitable[Any]] | None = None
-    lease_seconds: int = 300
+    lease_seconds: int = SECTION_WRITER_LEASE_SECONDS
 
 
 @dataclass(frozen=True)
@@ -487,7 +488,7 @@ async def _write_section_work_item(
     request: SectionWriterRequest,
     provider: Callable[[dict[str, Any]], Awaitable[Any]] | None = None,
     provider_semaphore: asyncio.Semaphore,
-    lease_seconds: int = 300,
+    lease_seconds: int = SECTION_WRITER_LEASE_SECONDS,
 ) -> SectionWriteResult:
     """Write one section under a provider-call cap and a durable lease fence."""
     identity = verify_teaching_plan_source(source)

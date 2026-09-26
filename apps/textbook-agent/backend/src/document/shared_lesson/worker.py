@@ -28,7 +28,7 @@ from document.shared_lesson.post_section_pipeline import (
     PostSectionPipelineOutcome,
     run_post_section_pipeline,
 )
-from document.shared_lesson.runtime import TeachingPlanSource
+from document.shared_lesson.runtime import SECTION_WRITER_LEASE_SECONDS, TeachingPlanSource
 from document.shared_lesson.section_dispatcher import SharedSectionDispatcher
 from document.shared_lesson.semantic_inputs import (
     SOURCEBOOK_ITEM_KEY,
@@ -298,6 +298,10 @@ class SharedDocumentWorker:
                 composer_provider=self.composer_provider,
                 writer_provider=self.writer_provider,
                 lease_seconds=self.lease_seconds,
+                writer_lease_seconds=max(
+                    self.lease_seconds,
+                    SECTION_WRITER_LEASE_SECONDS,
+                ),
             )
             outcome = await dispatcher.run_one(
                 run_id=candidate.run.id,

@@ -22,6 +22,7 @@ _CALLER = "v3_execution"
 
 _NODE_TIMEOUT_KEYS = {
     "v3_section_writer": "section_writer",
+    "shared_section_writer": "section_writer",
     "v3_question_writer": "question_writer",
     "v3_answer_key_generator": "answer_key_generator",
 }

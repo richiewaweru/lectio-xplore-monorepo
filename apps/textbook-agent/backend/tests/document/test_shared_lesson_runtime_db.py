@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select
@@ -29,6 +31,7 @@ from document.shared_lesson.runtime import (
     retry_failed_section,
     verify_teaching_plan_source,
 )
+from document.shared_lesson import runtime as shared_runtime
 from infra.database.models import (
     ConceptModel,
     GenerationEventModel,
@@ -417,6 +420,62 @@ async def test_shared_lesson_runtime_persists_composition_writer_retry_cancel_an
         assert any(event.event_type == "work_item_ready" for event in events)
         assert any(event.event_type == "work_item_failed" for event in events)
         assert any(event.event_type == "run_cancelled" for event in events)
+
+
+@pytest.mark.asyncio
+async def test_expired_writer_lease_is_reclaimed_with_new_attempt_and_fence(
+    db_session, monkeypatch
+) -> None:
+    owner_id, lesson_id = await _seed_build(db_session, suffix="expired-writer-reclaim")
+    source = _source()
+    _build, (run, _composition_items) = await _admit_run(
+        db_session,
+        owner_id=owner_id,
+        lesson_id=lesson_id,
+        source=source,
+        request_key="expired-writer-reclaim-request",
+    )
+    section = next(section for section in source.plan.sections if section.slot_id == "explain")
+    request = _writer_request(section)
+    item = await admit_writer_work_item(
+        db_session,
+        run_id=run.id,
+        section=section,
+        request=request,
+    )
+    item.status = "running"
+    item.attempt = 1
+    item.lease_owner = "expired-writer"
+    item.lease_token = 1
+    item.lease_expires_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=1)
+    await db_session.commit()
+
+    async def write(*, request, provider):
+        assert provider is not None
+        return SimpleNamespace(
+            model_dump=lambda **_kwargs: {
+                "section_slot_id": request.section.slot_id,
+                "title": "Written section",
+                "nodes": [],
+            }
+        )
+
+    monkeypatch.setattr(shared_runtime, "write_section", write)
+    await _write_section_work_item(
+        db_session,
+        work_item_id=item.id,
+        worker_id="replacement-writer",
+        source=source,
+        request=request,
+        provider=lambda _payload: None,
+        provider_semaphore=asyncio.Semaphore(1),
+        lease_seconds=360,
+    )
+    await db_session.refresh(item)
+    assert item.status == "ready"
+    assert item.attempt == 2
+    assert item.lease_token == 2
+    assert item.output_hash is not None
 
 
 @pytest.mark.asyncio
