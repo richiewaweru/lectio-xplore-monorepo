@@ -549,11 +549,30 @@ async def _write_section_work_item(
             provider_dispatch = _default_provider
         else:
             provider_dispatch = provider
-        bounded_provider = _bounded_section_provider(provider_dispatch, provider_semaphore)
-        result = await asyncio.wait_for(
-            write_section(request=request, provider=bounded_provider),
-            timeout=SECTION_WRITER_TIMEOUT_SECONDS,
+        deadline = asyncio.get_running_loop().time() + SECTION_WRITER_TIMEOUT_SECONDS
+        bounded_provider = _bounded_section_provider(
+            provider_dispatch,
+            provider_semaphore,
+            deadline=deadline,
         )
+        # Keep provider/validation work separate from this session-owning task.
+        # asyncio.wait_for waits for cancellation to finish, so a provider that
+        # suppresses cancellation can otherwise keep the lease running forever.
+        writer_task = asyncio.create_task(
+            write_section(request=request, provider=bounded_provider),
+            name=f"shared-section-writer:{work_item_id}",
+        )
+        try:
+            done, _pending = await asyncio.wait(
+                {writer_task}, timeout=max(0.0, deadline - asyncio.get_running_loop().time())
+            )
+        except BaseException:
+            _cancel_detached_writer_task(writer_task)
+            raise
+        if not done:
+            _cancel_detached_writer_task(writer_task)
+            raise TimeoutError("SharedDocument section writer exceeded its aggregate deadline")
+        result = writer_task.result()
     except LeaseLostError:
         raise
     except Exception as exc:
@@ -626,14 +645,39 @@ async def write_section_work_items(
 def _bounded_section_provider(
     provider: Callable[[dict[str, Any]], Awaitable[Any]],
     semaphore: asyncio.Semaphore,
+    *,
+    deadline: float,
 ) -> Callable[[dict[str, Any]], Awaitable[Any]]:
-    """Cap each provider dispatch, including the writer's bounded repair calls."""
+    """Cap provider concurrency and forbid further calls after the writer deadline."""
 
     async def dispatch(payload: dict[str, Any]) -> Any:
+        loop = asyncio.get_running_loop()
+        if loop.time() >= deadline:
+            raise TimeoutError("SharedDocument section writer deadline expired")
         async with semaphore:
-            return await provider(payload)
+            if loop.time() >= deadline:
+                raise TimeoutError("SharedDocument section writer deadline expired")
+            result = await provider(payload)
+            if loop.time() >= deadline:
+                raise TimeoutError("SharedDocument section writer deadline expired")
+            return result
 
     return dispatch
+
+
+def _consume_detached_writer_task(task: asyncio.Task[Any]) -> None:
+    """Retrieve a late detached provider-task exception without touching DB state."""
+    try:
+        task.exception()
+    except asyncio.CancelledError:
+        pass
+
+
+def _cancel_detached_writer_task(task: asyncio.Task[Any]) -> None:
+    """Request cancellation without waiting on a cancellation-resistant provider."""
+    if not task.done():
+        task.cancel()
+        task.add_done_callback(_consume_detached_writer_task)
 
 
 def verify_writer_checkpoint_payload(payload: Any, *, composition: SectionCompositionPlan) -> None:

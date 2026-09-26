@@ -395,6 +395,81 @@ async def test_writer_total_timeout_is_recorded_as_retryable_transport_failure(m
 
 
 @pytest.mark.asyncio
+async def test_writer_timeout_records_failure_without_awaiting_cancel_resistant_provider(
+    monkeypatch,
+) -> None:
+    from infra.generation_runtime import ErrorClass, RecoveryAction
+
+    source = _source()
+    composition_plan = SimpleNamespace(model_dump=lambda **_kwargs: {"items": []})
+    request = SimpleNamespace(
+        composition_plan=composition_plan,
+        model_dump=lambda **_kwargs: {"composition_plan": {"items": []}},
+    )
+    provider_started = asyncio.Event()
+    provider_cancelled = asyncio.Event()
+    release_provider = asyncio.Event()
+    provider_finished = asyncio.Event()
+    recorded = []
+
+    async def fake_claim(*_args, **_kwargs):
+        return SimpleNamespace(lease_token=1)
+
+    async def fake_no_checkpoint(*_args, **_kwargs):
+        return None
+
+    async def fake_fail(_session, **kwargs):
+        recorded.append(kwargs["failure"])
+
+    async def cancel_resistant_provider(_payload):
+        provider_started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            provider_cancelled.set()
+            await release_provider.wait()
+        provider_finished.set()
+        return {"nodes": []}
+
+    async def writer_with_provider(*, provider, **_kwargs):
+        return await provider({"repair_scope": "initial"})
+
+    monkeypatch.setattr("document.shared_lesson.runtime.claim_work_item", fake_claim)
+    monkeypatch.setattr(
+        "document.shared_lesson.runtime.load_compatible_checkpoint", fake_no_checkpoint
+    )
+    monkeypatch.setattr("document.shared_lesson.runtime.persist_checkpoint", fake_no_checkpoint)
+    monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.write_section", writer_with_provider)
+    monkeypatch.setattr("document.shared_lesson.runtime.SECTION_WRITER_TIMEOUT_SECONDS", 0.02)
+
+    with pytest.raises(TimeoutError, match="aggregate deadline"):
+        await asyncio.wait_for(
+            _write_section_work_item(
+                SimpleNamespace(commit=_commit_noop),
+                work_item_id="write:orient",
+                worker_id="worker-1",
+                source=source,
+                request=request,
+                provider=cancel_resistant_provider,
+                provider_semaphore=asyncio.Semaphore(1),
+            ),
+            timeout=0.5,
+        )
+
+    assert provider_started.is_set()
+    assert len(recorded) == 1
+    assert recorded[0].error_class == ErrorClass.PROVIDER_TRANSPORT
+    assert recorded[0].recovery_action == RecoveryAction.RETRY
+    assert recorded[0].error_code == "provider_transport"
+    await asyncio.wait_for(provider_cancelled.wait(), timeout=0.1)
+    assert provider_finished.is_set() is False
+
+    release_provider.set()
+    await asyncio.wait_for(provider_finished.wait(), timeout=0.2)
+
+
+@pytest.mark.asyncio
 async def test_pending_source_is_rejected_before_work_item_claim(monkeypatch) -> None:
     source = _source()
     pending_plan = source.plan.model_copy(update={"approval_status": "pending"})
