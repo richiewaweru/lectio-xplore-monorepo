@@ -42,6 +42,7 @@ from document.shared_lesson.handoff_dispatcher import (
     SharedDocumentHandoffDispatchError,
     handoff_qa_dispatch_result,
 )
+from document.shared_lesson.media import SharedFigureMediaError
 from document.shared_lesson.media_dispatcher import (
     SharedMediaDispatcher,
     SharedMediaDispatcherError,
@@ -266,6 +267,7 @@ async def run_post_section_pipeline(
         SemanticInputError,
         SharedLessonInputError,
         SharedMediaDispatcherError,
+        SharedFigureMediaError,
         PostSectionPipelineError,
     ) as exc:
         return PostSectionPipelineOutcome(

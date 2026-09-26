@@ -12,6 +12,7 @@ from document.shared_lesson.boundary_dispatcher import BoundaryDispatchResult
 from document.shared_lesson.document_qa_dispatcher import SharedDocumentQADispatchResult
 from document.shared_lesson.document_semantic import DocumentSemanticQAResult
 from document.shared_lesson.finalization_dispatcher import SharedLessonFinalizationDispatchOutcome
+from document.shared_lesson.media import SharedFigureMediaError
 from document.shared_lesson.media_runtime import MediaReadiness
 from document.shared_lesson.qa_runtime import VerifiedDocumentQA
 
@@ -160,6 +161,50 @@ async def test_pipeline_stops_pending_before_media_or_qa(db_session_factory, mon
     assert outcome.state == "pending"
     assert outcome.stage == "boundaries"
     assert called is False
+
+
+@pytest.mark.asyncio
+async def test_invalid_accepted_figure_section_returns_blocked_outcome(
+    db_session_factory,
+    monkeypatch,
+) -> None:
+    source, _composition, _section = _accepted()
+
+    class InvalidMediaDispatcher:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        async def run_one(self, **_kwargs):
+            raise SharedFigureMediaError(
+                "accepted section failed deterministic validation: avoid_repeating_violated"
+            )
+
+    async def passed_boundaries(*_args, **_kwargs):
+        return _passed_boundaries()
+
+    async def set_stage(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(pipeline, "dispatch_shared_document_boundaries", passed_boundaries)
+    monkeypatch.setattr(pipeline, "_set_run_stage", set_stage)
+    monkeypatch.setattr(pipeline, "SharedMediaDispatcher", InvalidMediaDispatcher)
+    monkeypatch.setattr(
+        pipeline,
+        "load_current_approved_teaching_plan_source",
+        lambda **_kwargs: _source(source),
+    )
+
+    outcome = await pipeline.run_post_section_pipeline(
+        db_session_factory,
+        run_id="post-section-run",
+        owner_user_id="owner",
+        path_lesson_id="lesson",
+        preparation_generation_id="prep",
+    )
+
+    assert outcome.state == "blocked"
+    assert outcome.stage == "media"
+    assert "avoid_repeating_violated" in (outcome.error or "")
 
 
 def _passed_boundaries() -> BoundaryDispatchResult:
