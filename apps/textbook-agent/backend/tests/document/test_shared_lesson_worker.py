@@ -4,12 +4,14 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
+from sqlalchemy import select
 from test_shared_lesson_approved_source import _prepared
 
 from document.shared_lesson import worker
 from document.shared_lesson.approved_source import ApprovedSourceVerificationError
 from document.shared_lesson.run_admission import admit_shared_document_run
-from infra.database.models import GenerationRunModel, GenerationWorkItemModel
+from document.shared_lesson.semantic_inputs import SemanticInputError
+from infra.database.models import GenerationEventModel, GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import SourceIdentity
 
@@ -223,3 +225,149 @@ async def test_stale_source_context_fails_claimed_item_without_provider_call(
     assert item is not None
     assert item.status == "failed_terminal"
     assert item.error_class == "source_conflict"
+
+
+async def _ready_sourcebook(db_session, *, source, lesson, generation, request_key):
+    admission = await _admitted(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key=request_key,
+    )
+    item = await db_session.get(GenerationWorkItemModel, admission.sourcebook_work_item.id)
+    assert item is not None
+    item.status = "ready"
+    item.output_json = {"entries": []}
+    item.output_hash = content_hash(item.output_json)
+    await db_session.commit()
+    return admission, item
+
+
+@pytest.mark.asyncio
+async def test_ready_sourcebook_dependency_loss_fails_run_durably_and_stops_after_restart(
+    db_session, monkeypatch
+):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, sourcebook = await _ready_sourcebook(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-terminal-snapshot-loss",
+    )
+    _bind_source_context(monkeypatch, source)
+
+    async def missing_snapshot(*_args, **_kwargs):
+        raise SemanticInputError("approved item snapshot is unavailable or invalid")
+
+    monkeypatch.setattr(worker, "load_verified_sourcebook_input", missing_snapshot)
+    worker_instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-terminal-1")
+
+    assert await worker_instance.run_one(db_session)
+    run = await db_session.get(GenerationRunModel, admission.run.id)
+    assert run is not None
+    assert run.status == "failed_terminal"
+    assert run.error_class == "unsupported_contract"
+    assert run.recovery_action == "none"
+    await db_session.refresh(sourcebook)
+    assert sourcebook.status == "ready"
+    assert sourcebook.output_json == {"entries": []}
+    event = await db_session.scalar(
+        select(GenerationEventModel).where(
+            GenerationEventModel.run_id == admission.run.id,
+            GenerationEventModel.event_type == "run_failed",
+        )
+    )
+    assert event is not None
+    assert event.status == "failed_terminal"
+    assert event.safe_payload_json["error_class"] == "unsupported_contract"
+
+    restarted_worker = worker.SharedDocumentWorker(lambda: None, worker_id="worker-terminal-2")
+    assert await restarted_worker.run_one(db_session) is False
+
+
+@pytest.mark.asyncio
+async def test_ready_sourcebook_approved_source_loss_fails_as_source_conflict(db_session, monkeypatch):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, sourcebook = await _ready_sourcebook(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-terminal-source-loss",
+    )
+
+    async def stale_source(**_kwargs):
+        raise ApprovedSourceVerificationError("approved source no longer exists")
+
+    monkeypatch.setattr(worker, "load_current_approved_teaching_plan_source", stale_source)
+    worker_instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-terminal-3")
+
+    assert await worker_instance.run_one(db_session)
+    run = await db_session.get(GenerationRunModel, admission.run.id)
+    assert run is not None
+    assert run.status == "failed_terminal"
+    assert run.error_class == "source_conflict"
+    assert run.recovery_action == "none"
+    await db_session.refresh(sourcebook)
+    assert sourcebook.status == "ready"
+
+
+@pytest.mark.asyncio
+async def test_task_admission_snapshot_loss_fails_run_terminally(db_session, monkeypatch):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, sourcebook = await _ready_sourcebook(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-terminal-task-admission-loss",
+    )
+    _bind_source_context(monkeypatch, source)
+
+    async def verified(*_args, **_kwargs):
+        return SimpleNamespace(sourcebook_output_hash=sourcebook.output_hash)
+
+    async def rejected_admission(*_args, **_kwargs):
+        raise SemanticInputError("approved item snapshot is unavailable or invalid")
+
+    monkeypatch.setattr(worker, "load_verified_sourcebook_input", verified)
+    monkeypatch.setattr(worker, "admit_shared_task_work_item", rejected_admission)
+    worker_instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-terminal-5")
+
+    assert await worker_instance.run_one(db_session)
+    run = await db_session.get(GenerationRunModel, admission.run.id)
+    assert run is not None
+    assert run.status == "failed_terminal"
+    assert run.error_class == "unsupported_contract"
+    await db_session.refresh(sourcebook)
+    assert sourcebook.status == "ready"
+
+
+@pytest.mark.asyncio
+async def test_ready_sourcebook_programming_error_is_not_classified_as_source_conflict(
+    db_session, monkeypatch
+):
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, _sourcebook = await _ready_sourcebook(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-terminal-programming-error",
+    )
+
+    async def programming_error(**_kwargs):
+        raise RuntimeError("unexpected implementation failure")
+
+    monkeypatch.setattr(worker, "load_current_approved_teaching_plan_source", programming_error)
+    worker_instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-terminal-4")
+
+    with pytest.raises(RuntimeError, match="unexpected implementation failure"):
+        await worker_instance.run_one(db_session)
+
+    run = await db_session.get(GenerationRunModel, admission.run.id)
+    assert run is not None
+    assert run.status == "queued"
+    assert run.error_class is None

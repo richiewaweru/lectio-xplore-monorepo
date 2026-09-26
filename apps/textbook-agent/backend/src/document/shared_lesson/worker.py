@@ -28,6 +28,7 @@ from document.shared_lesson.runtime import TeachingPlanSource
 from document.shared_lesson.semantic_inputs import (
     SOURCEBOOK_ITEM_KEY,
     TASK_ITEM_KEY,
+    SemanticInputError,
     admit_shared_task_work_item,
     load_verified_sourcebook_input,
 )
@@ -48,12 +49,16 @@ from infra.database.models import (
 from infra.execution.leases import LeaseLostError
 from infra.generation_runtime import (
     ErrorClass,
+    InvalidRunTransition,
     RecoveryAction,
+    RunFailure,
+    RunNotFound,
     SourceIdentity,
     WorkItemFailure,
     WorkItemUnavailable,
     active_work_items,
     claim_work_item,
+    fail_run_terminal,
     fail_work_item,
 )
 
@@ -133,7 +138,6 @@ class SharedDocumentWorker:
         self.poll_interval_seconds = poll_interval_seconds
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
-        self._blocked_admission_runs: set[str] = set()
 
     async def start(self) -> None:
         if self._task is not None and not self._task.done():
@@ -178,34 +182,58 @@ class SharedDocumentWorker:
             source, verifier, snapshot_loader = await self._source_context(session, candidate)
         except (ApprovedSourceVerificationError, SharedDocumentWorkerError) as exc:
             if candidate.item is None:
-                # There is no WorkItem to fence when a ready sourcebook cannot
-                # admit its dependent task.  The generic runtime currently has
-                # no fail-run primitive, so hold this Run out of the in-memory
-                # poll set and surface an explicit contract blocker.
-                self._blocked_admission_runs.add(candidate.run.id)
-                LOGGER.error(
-                    "SharedDocument Run %s is blocked before task admission: %s",
+                await self._fail_admission_run(
+                    session,
+                    candidate,
+                    error_code="shared_document_source_conflict",
+                    error_class=ErrorClass.SOURCE_CONFLICT,
+                    safe_summary=(
+                        "The approved Teaching Plan source is unavailable or no longer valid."
+                    ),
+                    now=current,
+                )
+                LOGGER.warning(
+                    "SharedDocument Run %s failed before task admission: %s",
                     candidate.run.id,
                     exc,
                 )
-                return False
+                return True
             await self._fail_source_context(session, candidate, current)
             return True
 
         if candidate.admit_tasks:
-            verified = await load_verified_sourcebook_input(
-                session,
-                run_id=candidate.run.id,
-                owner_user_id=candidate.run.owner_user_id,
-                source=source,
-            )
-            await admit_shared_task_work_item(
-                session,
-                run_id=candidate.run.id,
-                owner_user_id=candidate.run.owner_user_id,
-                source=source,
-                sourcebook_output_hash=verified.sourcebook_output_hash,
-            )
+            try:
+                verified = await load_verified_sourcebook_input(
+                    session,
+                    run_id=candidate.run.id,
+                    owner_user_id=candidate.run.owner_user_id,
+                    source=source,
+                )
+                await admit_shared_task_work_item(
+                    session,
+                    run_id=candidate.run.id,
+                    owner_user_id=candidate.run.owner_user_id,
+                    source=source,
+                    sourcebook_output_hash=verified.sourcebook_output_hash,
+                )
+            except SemanticInputError as exc:
+                await self._fail_admission_run(
+                    session,
+                    candidate,
+                    error_code="shared_document_dependency_contract",
+                    error_class=ErrorClass.UNSUPPORTED_CONTRACT,
+                    safe_summary=(
+                        "The approved dependency snapshot or ready sourcebook no longer "
+                        "matches the SharedDocument contract."
+                    ),
+                    now=current,
+                )
+                LOGGER.warning(
+                    "SharedDocument Run %s failed while admitting task work: %s",
+                    candidate.run.id,
+                    exc,
+                )
+                return True
             candidate.run.stage = "shared_task_generation"
             await session.commit()
             return True
@@ -267,8 +295,6 @@ class SharedDocumentWorker:
             ).all()
         )
         for run in runs:
-            if run.id in self._blocked_admission_runs:
-                continue
             items = list(
                 (
                     await session.scalars(
@@ -300,7 +326,8 @@ class SharedDocumentWorker:
                     preparation_generation_id=preparation_generation_id,
                 )
             if sourcebook is not None and sourcebook.status == "ready":
-                if task is None:
+                has_active_item = any(item.status in {"queued", "running"} for item in active)
+                if task is None and not has_active_item:
                     return _Candidate(
                         run=run,
                         item=None,
@@ -316,6 +343,34 @@ class SharedDocumentWorker:
                         preparation_generation_id=preparation_generation_id,
                     )
         return None
+
+    async def _fail_admission_run(
+        self,
+        session: Any,
+        candidate: _Candidate,
+        *,
+        error_code: str,
+        error_class: ErrorClass,
+        safe_summary: str,
+        now: datetime,
+    ) -> None:
+        try:
+            await fail_run_terminal(
+                session,
+                run_id=candidate.run.id,
+                owner_user_id=candidate.run.owner_user_id,
+                failure=RunFailure(
+                    error_code=error_code,
+                    error_class=error_class,
+                    safe_summary=safe_summary,
+                ),
+                now=now,
+            )
+        except (InvalidRunTransition, RunNotFound):
+            # A concurrent worker or user action already moved the Run.
+            await session.rollback()
+            return
+        await session.commit()
 
     async def _source_context(
         self,
