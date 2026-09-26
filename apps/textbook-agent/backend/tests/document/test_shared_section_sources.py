@@ -13,6 +13,7 @@ from curriculum.teaching_plan.models import (
     TeachingPlanSection,
     TeachingRevisionRecord,
 )
+from curriculum.teaching_plan.revisions import approved_item_snapshot_hash
 from document.shared_lesson.runtime import TeachingPlanSource
 from document.shared_lesson.section_sources import (
     SectionSourceError,
@@ -83,6 +84,13 @@ def _source() -> TeachingPlanSource:
         approval_status="approved",
     )
     digest = teaching_plan_content_hash(plan)
+    approved_item_snapshot = {
+        "schema_version": 1,
+        "teaching_plan_id": plan.teaching_plan_id,
+        "teaching_plan_revision": plan.revision,
+        "teaching_plan_hash": digest,
+        "items": {},
+    }
     record = TeachingRevisionRecord(
         teaching_plan_id=plan.teaching_plan_id,
         revision=plan.revision,
@@ -94,6 +102,8 @@ def _source() -> TeachingPlanSource:
         approved_at="2026-09-25T00:00:00Z",
         reviewed_by="teacher-1",
         approval_hash_binding="submitted",
+        approved_item_snapshot=approved_item_snapshot,
+        approved_item_snapshot_hash=approved_item_snapshot_hash(approved_item_snapshot),
     )
     return TeachingPlanSource(
         plan=plan,
@@ -145,6 +155,8 @@ def _inputs(
         source=source,
         sourcebook=sourcebook,
         tasks=(),
+        approved_item_snapshot=source.revision_record.approved_item_snapshot,
+        approved_item_snapshot_hash=source.revision_record.approved_item_snapshot_hash,
         sourcebook_output_hash=content_hash(sourcebook.model_dump(mode="json")),
         task_output_hash="a" * 64,
         work_item_ids={"sourcebook": "item-sourcebook", "shared_tasks": "item-tasks"},

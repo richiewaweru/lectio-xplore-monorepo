@@ -16,6 +16,7 @@ from test_shared_lesson_repository import (
 )
 
 from curriculum.lesson_sourcebook import LessonSourcebook, SourcebookEntry
+from curriculum.teaching_plan.revisions import approved_item_snapshot_hash
 from document.shared_lesson.boundary_runtime import (
     BOUNDARY_DEFINITION,
     BOUNDARY_STAGE,
@@ -62,6 +63,7 @@ def _handoff(source, document, *, expected_shapes=None):
 
 
 def _request(source, document, *, tasks=(), sources=()):
+    source = _source_with_frozen_items(source)
     return SharedLessonFinalizationRequest(
         run_id="run-1",
         owner_user_id="owner-1",
@@ -75,6 +77,24 @@ def _request(source, document, *, tasks=(), sources=()):
         required_media_by_section=None,
         media_results=(),
     )
+
+
+def _source_with_frozen_items(source):
+    """Give legacy test sources the revision-bound snapshot required by semantic inputs."""
+    snapshot = {
+        "schema_version": 1,
+        "teaching_plan_id": source.id,
+        "teaching_plan_revision": source.revision,
+        "teaching_plan_hash": source.content_hash,
+        "items": {},
+    }
+    record = source.revision_record.model_copy(
+        update={
+            "approved_item_snapshot": snapshot,
+            "approved_item_snapshot_hash": approved_item_snapshot_hash(snapshot),
+        }
+    )
+    return source.model_copy(update={"revision_record": record})
 
 
 def _verified_inputs(document):
@@ -97,6 +117,7 @@ def _verified_inputs(document):
 
 
 def _verified_semantic_inputs(source, *, tasks=(), sourcebook=None):
+    source = _source_with_frozen_items(source)
     sourcebook = sourcebook or LessonSourcebook(
         teaching_plan_id=source.id,
         teaching_plan_revision=source.revision,
@@ -109,6 +130,8 @@ def _verified_semantic_inputs(source, *, tasks=(), sourcebook=None):
         source=source,
         sourcebook=sourcebook,
         tasks=tasks,
+        approved_item_snapshot=source.revision_record.approved_item_snapshot,
+        approved_item_snapshot_hash=source.revision_record.approved_item_snapshot_hash,
         sourcebook_output_hash=content_hash(sourcebook.model_dump(mode="json")),
         task_output_hash="0" * 64,
         work_item_ids={"sourcebook": "sourcebook-item", "shared_tasks": "task-item"},
