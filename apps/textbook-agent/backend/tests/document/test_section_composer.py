@@ -17,6 +17,7 @@ from document.shared_lesson.composer import (
     validate_composition_plan,
 )
 from infra.authoring.model_policy import SECTION_COMPOSER, get_v3_slot
+from core.prompts import effective_prompt_text
 
 
 def _block(block_id: str, intent: str, brief: str | None = None) -> TeachingPlanBlock:
@@ -236,6 +237,43 @@ def test_rejects_block_node_ceiling_callout_ceiling_and_false_subsection() -> No
             ],
             tasks=[],
         )
+
+
+def test_misconception_role_does_not_authorize_callout_without_block_cue() -> None:
+    prompt = " ".join(effective_prompt_text("section-composer").split())
+    assert "A `misconception` semantic role does not by itself authorize a `callout`" in prompt
+    assert "a paragraph may still use the `misconception` role" in prompt
+
+    section = _section(
+        _block(
+            "b0",
+            "explain why one result follows",
+            "Show the reasoning behind the result.",
+        )
+    )
+    with pytest.raises(CompositionValidationError, match="lacks cautionary semantics"):
+        validate_and_build_composition(
+            section=section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="callout", semantic_role="misconception"
+                )
+            ],
+            tasks=[],
+        )
+
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="paragraph", semantic_role="misconception"
+            )
+        ],
+        tasks=[],
+    )
+    assert [(item.kind, item.semantic_role) for item in plan.items] == [
+        ("paragraph", "misconception")
+    ]
 
 
 def test_rejects_more_than_ten_ordinary_nodes_even_when_block_caps_hold() -> None:

@@ -27,9 +27,14 @@ always eligible. Specialized form eligibility is exact:
   `relationship`, `data`, or `evidence`.
 - `list` / `sequence` or `evidence`: it contains `sequence`, `step`, `stage`,
   `set`, `category`, `example`, `evidence`, or `sort`.
-- `callout` / `misconception` or `safety_guidance`: it contains `misconception`,
-  `mistake`, `warning`, `safety`, or `caution`. Use no more than one callout in
-  the whole section.
+- `callout` with role `misconception` or `safety_guidance`: the same block text
+  contains `misconception`, `mistake`, `warning`, `safety`, or `caution`. Use no
+  more than one callout in the whole section.
+
+A `misconception` semantic role does not by itself authorize a `callout`.
+The same block's `intent`, `brief`, or `evidence` must contain one of the literal
+callout cues above. If it does not, use a `paragraph`; a paragraph may still use
+the `misconception` role.
 
 Match roles to kinds exactly: paragraphs allow `bridge`, `explanation`,
 `worked_example`, `interpretation`, `summary`, `evidence`, `misconception`, and
