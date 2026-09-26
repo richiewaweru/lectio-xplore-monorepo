@@ -65,6 +65,9 @@ from infra.generation_runtime import (
 
 MAX_CONCURRENT_SECTION_WRITERS = 4
 SECTION_WRITER_LEASE_SECONDS = 360
+# A writer can make up to three 90-second provider calls. Bound the full
+# section operation below its lease so a stalled call fails while fenced.
+SECTION_WRITER_TIMEOUT_SECONDS = 300
 _COMPOSER_DEFINITION = "shared-section-composer:v1"
 _WRITER_DEFINITION = "shared-section-writer:v1"
 
@@ -547,7 +550,10 @@ async def _write_section_work_item(
         else:
             provider_dispatch = provider
         bounded_provider = _bounded_section_provider(provider_dispatch, provider_semaphore)
-        result = await write_section(request=request, provider=bounded_provider)
+        result = await asyncio.wait_for(
+            write_section(request=request, provider=bounded_provider),
+            timeout=SECTION_WRITER_TIMEOUT_SECONDS,
+        )
     except LeaseLostError:
         raise
     except Exception as exc:

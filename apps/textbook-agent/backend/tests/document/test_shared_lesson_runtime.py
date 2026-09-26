@@ -346,6 +346,55 @@ async def test_provider_validation_error_keeps_provider_output_classification(mo
 
 
 @pytest.mark.asyncio
+async def test_writer_total_timeout_is_recorded_as_retryable_transport_failure(monkeypatch) -> None:
+    from infra.generation_runtime import ErrorClass, RecoveryAction
+
+    source = _source()
+    composition_plan = SimpleNamespace(model_dump=lambda **_kwargs: {"items": []})
+    request = SimpleNamespace(
+        composition_plan=composition_plan,
+        model_dump=lambda **_kwargs: {"composition_plan": {"items": []}},
+    )
+    recorded = []
+
+    async def fake_claim(*_args, **_kwargs):
+        return SimpleNamespace(lease_token=1)
+
+    async def fake_no_checkpoint(*_args, **_kwargs):
+        return None
+
+    async def fake_fail(_session, **kwargs):
+        recorded.append(kwargs["failure"])
+
+    async def stalled_writer(**_kwargs):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr("document.shared_lesson.runtime.claim_work_item", fake_claim)
+    monkeypatch.setattr(
+        "document.shared_lesson.runtime.load_compatible_checkpoint", fake_no_checkpoint
+    )
+    monkeypatch.setattr("document.shared_lesson.runtime.persist_checkpoint", fake_no_checkpoint)
+    monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.write_section", stalled_writer)
+    monkeypatch.setattr("document.shared_lesson.runtime.SECTION_WRITER_TIMEOUT_SECONDS", 0.01)
+
+    with pytest.raises(TimeoutError):
+        await _write_section_work_item(
+            SimpleNamespace(commit=_commit_noop),
+            work_item_id="write:orient",
+            worker_id="worker-1",
+            source=source,
+            request=request,
+            provider_semaphore=asyncio.Semaphore(1),
+        )
+
+    assert len(recorded) == 1
+    assert recorded[0].error_class == ErrorClass.PROVIDER_TRANSPORT
+    assert recorded[0].recovery_action == RecoveryAction.RETRY
+    assert recorded[0].error_code == "provider_transport"
+
+
+@pytest.mark.asyncio
 async def test_pending_source_is_rejected_before_work_item_claim(monkeypatch) -> None:
     source = _source()
     pending_plan = source.plan.model_copy(update={"approval_status": "pending"})
