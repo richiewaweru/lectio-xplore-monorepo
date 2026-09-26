@@ -24,6 +24,7 @@ from core.routes.prompts import router as prompts_router
 from core.routes.shares import router as shares_router
 from curriculum.planning.skeletons import initialize_skeleton_catalog
 from curriculum.routes import router as planning_router
+from document.shared_lesson.http import router as shared_document_router
 from infra.config import settings
 from infra.database.migrations import upgrade_database
 from infra.database.session import async_session_factory, engine
@@ -334,6 +335,7 @@ def create_app() -> FastAPI:
     app.include_router(planning_router)
     app.include_router(units_generation_router)
     app.include_router(realization_progress_router)
+    app.include_router(shared_document_router)
     from infra.generation_runtime.http import router as generation_runtime_router
     app.include_router(generation_runtime_router)
     # D3: /api/v1/legacy-units retired
