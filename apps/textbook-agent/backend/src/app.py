@@ -269,19 +269,33 @@ async def lifespan(app: FastAPI):
     if settings.xplore_native_worker_enabled:
         from learn.generation.worker import start_learn_worker
         from print.generation.whole_lesson.worker import start_native_worker
+        from document.shared_lesson.worker import SharedDocumentWorker
 
         await start_native_worker()
         await start_learn_worker()
+        shared_document_worker = SharedDocumentWorker(async_session_factory)
+        await shared_document_worker.start()
     yield
     if settings.xplore_native_worker_enabled:
         from learn.generation.worker import stop_learn_worker
         from print.generation.whole_lesson.worker import stop_native_worker
 
-        await stop_learn_worker(drain_seconds=5.0)
-        await stop_native_worker(drain_seconds=5.0)
-    await telemetry_monitor.stop()
-    telemetry_monitor.configure()
-    await engine.dispose()
+        async def stop_worker(label, stop, **kwargs):
+            try:
+                await stop(**kwargs)
+            except Exception:
+                logger.exception("Failed to stop %s worker", label)
+
+        await stop_worker("Learn", stop_learn_worker, drain_seconds=5.0)
+        await stop_worker("Print", stop_native_worker, drain_seconds=5.0)
+        await stop_worker("SharedDocument", shared_document_worker.stop)
+    try:
+        await telemetry_monitor.stop()
+    except Exception:
+        logger.exception("Failed to stop telemetry monitor")
+    finally:
+        telemetry_monitor.configure()
+        await engine.dispose()
 
 
 def create_app() -> FastAPI:
