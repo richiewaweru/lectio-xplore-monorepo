@@ -21,8 +21,13 @@ from curriculum.lesson_sourcebook import (
     LessonSourcebook,
     validate_sourcebook,
 )
+from curriculum.shared_task_authoring import (
+    ApprovedItemSnapshot,
+    approved_item_snapshot_hash,
+)
 from curriculum.shared_tasks import SharedTaskSpec, finalize_shared_tasks
 from curriculum.teaching_plan.compatibility import response_bearing_action
+from curriculum.teaching_plan.revisions import read_approved_item_snapshot
 from document.shared_lesson.runtime import (
     SectionRuntimeError,
     TeachingPlanSource,
@@ -76,6 +81,8 @@ class VerifiedSemanticInputs(BaseModel):
     source: TeachingPlanSource
     sourcebook: LessonSourcebook
     tasks: tuple[SharedTaskSpec, ...]
+    approved_item_snapshot: ApprovedItemSnapshot
+    approved_item_snapshot_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     sourcebook_output_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     task_output_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     work_item_ids: dict[str, str]
@@ -136,7 +143,39 @@ def _sourcebook_input_hash(source: TeachingPlanSource) -> str:
     )
 
 
-def _task_input_hash(source: TeachingPlanSource, sourcebook_output_hash: str) -> str:
+def _verified_approved_item_snapshot(
+    source: TeachingPlanSource,
+) -> tuple[ApprovedItemSnapshot, str]:
+    """Read the immutable item snapshot from the approved revision ledger.
+
+    Shared task admission and reload must use the persisted revision record as
+    their source of truth.  A caller supplied map, including a map that has
+    been rebound to the current plan, cannot establish approved item
+    provenance.
+    """
+
+    try:
+        raw_snapshot = read_approved_item_snapshot(source.revision_record)
+        snapshot = ApprovedItemSnapshot.model_validate(raw_snapshot)
+        snapshot_hash = approved_item_snapshot_hash(snapshot)
+    except (TypeError, ValueError) as exc:
+        raise SemanticInputError("approved item snapshot is unavailable or invalid") from exc
+    if (
+        snapshot.teaching_plan_id,
+        snapshot.teaching_plan_revision,
+        snapshot.teaching_plan_hash,
+    ) != (source.id, source.revision, source.content_hash):
+        raise SemanticInputError(
+            "approved item snapshot is bound to a different Teaching Plan revision"
+        )
+    return snapshot, snapshot_hash
+
+
+def _task_input_hash(
+    source: TeachingPlanSource,
+    sourcebook_output_hash: str,
+    approved_item_snapshot_hash_value: str,
+) -> str:
     return _stable_hash(
         {
             "source": {
@@ -146,6 +185,7 @@ def _task_input_hash(source: TeachingPlanSource, sourcebook_output_hash: str) ->
                 "hash": source.content_hash,
             },
             "sourcebook_output_hash": sourcebook_output_hash,
+            "approved_item_snapshot_hash": approved_item_snapshot_hash_value,
         }
     )
 
@@ -390,6 +430,7 @@ async def admit_shared_task_work_item(
     ):
         raise SemanticInputError("sourcebook output hash is not a canonical digest")
     identity = _source_identity(source)
+    _snapshot, approved_snapshot_hash = _verified_approved_item_snapshot(source)
     run = await _lock_owned_run(
         session, run_id=run_id, owner_user_id=owner_user_id, source=identity
     )
@@ -413,7 +454,11 @@ async def admit_shared_task_work_item(
             run_id=run_id,
             item_key=TASK_ITEM_KEY,
             stage=TASK_STAGE,
-            input_hash=_task_input_hash(source, sourcebook_output_hash),
+            input_hash=_task_input_hash(
+                source,
+                sourcebook_output_hash,
+                approved_snapshot_hash,
+            ),
             definition_hash=_stable_hash(TASK_DEFINITION),
             composition_identity=sourcebook_output_hash,
             max_attempts=max_attempts,
@@ -498,12 +543,17 @@ async def load_verified_semantic_inputs(
         raise SemanticInputError("active sourcebook WorkItem changed during semantic reload")
     sourcebook = verified_sourcebook.sourcebook
     sourcebook_hash = verified_sourcebook.sourcebook_output_hash
+    approved_snapshot, approved_snapshot_hash = _verified_approved_item_snapshot(source)
     if task_item is None:
         raise SemanticInputError("missing active semantic WorkItems: ['shared_tasks']")
     task_raw, task_hash = _verify_work_item_output(task_item, expected_key=TASK_ITEM_KEY)
     if task_item.composition_identity != sourcebook_hash:
         raise SemanticInputError("shared-task WorkItem has a stale sourcebook dependency")
-    if task_item.input_hash != _task_input_hash(source, sourcebook_hash):
+    if task_item.input_hash != _task_input_hash(
+        source,
+        sourcebook_hash,
+        approved_snapshot_hash,
+    ):
         raise SemanticInputError("shared-task WorkItem input identity is stale")
     tasks = _validate_tasks(source, sourcebook, task_raw)
     return VerifiedSemanticInputs(
@@ -512,6 +562,8 @@ async def load_verified_semantic_inputs(
         source=source,
         sourcebook=sourcebook,
         tasks=tasks,
+        approved_item_snapshot=approved_snapshot,
+        approved_item_snapshot_hash=approved_snapshot_hash,
         sourcebook_output_hash=sourcebook_hash,
         task_output_hash=task_hash,
         work_item_ids={SOURCEBOOK_ITEM_KEY: sourcebook_item.id, TASK_ITEM_KEY: task_item.id},

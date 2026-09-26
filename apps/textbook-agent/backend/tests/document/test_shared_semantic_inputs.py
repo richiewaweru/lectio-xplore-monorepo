@@ -14,6 +14,7 @@ from curriculum.teaching_plan.models import (
     TeachingPlanSection,
     TeachingRevisionRecord,
 )
+from curriculum.teaching_plan.revisions import approved_item_snapshot_hash
 from document.shared_lesson.runtime import TeachingPlanSource
 from document.shared_lesson.semantic_inputs import (
     SemanticInputError,
@@ -43,7 +44,10 @@ from infra.generation_runtime import (
 
 
 def _source(
-    *, sourcebook_refs: list[str] | None = None, include_shared_ref_block: bool = False
+    *,
+    sourcebook_refs: list[str] | None = None,
+    include_shared_ref_block: bool = False,
+    with_snapshot: bool = True,
 ) -> TeachingPlanSource:
     block = TeachingPlanBlock(
         id="block-explain",
@@ -98,6 +102,13 @@ def _source(
         approval_status="approved",
     )
     digest = teaching_plan_content_hash(plan)
+    approved_item_snapshot = {
+        "schema_version": 1,
+        "teaching_plan_id": plan.teaching_plan_id,
+        "teaching_plan_revision": plan.revision,
+        "teaching_plan_hash": digest,
+        "items": {},
+    }
     record = TeachingRevisionRecord(
         teaching_plan_id=plan.teaching_plan_id,
         revision=plan.revision,
@@ -109,6 +120,10 @@ def _source(
         approved_at="2026-09-25T00:00:00Z",
         reviewed_by="teacher-1",
         approval_hash_binding="submitted",
+        approved_item_snapshot=approved_item_snapshot if with_snapshot else None,
+        approved_item_snapshot_hash=(
+            approved_item_snapshot_hash(approved_item_snapshot) if with_snapshot else None
+        ),
     )
     return TeachingPlanSource(
         plan=plan,
@@ -419,6 +434,10 @@ async def test_reload_validates_exact_sourcebook_and_task_lineage(db_session) ->
         db_session, run_id=run_id, owner_user_id=owner, source=source
     )
     assert verified.sourcebook_output_hash == sourcebook_hash
+    assert (
+        verified.approved_item_snapshot_hash == source.revision_record.approved_item_snapshot_hash
+    )
+    assert verified.approved_item_snapshot.items == {}
     assert tuple(task.id for task in verified.tasks) == ("task-block-explain",)
     assert verified.work_item_ids == {
         "sourcebook": sourcebook_admission.record.id,
@@ -582,6 +601,84 @@ async def test_admission_rejects_owner_source_and_hash_conflicts(db_session) -> 
     with pytest.raises(SemanticInputError, match="source"):
         await admit_sourcebook_work_item(
             db_session, run_id=run_id, owner_user_id=owner, source=changed
+        )
+
+
+@pytest.mark.asyncio
+async def test_task_admission_rejects_missing_or_tampered_approved_item_snapshot(
+    db_session,
+) -> None:
+    source = _source()
+    owner, run_id = await _seed_run(db_session, source, suffix="snapshot-admission")
+    sourcebook = await admit_sourcebook_work_item(
+        db_session, run_id=run_id, owner_user_id=owner, source=source
+    )
+    payload = _sourcebook(source).model_dump(mode="json")
+    await _ready(db_session, sourcebook.record, payload)
+    dependency = content_hash(payload)
+
+    legacy = _source(with_snapshot=False)
+    with pytest.raises(SemanticInputError, match="approved item snapshot"):
+        await admit_shared_task_work_item(
+            db_session,
+            run_id=run_id,
+            owner_user_id=owner,
+            source=legacy,
+            sourcebook_output_hash=dependency,
+        )
+
+    tampered_record = source.revision_record.model_copy(
+        update={
+            "approved_item_snapshot": {
+                **source.revision_record.approved_item_snapshot,
+                "teaching_plan_hash": "f" * 64,
+            }
+        }
+    )
+    tampered = source.model_copy(update={"revision_record": tampered_record})
+    with pytest.raises(SemanticInputError, match="approved item snapshot"):
+        await admit_shared_task_work_item(
+            db_session,
+            run_id=run_id,
+            owner_user_id=owner,
+            source=tampered,
+            sourcebook_output_hash=dependency,
+        )
+
+
+@pytest.mark.asyncio
+async def test_reload_rejects_stale_task_input_snapshot_binding(db_session) -> None:
+    source = _source()
+    owner, run_id = await _seed_run(db_session, source, suffix="snapshot-reload")
+    sourcebook = await admit_sourcebook_work_item(
+        db_session, run_id=run_id, owner_user_id=owner, source=source
+    )
+    sourcebook_payload = _sourcebook(source).model_dump(mode="json")
+    await _ready(db_session, sourcebook.record, sourcebook_payload)
+    dependency = content_hash(sourcebook_payload)
+    task = await admit_shared_task_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        sourcebook_output_hash=dependency,
+    )
+    await session_update_task(
+        db_session,
+        task.record,
+        [item.model_dump(mode="json") for item in _tasks(source)],
+        dependency,
+    )
+    await db_session.execute(
+        update(GenerationWorkItemModel)
+        .where(GenerationWorkItemModel.id == task.record.id)
+        .values(input_hash="f" * 64)
+    )
+    await db_session.commit()
+
+    with pytest.raises(SemanticInputError, match="input identity is stale"):
+        await load_verified_semantic_inputs(
+            db_session, run_id=run_id, owner_user_id=owner, source=source
         )
 
 
