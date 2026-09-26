@@ -275,7 +275,7 @@ def _verify_sourcebook_work_item(
         raise SemanticInputError("sourcebook WorkItem input identity is stale")
     if item.definition_hash != _stable_hash(SOURCEBOOK_DEFINITION):
         raise SemanticInputError("sourcebook WorkItem definition identity is stale")
-    if item.replaces_work_item_id is None and item.composition_identity is not None:
+    if item.composition_identity is not None:
         raise SemanticInputError("sourcebook WorkItem has an invalid composition identity")
     try:
         sourcebook = LessonSourcebook.model_validate(raw)

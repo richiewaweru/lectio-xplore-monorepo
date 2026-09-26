@@ -458,7 +458,7 @@ async def test_reload_rejects_sourcebook_ref_mismatch_and_source_naming_adapter(
 
 
 @pytest.mark.asyncio
-async def test_reload_uses_active_sourcebook_replacement_and_preserves_task_sibling(
+async def test_reload_rejects_sourcebook_replacement_composition_identity(
     db_session,
 ) -> None:
     source = _source()
@@ -502,15 +502,10 @@ async def test_reload_uses_active_sourcebook_replacement_and_preserves_task_sibl
     )
     await db_session.commit()
     await _ready(db_session, replacement, sourcebook_payload)
-    sourcebook_verified = await load_verified_sourcebook_input(
-        db_session, run_id=run_id, owner_user_id=owner, source=source
-    )
-    assert sourcebook_verified.work_item_id == replacement.id
-    verified = await load_verified_semantic_inputs(
-        db_session, run_id=run_id, owner_user_id=owner, source=source
-    )
-    assert verified.work_item_ids["sourcebook"] == replacement.id
-    assert verified.work_item_ids["shared_tasks"] == task.record.id
+    with pytest.raises(SemanticInputError, match="invalid composition identity"):
+        await load_verified_sourcebook_input(
+            db_session, run_id=run_id, owner_user_id=owner, source=source
+        )
 
 
 @pytest.mark.asyncio
