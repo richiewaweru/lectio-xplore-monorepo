@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from copy import deepcopy
+from types import SimpleNamespace
 
 import pytest
 
@@ -381,6 +382,16 @@ def test_media_admission_keeps_hard_contract_but_leaves_bridge_to_boundary_qa() 
             expected_shape=_shape("section-b"),
             approved_source_facts={"fact-energy": "The leaf is blue."},
         )
+
+
+def test_media_admission_fails_closed_on_unknown_continuity_issue(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "document.shared_lesson.media.validate_section_continuity",
+        lambda **_kwargs: (SimpleNamespace(issue_code="future_hard_contract"),),
+    )
+
+    with pytest.raises(SharedFigureMediaError, match="future_hard_contract"):
+        _work()
 
 
 def test_provider_diagnostics_never_replace_learner_figure_fields() -> None:

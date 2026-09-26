@@ -31,24 +31,13 @@ class SharedFigureMediaError(ValueError):
     """A figure cannot be safely bound to a media result."""
 
 
-_MEDIA_HARD_SECTION_ISSUES = frozenset(
+_MEDIA_NARRATIVE_SECTION_ISSUES = frozenset(
     {
-        "section_shape_mismatch",
-        "node_id_mismatch",
-        "node_kind_mismatch",
-        "node_owner_mismatch",
-        "task_anchor_mismatch",
-        "incomplete_task_anchor",
-        "metadata_or_placeholder_leak",
-        "internal_id_leak",
-        "heading_hierarchy_invalid",
-        "list_item_blank",
-        "figure_alt_text_missing",
-        "table_shape_invalid",
-        "section_title_missing",
-        "section_title_mismatch",
-        "source_lineage_mismatch",
-        "unsupported_required_fact",
+        "teaching_block_unrealized",
+        "must_establish_uncovered",
+        "avoid_repeating_violated",
+        "bridge_unrealized",
+        "exit_state_unrealized",
     }
 )
 
@@ -219,7 +208,9 @@ def _validate_section(
     # Writer/boundary QA owns narrative continuity. Media admission keeps the
     # hard contract checks that protect accepted node identity/shape and source
     # grounding, without re-applying lexical coverage after a semantic PASS.
-    issues = tuple(issue for issue in issues if issue.issue_code in _MEDIA_HARD_SECTION_ISSUES)
+    issues = tuple(
+        issue for issue in issues if issue.issue_code not in _MEDIA_NARRATIVE_SECTION_ISSUES
+    )
     if issues:
         raise SharedFigureMediaError(
             "accepted section failed deterministic validation: "
