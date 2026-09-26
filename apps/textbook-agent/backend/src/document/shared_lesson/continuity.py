@@ -172,6 +172,16 @@ def _all_text(section: SharedSection) -> str:
     return " ".join((section.title, *(part.text for part in _node_parts(section))))
 
 
+def _sentence_spans(section: SharedSection) -> tuple[str, ...]:
+    """Return learner-facing sentence spans for targeted continuity checks."""
+    text = " ".join((section.title, *(part.text for part in _node_parts(section))))
+    return tuple(
+        span.strip()
+        for span in re.split(r"(?<=[.!?;])\s+", text)
+        if span.strip()
+    )
+
+
 def _coverage(statement: str | None, text: str) -> bool:
     expected = _tokens(statement)
     if not expected:
@@ -435,17 +445,24 @@ def validate_section_continuity(
             )
     must_establish = tuple(teaching_plan_section.must_establish or ())
     for statement in teaching_plan_section.avoid_repeating or ():
-        # Avoidance prose may mention the same topic labels as required new
-        # content.  Do not classify that required teaching as repetition when
-        # the accepted section also realizes detail that is unique to a
-        # must-establish requirement.
-        covered_required_detail = any(
-            _coverage(requirement, text)
-            and bool(unique_requirement_tokens := _tokens(requirement) - _tokens(statement))
-            and _coverage(" ".join(sorted(unique_requirement_tokens)), text)
-            for requirement in must_establish
-        )
-        if _coverage(statement, text) and not covered_required_detail:
+        avoided_span = False
+        for span in _sentence_spans(section):
+            if not _coverage(statement, span):
+                continue
+            # Topic words can occur in both prior knowledge and required new
+            # teaching. Exempt only the same sentence that covers a distinct
+            # approved requirement; another sentence repeating the avoided
+            # concept still blocks the section.
+            covers_required_detail = any(
+                _coverage(requirement, span)
+                and bool(unique_tokens := _tokens(requirement) - _tokens(statement))
+                and _coverage(" ".join(sorted(unique_tokens)), span)
+                for requirement in must_establish
+            )
+            if not covers_required_detail:
+                avoided_span = True
+                break
+        if avoided_span:
             issues.append(
                 _issue(
                     "avoid_repeating_violated",

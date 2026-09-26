@@ -164,6 +164,29 @@ def test_avoid_repetition_still_rejects_repeated_content_without_required_detail
     assert "avoid_repeating_violated" in {issue.issue_code for issue in issues}
 
 
+def test_avoid_repetition_still_rejects_repeat_in_another_sentence_with_required_detail() -> None:
+    section = _section(
+        text=(
+            "Glucose and oxygen are reactants taken in and used up by the reaction. "
+            "Recall: glucose is a sugar used for energy."
+        )
+    )
+    plan = _plan(
+        "section-1",
+        title="Light and energy",
+        avoid=["Do not repeat that glucose is a sugar used for energy"],
+        must=["Glucose and oxygen are reactants taken in and used up by the reaction"],
+    )
+
+    issues = validate_section_continuity(
+        section=section,
+        teaching_plan_section=plan,
+        expected_nodes=_shape(),
+    )
+
+    assert "avoid_repeating_violated" in {issue.issue_code for issue in issues}
+
+
 def test_shape_mismatch_reports_typed_issues_without_rewriting() -> None:
     section = _section()
     section = section.model_copy(
