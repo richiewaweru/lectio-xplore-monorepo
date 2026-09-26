@@ -179,6 +179,82 @@ async def test_shared_task_llm_provider_uses_closed_provider_output_type(monkeyp
 
 
 @pytest.mark.asyncio
+async def test_classification_prompt_repairs_incomplete_or_undeclared_placements() -> None:
+    plan = _plan()
+    block = plan.sections[0].blocks[0].model_copy(
+        update={
+            "task_mode": "formative",
+            "learner_action": LearnerActionBrief(
+                action="classify-items",
+                target="two examples by their shared property",
+                purpose="Check whether the learner can sort each example",
+                expected_evidence="Each example is placed in its matching category.",
+                difficulty="guided",
+            ),
+        }
+    )
+    section = plan.sections[0].model_copy(update={"blocks": [block]})
+    plan = plan.model_copy(update={"sections": [section]})
+    invalid_placements = {"Example A": "Undeclared category"}
+    invalid = {
+        "tasks": [
+            {
+                "prompt": "Place each example in the matching category.",
+                "response": {
+                    "type": "classification",
+                    "items": ["Example A", "Example B"],
+                    "categories": ["Category 1", "Category 2"],
+                    "correct_placements": invalid_placements,
+                },
+                "evaluation": {
+                    "type": "mapping",
+                    "correct_placements": invalid_placements,
+                },
+                "expected_evidence": "Each example is placed in its matching category.",
+                "difficulty": "guided",
+            }
+        ]
+    }
+    valid_placements = {"Example A": "Category 1", "Example B": "Category 2"}
+    valid = {
+        "tasks": [
+            {
+                "prompt": "Place each example in the matching category.",
+                "response": {
+                    "type": "classification",
+                    "items": ["Example A", "Example B"],
+                    "categories": ["Category 1", "Category 2"],
+                    "correct_placements": valid_placements,
+                },
+                "evaluation": {
+                    "type": "mapping",
+                    "correct_placements": valid_placements,
+                },
+                "expected_evidence": "Each example is placed in its matching category.",
+                "difficulty": "guided",
+            }
+        ]
+    }
+    provider = ScriptedProvider(invalid, valid)
+
+    tasks = await author_shared_tasks(
+        plan,
+        _sourcebook(plan),
+        approved_item_snapshot=_items_snapshot(plan),
+        provider=provider,
+    )
+
+    instructions = provider.calls[0].prompt
+    assert "Every classification item and category must be a non-empty string" in instructions
+    assert "map every item string exactly once to one declared category string" in instructions
+    assert "mapping evaluation's correct_placements must exactly match" in instructions
+    assert len(provider.calls) == 2
+    assert provider.calls[1].is_repair is True
+    assert tasks[0].response["correct_placements"] == valid_placements
+    assert tasks[0].evaluation["correct_placements"] == valid_placements
+
+
+@pytest.mark.asyncio
 async def test_malformed_count_gets_one_bounded_repair() -> None:
     plan = _plan()
     provider = ScriptedProvider({"tasks": []}, _task(prompt="Repaired task."))
