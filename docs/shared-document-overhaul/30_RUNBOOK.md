@@ -271,6 +271,7 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 - SharedDocument worker now resumes post-section stages as `72d29c19`: after READY section leaves it calls the same-Run pipeline, selects queued/expired post-section leaves after restart or legal retry, avoids unchanged failure polling, and terminalizes a blocked Run with no pending/retryable work while preserving READY siblings. Focused worker suite **15 passed**; Ruff check PASS. Startup registration remains a separate gate.
 - Integrated worker/full-Run focused regression after `72d29c19`: `pytest tests/document/test_shared_document_full_run.py tests/document/test_shared_lesson_worker.py -q` **17 passed** in 43.76s. No broader optional suite run at this step.
 - SharedDocument worker startup/shutdown registered as `8fd7d078` under the existing local worker flag. Enabled/disabled lifespan and stop-failure cleanup coverage: **7 passed**; Ruff check PASS. This enables admitted local Runs to progress through atomic finalization; Phase 9 still has no eligible real approved V2 lesson.
+- Pure Print SharedDocument adapter integrated as `4403c6ef`: verifies exact READY document identity/hashes, preserves ordered section and heading hierarchy, maps ordinary nodes and document-bound required media into existing Print V2 content, and maps frozen TaskAnchors to paper treatments and human answer labels. Focused adapter suite **3 passed**; Ruff check PASS. No Print route, worker, schema, or PDF cutover is claimed before Phase 9.
 
 ## Baseline
 - [x] branch recorded
