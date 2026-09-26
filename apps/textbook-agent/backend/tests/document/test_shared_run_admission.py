@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from copy import deepcopy
 
 import pytest
@@ -199,6 +200,117 @@ async def test_wrong_owner_path_and_stale_snapshot_fail_before_build_mutation(db
         )
 
     assert await db_session.scalar(select(func.count()).select_from(GenerationBuildModel)) == 0
+
+
+@pytest.mark.asyncio
+async def test_sqlite_concurrent_duplicate_admission_has_one_build_run_and_item(
+    db_session,
+    db_session_factory,
+) -> None:
+    generation, lesson, _provenance, _source = await _prepared(db_session)
+    await db_session.commit()
+
+    async def admit_once() -> tuple[bool, bool, str, str]:
+        async with db_session_factory() as session:
+            result = await admit_shared_document_run(
+                session,
+                owner_user_id="source-owner",
+                path_lesson_id=lesson.id,
+                preparation_generation_id=generation.id,
+                request_key="sqlite-concurrent-request",
+            )
+            await session.commit()
+            return (
+                result.run_admission.created,
+                result.sourcebook_admission.created,
+                result.run.id,
+                result.sourcebook_work_item.id,
+            )
+
+    outcomes = await asyncio.gather(admit_once(), admit_once(), return_exceptions=True)
+    assert all(not isinstance(outcome, Exception) for outcome in outcomes), outcomes
+    values = [outcome for outcome in outcomes if not isinstance(outcome, Exception)]
+    assert sorted(value[0] for value in values) == [False, True]
+    assert sorted(value[1] for value in values) == [False, True]
+    assert len({value[2] for value in values}) == 1
+    assert len({value[3] for value in values}) == 1
+
+    async with db_session_factory() as verify:
+        assert (
+            await verify.scalar(
+                select(func.count())
+                .select_from(GenerationBuildModel)
+                .where(GenerationBuildModel.owner_user_id == "source-owner")
+            )
+            == 1
+        )
+        assert (
+            await verify.scalar(
+                select(func.count())
+                .select_from(GenerationRunModel)
+                .where(GenerationRunModel.request_key == "sqlite-concurrent-request")
+            )
+            == 1
+        )
+        assert (
+            await verify.scalar(
+                select(func.count())
+                .select_from(GenerationWorkItemModel)
+                .where(GenerationWorkItemModel.item_key == "sourcebook")
+            )
+            == 1
+        )
+
+
+@pytest.mark.asyncio
+async def test_build_run_and_sourcebook_rollback_together_before_commit(
+    db_session,
+    db_session_factory,
+    monkeypatch,
+) -> None:
+    generation, lesson, _provenance, _source = await _prepared(db_session)
+    real_sourcebook_admission = run_admission.admit_sourcebook_work_item
+
+    async def admit_then_fail(*args, **kwargs):
+        await real_sourcebook_admission(*args, **kwargs)
+        raise RuntimeError("deliberate post-sourcebook failure")
+
+    monkeypatch.setattr(run_admission, "admit_sourcebook_work_item", admit_then_fail)
+    with pytest.raises(RuntimeError, match="post-sourcebook"):
+        await admit_shared_document_run(
+            db_session,
+            owner_user_id="source-owner",
+            path_lesson_id=lesson.id,
+            preparation_generation_id=generation.id,
+            request_key="rollback-request",
+        )
+    await db_session.rollback()
+
+    async with db_session_factory() as verify:
+        assert (
+            await verify.scalar(
+                select(func.count())
+                .select_from(GenerationBuildModel)
+                .where(GenerationBuildModel.owner_user_id == "source-owner")
+            )
+            == 0
+        )
+        assert (
+            await verify.scalar(
+                select(func.count())
+                .select_from(GenerationRunModel)
+                .where(GenerationRunModel.request_key == "rollback-request")
+            )
+            == 0
+        )
+        assert (
+            await verify.scalar(
+                select(func.count())
+                .select_from(GenerationWorkItemModel)
+                .where(GenerationWorkItemModel.item_key == "sourcebook")
+            )
+            == 0
+        )
 
 
 async def _resolved(value):
