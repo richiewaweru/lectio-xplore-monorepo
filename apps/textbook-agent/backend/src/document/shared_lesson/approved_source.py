@@ -25,8 +25,13 @@ from core.database.models import (
     PathVersionModel,
     UnitModel,
 )
+from curriculum.shared_task_authoring import ApprovedItemSnapshot
 from curriculum.teaching_plan.models import TeachingPlan
-from curriculum.teaching_plan.revisions import TeachingRevisionStore
+from curriculum.teaching_plan.revisions import (
+    TeachingRevisionApprovedItemError,
+    TeachingRevisionStore,
+    read_approved_item_snapshot,
+)
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
 from infra.generation_runtime.contracts import SourceIdentity
 from infra.generation_runtime.repository import SourceVerifier
@@ -185,7 +190,82 @@ def make_approved_source_verifier(
     return verify
 
 
+async def load_approved_item_snapshot(
+    *,
+    session: AsyncSession,
+    owner_user_id: str,
+    path_lesson_id: str,
+    preparation_generation_id: str,
+    requested: SourceIdentity,
+) -> ApprovedItemSnapshot:
+    """Load the immutable item snapshot for one verified approved plan.
+
+    The source verifier remains the authority for owner, path/provenance, and
+    Teaching Plan identity.  This loader then reads the same approved revision
+    from the frozen ledger and validates its revision-bound item digest.  It
+    never consults the mutable lesson packet or accepts caller-supplied items.
+    """
+
+    verifier = make_approved_source_verifier(
+        owner_user_id=owner_user_id,
+        path_lesson_id=path_lesson_id,
+        preparation_generation_id=preparation_generation_id,
+    )
+    await verifier(session, requested)
+
+    generation = await session.scalar(
+        select(GenerationModel)
+        .where(GenerationModel.id == preparation_generation_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if generation is None:
+        # The verifier already checks this, but retain a typed failure if a
+        # concurrent transaction changes the row between the two reads.
+        raise ApprovedSourceVerificationError("preparation generation is unavailable")
+    state = generation.chunked_state_json
+    if not isinstance(state, dict):
+        raise ApprovedSourceVerificationError("preparation state is unavailable")
+    page_state = state.get("page_document_v2")
+    if not isinstance(page_state, dict):
+        raise ApprovedSourceVerificationError(
+            "preparation state has no page_document_v2 Teaching Plan ledger"
+        )
+
+    try:
+        review = page_state.get("teaching_review")
+        if not isinstance(review, dict):
+            raise TeachingRevisionApprovedItemError("Teaching Plan review state is missing")
+        approved_revision = review.get("approved_revision")
+        if isinstance(approved_revision, bool) or approved_revision is None:
+            raise TeachingRevisionApprovedItemError(
+                "Teaching Plan approved_revision pointer is missing"
+            )
+        record = TeachingRevisionStore(deepcopy(page_state)).get_revision(int(approved_revision))
+        if record is None or record.status != "approved":
+            raise TeachingRevisionApprovedItemError(
+                "approved Teaching Plan revision is unavailable"
+            )
+        snapshot = read_approved_item_snapshot(record)
+        validated = ApprovedItemSnapshot.model_validate(snapshot)
+    except (TypeError, ValueError) as exc:
+        raise ApprovedSourceVerificationError(
+            "approved Teaching Plan item snapshot failed hash or identity verification"
+        ) from exc
+
+    if (
+        validated.teaching_plan_id != requested.source_artifact_id
+        or validated.teaching_plan_revision != requested.source_revision
+        or validated.teaching_plan_hash != requested.source_hash
+    ):
+        raise ApprovedSourceVerificationError(
+            "approved item snapshot differs from the requested source identity"
+        )
+    return validated
+
+
 __all__ = [
     "ApprovedSourceVerificationError",
+    "load_approved_item_snapshot",
     "make_approved_source_verifier",
 ]

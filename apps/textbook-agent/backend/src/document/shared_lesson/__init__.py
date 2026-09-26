@@ -2,6 +2,7 @@
 
 from document.shared_lesson.approved_source import (
     ApprovedSourceVerificationError,
+    load_approved_item_snapshot,
     make_approved_source_verifier,
 )
 from document.shared_lesson.assembly import (
@@ -182,6 +183,7 @@ __all__ = [
     "execute_figure_work_order",
     "execute_figure_work_orders",
     "fail_section_work_item",
+    "load_approved_item_snapshot",
     "load_shared_lesson_document",
     "load_verified_semantic_inputs",
     "load_verified_shared_lesson_artifact",
