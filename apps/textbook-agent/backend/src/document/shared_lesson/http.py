@@ -5,21 +5,39 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.entities.user import User
+from document.shared_lesson.approved_source import ApprovedSourceVerificationError
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.repository import (
     SharedLessonDocumentRepositoryError,
     load_shared_lesson_document,
 )
+from document.shared_lesson.run_admission import (
+    SharedRunAdmissionError,
+    admit_shared_document_run,
+)
 from infra.auth.middleware import get_current_user
 from infra.database.models import GenerationBuildModel, GenerationRunModel
 from infra.database.session import get_async_session
 from infra.execution.checkpoints import content_hash
+from infra.generation_runtime.http import _run_status
+from infra.generation_runtime.repository import RunAdmissionConflict, RunNotFound, get_run_status
 
 router = APIRouter(prefix="/api/v1/shared-documents", tags=["shared-documents"])
+
+
+class SharedDocumentAdmissionRequest(BaseModel):
+    """Closed owner-scoped request for a shadow SharedDocument generation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path_lesson_id: str = Field(min_length=1)
+    preparation_generation_id: str = Field(min_length=1)
+    request_key: str = Field(min_length=1)
 
 
 def _not_found() -> HTTPException:
@@ -35,6 +53,42 @@ def _identity(
         "id": artifact_id,
         "revision": revision,
         "hash": digest,
+    }
+
+
+@router.post("/generations", status_code=202)
+async def post_shared_document_generation(
+    body: SharedDocumentAdmissionRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    """Queue one owner-scoped SharedDocument Run from an approved preparation."""
+
+    try:
+        async with session.begin():
+            result = await admit_shared_document_run(
+                session,
+                owner_user_id=current_user.id,
+                path_lesson_id=body.path_lesson_id,
+                preparation_generation_id=body.preparation_generation_id,
+                request_key=body.request_key,
+            )
+    except (RunNotFound, ApprovedSourceVerificationError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    except (RunAdmissionConflict, SharedRunAdmissionError, ValueError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except Exception as exc:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail="SharedDocument admission failed") from exc
+
+    run = await get_run_status(session, run_id=result.run.id, owner_user_id=current_user.id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="SharedDocument Run not found")
+    status = _run_status(run)
+    return {
+        **status,
+        "run_id": result.run.id,
+        "sourcebook_work_item_id": result.sourcebook_work_item.id,
     }
 
 
@@ -122,4 +176,9 @@ async def get_shared_document_preview(
     }
 
 
-__all__ = ["get_shared_document_preview", "router"]
+__all__ = [
+    "SharedDocumentAdmissionRequest",
+    "get_shared_document_preview",
+    "post_shared_document_generation",
+    "router",
+]
