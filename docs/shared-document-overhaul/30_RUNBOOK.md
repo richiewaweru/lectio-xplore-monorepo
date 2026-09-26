@@ -20,6 +20,7 @@
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
 - Phase status (2026-09-25): Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–6 PASS. Phase 7 continuity, assembly, bounded boundary repair, draft/READY persistence, one-call FAST semantic QA, semantic READY enforcement, pure composer-to-document handoff, and bound-media READY verification are integrated, but Phase 7 remains IN PROGRESS pending durable accepted-output loading, final orchestration, and full gate. Phase 8 early media contract, generic active-leaf replacement, and durable media worker are integrated; its full gate remains IN PROGRESS. Phase 10A Learn and Phase 11A Print pure adapters are isolated; no route cutover has occurred. Phase 9 and remaining Phase 10–16 cutovers are NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke.
+- Phase status update (2026-09-26): Phases 7 and 8 PASS on the genuine isolated same-Run READY/required-media failure gate, targeted boundary/QA/media failure suites, and full repository verification recorded below. Phase 9 IN PROGRESS: one eligible real local V2 approved plan was created, but its first shadow Run stopped at shared-task provider-output validation; the required 12 unique lessons/six archetypes plus eight regenerations are open. Phase 0 authenticated smoke remains pending OAuth-origin configuration. Learn/Print pure adapters are isolated; Phases 10–16 cutovers remain NOT STARTED.
 
 ## Parallel work allocation
 
@@ -272,6 +273,9 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 - Integrated worker/full-Run focused regression after `72d29c19`: `pytest tests/document/test_shared_document_full_run.py tests/document/test_shared_lesson_worker.py -q` **17 passed** in 43.76s. No broader optional suite run at this step.
 - SharedDocument worker startup/shutdown registered as `8fd7d078` under the existing local worker flag. Enabled/disabled lifespan and stop-failure cleanup coverage: **7 passed**; Ruff check PASS. This enables admitted local Runs to progress through atomic finalization; Phase 9 still has no eligible real approved V2 lesson.
 - Pure Print SharedDocument adapter integrated as `4403c6ef`: verifies exact READY document identity/hashes, preserves ordered section and heading hierarchy, maps ordinary nodes and document-bound required media into existing Print V2 content, and maps frozen TaskAnchors to paper treatments and human answer labels. Focused adapter suite **3 passed**; Ruff check PASS. No Print route, worker, schema, or PDF cutover is claimed before Phase 9.
+- Full verification after worker startup and pure adapters: initial `scripts/verify-phase.ps1 -Phase full` failed backend collection because Learn and Print adapter test modules shared the same basename; Print test renamed in `51f2cda2`, combined adapter suite **8 passed**. Rerun `powershell -ExecutionPolicy Bypass -File scripts/verify-phase.ps1 -Phase full` exited **0**: page tests **64 passed**, page check 0 errors/warnings, backend full suite PASS, frontend check 0 errors/5 existing warnings, frontend tests **227 passed**, frontend build PASS, PDF fixtures PASS, clean-worktree check PASS. `pnpm program:domain-guards` PASS (0 violations, **8 tests**); `uv run python ../tools/agent/check_architecture.py --format text` PASS (0 violations); `uv run alembic current` confirms applied PostgreSQL head `20260925_0046`.
+- First real local Phase 9 source: PathLesson `9df8aaf9-11dd-4874-a0e6-14ed1b2922d4`, preparation `b682e05c-5927-4178-8bcc-e49fc1d84c6b`, approved V2 Teaching Plan `88825517-7498-437e-aabc-3cd6c5fa8b24` revision 2/hash `b31e2318c4790935f1e84b1a267c421b5185b1e9aa71e9f850093216a7fbe88b`, frozen item snapshot hash `3504b2660f19c5c938dcca10273395cbc01645f48cd028654ca2d3ee3f2614f6`, approved sourcebook refs `source-1`, `source-2`, `source-3`. Existing approved-source loader PASS. Normal local owner workflow created and approved this plan; no production data changed.
+- First real shadow Build `fffd2aea-1751-465d-b02e-21f4d5403aa8`, Run `ec975a04-7adc-42b4-959b-79068ece697d`: sourcebook WorkItem `176e4282-1666-41ce-9392-430c5d54b736` READY with exact refs and output hash `25cd384ae00a147112d05e12c65826e5fd2c433eded78f4a7fb2147dd74731da`. Shared-task WorkItem `58f88fdc-9653-4db5-891d-508f2690156e` failed recoverably (`shared_task_invalid_output`, provider_output, retry). One generic legal retry advanced attempt 1→2 with unchanged plan/snapshot/sourcebook hashes; FAST provider used initial plus one bounded repair and again failed the closed semantic contract. No composer/writer/media/QA/finalizer output or SharedLessonDocument was created. Likely prompt mismatch with exact approved `expected_evidence`/difficulty strings; validator invariant will remain strict and prompt/diagnostic correction is next. Phase 9 quality proof is NOT PASS.
 
 ## Baseline
 - [x] branch recorded
@@ -291,8 +295,8 @@ The Phase 4 and Phase 5/6A streams preserve current `SharedTaskSpec` outer field
 - [x] 4 Shared tasks
 - [x] 5 Section Composer
 - [x] 6 Section Writer (PASS: durable execution and full gate)
-- [ ] 7 Continuity/QA
-- [ ] 8 Media
+- [x] 7 Continuity/QA (PASS: same-Run READY, one-call QA, boundary/failure and full verification gates)
+- [x] 8 Media (PASS: required-media failure, durable media and full verification gates)
 - [ ] 9 Shadow proof
 - [ ] 10 Learn cutover/deletion
 - [ ] 11 Print cutover/deletion
