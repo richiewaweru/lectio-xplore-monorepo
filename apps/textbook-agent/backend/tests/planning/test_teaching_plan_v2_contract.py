@@ -100,6 +100,22 @@ def test_legacy_approved_plan_hash_and_serialized_bytes_are_preserved() -> None:
     assert teaching_plan_content_hash(plan) == LEGACY_HASH
 
 
+def test_v2_draft_requires_approved_refs_for_sourcebook_needs() -> None:
+    payload = _v2_draft_payload()
+    payload["sections"][1]["blocks"] = [
+        {
+            "intent": "model",
+            "brief": "Show one worked example.",
+            "evidence": "Learner follows the example.",
+            "sourcebook_needs": ["a worked example"],
+            "sourcebook_refs": [],
+        }
+    ]
+
+    with pytest.raises(ValidationError, match="sourcebook_needs require approved sourcebook_refs"):
+        TeachingPlanDraftV2.model_validate(payload)
+
+
 @pytest.mark.parametrize(
     ("field_path", "replacement"),
     [

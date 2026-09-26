@@ -11,7 +11,11 @@ from typing import Any
 from uuid import uuid4
 
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
-from curriculum.teaching_plan.models import TeachingPlan, TeachingRevisionRecord
+from curriculum.teaching_plan.models import (
+    TeachingPlan,
+    TeachingRevisionRecord,
+    validate_sourcebook_need_refs,
+)
 
 
 class TeachingRevisionConflictError(ValueError):
@@ -476,6 +480,12 @@ class TeachingRevisionStore:
             raise TeachingRevisionConflictError(
                 "current Teaching Plan bytes differ from the pending revision snapshot"
             )
+        try:
+            validate_sourcebook_need_refs(pending_plan)
+        except ValueError as exc:
+            raise TeachingRevisionConflictError(
+                "Teaching Plan sourcebook needs require approved sourcebook refs"
+            ) from exc
         for candidate in (pending_plan, mutable_plan):
             if (candidate.revision is not None and candidate.revision != expected_revision) or (
                 candidate.teaching_plan_id

@@ -231,6 +231,23 @@ class TeachingPlan(BaseModel):
         return payload
 
 
+def _validate_sourcebook_need_refs(needs: list[str], refs: list[str]) -> None:
+    """Require explicit approved identities whenever a block needs sourcebook content."""
+
+    if needs and not refs:
+        raise ValueError("sourcebook_needs require approved sourcebook_refs")
+    if any(not ref.strip() or ref != ref.strip() for ref in refs):
+        raise ValueError("sourcebook_refs must be non-empty canonical identities")
+
+
+def validate_sourcebook_need_refs(plan: TeachingPlan) -> None:
+    """Validate sourcebook bindings at the Teaching Plan approval boundary."""
+
+    for section in plan.sections:
+        for block in section.blocks:
+            _validate_sourcebook_need_refs(block.sourcebook_needs, block.sourcebook_refs)
+
+
 def _require_meaningful(value: str | None, name: str) -> None:
     if value is None or not value.strip():
         raise ValueError(f"{name} must be meaningful and non-empty")
@@ -290,6 +307,7 @@ class TeachingPlanDraftBlock(BaseModel):
             raise ValueError("assessment tasks require a learner_action")
         if self.task_mode == "assessment" and not self.source_question_ids:
             raise ValueError("assessment tasks require approved source_question_ids")
+        _validate_sourcebook_need_refs(self.sourcebook_needs, self.sourcebook_refs)
         return self
 
 
