@@ -47,22 +47,31 @@ class SharedRunAdmissionResult:
 
 
 async def _lock_owner(session: AsyncSession, owner_user_id: str) -> UserModel:
-    owner = await session.scalar(
-        select(UserModel)
-        .where(UserModel.id == owner_user_id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    )
-    if owner is None:
-        raise RunNotFound("generation owner is unavailable")
-    # SQLite ignores FOR UPDATE.  Updating the stable owner row acquires its
-    # writer lock, serializing duplicate admissions before Build creation.
     if session.get_bind().dialect.name == "sqlite":
-        await session.execute(
+        # SQLite ignores FOR UPDATE.  Make this the first statement in the
+        # transaction so concurrent callers do not both open read snapshots
+        # before attempting to upgrade to the writer lock.
+        result = await session.execute(
             update(UserModel)
             .where(UserModel.id == owner_user_id)
             .values(created_at=UserModel.created_at)
         )
+        if result.rowcount != 1:
+            raise RunNotFound("generation owner is unavailable")
+        owner = await session.scalar(
+            select(UserModel)
+            .where(UserModel.id == owner_user_id)
+            .execution_options(populate_existing=True)
+        )
+    else:
+        owner = await session.scalar(
+            select(UserModel)
+            .where(UserModel.id == owner_user_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    if owner is None:
+        raise RunNotFound("generation owner is unavailable")
     return owner
 
 
