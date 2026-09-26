@@ -14,6 +14,7 @@ from document.shared_lesson.runtime import SectionWriterOutcome
 from document.shared_lesson.writer_admission import admit_writer_work_items
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
+from infra.generation_runtime import WorkItemUnavailable
 
 
 def _dispatcher(db_session_factory) -> section_dispatcher.SharedSectionDispatcher:
@@ -177,6 +178,40 @@ async def test_composer_failure_is_persisted_and_ready_sibling_is_preserved(
     )
     assert orient is not None and orient.status == "failed_recoverable"
     assert explain is not None and explain.status == "ready"
+
+
+@pytest.mark.asyncio
+async def test_stale_composer_claim_rolls_back_without_terminalizing_the_item(
+    db_session, db_session_factory, monkeypatch
+):
+    owner, run_id, source, _sourcebook = await _seed_run(db_session)
+
+    async def stale_claim(*_args, **_kwargs):
+        raise WorkItemUnavailable("stale composer claim")
+
+    monkeypatch.setattr(section_dispatcher, "compose_section_work_item", stale_claim)
+    dispatcher = _dispatcher(db_session_factory)
+
+    result = await dispatcher.run_one(
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        source_verifier=_verifier,
+        session=db_session,
+    )
+    assert result.blocked is True
+    rows = list(
+        (
+            await db_session.scalars(
+                select(GenerationWorkItemModel).where(
+                    GenerationWorkItemModel.run_id == run_id,
+                    GenerationWorkItemModel.item_key.like("compose:%"),
+                )
+            )
+        ).all()
+    )
+    assert rows
+    assert all(row.status == "queued" for row in rows)
 
 
 @pytest.mark.asyncio

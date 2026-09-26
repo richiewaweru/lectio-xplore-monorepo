@@ -32,7 +32,9 @@ from document.shared_lesson.writer_admission import (
     admit_writer_work_items,
 )
 from infra.generation_runtime import (
+    LeaseLostError,
     SourceIdentity,
+    WorkItemUnavailable,
     active_work_items,
     get_run_status,
 )
@@ -271,15 +273,28 @@ class SharedSectionDispatcher:
                     )
                     await stage_session.commit()
                     dispatched += 1
+                except (LeaseLostError, WorkItemUnavailable):
+                    # Claim rejection or a lost fence did not produce a
+                    # durable execution failure. Roll back only this stage
+                    # session and let the next poll/retry own the item.
+                    await stage_session.rollback()
                 except Exception:
                     # The corrected composer runtime records a typed failure
-                    # under its live lease before raising. Commit that state;
-                    # rolling back here would strand a running lease and erase
-                    # the recoverable/terminal outcome.
+                    # under its live lease before raising. Commit only when a
+                    # fresh read proves that durable state exists; otherwise
+                    # do not erase a live lease or hide a programming error.
+                    fresh = await stage_session.get(GenerationWorkItemModel, item.id)
+                    if fresh is None or fresh.status not in {
+                        "failed_recoverable",
+                        "failed_terminal",
+                    }:
+                        await stage_session.rollback()
+                        raise
                     try:
                         await stage_session.commit()
-                    except Exception:  # noqa: BLE001 - rollback any failed commit.
+                    except Exception:
                         await stage_session.rollback()
+                        raise
                     LOGGER.exception("section composer failed for %s", item.id)
         return dispatched
 
