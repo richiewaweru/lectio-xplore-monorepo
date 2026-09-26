@@ -111,6 +111,13 @@ _INTERNAL_REVIEW_TEXT = re.compile(
     r"learn widget|print page|model planning)\b",
     re.IGNORECASE,
 )
+_SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES = frozenset(
+    {
+        "boundary_bridge_missing",
+        "boundary_prerequisite_gap",
+        "boundary_exit_state_missing",
+    }
+)
 
 
 class BoundaryValidationResult(_ClosedModel):
@@ -283,9 +290,10 @@ async def validate_and_repair_boundary(
 ) -> BoundaryValidationResult:
     """Validate one adjacent boundary and spend at most one repair call.
 
-    Deterministic issues stop semantic review.  A semantic review is invoked
-    once only when deterministic checks pass.  A repair is legal only when all
-    issues target one side and an exact writer request for that side is given.
+    Structural boundary issues stop semantic review. A single semantic review
+    may adjudicate deterministic token-coverage misses for bridge, entry-state,
+    and exit-state wording. A repair is legal only when all remaining issues
+    target one side and an exact writer request for that side is given.
     """
     deterministic = tuple(
         validate_section_boundary(
@@ -299,7 +307,10 @@ async def validate_and_repair_boundary(
     semantic_calls = 0
     initial = deterministic
     reviewer = semantic_validator or default_boundary_semantic_validator
-    if not initial:
+    lexical_only = bool(deterministic) and all(
+        issue.issue_code in _SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES for issue in deterministic
+    )
+    if not deterministic or lexical_only:
         semantic_calls = 1
         try:
             verdict = _coerce_verdict(
@@ -350,13 +361,21 @@ async def validate_and_repair_boundary(
                     semantic_calls=semantic_calls,
                     failure_code=issue.issue_code,
                 )
+            # The semantic validator may distinguish a genuine content gap
+            # from a deterministic token-coverage miss, but only its one typed
+            # issue may trigger the existing one-sided repair contract.
             initial = (verdict.issue,)
+        else:
+            # A PASS explicitly adjudicates the lexical-only misses as
+            # paraphrases; all other deterministic issue classes remain hard.
+            initial = ()
 
     if not initial:
         return BoundaryValidationResult(
             status="pass",
             previous_section=previous_section,
             next_section=next_section,
+            initial_issues=deterministic if lexical_only else (),
             semantic_calls=semantic_calls,
         )
 

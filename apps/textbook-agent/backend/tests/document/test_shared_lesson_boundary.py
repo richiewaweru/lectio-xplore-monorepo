@@ -115,11 +115,107 @@ def _boundary(*, next_text: str = "Light energy supports photosynthesis."):
 
 
 @pytest.mark.asyncio
-async def test_deterministic_boundary_failure_precedes_semantic_and_repairs_once() -> None:
+async def test_semantic_pass_adjudicates_paraphrased_boundary_coverage() -> None:
+    previous_plan = _plan(
+        "s1",
+        title="Light source and shadow",
+        exit_state=("A lamp's position changes the shadow's location.",),
+    )
+    next_plan = _plan(
+        "s2",
+        title="Moving light",
+        entry=("An object interrupts rays of light.",),
+        bridge="Changing the source moves the dark shape across the wall.",
+    )
+    previous = _section(
+        "s1", 0, "Shift the light source and the silhouette moves across the backdrop."
+    )
+    following = _section(
+        "s2", 1, "An obstacle stops beams; the dark outline shifts on the surface."
+    )
+    semantic = _Semantic(BoundarySemanticVerdict(status="pass"))
+
+    result = await validate_and_repair_boundary(
+        previous_section=previous,
+        previous_plan=previous_plan,
+        next_section=following,
+        next_plan=next_plan,
+        semantic_validator=semantic,
+    )
+
+    assert result.passed
+    assert {issue.issue_code for issue in result.initial_issues} == {
+        "boundary_bridge_missing",
+        "boundary_prerequisite_gap",
+        "boundary_exit_state_missing",
+    }
+    assert result.issues == ()
+    assert result.semantic_calls == 1
+    assert semantic.calls == 1
+    assert result.repair_attempted is False
+
+
+@pytest.mark.asyncio
+async def test_invalid_semantic_output_on_lexical_miss_fails_closed() -> None:
     previous_plan, next_plan, previous, following = _boundary(
         next_text="Photosynthesis makes food."
     )
+    semantic = _Semantic({"status": "issue", "issue": {"affected_section_id": "s2"}})
+    repair = _Repair(following)
+
+    result = await validate_and_repair_boundary(
+        previous_section=previous,
+        previous_plan=previous_plan,
+        next_section=following,
+        next_plan=next_plan,
+        semantic_validator=semantic,
+        repair_engine=repair,
+        writer_requests={"s2": _writer_request(next_plan)},
+    )
+
+    assert result.failure_code == "boundary_semantic_output_invalid"
+    assert result.semantic_calls == 1
+    assert semantic.calls == 1
+    assert repair.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_exact_deterministic_coverage_keeps_one_semantic_review() -> None:
+    previous_plan, next_plan, previous, following = _boundary()
     semantic = _Semantic(BoundarySemanticVerdict(status="pass"))
+
+    result = await validate_and_repair_boundary(
+        previous_section=previous,
+        previous_plan=previous_plan,
+        next_section=following,
+        next_plan=next_plan,
+        semantic_validator=semantic,
+    )
+
+    assert result.passed
+    assert result.initial_issues == ()
+    assert result.semantic_calls == 1
+    assert semantic.calls == 1
+    assert result.repair_attempted is False
+
+
+@pytest.mark.asyncio
+async def test_lexical_miss_issue_gets_one_targeted_repair_and_revalidation() -> None:
+    previous_plan, next_plan, previous, following = _boundary(
+        next_text="Photosynthesis makes food."
+    )
+    issue = ContinuityIssue(
+        issue_code="missing_explanatory_link",
+        affected_section_id="s2",
+        explanation="The opening does not connect the prior light observation to photosynthesis.",
+        required_correction="Connect the light observation to photosynthesis in the opening.",
+    )
+    semantic = _Semantic(
+        [
+            BoundarySemanticVerdict(status="issue", issue=issue),
+            BoundarySemanticVerdict(status="pass"),
+        ]
+    )
     repair = _Repair(_section("s2", 1, "Light energy supports photosynthesis."))
 
     result = await validate_and_repair_boundary(
@@ -133,9 +229,11 @@ async def test_deterministic_boundary_failure_precedes_semantic_and_repairs_once
     )
 
     assert result.passed
-    assert result.semantic_calls == 1
-    assert semantic.calls == 1
+    assert result.initial_issues == (issue,)
+    assert result.semantic_calls == 2
+    assert semantic.calls == 2
     assert repair.calls == 1
+    assert repair.requests[0].target_section_id == "s2"
     assert result.previous_section == previous
     assert result.next_section.nodes[0].display.text.startswith("Light energy")
 
@@ -145,7 +243,18 @@ async def test_missing_repair_engine_uses_bounded_default_writer_adapter(monkeyp
     previous_plan, next_plan, previous, following = _boundary(
         next_text="Photosynthesis makes food."
     )
-    semantic = _Semantic(BoundarySemanticVerdict(status="pass"))
+    issue = ContinuityIssue(
+        issue_code="missing_explanatory_link",
+        affected_section_id="s2",
+        explanation="The opening does not connect the prior light observation to photosynthesis.",
+        required_correction="Connect the light observation to photosynthesis in the opening.",
+    )
+    semantic = _Semantic(
+        [
+            BoundarySemanticVerdict(status="issue", issue=issue),
+            BoundarySemanticVerdict(status="pass"),
+        ]
+    )
     provider_calls = []
 
     async def repair_provider(payload):
@@ -174,24 +283,21 @@ async def test_missing_repair_engine_uses_bounded_default_writer_adapter(monkeyp
 
     assert result.passed
     assert result.repair_attempted
-    assert result.semantic_calls == 1
-    assert semantic.calls == 1
+    assert result.semantic_calls == 2
+    assert semantic.calls == 2
     assert len(provider_calls) == 1
     assert provider_calls[0]["repair"]["scope"] == "targeted"
     assert result.previous_section == previous
 
 
 @pytest.mark.asyncio
-async def test_default_adapter_does_not_repair_issues_on_both_boundary_sides(monkeypatch) -> None:
+async def test_nonlexical_repetition_issue_is_not_semantically_adjudicated() -> None:
     previous_plan, next_plan, previous, following = _boundary(
-        next_text="Photosynthesis makes food."
+        next_text="Sunlight reaches the wall and the object blocks some light."
     )
-    previous = _section("s1", 0, "Plants use sunlight.")
-
-    async def unexpected_provider_call(_payload):
-        pytest.fail("ambiguous boundary must not invoke a repair provider")
-
-    monkeypatch.setattr(boundary, "_default_provider", unexpected_provider_call)
+    repeated_text = "Sunlight reaches the wall and the object blocks some light."
+    previous = _section("s1", 0, repeated_text)
+    following = _section("s2", 1, repeated_text)
     semantic = _Semantic(BoundarySemanticVerdict(status="pass"))
 
     result = await validate_and_repair_boundary(
@@ -200,13 +306,10 @@ async def test_default_adapter_does_not_repair_issues_on_both_boundary_sides(mon
         next_section=following,
         next_plan=next_plan,
         semantic_validator=semantic,
-        writer_requests={
-            "s1": _writer_request(previous_plan),
-            "s2": _writer_request(next_plan),
-        },
     )
 
     assert result.failure_code == "boundary_repair_ambiguous"
+    assert "boundary_repetition" in {issue.issue_code for issue in result.initial_issues}
     assert result.repair_attempted is False
     assert result.semantic_calls == 0
     assert semantic.calls == 0
@@ -217,15 +320,16 @@ async def test_deterministic_repair_is_blocked_by_post_repair_semantic_issue() -
     previous_plan, next_plan, previous, following = _boundary(
         next_text="Photosynthesis makes food."
     )
+    issue = ContinuityIssue(
+        issue_code="semantic_bridge_gap",
+        affected_section_id="s2",
+        explanation="the opening still does not connect the prerequisite",
+        required_correction="add the approved bridge to the opening",
+    )
     semantic = _Semantic(
         BoundarySemanticVerdict(
             status="issue",
-            issue=ContinuityIssue(
-                issue_code="semantic_bridge_gap",
-                affected_section_id="s2",
-                explanation="the opening still does not connect the prerequisite",
-                required_correction="add the approved bridge to the opening",
-            ),
+            issue=issue,
         )
     )
     repair = _Repair(_section("s2", 1, "Light energy supports photosynthesis."))
@@ -242,8 +346,8 @@ async def test_deterministic_repair_is_blocked_by_post_repair_semantic_issue() -
 
     assert result.status == "recoverable_failure"
     assert result.failure_code == "boundary_semantic_revalidation_failed"
-    assert result.semantic_calls == 1
-    assert semantic.calls == 1
+    assert result.semantic_calls == 2
+    assert semantic.calls == 2
     assert repair.calls == 1
     assert result.previous_section == previous
 
@@ -491,13 +595,19 @@ async def test_repair_operational_error_is_not_reclassified_as_recoverable_conte
         async def repair_section(self, _request):
             raise RuntimeError("writer credentials are unavailable")
 
+    issue = ContinuityIssue(
+        issue_code="semantic_bridge_gap",
+        affected_section_id="s2",
+        explanation="the opening does not connect the prerequisite",
+        required_correction="add the approved bridge to the opening",
+    )
     with pytest.raises(RuntimeError, match="credentials"):
         await validate_and_repair_boundary(
             previous_section=previous,
             previous_plan=previous_plan,
             next_section=following,
             next_plan=next_plan,
-            semantic_validator=_Semantic(BoundarySemanticVerdict(status="pass")),
+            semantic_validator=_Semantic(BoundarySemanticVerdict(status="issue", issue=issue)),
             repair_engine=_OperationalRepair(),
             writer_requests={"s2": _writer_request(next_plan)},
         )
