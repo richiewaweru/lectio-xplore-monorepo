@@ -89,6 +89,8 @@ def test_approval_freezes_exact_source_items_and_plan_lineage() -> None:
     )
     from curriculum.shared_task_authoring import (
         ApprovedItemSnapshot,
+    )
+    from curriculum.shared_task_authoring import (
         approved_item_snapshot_hash as shared_hash,
     )
 
