@@ -379,6 +379,11 @@ class TeachingRevisionRecord(BaseModel):
     reviewed_by: str | None = None
     teacher_note: str | None = None
     supersedes_revision: int | None = None
+    # Revision-bound approved assessment records.  These fields are optional so
+    # rows written before shared-task authoring was introduced remain readable;
+    # the shared-task verifier requires them when a plan owns source items.
+    approved_item_snapshot: dict[str, Any] | None = None
+    approved_item_snapshot_hash: str | None = None
 
 
 def materialize_teaching_plan(

@@ -27,7 +27,12 @@ from curriculum.teaching_plan.models import (
     TeachingRevisionRecord,
     materialize_teaching_plan,
 )
-from curriculum.teaching_plan.revisions import TeachingRevisionStore
+from curriculum.teaching_plan.revisions import (
+    TeachingRevisionApprovedItemError,
+    TeachingRevisionStore,
+    approved_item_snapshot_hash,
+    read_approved_item_snapshot,
+)
 
 __all__ = [
     "ActionSourceIncompatibleError",
@@ -42,10 +47,13 @@ __all__ = [
     "TeachingPlanDraftSection",
     "TeachingPlanSection",
     "TeachingRevisionRecord",
+    "TeachingRevisionApprovedItemError",
     "TeachingRevisionStore",
     "accept_approved_teaching_revision",
     "assert_action_compatible_with_sources",
     "assign_slot_instance_ids",
     "materialize_teaching_plan",
+    "approved_item_snapshot_hash",
+    "read_approved_item_snapshot",
     "teaching_plan_content_hash",
 ]

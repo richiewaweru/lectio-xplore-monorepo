@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from copy import deepcopy
 from datetime import UTC, datetime
+import hashlib
+import json
 from typing import Any
 from uuid import uuid4
 
@@ -25,6 +28,236 @@ class TeachingRevisionContentError(ValueError):
 
 class TeachingRevisionContentMismatchError(TeachingRevisionContentError):
     code = "TEACHING_CONTENT_HASH_MISMATCH"
+
+
+class TeachingRevisionApprovedItemError(TeachingRevisionContentError):
+    """A revision-bound approved-item snapshot is unavailable or invalid."""
+
+    code = "TEACHING_APPROVED_ITEM_SNAPSHOT_UNAVAILABLE"
+
+
+_APPROVED_ITEM_SNAPSHOT_KEYS = frozenset(
+    {
+        "schema_version",
+        "teaching_plan_id",
+        "teaching_plan_revision",
+        "teaching_plan_hash",
+        "items",
+    }
+)
+_APPROVED_ITEM_KEYS = frozenset({"id", "card_id", "stem", "options", "correct_key", "diagnoses"})
+
+
+def approved_item_snapshot_hash(snapshot: Mapping[str, Any]) -> str:
+    """Return the canonical hash of a revision-bound approved-item snapshot."""
+
+    canonical = json.dumps(
+        snapshot,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _source_question_ids(plan: TeachingPlan) -> list[str]:
+    source_ids: list[str] = []
+    for section in plan.sections:
+        for block in section.blocks:
+            for source_id in block.source_question_ids:
+                if not isinstance(source_id, str) or not source_id.strip():
+                    raise TeachingRevisionConflictError(
+                        "Teaching Plan contains a malformed source_question_id"
+                    )
+                source_ids.append(source_id)
+    return source_ids
+
+
+def _packet_approved_items(state: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    packet = state.get("lesson_packet")
+    if not isinstance(packet, Mapping):
+        raise TeachingRevisionConflictError(
+            "lesson_packet is required to freeze approved source items"
+        )
+    raw_items = packet.get("approved_items")
+    if not isinstance(raw_items, list):
+        raise TeachingRevisionConflictError("lesson_packet.approved_items must be a list")
+    items: dict[str, dict[str, Any]] = {}
+    for raw_item in raw_items:
+        if not isinstance(raw_item, Mapping):
+            raise TeachingRevisionConflictError(
+                "lesson_packet.approved_items entries must be objects"
+            )
+        item_id = raw_item.get("id")
+        if not isinstance(item_id, str) or not item_id.strip() or item_id != item_id.strip():
+            raise TeachingRevisionConflictError(
+                "lesson_packet.approved_items entries require canonical string ids"
+            )
+        if item_id in items:
+            raise TeachingRevisionConflictError(
+                f"lesson_packet.approved_items contains duplicate id {item_id!r}"
+            )
+        item = deepcopy(dict(raw_item))
+        if set(item) != _APPROVED_ITEM_KEYS:
+            raise TeachingRevisionConflictError(
+                f"approved item {item_id!r} has a malformed payload"
+            )
+        if (
+            not isinstance(item["card_id"], str)
+            or not isinstance(item["stem"], str)
+            or not isinstance(item["options"], list)
+            or not isinstance(item["correct_key"], str)
+            or not isinstance(item["diagnoses"], dict)
+        ):
+            raise TeachingRevisionConflictError(
+                f"approved item {item_id!r} has a malformed payload"
+            )
+        try:
+            json.dumps(item, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        except (TypeError, ValueError) as exc:
+            raise TeachingRevisionConflictError(
+                f"approved item {item_id!r} is not a canonical JSON payload"
+            ) from exc
+        items[item_id] = item
+    return items
+
+
+def _snapshot_for_approval(
+    state: Mapping[str, Any],
+    plan: TeachingPlan,
+    *,
+    teaching_plan_id: str,
+    revision: int,
+    content_hash: str,
+) -> dict[str, Any] | None:
+    source_ids = _source_question_ids(plan)
+    base = {
+        "schema_version": 1,
+        "teaching_plan_id": teaching_plan_id,
+        "teaching_plan_revision": revision,
+        "teaching_plan_hash": content_hash,
+        "items": {},
+    }
+    if not source_ids:
+        return base
+    # A missing packet predates item freezing. Preserve the old approval ledger
+    # for display and legacy paths, while making it fail the new verifier.
+    if "lesson_packet" not in state:
+        return None
+    available = _packet_approved_items(state)
+    missing = sorted(set(source_ids) - set(available))
+    if missing:
+        raise TeachingRevisionConflictError(
+            f"lesson_packet.approved_items is missing source ids {missing!r}"
+        )
+    base["items"] = {source_id: available[source_id] for source_id in dict.fromkeys(source_ids)}
+    return base
+
+
+def _validate_snapshot_shape(
+    record: TeachingRevisionRecord,
+    snapshot: Mapping[str, Any],
+) -> dict[str, Any]:
+    if set(snapshot) != _APPROVED_ITEM_SNAPSHOT_KEYS:
+        raise TeachingRevisionApprovedItemError("approved item snapshot has an unexpected shape")
+    if snapshot.get("schema_version") != 1:
+        raise TeachingRevisionApprovedItemError(
+            "approved item snapshot schema_version is unsupported"
+        )
+    if snapshot.get("teaching_plan_id") != record.teaching_plan_id:
+        raise TeachingRevisionApprovedItemError(
+            "approved item snapshot teaching_plan_id does not match its revision"
+        )
+    if snapshot.get("teaching_plan_revision") != record.revision:
+        raise TeachingRevisionApprovedItemError(
+            "approved item snapshot revision does not match its revision"
+        )
+    if snapshot.get("teaching_plan_hash") != record.content_hash or not record.content_hash:
+        raise TeachingRevisionApprovedItemError(
+            "approved item snapshot hash binding does not match its revision"
+        )
+    items = snapshot.get("items")
+    if not isinstance(items, Mapping):
+        raise TeachingRevisionApprovedItemError("approved item snapshot items must be a mapping")
+    normalized_items: dict[str, dict[str, Any]] = {}
+    for item_id, raw_item in items.items():
+        if not isinstance(item_id, str) or not item_id.strip() or item_id != item_id.strip():
+            raise TeachingRevisionApprovedItemError(
+                "approved item snapshot contains a malformed item id"
+            )
+        if not isinstance(raw_item, Mapping) or raw_item.get("id") != item_id:
+            raise TeachingRevisionApprovedItemError(
+                f"approved item snapshot record for {item_id!r} is malformed"
+            )
+        item = deepcopy(dict(raw_item))
+        if set(item) != _APPROVED_ITEM_KEYS or not (
+            isinstance(item["card_id"], str)
+            and isinstance(item["stem"], str)
+            and isinstance(item["options"], list)
+            and isinstance(item["correct_key"], str)
+            and isinstance(item["diagnoses"], dict)
+        ):
+            raise TeachingRevisionApprovedItemError(
+                f"approved item snapshot record for {item_id!r} is malformed"
+            )
+        normalized_items[item_id] = item
+    try:
+        validated_plan = TeachingPlan.model_validate(record.plan)
+        actual_plan_hash = teaching_plan_content_hash(validated_plan)
+    except (TypeError, ValueError) as exc:
+        raise TeachingRevisionApprovedItemError(
+            "approved Teaching Plan snapshot is malformed"
+        ) from exc
+    if actual_plan_hash != record.content_hash:
+        raise TeachingRevisionContentMismatchError(
+            "approved Teaching Plan does not match its persisted hash"
+        )
+    if (
+        validated_plan.teaching_plan_id
+        and validated_plan.teaching_plan_id != record.teaching_plan_id
+    ) or (validated_plan.revision is not None and validated_plan.revision != record.revision):
+        raise TeachingRevisionApprovedItemError(
+            "approved Teaching Plan identity does not match its revision"
+        )
+    expected_source_ids = _source_question_ids(validated_plan)
+    if set(normalized_items) != set(expected_source_ids):
+        raise TeachingRevisionApprovedItemError(
+            "approved item snapshot ids do not match the approved plan sources"
+        )
+    normalized = dict(snapshot)
+    normalized["items"] = normalized_items
+    try:
+        actual_hash = approved_item_snapshot_hash(normalized)
+    except (TypeError, ValueError) as exc:
+        raise TeachingRevisionApprovedItemError(
+            "approved item snapshot is not canonical JSON"
+        ) from exc
+    if record.approved_item_snapshot_hash != actual_hash:
+        raise TeachingRevisionContentMismatchError(
+            "approved item snapshot does not match its persisted hash"
+        )
+    return normalized
+
+
+def read_approved_item_snapshot(
+    record: TeachingRevisionRecord,
+    *,
+    state: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Read and verify the immutable item snapshot required by shared tasks.
+
+    ``state`` is accepted for callers that already pass the revision state, but
+    the verifier intentionally reads only the frozen record.  A later packet
+    refresh must not rewrite or invalidate a historical approved revision.
+    """
+
+    if record.approved_item_snapshot is None or not record.approved_item_snapshot_hash:
+        raise TeachingRevisionApprovedItemError(
+            f"teaching revision {record.revision} has no approved item snapshot"
+        )
+    snapshot = _validate_snapshot_shape(record, record.approved_item_snapshot)
+    del state
+    return deepcopy(snapshot)
 
 
 def _utcnow() -> str:
@@ -155,6 +388,16 @@ class TeachingRevisionStore:
                 return record
         return None
 
+    def read_approved_item_snapshot(self, revision: int) -> dict[str, Any]:
+        """Read and verify one persisted revision's immutable item snapshot."""
+
+        record = self.get_revision(revision)
+        if record is None:
+            raise TeachingRevisionApprovedItemError(
+                f"teaching revision {revision} has no approved item snapshot"
+            )
+        return read_approved_item_snapshot(record, state=self._state)
+
     def record_draft(
         self,
         plan: TeachingPlan | dict[str, Any],
@@ -234,10 +477,7 @@ class TeachingRevisionStore:
                 "current Teaching Plan bytes differ from the pending revision snapshot"
             )
         for candidate in (pending_plan, mutable_plan):
-            if (
-                candidate.revision is not None
-                and candidate.revision != expected_revision
-            ) or (
+            if (candidate.revision is not None and candidate.revision != expected_revision) or (
                 candidate.teaching_plan_id
                 and candidate.teaching_plan_id != pending.teaching_plan_id
             ):
@@ -248,10 +488,23 @@ class TeachingRevisionStore:
             raise TeachingRevisionConflictError(
                 "displayed Teaching Plan content changed; reload the review before approving"
             )
+        approved_item_snapshot = _snapshot_for_approval(
+            self._state,
+            pending_plan,
+            teaching_plan_id=pending.teaching_plan_id,
+            revision=expected_revision,
+            content_hash=current_content_hash,
+        )
         approved = pending.model_copy(
             update={
                 "status": "approved",
                 "content_hash": current_content_hash,
+                "approved_item_snapshot": approved_item_snapshot,
+                "approved_item_snapshot_hash": (
+                    approved_item_snapshot_hash(approved_item_snapshot)
+                    if approved_item_snapshot is not None
+                    else None
+                ),
                 "approval_hash_binding": (
                     "submitted" if expected_content_hash is not None else "server_current_compat"
                 ),
