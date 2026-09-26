@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
+from uuid import UUID
 
 from media.generation.contracts import GeneratedVisualBlock, VisualGeneratorWorkOrder
 from media.generation.executor import execute_visual
@@ -30,16 +31,19 @@ class SharedFigureExecutorAdapter:
     emit_event: EmitEvent = _noop_emit
 
     def __post_init__(self) -> None:
-        if not self.run_id.strip():
-            raise ValueError("run_id must be non-empty")
+        try:
+            UUID(self.run_id)
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise ValueError("run_id must be a UUID") from exc
 
     async def execute_figure(self, order: VisualGeneratorWorkOrder) -> list[GeneratedVisualBlock]:
         """Execute one durable work order with stable Run/work trace IDs."""
 
         if not isinstance(order, VisualGeneratorWorkOrder):
             raise TypeError("SharedDocument media requires a VisualGeneratorWorkOrder")
-        generation_id = f"shared-document:{self.run_id}"
-        trace_id = f"{generation_id}:media:{order.work_order_id}"
+        canonical_run_id = str(UUID(self.run_id))
+        generation_id = f"shared-document-{canonical_run_id}"
+        trace_id = f"shared-document:{canonical_run_id}:media:{order.work_order_id}"
         return await execute_visual(
             order,
             self.emit_event,

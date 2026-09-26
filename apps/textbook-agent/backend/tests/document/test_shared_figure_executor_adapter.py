@@ -41,6 +41,7 @@ def _block(order: VisualGeneratorWorkOrder) -> GeneratedVisualBlock:
 @pytest.mark.asyncio
 async def test_adapter_returns_existing_valid_hosted_visual_and_stable_ids(monkeypatch):
     order = _order()
+    run_id = "ec975a04-7adc-42b4-959b-79068ece697d"
     events = []
 
     async def emit(event_type, payload):
@@ -48,12 +49,13 @@ async def test_adapter_returns_existing_valid_hosted_visual_and_stable_ids(monke
 
     async def execute(order, emit_event, *, trace_id, generation_id):
         await emit_event("visual_ready", {"visual_id": order.visual.id})
-        assert trace_id == "shared-document:run-1:media:shared-media-work-1"
-        assert generation_id == "shared-document:run-1"
+        assert trace_id == f"shared-document:{run_id}:media:shared-media-work-1"
+        assert generation_id == f"shared-document-{run_id}"
+        assert ":" not in generation_id
         return [_block(order)]
 
     monkeypatch.setattr("document.shared_lesson.figure_executor_adapter.execute_visual", execute)
-    result = await SharedFigureExecutorAdapter(run_id="run-1", emit_event=emit).execute_figure(
+    result = await SharedFigureExecutorAdapter(run_id=run_id, emit_event=emit).execute_figure(
         order
     )
 
@@ -69,9 +71,12 @@ async def test_adapter_propagates_provider_failure(monkeypatch):
     monkeypatch.setattr("document.shared_lesson.figure_executor_adapter.execute_visual", execute)
 
     with pytest.raises(RuntimeError, match="image provider unavailable"):
-        await SharedFigureExecutorAdapter(run_id="run-1").execute_figure(_order())
+        await SharedFigureExecutorAdapter(
+            run_id="ec975a04-7adc-42b4-959b-79068ece697d"
+        ).execute_figure(_order())
 
 
-def test_adapter_rejects_blank_run_id():
-    with pytest.raises(ValueError, match="run_id"):
-        SharedFigureExecutorAdapter(run_id=" ")
+@pytest.mark.parametrize("run_id", [" ", "shared-document:bad-run-id", "..\\escape"])
+def test_adapter_rejects_run_ids_that_cannot_be_safe_store_paths(run_id):
+    with pytest.raises(ValueError, match="run_id must be a UUID"):
+        SharedFigureExecutorAdapter(run_id=run_id)
