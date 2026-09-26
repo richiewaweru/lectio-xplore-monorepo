@@ -76,6 +76,48 @@ def _source() -> TeachingPlanSource:
     )
 
 
+def _source_with_empty_sourcebook() -> TeachingPlanSource:
+    source = _source()
+    original_section = source.plan.sections[0]
+    original_block = original_section.blocks[0]
+    block = original_block.model_copy(
+        update={"sourcebook_needs": [], "sourcebook_refs": []}
+    )
+    section = original_section.model_copy(update={"blocks": [block]})
+    plan = source.plan.model_copy(update={"sections": [section]})
+    digest = teaching_plan_content_hash(plan)
+    record = source.revision_record.model_copy(
+        update={"content_hash": digest, "plan": plan.model_dump(mode="json")}
+    )
+    return TeachingPlanSource(
+        plan=plan,
+        revision_record=record,
+        id=source.id,
+        revision=source.revision,
+        content_hash=digest,
+    )
+
+
+def _source_with_unbound_sourcebook_need() -> TeachingPlanSource:
+    source = _source()
+    original_section = source.plan.sections[0]
+    original_block = original_section.blocks[0]
+    block = original_block.model_copy(update={"sourcebook_refs": []})
+    section = original_section.model_copy(update={"blocks": [block]})
+    plan = source.plan.model_copy(update={"sections": [section]})
+    digest = teaching_plan_content_hash(plan)
+    record = source.revision_record.model_copy(
+        update={"content_hash": digest, "plan": plan.model_dump(mode="json")}
+    )
+    return TeachingPlanSource(
+        plan=plan,
+        revision_record=record,
+        id=source.id,
+        revision=source.revision,
+        content_hash=digest,
+    )
+
+
 def _item(source: TeachingPlanSource) -> SimpleNamespace:
     return SimpleNamespace(
         id="sourcebook-item",
@@ -248,6 +290,70 @@ async def test_authentication_failure_is_terminal_without_semantic_fallback(runt
     assert outcome.error_code == "sourcebook_provider_terminal"
     assert runtime_mocks.failures[0].recovery_action == "none"
     assert len(provider.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_empty_approved_sourcebook_completes_fenced_item_without_provider_call(
+    runtime_mocks,
+):
+    source = _source_with_empty_sourcebook()
+    item = _item(source)
+    runtime_mocks.set_item(item)
+    provider = _Provider({"entries": []})
+
+    async def verifier(_session, requested):
+        return requested
+
+    outcome = await sourcebook_runtime.execute_sourcebook_work_item(
+        sourcebook_runtime.SourcebookWorkItemJob(
+            session=_Session(),
+            work_item_id=item.id,
+            worker_id="worker-empty",
+            source=source,
+            provider=provider,
+            source_verifier=verifier,
+        )
+    )
+
+    assert outcome.sourcebook is not None
+    assert outcome.sourcebook.entries == []
+    assert outcome.error_code is None
+    assert provider.calls == []
+    assert runtime_mocks.failures == []
+    output = runtime_mocks.completed[0]["output_json"]
+    assert output["teaching_plan_id"] == source.id
+    assert output["teaching_plan_revision"] == source.revision
+    assert output["teaching_plan_hash"] == source.content_hash
+    assert output["entries"] == []
+    assert runtime_mocks.completed[0]["output_hash"] == content_hash(output)
+
+
+@pytest.mark.asyncio
+async def test_unbound_sourcebook_need_fails_closed_without_provider_call(runtime_mocks):
+    source = _source_with_unbound_sourcebook_need()
+    item = _item(source)
+    runtime_mocks.set_item(item)
+    provider = _Provider({"entries": []})
+
+    async def verifier(_session, requested):
+        return requested
+
+    outcome = await sourcebook_runtime.execute_sourcebook_work_item(
+        sourcebook_runtime.SourcebookWorkItemJob(
+            session=_Session(),
+            work_item_id=item.id,
+            worker_id="worker-unbound",
+            source=source,
+            provider=provider,
+            source_verifier=verifier,
+        )
+    )
+
+    assert outcome.error_code == "sourcebook_plan_contract"
+    assert runtime_mocks.failures[0].error_class == "unsupported_contract"
+    assert runtime_mocks.failures[0].recovery_action == "none"
+    assert runtime_mocks.completed == []
+    assert provider.calls == []
 
 
 @pytest.mark.asyncio

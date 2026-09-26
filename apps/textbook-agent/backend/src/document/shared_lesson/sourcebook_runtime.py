@@ -17,6 +17,7 @@ from sqlalchemy import select
 
 from curriculum.lesson_sourcebook import LessonSourcebook, validate_sourcebook
 from curriculum.shared_sourcebook_authoring import (
+    SharedSourcebookAuthoringError,
     author_shared_sourcebook,
 )
 from document.shared_lesson.runtime import (
@@ -238,6 +239,15 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
             error_code="sourcebook_checkpoint_integrity",
             error_class=ErrorClass.UNSUPPORTED_CONTRACT,
             safe_summary="Sourcebook checkpoint failed compatibility or integrity validation.",
+            recovery_action=RecoveryAction.NONE,
+        )
+    if isinstance(exc, SharedSourcebookAuthoringError):
+        return WorkItemFailure(
+            error_code="sourcebook_plan_contract",
+            error_class=ErrorClass.UNSUPPORTED_CONTRACT,
+            safe_summary=(
+                "The approved Teaching Plan has sourcebook needs without approved references."
+            ),
             recovery_action=RecoveryAction.NONE,
         )
     return WorkItemFailure(
