@@ -23,6 +23,7 @@ from document.shared_lesson.media import (
     verify_bound_figure_media,
 )
 from document.shared_lesson.models import (
+    SharedProvenance,
     SharedLessonDocument,
     SharedSection,
     build_shared_lesson_document,
@@ -129,6 +130,19 @@ def _source() -> TeachingPlanSource:
         id="plan-1",
         revision=3,
         content_hash=digest,
+    )
+
+
+def _source_with_second_section_bridge(statement: str) -> TeachingPlanSource:
+    source = _source()
+    plan = source.plan.model_copy(deep=True)
+    plan.sections[1].bridge_from_previous = statement
+    digest = teaching_plan_content_hash(plan)
+    record = source.revision_record.model_copy(
+        update={"content_hash": digest, "plan": plan.model_dump(mode="json")}
+    )
+    return source.model_copy(
+        update={"plan": plan, "revision_record": record, "content_hash": digest}
     )
 
 
@@ -303,6 +317,69 @@ def test_pending_source_and_invalid_shape_or_facts_fail_before_media_order() -> 
             figure_node_id="figure-a",
             expected_shape=_shape("section-a"),
             approved_source_facts={"fact": "Unrelated fact."},
+        )
+
+
+def test_media_admission_keeps_hard_contract_but_leaves_bridge_to_boundary_qa() -> None:
+    source = _source_with_second_section_bridge(
+        "A source idea continues into the energy flow."
+    )
+    section = _section("section-b", 1)
+    work = build_figure_work_order(
+        source,
+        section,
+        figure_node_id="figure-b",
+        expected_shape=_shape("section-b"),
+        approved_source_facts={"fact-energy": "Energy moves through the leaf."},
+        required=True,
+    )
+    assert work.section_id == "section-b"
+    assert work.required
+
+    forged_source_section = section.model_copy(
+        update={"provenance": SharedProvenance(source_ids=("unapproved-source",))}
+    )
+    with pytest.raises(SharedFigureMediaError, match="source_lineage_mismatch"):
+        build_figure_work_order(
+            source,
+            forged_source_section,
+            figure_node_id="figure-b",
+            expected_shape=_shape("section-b"),
+            approved_source_ids=("approved-source",),
+            approved_source_facts={"fact-energy": "Energy moves through the leaf."},
+        )
+    with pytest.raises(SharedFigureMediaError, match="not a FigureNode"):
+        build_figure_work_order(
+            source,
+            section,
+            figure_node_id="forged-figure",
+            expected_shape=_shape("section-b"),
+            approved_source_facts={"fact-energy": "Energy moves through the leaf."},
+        )
+
+    with pytest.raises(SharedFigureMediaError, match="deterministic validation"):
+        build_figure_work_order(
+            source,
+            section,
+            figure_node_id="figure-b",
+            expected_shape=(
+                ExpectedNodeShape(
+                    id="forged-figure",
+                    kind="figure",
+                    teaching_block_id="block-b",
+                    semantic_role="explanation",
+                ),
+            ),
+            approved_source_facts={"fact-energy": "Energy moves through the leaf."},
+        )
+
+    with pytest.raises(SharedFigureMediaError, match="unsupported_required_fact"):
+        build_figure_work_order(
+            source,
+            section,
+            figure_node_id="figure-b",
+            expected_shape=_shape("section-b"),
+            approved_source_facts={"fact-energy": "The leaf is blue."},
         )
 
 
