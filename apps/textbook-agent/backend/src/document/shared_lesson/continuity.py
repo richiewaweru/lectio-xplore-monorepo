@@ -285,6 +285,12 @@ def _primitive_issues(section: SharedSection) -> list[ContinuityIssue]:
         for node in section.nodes
         if isinstance(node, TaskAnchor) and (task_id := node.task_spec_id)
     )
+    # Match the writer boundary: natural words such as "check" are not opaque IDs.
+    known_ids = {
+        identifier
+        for identifier in known_ids
+        if any(not character.isalpha() for character in identifier)
+    }
     for node in section.nodes:
         if isinstance(node, TaskAnchor):
             if not _meaningful(node.id) or not _meaningful(node.task_spec_id):

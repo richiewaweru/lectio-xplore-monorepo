@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+import document.shared_lesson.qa as qa_module
 from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
 from document.shared_lesson.continuity import (
     BoundedRepairExhausted,
@@ -425,6 +426,250 @@ def test_final_qa_blocks_required_media_and_ready_gate() -> None:
     assert any(issue.issue_code == "required_media_missing" for issue in result.issues)
     with pytest.raises(DocumentQAError):
         require_ready_document(result)
+
+
+def test_final_qa_defers_narrative_coverage_and_ignores_natural_section_id() -> None:
+    section = SharedSection(
+        id="check",
+        title="Light and energy",
+        position=0,
+        nodes=(
+            ParagraphNode(
+                id="node-check-1",
+                teaching_block_id="b1",
+                display=ParagraphDisplay(
+                    text="This check is yours alone. A learner sorts a new case independently."
+                ),
+            ),
+        ),
+    )
+    document = build_shared_lesson_document(
+        {
+            "id": "document-check",
+            "revision": 1,
+            "teaching_plan_id": "plan-1",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "a" * 64,
+            "title": "Light and energy",
+            "sections": [section.model_dump(mode="json")],
+            "created_at": "2026-09-24T09:00:00+03:00",
+        }
+    )
+
+    result = qa_shared_lesson_document(
+        document=document,
+        teaching_plan_sections=(
+            _plan(
+                "check",
+                title="Light and energy",
+                must=["Whether each learner working alone can classify an unseen decision"],
+                bridge="Connect the previous example to a new decision",
+                exit_state=["Learners explain why their classification is supported"],
+            ),
+        ),
+        expected_shapes={
+            "check": (
+                ExpectedNodeShape(
+                    id="node-check-1",
+                    kind="paragraph",
+                    teaching_block_id="b1",
+                    semantic_role="explanation",
+                ),
+            )
+        },
+    )
+
+    assert result.ready
+
+
+def test_final_qa_defers_boundary_narrative_checks_to_boundary_evidence() -> None:
+    previous = SharedSection(
+        id="section-1",
+        title="Light and energy",
+        position=0,
+        nodes=(
+            ParagraphNode(
+                id="node-prev",
+                teaching_block_id="b1",
+                display=ParagraphDisplay(text="Plants can grow in sunlight."),
+            ),
+        ),
+    )
+    current = SharedSection(
+        id="section-2",
+        title="Photosynthesis",
+        position=1,
+        nodes=(
+            ParagraphNode(
+                id="node-current",
+                teaching_block_id="b1",
+                display=ParagraphDisplay(text="Food is made through photosynthesis."),
+            ),
+        ),
+    )
+    document = build_shared_lesson_document(
+        {
+            "id": "document-boundary-check",
+            "revision": 1,
+            "teaching_plan_id": "plan-1",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "a" * 64,
+            "title": "Light and energy",
+            "sections": [previous.model_dump(mode="json"), current.model_dump(mode="json")],
+            "created_at": "2026-09-24T09:00:00+03:00",
+        }
+    )
+
+    result = qa_shared_lesson_document(
+        document=document,
+        teaching_plan_sections=(
+            _plan(
+                "section-1",
+                title="Light and energy",
+                exit_state=["Learners understand sunlight's role in plant growth"],
+            ),
+            _plan(
+                "section-2",
+                title="Photosynthesis",
+                bridge="Connect sunlight's role to food production",
+                entry=["Learners know plants use light"],
+            ),
+        ),
+        expected_shapes={
+            "section-1": (
+                ExpectedNodeShape(
+                    id="node-prev",
+                    kind="paragraph",
+                    teaching_block_id="b1",
+                    semantic_role="explanation",
+                ),
+            ),
+            "section-2": (
+                ExpectedNodeShape(
+                    id="node-current",
+                    kind="paragraph",
+                    teaching_block_id="b1",
+                    semantic_role="explanation",
+                ),
+            ),
+        },
+    )
+
+    assert result.ready
+
+
+def test_final_qa_retains_hard_metadata_and_source_failures() -> None:
+    section = _section(text="TODO chlorophyll captures light energy.")
+    document = build_shared_lesson_document(
+        {
+            "id": "document-hard-checks",
+            "revision": 1,
+            "teaching_plan_id": "plan-1",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "a" * 64,
+            "title": "Light and energy",
+            "sections": [section.model_dump(mode="json")],
+            "tasks": [
+                {
+                    "id": "task-1",
+                    "teaching_plan_id": "plan-1",
+                    "teaching_plan_revision": 1,
+                    "teaching_plan_hash": "a" * 64,
+                    "teaching_block_id": "b1",
+                    "mode": "formative",
+                    "action": "select-one",
+                    "purpose": "Check understanding",
+                    "prompt": "What captures light energy?",
+                    "difficulty": "guided",
+                    "expected_evidence": "Chlorophyll captures light energy",
+                    "response": {
+                        "type": "single_choice",
+                        "options": [
+                            {"id": "chlorophyll", "text": "Chlorophyll"},
+                            {"id": "water", "text": "Water"},
+                        ],
+                    },
+                    "evaluation": {"type": "exact_match", "correct_option_id": "chlorophyll"},
+                }
+            ],
+            "created_at": "2026-09-24T09:00:00+03:00",
+        }
+    )
+
+    result = qa_shared_lesson_document(
+        document=document,
+        teaching_plan_sections=(
+            _plan(
+                "section-1",
+                title="Light and energy",
+                must=["Chlorophyll captures light energy"],
+            ),
+        ),
+        expected_shapes={"section-1": _shape()},
+        source_facts_by_section={"section-1": ("Sunlight provides energy to plants.",)},
+    )
+
+    assert {
+        "metadata_or_placeholder_leak",
+        "unsupported_required_fact",
+    } <= {issue.issue_code for issue in result.issues}
+    assert not result.ready
+
+
+def test_final_qa_keeps_unknown_continuity_issues_blocking(monkeypatch) -> None:
+    section = SharedSection(
+        id="section-1",
+        title="Light and energy",
+        position=0,
+        nodes=(
+            ParagraphNode(
+                id="node-1",
+                teaching_block_id="b1",
+                display=ParagraphDisplay(text="Light provides energy for photosynthesis."),
+            ),
+        ),
+    )
+    document = build_shared_lesson_document(
+        {
+            "id": "document-unknown-check",
+            "revision": 1,
+            "teaching_plan_id": "plan-1",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "a" * 64,
+            "title": "Light and energy",
+            "sections": [section.model_dump(mode="json")],
+            "created_at": "2026-09-24T09:00:00+03:00",
+        }
+    )
+
+    def unknown_issue(**_kwargs):
+        return (
+            ContinuityIssue(
+                issue_code="future_unknown_contract",
+                affected_section_id="section-1",
+                explanation="unknown continuity contract",
+                required_correction="resolve the unknown contract",
+            ),
+        )
+
+    monkeypatch.setattr(qa_module, "validate_section_continuity", unknown_issue)
+    result = qa_shared_lesson_document(
+        document=document,
+        teaching_plan_sections=(_plan("section-1", title="Light and energy"),),
+        expected_shapes={
+            "section-1": (
+                ExpectedNodeShape(
+                    id="node-1",
+                    kind="paragraph",
+                    teaching_block_id="b1",
+                    semantic_role="explanation",
+                ),
+            )
+        },
+    )
+
+    assert [issue.issue_code for issue in result.issues] == ["future_unknown_contract"]
+    assert not result.ready
 
 
 class _RepairEngine:

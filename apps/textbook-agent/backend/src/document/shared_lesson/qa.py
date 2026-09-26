@@ -17,6 +17,22 @@ from document.shared_lesson.continuity import (
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
 
+# Boundary WorkItems and final semantic QA own narrative judgments. Keep this
+# exact allowlist narrow so metadata, shape, source, and future unknown issues
+# continue to block deterministic readiness.
+_SEMANTIC_CONTINUITY_ISSUE_CODES = frozenset(
+    {
+        "must_establish_uncovered",
+        "avoid_repeating_violated",
+        "bridge_unrealized",
+        "exit_state_unrealized",
+        "boundary_bridge_missing",
+        "boundary_prerequisite_gap",
+        "boundary_exit_state_missing",
+        "boundary_repetition",
+    }
+)
+
 
 class DocumentQAResult(BaseModel):
     """The complete final QA result; READY is derived from zero issues."""
@@ -156,14 +172,17 @@ def qa_shared_lesson_document(
                 )
             )
             continue
+        section_issues = validate_section_continuity(
+            section=section,
+            teaching_plan_section=plan_section,
+            expected_nodes=shape,
+            approved_source_ids=approved_source_ids,
+            source_facts=source_facts_by_section.get(section.id, ()),
+        )
         issues.extend(
-            validate_section_continuity(
-                section=section,
-                teaching_plan_section=plan_section,
-                expected_nodes=shape,
-                approved_source_ids=approved_source_ids,
-                source_facts=source_facts_by_section.get(section.id, ()),
-            )
+            issue
+            for issue in section_issues
+            if issue.issue_code not in _SEMANTIC_CONTINUITY_ISSUE_CODES
         )
 
         required_media = set(required_media_by_section.get(section.id, ()))
@@ -188,13 +207,16 @@ def qa_shared_lesson_document(
         plans[1:],
         strict=False,
     ):
+        boundary_issues = validate_section_boundary(
+            previous_section=previous,
+            previous_plan=previous_plan,
+            next_section=current,
+            next_plan=current_plan,
+        )
         issues.extend(
-            validate_section_boundary(
-                previous_section=previous,
-                previous_plan=previous_plan,
-                next_section=current,
-                next_plan=current_plan,
-            )
+            issue
+            for issue in boundary_issues
+            if issue.issue_code not in _SEMANTIC_CONTINUITY_ISSUE_CODES
         )
 
     return DocumentQAResult(
