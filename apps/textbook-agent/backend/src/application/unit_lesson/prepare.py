@@ -89,6 +89,25 @@ def _clip_advisory_text(value: str, *, limit: int) -> str:
     return normalized[: limit - 1].rstrip() + "…"
 
 
+def _normalize_anchor_text(value: str) -> str:
+    """Keep source-bearing anchors complete and reject replacement glyphs.
+
+    Anchor text is instructional source evidence, so the advisory display
+    length must not truncate it mid-fact.  A replacement character indicates
+    that the provider or transport already lost source text; preserving that
+    value would make a preparation look approved while its source is corrupt.
+    """
+
+    normalized = " ".join(value.split())
+    if "\ufffd" in normalized:
+        raise PathPreparationBlocked(
+            "Structural planner returned a corrupted anchor containing a replacement character"
+        )
+    if not normalized:
+        raise PathPreparationBlocked("Structural planner returned an empty anchor")
+    return normalized
+
+
 async def _preparation_context(
     session: AsyncSession,
     *,
@@ -326,7 +345,7 @@ def _build_structural_plan(
         structure_rationale="Selected lesson flow is code-validated; content awaits teacher review.",
         ),
         anchor=AnchorSpec(
-            example=_clip_advisory_text(generated.anchor.description, limit=100),
+            example=_normalize_anchor_text(generated.anchor.description),
         reuse_scope="Reuse this anchor across the selected path lesson slots.",
         ),
         prior_knowledge=prior_knowledge,

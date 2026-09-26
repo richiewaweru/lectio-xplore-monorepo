@@ -218,6 +218,85 @@ def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> 
     assert [section.visual_required for section in plan.sections] == [False, True, False]
 
 
+def test_bridge_preserves_complete_unicode_source_anchor() -> None:
+    from types import SimpleNamespace
+
+    from application.unit_lesson.prepare import _build_structural_plan
+
+    anchor = (
+        "The Lion & the Mouse — the lion spares the mouse, and later the mouse "
+        "gnaws through the hunter's net to free the lion; the kindness is repaid."
+    )
+    generated = PathStructuralPagePlan.model_validate(
+        {
+            "anchor": {"description": anchor, "source": "new"},
+            "cards": [{"title": "Inference in The Lion & the Mouse"}],
+            "sections": [
+                {"title": slot.title(), "transition_note": None if i == 0 else "follows"}
+                for i, slot in enumerate(["orient", "model", "check"])
+            ],
+        }
+    )
+    lesson = SimpleNamespace(
+        concept_id="c-lion-mouse",
+        objective="State an inference about cooperation in The Lion & the Mouse.",
+        title="The Lion & the Mouse",
+    )
+
+    plan = _build_structural_plan(
+        generated=generated,
+        lesson=lesson,
+        lesson_mode="first_exposure",
+        prior_knowledge=[],
+        slot_roles=["orient", "model", "check"],
+        slot_instance_ids=["orient", "model", "check"],
+        selected_components={},
+        shared_preparation=True,
+        visual_required_by_instance={},
+    )
+
+    assert len(anchor) > 100
+    assert plan.anchor.example == anchor
+    assert "—" in plan.anchor.example
+    assert "hunter's net" in plan.anchor.example
+
+
+def test_bridge_rejects_corrupted_source_anchor() -> None:
+    from types import SimpleNamespace
+
+    from application.unit_lesson.contracts import PathPreparationBlocked
+    from application.unit_lesson.prepare import _build_structural_plan
+
+    generated = PathStructuralPagePlan.model_validate(
+        {
+            "anchor": {"description": "The Lion & the Mouse\ufffd", "source": "new"},
+            "cards": [{"title": "Inference"}],
+            "sections": [
+                {"title": slot.title(), "transition_note": None if i == 0 else "follows"}
+                for i, slot in enumerate(["orient", "model", "check"])
+            ],
+        }
+    )
+    lesson = SimpleNamespace(
+        concept_id="c-corrupt",
+        objective="State an inference about cooperation.",
+        title="The Lion & the Mouse",
+    )
+
+    with pytest.raises(PathPreparationBlocked, match="corrupted anchor"):
+        _build_structural_plan(
+            generated=generated,
+            lesson=lesson,
+            lesson_mode="first_exposure",
+            prior_knowledge=[],
+            slot_roles=["orient", "model", "check"],
+            slot_instance_ids=["orient", "model", "check"],
+            selected_components={},
+            shared_preparation=True,
+            visual_required_by_instance={},
+        )
+
+
 def test_native_page_plan_bridge_stamps_fixed_identities() -> None:
     from types import SimpleNamespace
 
