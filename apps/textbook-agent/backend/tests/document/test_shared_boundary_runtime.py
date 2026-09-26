@@ -216,6 +216,60 @@ async def test_boundary_batch_settles_siblings_before_reraising_unexpected_error
 
 
 @pytest.mark.asyncio
+async def test_boundary_job_commits_before_sibling_finishes(monkeypatch) -> None:
+    lock = asyncio.Lock()
+    first_locked = asyncio.Event()
+    commits = []
+
+    class LockingSession:
+        def __init__(self, name):
+            self.name = name
+            self.owns_lock = False
+
+        async def commit(self):
+            commits.append(self.name)
+            if self.owns_lock:
+                self.owns_lock = False
+                lock.release()
+
+        async def rollback(self):
+            if self.owns_lock:
+                self.owns_lock = False
+                lock.release()
+
+    async def execute(job):
+        session = job.session
+        if job.work_item_id == "second":
+            await first_locked.wait()
+        await lock.acquire()
+        session.owns_lock = True
+        if job.work_item_id == "first":
+            first_locked.set()
+        return boundary_runtime.BoundaryRuntimeOutcome(work_item_id=job.work_item_id)
+
+    monkeypatch.setattr(boundary_runtime, "execute_boundary_work_item", execute)
+    jobs = tuple(
+        boundary_runtime.BoundaryWorkItemJob(
+            session=LockingSession(item_id),
+            work_item_id=item_id,
+            worker_id="boundary-lock-test",
+            source=SimpleNamespace(),
+            previous_section=SimpleNamespace(),
+            next_section=SimpleNamespace(),
+            writer_requests={},
+        )
+        for item_id in ("first", "second")
+    )
+
+    outcomes = await asyncio.wait_for(
+        boundary_runtime.execute_boundary_work_items(jobs, concurrency=2), timeout=1
+    )
+
+    assert [outcome.work_item_id for outcome in outcomes] == ["first", "second"]
+    assert set(commits) == {"first", "second"}
+
+
+@pytest.mark.asyncio
 async def test_boundary_batch_cancellation_settles_sibling_tasks(monkeypatch) -> None:
     sibling_cancelled = asyncio.Event()
     started = asyncio.Event()

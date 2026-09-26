@@ -639,11 +639,41 @@ async def write_section_work_items(
                 provider_semaphore=semaphore,
                 lease_seconds=job.lease_seconds,
             )
-        except Exception as exc:  # noqa: BLE001 - isolate section failures and finish siblings.
+        except LeaseLostError as exc:
+            await _settle_writer_job_session(job.session, commit=False)
             return SectionWriterOutcome(work_item_id=job.work_item_id, error=exc)
+        except asyncio.CancelledError:
+            await _settle_writer_job_session(job.session, commit=False)
+            raise
+        except Exception as exc:  # noqa: BLE001 - isolate section failures and finish siblings.
+            # _write_section_work_item records typed failures before raising.
+            # Commit here so its Run/item locks are released while siblings
+            # continue, including siblings waiting on the shared Run row.
+            try:
+                await _settle_writer_job_session(job.session, commit=True)
+            except BaseException:
+                await _settle_writer_job_session(job.session, commit=False)
+                raise
+            return SectionWriterOutcome(work_item_id=job.work_item_id, error=exc)
+        try:
+            await _settle_writer_job_session(job.session, commit=True)
+        except BaseException:
+            await _settle_writer_job_session(job.session, commit=False)
+            raise
         return SectionWriterOutcome(work_item_id=job.work_item_id, result=result)
 
-    return tuple(await asyncio.gather(*(run_one(job) for job in selected)))
+    tasks = [asyncio.create_task(run_one(job)) for job in selected]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    for result in results:
+        if isinstance(result, BaseException):
+            raise result
+    return tuple(results)
+
+
+async def _settle_writer_job_session(session: Any, *, commit: bool) -> None:
+    method = getattr(session, "commit" if commit else "rollback", None)
+    if callable(method):
+        await method()
 
 
 def _section_provider_semaphore() -> asyncio.Semaphore:

@@ -375,10 +375,8 @@ async def dispatch_shared_document_boundaries(
     if work:
         async with AsyncExitStack() as stack:
             jobs: list[BoundaryWorkItemJob] = []
-            job_sessions: list[Any] = []
             for previous_id, next_id, item in work:
                 job_session = await stack.enter_async_context(session_factory())
-                job_sessions.append(job_session)
                 jobs.append(
                     BoundaryWorkItemJob(
                         session=job_session,
@@ -400,8 +398,6 @@ async def dispatch_shared_document_boundaries(
                     )
                 )
             outcomes = await execute_boundary_work_items(jobs, concurrency=concurrency)
-            for job_session in job_sessions:
-                await job_session.commit()
 
     async with session_factory() as session:
         boundary_leaves = await _load_boundary_leaves(session, run_id=run_id)

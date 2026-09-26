@@ -754,6 +754,56 @@ async def test_public_writer_batch_enforces_four_and_skips_ready_sibling(monkeyp
     assert claim_count == 8
 
 
+@pytest.mark.asyncio
+async def test_writer_job_commits_before_sibling_finishes(monkeypatch) -> None:
+    lock = asyncio.Lock()
+    first_locked = asyncio.Event()
+    commits = []
+
+    class LockingSession:
+        def __init__(self, name):
+            self.name = name
+            self.owns_lock = False
+
+        async def commit(self):
+            commits.append(self.name)
+            if self.owns_lock:
+                self.owns_lock = False
+                lock.release()
+
+        async def rollback(self):
+            if self.owns_lock:
+                self.owns_lock = False
+                lock.release()
+
+    async def write(session, *, work_item_id, **_kwargs):
+        if work_item_id == "write:second":
+            await first_locked.wait()
+        await lock.acquire()
+        session.owns_lock = True
+        if work_item_id == "write:first":
+            first_locked.set()
+        return SimpleNamespace(section_slot_id=work_item_id)
+
+    monkeypatch.setattr("document.shared_lesson.runtime._write_section_work_item", write)
+    jobs = tuple(
+        SectionWriterJob(
+            session=LockingSession(item_id),
+            work_item_id=f"write:{item_id}",
+            worker_id="writer-lock-test",
+            source=SimpleNamespace(),
+            request=SimpleNamespace(),
+            status="queued",
+        )
+        for item_id in ("first", "second")
+    )
+
+    outcomes = await asyncio.wait_for(write_section_work_items(jobs), timeout=1)
+
+    assert all(outcome.result is not None for outcome in outcomes)
+    assert set(commits) == {"first", "second"}
+
+
 def test_writer_checkpoint_must_match_exact_composition_identity() -> None:
     composition = SectionCompositionPlan(
         section_slot_id="orient",

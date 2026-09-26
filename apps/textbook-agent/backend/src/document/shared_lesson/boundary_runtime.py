@@ -979,8 +979,9 @@ async def execute_boundary_work_items(
             )
         async with semaphore:
             try:
-                return await execute_boundary_work_item(job)
+                outcome = await execute_boundary_work_item(job)
             except LeaseLostError:
+                await _settle_boundary_job_session(job.session, commit=False)
                 return BoundaryRuntimeOutcome(
                     work_item_id=job.work_item_id,
                     error_code="boundary_lease_lost",
@@ -988,12 +989,24 @@ async def execute_boundary_work_items(
                     preserved_ready_siblings=True,
                 )
             except BoundaryRuntimeError as exc:
+                await _settle_boundary_job_session(job.session, commit=False)
                 return BoundaryRuntimeOutcome(
                     work_item_id=job.work_item_id,
                     error_code="boundary_contract_failure",
                     error_summary=str(exc),
                     preserved_ready_siblings=True,
                 )
+            except BaseException:
+                await _settle_boundary_job_session(job.session, commit=False)
+                raise
+            try:
+                # Each job owns this session. Persist its fenced READY/FAILED
+                # transition now, rather than after gather waits for siblings.
+                await _settle_boundary_job_session(job.session, commit=True)
+            except BaseException:
+                await _settle_boundary_job_session(job.session, commit=False)
+                raise
+            return outcome
 
     tasks = [asyncio.create_task(run_one(job)) for job in jobs]
     try:
@@ -1016,6 +1029,12 @@ async def execute_boundary_work_items(
         if isinstance(result, BaseException):
             raise result
     return tuple(results)
+
+
+async def _settle_boundary_job_session(session: Any, *, commit: bool) -> None:
+    method = getattr(session, "commit" if commit else "rollback", None)
+    if callable(method):
+        await method()
 
 
 __all__ = [

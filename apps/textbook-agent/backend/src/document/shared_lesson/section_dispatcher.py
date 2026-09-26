@@ -348,8 +348,6 @@ class SharedSectionDispatcher:
                 for admission, stage_session, item in selected
             ]
             outcomes = await write_section_work_items(jobs)
-            for _admission, stage_session, _item in selected:
-                await stage_session.commit()
             writer_dispatched = sum(1 for outcome in outcomes if outcome.result is not None)
             preserved += sum(1 for outcome in outcomes if outcome.preserved_ready)
             return writer_dispatched, preserved
