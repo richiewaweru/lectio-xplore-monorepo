@@ -9,16 +9,14 @@ from v3_execution.config.models import (
     V2_LESSON_APPROACH_PLANNER,
     V2_PATH_PLANNER,
     V2_PATH_STRUCTURAL_PLANNER,
-    V3_ANSWER_KEY_GENERATOR,
-    V3_ANSWER_KEY_GENERATOR_HEAVY,
     V3_NODE_REASONING,
     V3_PROPOSE_INTENT,
+    SHARED_TASK_AUTHORING,
     V3_VISUAL_QC,
     get_v3_model_settings,
     get_v3_slot,
     get_v3_spec,
 )
-from v3_execution.models import AnswerKeyExecutorWorkOrder, AnswerKeyPlanSpec, WriterQuestion
 
 
 def test_v3_slot_mapping() -> None:
@@ -28,6 +26,7 @@ def test_v3_slot_mapping() -> None:
     assert get_v3_slot("v3_answer_key_generator") == ModelSlot.FAST
     assert get_v3_slot("v3_answer_key_generator_heavy") == ModelSlot.STANDARD
     assert get_v3_slot(V3_PROPOSE_INTENT) == ModelSlot.STANDARD
+    assert get_v3_slot(SHARED_TASK_AUTHORING) == ModelSlot.STANDARD
 
 
 def test_get_v3_spec_env_override(monkeypatch: pytest.MonkeyPatch) -> None:

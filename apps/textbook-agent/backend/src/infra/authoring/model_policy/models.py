@@ -84,7 +84,7 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     DOCUMENT_SEMANTIC_QA: ModelSlot.FAST,
     V3_TARGETED_LESSON_REPAIR: ModelSlot.FAST,
     SHARED_SOURCEBOOK_AUTHORING: ModelSlot.STANDARD,
-    SHARED_TASK_AUTHORING: ModelSlot.FAST,
+    SHARED_TASK_AUTHORING: ModelSlot.STANDARD,
 }
 
 V3ReasoningLevel = Literal["low", "medium", "high"]
