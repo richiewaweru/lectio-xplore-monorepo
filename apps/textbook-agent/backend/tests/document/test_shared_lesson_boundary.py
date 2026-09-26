@@ -239,6 +239,82 @@ async def test_lexical_miss_issue_gets_one_targeted_repair_and_revalidation() ->
 
 
 @pytest.mark.asyncio
+async def test_post_repair_lexical_miss_uses_final_semantic_revalidation() -> None:
+    previous_plan, next_plan, previous, following = _boundary(
+        next_text="Photosynthesis makes food."
+    )
+    issue = ContinuityIssue(
+        issue_code="missing_explanatory_link",
+        affected_section_id="s2",
+        explanation="The opening does not connect the prior light observation to photosynthesis.",
+        required_correction="Connect the light observation to photosynthesis in the opening.",
+    )
+    semantic = _Semantic(
+        [
+            BoundarySemanticVerdict(status="issue", issue=issue),
+            BoundarySemanticVerdict(status="pass"),
+        ]
+    )
+    paraphrase = _section(
+        "s2",
+        1,
+        "Photosynthesis turns sunlight into stored power for sugar-making.",
+    )
+    repair = _Repair(paraphrase)
+
+    result = await validate_and_repair_boundary(
+        previous_section=previous,
+        previous_plan=previous_plan,
+        next_section=following,
+        next_plan=next_plan,
+        semantic_validator=semantic,
+        repair_engine=repair,
+        writer_requests={"s2": _writer_request(next_plan)},
+    )
+
+    assert result.passed, [item.issue_code for item in result.issues]
+    assert result.next_section == paraphrase
+    assert result.initial_issues == (issue,)
+    assert result.semantic_calls == 2
+    assert semantic.calls == 2
+    assert repair.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_post_repair_section_shape_failure_skips_final_semantic_review() -> None:
+    previous_plan, next_plan, previous, following = _boundary(
+        next_text="Photosynthesis makes food."
+    )
+    issue = ContinuityIssue(
+        issue_code="missing_explanatory_link",
+        affected_section_id="s2",
+        explanation="The opening does not connect the prior light observation to photosynthesis.",
+        required_correction="Connect the light observation to photosynthesis in the opening.",
+    )
+    semantic = _Semantic(BoundarySemanticVerdict(status="issue", issue=issue))
+    valid = _section("s2", 1, "Light energy supports photosynthesis.")
+    malformed = valid.model_copy(update={"nodes": (*valid.nodes, valid.nodes[0])})
+    repair = _Repair(malformed)
+
+    result = await validate_and_repair_boundary(
+        previous_section=previous,
+        previous_plan=previous_plan,
+        next_section=following,
+        next_plan=next_plan,
+        semantic_validator=semantic,
+        repair_engine=repair,
+        writer_requests={"s2": _writer_request(next_plan)},
+    )
+
+    assert result.status == "recoverable_failure"
+    assert result.failure_code == "boundary_revalidation_failed"
+    assert "section_shape_mismatch" in {item.issue_code for item in result.issues}
+    assert result.semantic_calls == 1
+    assert semantic.calls == 1
+    assert repair.calls == 1
+
+
+@pytest.mark.asyncio
 async def test_missing_repair_engine_uses_bounded_default_writer_adapter(monkeypatch) -> None:
     previous_plan, next_plan, previous, following = _boundary(
         next_text="Photosynthesis makes food."
@@ -414,7 +490,7 @@ async def test_semantic_issue_targets_one_section_and_preserves_sibling() -> Non
 
 
 @pytest.mark.asyncio
-async def test_repeated_failure_is_recoverable_and_budget_stays_one_call() -> None:
+async def test_repeated_lexical_failure_is_recoverable_with_two_call_ceiling() -> None:
     previous_plan, next_plan, previous, following = _boundary()
     semantic = _Semantic(
         BoundarySemanticVerdict(
@@ -440,7 +516,9 @@ async def test_repeated_failure_is_recoverable_and_budget_stays_one_call() -> No
     )
 
     assert result.status == "recoverable_failure"
-    assert result.failure_code == "boundary_revalidation_failed"
+    assert result.failure_code == "boundary_semantic_revalidation_failed"
+    assert result.semantic_calls == 2
+    assert semantic.calls == 2
     assert repair.calls == 1
     assert result.previous_section == previous
 

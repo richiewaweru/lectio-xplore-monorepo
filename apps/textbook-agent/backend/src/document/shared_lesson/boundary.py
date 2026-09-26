@@ -116,6 +116,8 @@ _SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES = frozenset(
         "boundary_bridge_missing",
         "boundary_prerequisite_gap",
         "boundary_exit_state_missing",
+        "bridge_unrealized",
+        "exit_state_unrealized",
     }
 )
 
@@ -468,7 +470,14 @@ async def validate_and_repair_boundary(
         expected_nodes=_expected_shapes(writer_request.composition_plan),
     )
     remaining.extend(section_issues)
-    if remaining:
+    # A repair may preserve a semantically valid paraphrase that still misses
+    # the deterministic token threshold. Let the already-budgeted final
+    # semantic review adjudicate only those lexical coverage findings; shape
+    # and other hard failures still stop here.
+    if any(
+        issue.issue_code not in _SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES
+        for issue in remaining
+    ):
         return BoundaryValidationResult(
             status="recoverable_failure",
             previous_section=repaired_previous,
