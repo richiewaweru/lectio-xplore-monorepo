@@ -379,7 +379,7 @@ async def validate_and_repair_boundary(
         )
     target_id = next(iter(affected_ids))
     writer_request = (writer_requests or {}).get(target_id)
-    if repair_engine is None or writer_request is None:
+    if writer_request is None:
         issue = _failure_issue(
             "boundary_targeted_repair_unavailable",
             target_id,
@@ -396,6 +396,11 @@ async def validate_and_repair_boundary(
             failure_code=issue.issue_code,
         )
 
+    # Production dispatchers always have the exact writer request for either
+    # side of this boundary. Use the existing one-call writer adapter when no
+    # custom engine is injected, so a legal single-section issue gets the
+    # bounded repair promised by the boundary contract.
+    selected_repair_engine = repair_engine or _WriterBoundaryRepairEngine()
     request = BoundaryRepairRequest(
         target_section_id=target_id,
         writer_request=writer_request,
@@ -406,7 +411,7 @@ async def validate_and_repair_boundary(
     try:
         repaired = _section_from_repair(
             request=request,
-            value=await repair_engine.repair_section(request),
+            value=await selected_repair_engine.repair_section(request),
         )
     except SectionWriteValidationError as exc:
         issue = _failure_issue(

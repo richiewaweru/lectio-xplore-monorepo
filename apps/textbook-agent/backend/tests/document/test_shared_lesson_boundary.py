@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
+from document.shared_lesson import boundary
 from document.shared_lesson.boundary import (
     BoundarySemanticVerdict,
     validate_and_repair_boundary,
@@ -137,6 +138,78 @@ async def test_deterministic_boundary_failure_precedes_semantic_and_repairs_once
     assert repair.calls == 1
     assert result.previous_section == previous
     assert result.next_section.nodes[0].display.text.startswith("Light energy")
+
+
+@pytest.mark.asyncio
+async def test_missing_repair_engine_uses_bounded_default_writer_adapter(monkeypatch) -> None:
+    previous_plan, next_plan, previous, following = _boundary(
+        next_text="Photosynthesis makes food."
+    )
+    semantic = _Semantic(BoundarySemanticVerdict(status="pass"))
+    provider_calls = []
+
+    async def repair_provider(payload):
+        provider_calls.append(payload)
+        return {
+            "nodes": [
+                {
+                    "id": "s2-node",
+                    "kind": "paragraph",
+                    "teaching_block_id": "s2-block",
+                    "display": {"text": "Light energy supports photosynthesis."},
+                }
+            ]
+        }
+
+    monkeypatch.setattr(boundary, "_default_provider", repair_provider)
+
+    result = await validate_and_repair_boundary(
+        previous_section=previous,
+        previous_plan=previous_plan,
+        next_section=following,
+        next_plan=next_plan,
+        semantic_validator=semantic,
+        writer_requests={"s2": _writer_request(next_plan)},
+    )
+
+    assert result.passed
+    assert result.repair_attempted
+    assert result.semantic_calls == 1
+    assert semantic.calls == 1
+    assert len(provider_calls) == 1
+    assert provider_calls[0]["repair"]["scope"] == "targeted"
+    assert result.previous_section == previous
+
+
+@pytest.mark.asyncio
+async def test_default_adapter_does_not_repair_issues_on_both_boundary_sides(monkeypatch) -> None:
+    previous_plan, next_plan, previous, following = _boundary(
+        next_text="Photosynthesis makes food."
+    )
+    previous = _section("s1", 0, "Plants use sunlight.")
+
+    async def unexpected_provider_call(_payload):
+        pytest.fail("ambiguous boundary must not invoke a repair provider")
+
+    monkeypatch.setattr(boundary, "_default_provider", unexpected_provider_call)
+    semantic = _Semantic(BoundarySemanticVerdict(status="pass"))
+
+    result = await validate_and_repair_boundary(
+        previous_section=previous,
+        previous_plan=previous_plan,
+        next_section=following,
+        next_plan=next_plan,
+        semantic_validator=semantic,
+        writer_requests={
+            "s1": _writer_request(previous_plan),
+            "s2": _writer_request(next_plan),
+        },
+    )
+
+    assert result.failure_code == "boundary_repair_ambiguous"
+    assert result.repair_attempted is False
+    assert result.semantic_calls == 0
+    assert semantic.calls == 0
 
 
 @pytest.mark.asyncio
