@@ -526,10 +526,10 @@ __all__ = [
     "TASK_ITEM_KEY",
     "TASK_STAGE",
     "SemanticInputError",
-    "VerifiedSourcebookInput",
     "VerifiedSemanticInputs",
+    "VerifiedSourcebookInput",
     "admit_shared_task_work_item",
     "admit_sourcebook_work_item",
-    "load_verified_sourcebook_input",
     "load_verified_semantic_inputs",
+    "load_verified_sourcebook_input",
 ]
