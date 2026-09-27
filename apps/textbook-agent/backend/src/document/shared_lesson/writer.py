@@ -51,6 +51,11 @@ class SectionTaskSummary(_ClosedModel):
     purpose: str = Field(min_length=1)
     prompt: str = Field(min_length=1)
     expected_evidence: str = Field(min_length=1)
+    # Raw SharedTaskSpec.evaluation, kept only for the deterministic
+    # answer-leakage check below. It is never serialized into the provider
+    # payload -- see `_request_payload` -- and defaults to `{}` so existing
+    # callers that do not yet supply it keep working unchanged.
+    evaluation: dict[str, Any] = Field(default_factory=dict)
 
 
 class SectionWriterRequest(_ClosedModel):
@@ -244,6 +249,27 @@ _INTERNAL_TERMS = re.compile(
 )
 _PLACEHOLDER = re.compile(r"\b(?:TODO|TBD|placeholder|lorem ipsum)\b|\[\s*insert\b", re.IGNORECASE)
 _NUMBER = re.compile(r"(?<![A-Za-z])\d+(?:[.,]\d+)?%?(?![A-Za-z])")
+_EXACT_NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
+
+# Templates that assert a task's answer VALUE as a solved result, e.g.
+# "x = 9", "gives x = 9", "equals 60", "is 9", "-> 60". Deliberately narrow:
+# these only fire on a result-asserting construction next to one of a
+# section's anchored-task answer values, never on the bare number occurring
+# elsewhere (e.g. restating the task's own given operands).
+_ANSWER_BOUNDARY = r"(?<!\d){value}(?!\d)(?!\.\d)"
+_RESULT_TEMPLATES = tuple(
+    template.format(value=_ANSWER_BOUNDARY)
+    for template in (
+        r"=\s*{value}",
+        r"\bequals?\s*{value}",
+        r"\bequal\s+to\s*{value}",
+        r"\bis\s*{value}",
+        r"\bgives?\s*(?:[a-zA-Z]\w*\s*=\s*)?{value}",
+        r"\byields?\s*(?:[a-zA-Z]\w*\s*=\s*)?{value}",
+        r"\bresults?\s+in\s*{value}",
+        r"(?:→|->)\s*{value}",
+    )
+)
 
 
 def _composition_error(
@@ -312,6 +338,71 @@ def _internal_identifiers(request: SectionWriterRequest) -> tuple[str, ...]:
     return tuple(sorted(value for value in candidates if any(not char.isalpha() for char in value)))
 
 
+def _numeric_literal(value: Any) -> str | None:
+    """Return `value` as a bare numeric string, or None if it is not one.
+
+    Only exact, short numeric literals are considered -- never option keys,
+    free text, or option labels -- so this stays conservative about what
+    counts as a leak-able "answer value".
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return str(int(value)) if value.is_integer() else str(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if _EXACT_NUMBER.fullmatch(stripped):
+            return stripped
+    return None
+
+
+def _task_answer_values(task: SectionTaskSummary) -> set[str]:
+    """Derive the numeric answer value(s) of one anchored task's evaluation.
+
+    Inspects only the evaluation shapes that name an exact numeric result:
+    ``exact_match`` (``correct_value``/``answer``), ``numeric`` (``value``),
+    and ``accepted_answers`` (``accepted_answers``). Choice-key, mapping,
+    ordered-match, rubric, and teacher-review evaluations do not name a
+    literal numeric result and are intentionally left alone.
+    """
+    evaluation = task.evaluation or {}
+    eval_type = evaluation.get("type")
+    values: set[str] = set()
+    if eval_type == "exact_match":
+        for field in ("correct_value", "answer"):
+            literal = _numeric_literal(evaluation.get(field))
+            if literal is not None:
+                values.add(literal)
+    elif eval_type == "numeric":
+        literal = _numeric_literal(evaluation.get("value"))
+        if literal is not None:
+            values.add(literal)
+    elif eval_type == "accepted_answers":
+        for candidate in evaluation.get("accepted_answers") or ():
+            literal = _numeric_literal(candidate)
+            if literal is not None:
+                values.add(literal)
+    return values
+
+
+def _leaked_task_answer(text: str, request: SectionWriterRequest) -> str | None:
+    """Return the first anchored-task answer value stated as a result in `text`.
+
+    A number merely occurring in the text (e.g. restating "4x = 36") is not
+    enough; the text must assert the value as a result via one of the narrow
+    `_RESULT_TEMPLATES` constructions.
+    """
+    for task in request.task_summaries:
+        for answer in _task_answer_values(task):
+            for template in _RESULT_TEMPLATES:
+                pattern = template.format(value=re.escape(answer))
+                if re.search(pattern, text, flags=re.IGNORECASE):
+                    return answer
+    return None
+
+
 def _check_learner_text(
     node: WrittenNode, request: SectionWriterRequest, item: CompositionItem
 ) -> None:
@@ -344,6 +435,13 @@ def _check_learner_text(
         if _INTERNAL_TERMS.search(value) or _PLACEHOLDER.search(value):
             raise _composition_error(
                 "learner-facing content leaks planning text or a placeholder", item
+            )
+        leaked_answer = _leaked_task_answer(value, request)
+        if leaked_answer is not None:
+            raise _composition_error(
+                "learner-facing content states the result of an anchored task "
+                f"({leaked_answer!r}) instead of leaving it for the learner to solve",
+                item,
             )
         for identifier in identifiers:
             if re.search(rf"(?<!\w){re.escape(identifier)}(?!\w)", value, flags=re.IGNORECASE):
@@ -458,7 +556,27 @@ def _request_payload(
             item.model_dump(mode="json") for item in request.composition_plan.items
         ],
         "sources": [source.model_dump(mode="json") for source in request.sources],
-        "task_summaries": [task.model_dump(mode="json") for task in request.task_summaries],
+        # Only the visible task/prompt/purpose context is ordinary input.
+        # `expected_evidence` names the worked answer and evaluation names
+        # the exact accepted value(s); neither is learner-facing text, so
+        # both are kept out of ordinary context. `expected_evidence` is
+        # still supplied, but quarantined under an explicit "do not reveal"
+        # key so the provider cannot mistake it for prose to include, and
+        # the raw `evaluation` shape is never sent at all.
+        "task_summaries": [
+            {
+                "task_spec_id": task.task_spec_id,
+                "teaching_block_id": task.teaching_block_id,
+                "action": task.action,
+                "purpose": task.purpose,
+                "prompt": task.prompt,
+            }
+            for task in request.task_summaries
+        ],
+        "hidden_answer_context_do_not_reveal": [
+            {"task_spec_id": task.task_spec_id, "expected_evidence": task.expected_evidence}
+            for task in request.task_summaries
+        ],
         "repair": (
             {
                 "scope": repair_scope,

@@ -107,6 +107,67 @@ def _request() -> SectionWriterRequest:
     )
 
 
+def _numeric_task() -> SharedTaskSpec:
+    return SharedTaskSpec(
+        id="task-solve-x",
+        teaching_block_id="block-solve",
+        mode="formative",
+        action="enter-number",
+        purpose="Check whether the learner can solve for x",
+        prompt="Solve 4x = 36 for x.",
+        difficulty="guided",
+        expected_evidence="The learner solves 4x = 36 to get x = 9",
+        response={"type": "number", "answer_lines": 1},
+        evaluation={"type": "exact_match", "correct_value": 9},
+    )
+
+
+def _numeric_request(sources: tuple[SectionSource, ...] = ()) -> SectionWriterRequest:
+    section = TeachingPlanSection(
+        slot_id="section-solve",
+        display_title="Solving linear equations",
+        entry_state=["Learner can isolate a variable"],
+        must_establish=["Learner solves a one-step linear equation"],
+        avoid_repeating=["Do not reteach variable notation"],
+        bridge_from_previous=None,
+        exit_state=["Learner solves 4x = 36 independently"],
+        specific_purpose="Guide the learner through solving 4x = 36",
+        blocks=[
+            _block("block-intro", 0, "explain how to isolate x in an equation"),
+            _block("block-solve", 1, "guide the learner to solve 4x = 36 for x"),
+        ],
+    )
+    task = _numeric_task()
+    composition = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="block-intro", kind="paragraph", semantic_role="worked_example"
+            ),
+            CompositionChoice(
+                teaching_block_id="block-solve", kind="paragraph", semantic_role="explanation"
+            ),
+        ],
+        tasks=[task],
+    )
+    return SectionWriterRequest(
+        section=section,
+        composition_plan=composition,
+        sources=sources,
+        task_summaries=(
+            SectionTaskSummary(
+                task_spec_id=task.id,
+                teaching_block_id=task.teaching_block_id,
+                action=task.action,
+                purpose=task.purpose,
+                prompt=task.prompt,
+                expected_evidence=task.expected_evidence,
+                evaluation=task.evaluation,
+            ),
+        ),
+    )
+
+
 def _payload_for_item(item) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "id": item.id,
@@ -315,3 +376,89 @@ async def test_provider_failure_fails_closed_without_repair() -> None:
     with pytest.raises(RuntimeError, match="authentication"):
         await write_section(request=request, provider=provider)
     assert calls == 1
+
+
+def test_rejects_stated_task_answer_result() -> None:
+    request = _numeric_request()
+    draft = _draft(request)
+    draft["nodes"][1]["display"]["text"] = "Divide both sides by 4 to see that x = 9."
+    with pytest.raises(SectionWriteValidationError, match="states the result of an anchored task"):
+        validate_and_build_section(request=request, draft=draft)
+
+
+def test_allows_benign_mention_of_task_operand_without_stating_result() -> None:
+    request = _numeric_request()
+    draft = _draft(request)
+    draft["nodes"][1]["display"]["text"] = "This step revisits the equation 4x = 36 from earlier."
+    result = validate_and_build_section(request=request, draft=draft)
+    assert result.nodes[1].kind == "paragraph"
+
+
+def test_allows_worked_example_using_different_values_than_the_anchored_task() -> None:
+    sources = (
+        SectionSource(
+            id="source-related-equation",
+            kind="approved_fact",
+            text="A related equation, 5m = 20, has solution m = 4.",
+        ),
+    )
+    request = _numeric_request(sources=sources)
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = "For example, 5m = 20, so m = 4."
+    result = validate_and_build_section(request=request, draft=draft)
+    assert result.nodes[0].kind == "paragraph"
+
+
+@pytest.mark.asyncio
+async def test_stated_task_answer_triggers_bounded_repair() -> None:
+    request = _numeric_request()
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        draft = _draft(request)
+        if len(calls) == 1:
+            draft["nodes"][1]["display"]["text"] = "Divide both sides by 4 to see that x = 9."
+        else:
+            draft["nodes"][1]["display"]["text"] = (
+                "Divide both sides of the equation by the same coefficient to isolate x."
+            )
+        return draft
+
+    result = await write_section(request=request, provider=provider)
+
+    assert len(calls) == 2
+    assert calls[0]["repair"] is None
+    assert calls[1]["repair"] is not None
+    assert "states the result of an anchored task" in calls[1]["repair"]["issues"][0]
+    assert result.nodes[-1].kind == "task_anchor"
+
+
+def test_prompt_states_answer_leakage_and_misconception_rules() -> None:
+    from core.prompts import effective_prompt_text
+
+    prompt = effective_prompt_text("shared-section-writer")
+    lowered = prompt.lower()
+    assert "resolve every misconception" in lowered
+    assert "never solve an anchored task" in lowered
+    assert "hidden_answer_context_do_not_reveal" in prompt
+    assert "stay factually accurate" in lowered
+
+
+def test_payload_hides_expected_evidence_and_evaluation_from_ordinary_context() -> None:
+    from document.shared_lesson.writer import _request_payload
+
+    request = _numeric_request()
+    payload = _request_payload(request, repair_scope="initial", errors=())
+
+    for summary in payload["task_summaries"]:
+        assert "expected_evidence" not in summary
+        assert "evaluation" not in summary
+
+    hidden = payload["hidden_answer_context_do_not_reveal"]
+    assert hidden == [
+        {
+            "task_spec_id": request.task_summaries[0].task_spec_id,
+            "expected_evidence": request.task_summaries[0].expected_evidence,
+        }
+    ]
