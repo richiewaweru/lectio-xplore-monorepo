@@ -16,6 +16,7 @@ from curriculum.teaching_plan.models import (
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.media import (
     SharedFigureMediaError,
+    SharedFigureMediaProviderFailed,
     bind_figure_media_to_document,
     bind_generated_figure,
     build_figure_work_order,
@@ -190,16 +191,20 @@ def _document(
     )
 
 
-def _block(work, *, url: str = "https://cdn.example.test/image.png", status: str = "ready"):
+def _block(work, *, url: str | None = "https://cdn.example.test/image.png", status: str = "ready"):
+    # Mirror the real executor's own output shape (media/generation/executor.py):
+    # both caption and alt_text are set to the work order's purpose, which
+    # legitimately differs from the FigureNode's alt text (``must_show[0]``).
     return GeneratedVisualBlock(
         visual_id=work.work_order.visual.id,
         attaches_to=work.figure_node_id,
         mode=work.work_order.visual.mode,
         image_url=url,
         caption=work.work_order.visual.purpose,
-        alt_text=work.work_order.visual.must_show[0],
+        alt_text=work.work_order.visual.purpose,
         source_work_order_id=work.work_order.work_order_id,
         status=status,
+        error_message="provider RuntimeError: dead image API" if status == "failed" else None,
     )
 
 
@@ -394,14 +399,55 @@ def test_media_admission_fails_closed_on_unknown_continuity_issue(monkeypatch) -
         _work()
 
 
-def test_provider_diagnostics_never_replace_learner_figure_fields() -> None:
+def test_real_executor_shape_binds_even_when_caption_and_alt_text_differ() -> None:
+    # The real executor (media/generation/executor.py) sets both caption and
+    # alt_text to the work order's purpose, which legitimately differs from
+    # the FigureNode's own alt text (``must_show[0]``). Binding must accept
+    # this real shape rather than rejecting a valid result.
     work = _work()
+    assert work.work_order.visual.purpose != work.work_order.visual.must_show[0]
     block = _block(work)
-    block = block.model_copy(
+    assert block.caption == work.work_order.visual.purpose
+    assert block.alt_text == work.work_order.visual.purpose
+
+    ready = bind_generated_figure(work, [block])
+
+    assert ready.asset_url == block.image_url
+    assert not hasattr(ready, "caption")
+    assert not hasattr(ready, "alt_text")
+
+
+def test_provider_diagnostics_never_replace_learner_figure_fields() -> None:
+    # Even wildly different provider diagnostic text must never leak into the
+    # bound media result or the assembled document: shared figure semantics
+    # come only from the FigureNode.
+    source = _source()
+    work = _work()
+    block = _block(work).model_copy(
         update={"caption": "provider diagnostic", "alt_text": "provider diagnostic"}
     )
-    with pytest.raises(SharedFigureMediaError, match="semantics"):
-        bind_generated_figure(work, [block])
+
+    ready = bind_generated_figure(work, [block])
+    bound = bind_figure_media_to_document(ready, _document(source))
+
+    assert not hasattr(bound, "caption")
+    assert not hasattr(bound, "alt_text")
+    section = next(item for item in _document(source).sections if item.id == work.section_id)
+    node = next(item for item in section.nodes if item.id == work.figure_node_id)
+    assert node.display.caption != "provider diagnostic"
+    assert node.accessibility.alt_text != "provider diagnostic"
+
+
+def test_failed_provider_block_raises_provider_failed_not_invalid_output() -> None:
+    work = _work()
+    failed_block = _block(work, url=None, status="failed")
+
+    with pytest.raises(SharedFigureMediaProviderFailed) as excinfo:
+        bind_generated_figure(work, [failed_block])
+    # A provider/transport failure must be its own exception type, distinct
+    # from (though still a subclass of) generic contract violations, so a
+    # caller can classify it separately.
+    assert isinstance(excinfo.value, SharedFigureMediaError)
 
 
 def test_independent_figures_run_concurrently_and_required_failure_preserves_sibling() -> None:

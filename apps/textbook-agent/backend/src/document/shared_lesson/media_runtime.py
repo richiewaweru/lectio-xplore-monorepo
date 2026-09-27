@@ -30,6 +30,7 @@ from sqlalchemy import select
 from document.shared_lesson.media import (
     ReadyFigureMediaResult,
     SharedFigureMediaError,
+    SharedFigureMediaProviderFailed,
     SharedFigureWorkOrder,
     bind_generated_figure,
 )
@@ -50,6 +51,7 @@ from infra.generation_runtime import (
     WorkItemReplacement,
     active_work_items,
     add_work_item,
+    append_event,
     claim_work_item,
     complete_work_item,
     fail_work_item,
@@ -571,6 +573,39 @@ async def execute_figure_media_work_item(
         media = bind_generated_figure(job.work, blocks)
     except LeaseLostError:
         raise
+    except SharedFigureMediaProviderFailed:
+        # The executor itself reported a failed provider/transport call (for
+        # example an unreachable image API). This is not a violation of the
+        # shared media contract, so it must not be classified as invalid
+        # hosted output. Only a safe, structured diagnostic is recorded -
+        # never the provider's error_message, prompts, URLs, or keys.
+        failure = WorkItemFailure(
+            error_code="media_provider_failed",
+            error_class=ErrorClass.PROVIDER_TRANSPORT,
+            safe_summary="Figure media provider call failed.",
+            recovery_action=RecoveryAction.RETRY,
+        )
+        failed_item = await fail_work_item(
+            job.session,
+            work_item_id=item.id,
+            worker_id=job.worker_id,
+            lease_token=item.lease_token or 0,
+            failure=failure,
+            now=now,
+        )
+        await append_event(
+            job.session,
+            run_id=failed_item.run_id,
+            work_item_id=failed_item.id,
+            event_type="media_provider_failure_diagnostic",
+            error_code=failure.error_code,
+            safe_payload={"media_block_status": "failed"},
+        )
+        return MediaRuntimeOutcome(
+            work_item_id=item.id,
+            error_code=failure.error_code,
+            error_summary=failure.safe_summary,
+        )
     except SharedFigureMediaError:
         failure = WorkItemFailure(
             error_code="media_invalid_output",

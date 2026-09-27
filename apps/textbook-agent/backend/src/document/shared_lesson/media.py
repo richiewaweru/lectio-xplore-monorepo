@@ -31,6 +31,16 @@ class SharedFigureMediaError(ValueError):
     """A figure cannot be safely bound to a media result."""
 
 
+class SharedFigureMediaProviderFailed(SharedFigureMediaError):
+    """The visual provider/executor itself failed to produce an asset.
+
+    This is distinct from a genuine shared-semantic-contract violation: the
+    executor already tried and reported ``status="failed"`` (a provider or
+    transport failure), so it must never be mistaken for invalid hosted
+    output the provider actually returned.
+    """
+
+
 _MEDIA_NARRATIVE_SECTION_ISSUES = frozenset(
     {
         "teaching_block_unrealized",
@@ -330,6 +340,14 @@ def bind_generated_figure(
     if not blocks:
         raise SharedFigureMediaError(f"figure {work.figure_node_id!r} returned no media block")
     block = blocks[0]
+    if block.status == "failed":
+        # The executor already attempted the provider call and reported a
+        # failure; this is a provider/transport failure, not a violation of
+        # the shared media contract, and must be classified separately so it
+        # is never mistaken for invalid hosted output.
+        raise SharedFigureMediaProviderFailed(
+            f"figure {work.figure_node_id!r} media provider call failed"
+        )
     if block.status not in {"ready", "ready_with_quality_warning"}:
         raise SharedFigureMediaError(
             f"figure {work.figure_node_id!r} media status is {block.status!r}"
@@ -341,10 +359,12 @@ def bind_generated_figure(
         )
     if not block.image_url or not block.image_url.strip():
         raise SharedFigureMediaError(f"figure {work.figure_node_id!r} has no hosted asset URL")
-    if block.caption and block.caption != work.work_order.visual.purpose:
-        raise SharedFigureMediaError("provider caption cannot replace shared figure semantics")
-    if block.alt_text and block.alt_text != work.work_order.visual.must_show[0]:
-        raise SharedFigureMediaError("provider alt text cannot replace shared figure semantics")
+    # Shared figure semantics (caption/alt text) come only from the FigureNode
+    # that produced this work order, never from the provider block. The
+    # provider's own caption/alt_text fields are diagnostic only: the real
+    # executor sets both to the work order's purpose, which legitimately
+    # differs from the FigureNode's alt text, and neither field is ever
+    # copied into ReadyFigureMediaResult/FigureMediaResult or the document.
     return ReadyFigureMediaResult(
         source_plan_id=work.source_plan_id,
         source_plan_revision=work.source_plan_revision,
@@ -557,6 +577,7 @@ __all__ = [
     "FigureMediaResult",
     "ReadyFigureMediaResult",
     "SharedFigureMediaError",
+    "SharedFigureMediaProviderFailed",
     "SharedFigureWorkOrder",
     "bind_figure_media_to_document",
     "bind_generated_figure",

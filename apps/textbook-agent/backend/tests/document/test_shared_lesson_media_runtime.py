@@ -28,6 +28,7 @@ from document.shared_lesson import media_runtime
 from document.shared_lesson.models import SharedSection
 from infra.database.models import (
     ConceptModel,
+    GenerationEventModel,
     GenerationWorkItemModel,
     PathLessonModel,
     PathVersionModel,
@@ -191,15 +192,34 @@ def _accepted_for(work: SharedFigureWorkOrder) -> SharedSection:
 
 
 def _block(work: SharedFigureWorkOrder) -> GeneratedVisualBlock:
+    # Mirror the real executor's own output shape (media/generation/executor.py):
+    # both caption and alt_text are set to the work order's purpose, which
+    # legitimately differs from the FigureNode's own alt text (``must_show[0]``).
     return GeneratedVisualBlock(
         visual_id=work.work_order.visual.id,
         attaches_to=work.figure_node_id,
         mode=work.work_order.visual.mode,
         image_url="https://cdn.example.test/figure.png",
         caption=work.work_order.visual.purpose,
-        alt_text=work.work_order.visual.must_show[0],
+        alt_text=work.work_order.visual.purpose,
         source_work_order_id=work.work_order.work_order_id,
         status="ready",
+    )
+
+
+def _failed_provider_block(work: SharedFigureWorkOrder) -> GeneratedVisualBlock:
+    # Mirrors executor.py's own "failed" block: no hosted asset and an
+    # unsafe error_message that must never be persisted.
+    return GeneratedVisualBlock(
+        visual_id=work.work_order.visual.id,
+        attaches_to=work.figure_node_id,
+        mode=work.work_order.visual.mode,
+        image_url=None,
+        caption=work.work_order.visual.purpose,
+        alt_text=work.work_order.visual.purpose,
+        source_work_order_id=work.work_order.work_order_id,
+        status="failed",
+        error_message="image_generation_api_call failed (RuntimeError): dead image API",
     )
 
 
@@ -214,6 +234,16 @@ class _Executor:
         if self.fail:
             return []
         return [_block(self.work)]
+
+
+class _ProviderFailedExecutor:
+    def __init__(self, work: SharedFigureWorkOrder) -> None:
+        self.work = work
+        self.calls = 0
+
+    async def execute_figure(self, order):
+        self.calls += 1
+        return [_failed_provider_block(self.work)]
 
 
 @pytest.mark.asyncio
@@ -1038,3 +1068,99 @@ async def test_handled_provider_failure_is_committed_before_sibling_exception(
     assert failed_row.error_code == "media_provider_transport"
     assert error_row is not None
     assert error_row.status == "queued"
+
+
+@pytest.mark.asyncio
+async def test_failed_status_block_is_provider_failed_not_invalid_output(db_session) -> None:
+    # Live evidence: the executor caught a dead image API (RuntimeError during
+    # image_generation_api_call) and returned status="failed". The work item
+    # must be classified as a provider/transport failure, not a violation of
+    # the shared media semantic contract.
+    owner, run_id = await _seed_run(db_session, suffix="provider-failed")
+    work = _work(suffix="provider-failed")
+    admitted = await admit_figure_media_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=SOURCE,
+        work=work,
+        accepted_section=_accepted_for(work),
+    )
+    executor = _ProviderFailedExecutor(work)
+
+    outcome = await execute_figure_media_work_item(
+        MediaWorkItemJob(
+            session=db_session,
+            work_item_id=admitted.record.id,
+            worker_id="provider-failed-worker",
+            source=SOURCE,
+            work=work,
+            accepted_section=_accepted_for(work),
+            executor=executor,
+        )
+    )
+
+    assert outcome.media is None
+    assert outcome.error_code == "media_provider_failed"
+    row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
+    assert row is not None
+    assert row.status == "failed_recoverable"
+    assert row.error_code == "media_provider_failed"
+    assert row.error_class == "provider_transport"
+
+    events = list(
+        (
+            await db_session.scalars(
+                select(GenerationEventModel).where(
+                    GenerationEventModel.work_item_id == admitted.record.id
+                )
+            )
+        ).all()
+    )
+    diagnostic = next(
+        event for event in events if event.event_type == "media_provider_failure_diagnostic"
+    )
+    # Only the safe, structured status may be persisted: never the provider's
+    # error_message, prompts, URLs, or keys.
+    assert diagnostic.safe_payload_json == {"media_block_status": "failed"}
+    payload_text = str(diagnostic.safe_payload_json)
+    assert "dead image API" not in payload_text
+    assert "RuntimeError" not in payload_text
+    assert "image_generation_api_call" not in payload_text
+
+
+@pytest.mark.asyncio
+async def test_empty_block_list_still_classifies_as_invalid_output(db_session) -> None:
+    # A genuine shared-contract violation (no block returned at all) must
+    # still be distinguished from a "failed" status block and keep the
+    # existing media_invalid_output classification.
+    owner, run_id = await _seed_run(db_session, suffix="contract-violation")
+    work = _work(suffix="contract-violation")
+    admitted = await admit_figure_media_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=SOURCE,
+        work=work,
+        accepted_section=_accepted_for(work),
+    )
+
+    outcome = await execute_figure_media_work_item(
+        MediaWorkItemJob(
+            session=db_session,
+            work_item_id=admitted.record.id,
+            worker_id="contract-violation-worker",
+            source=SOURCE,
+            work=work,
+            accepted_section=_accepted_for(work),
+            executor=_Executor(work, fail=True),
+        )
+    )
+
+    assert outcome.media is None
+    assert outcome.error_code == "media_invalid_output"
+    row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
+    assert row is not None
+    assert row.status == "failed_recoverable"
+    assert row.error_code == "media_invalid_output"
+    assert row.error_class == "provider_output"
