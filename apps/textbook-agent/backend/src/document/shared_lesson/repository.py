@@ -16,8 +16,10 @@ from document.shared_lesson.document_semantic import DocumentSemanticQAResult
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.hashing import verify_shared_lesson_source as verify_document_source
 from document.shared_lesson.media import (
+    DeferredFigureMediaBinding,
     FigureMediaResult,
     SharedFigureMediaError,
+    verify_bound_deferred_figure_media,
     verify_bound_figure_media,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
@@ -27,6 +29,7 @@ from document.shared_lesson.runtime import (
     TeachingPlanSource,
     verify_teaching_plan_source,
 )
+from infra.config import settings
 from infra.database.models import SharedLessonDocumentModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime.contracts import SourceIdentity, VerifiedArtifact
@@ -229,7 +232,7 @@ def _validate_required_media(
     *,
     document: SharedLessonDocument,
     required_media_by_section: Mapping[str, Sequence[str]],
-    media_results: Sequence[FigureMediaResult],
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
 ) -> None:
     """Require every declared figure to be bound to this exact document.
 
@@ -237,6 +240,11 @@ def _validate_required_media(
     the binder again here is intentional: persistence is the last boundary
     before READY and must recompute the document, section, and semantic
     identities even when an upstream worker already validated them.
+
+    A figure may instead be a ``DeferredFigureMediaBinding`` only when the
+    local-only ``shared_document_media_optional`` switch is enabled; when it
+    is off, a deferred binding is rejected exactly like any other invalid
+    media evidence, fail-closed, regardless of what produced it.
     """
     expected: dict[str, str] = {}
     for section_id, figure_ids in required_media_by_section.items():
@@ -247,7 +255,7 @@ def _validate_required_media(
                 )
             expected[figure_id] = section_id
 
-    supplied: dict[str, FigureMediaResult] = {}
+    supplied: dict[str, FigureMediaResult | DeferredFigureMediaBinding] = {}
     for result in media_results:
         if result.figure_node_id in supplied:
             raise SharedLessonDocumentReadinessError(
@@ -255,7 +263,15 @@ def _validate_required_media(
             )
         supplied[result.figure_node_id] = result
         try:
-            verify_bound_figure_media(result, document)
+            if isinstance(result, DeferredFigureMediaBinding):
+                if not settings.shared_document_media_optional:
+                    raise SharedLessonDocumentReadinessError(
+                        f"required media figure {result.figure_node_id!r} is deferred, but "
+                        "SHARED_DOCUMENT_MEDIA_OPTIONAL is not enabled"
+                    )
+                verify_bound_deferred_figure_media(result, document)
+            else:
+                verify_bound_figure_media(result, document)
         except SharedFigureMediaError as exc:
             raise SharedLessonDocumentReadinessError(
                 f"media binding for figure {result.figure_node_id!r} is invalid: {exc}"
@@ -307,7 +323,7 @@ async def promote_shared_lesson_document(
     approved_source_ids: Sequence[str] = (),
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult] = (),
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
 ) -> StoredSharedLessonDocument:
     """Atomically promote one persisted draft after the complete READY gate.
 

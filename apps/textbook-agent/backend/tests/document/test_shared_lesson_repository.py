@@ -17,6 +17,8 @@ from document.shared_lesson.assembly import SharedLessonAssemblyResult
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.document_semantic import DocumentSemanticQAResult
 from document.shared_lesson.media import (
+    bind_deferred_figure_media,
+    bind_deferred_figure_media_to_document,
     bind_figure_media_to_document,
     bind_generated_figure,
     build_figure_work_order,
@@ -34,6 +36,7 @@ from document.shared_lesson.repository import (
     verify_shared_lesson_source,
 )
 from document.shared_lesson.runtime import TeachingPlanSource
+from infra.config import settings
 from infra.database.models import SharedLessonDocumentModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime.contracts import SourceIdentity
@@ -217,6 +220,17 @@ def _bound_media(source, document):
     )
     ready = bind_generated_figure(work, [block])
     return bind_figure_media_to_document(ready, document)
+
+
+def _deferred_media(source, document, *, reason_code: str = "media_provider_failed"):
+    work = build_figure_work_order(
+        source,
+        document.sections[0],
+        figure_node_id="figure-1",
+        expected_shape=_expected_shapes(include_figure=True)["section-1"],
+    )
+    deferred = bind_deferred_figure_media(work, reason_code=reason_code)
+    return bind_deferred_figure_media_to_document(deferred, document)
 
 
 @pytest.mark.asyncio
@@ -503,6 +517,75 @@ async def test_ready_promotion_accepts_exact_bound_required_figure_and_replays(
 
     assert promoted.status == "ready"
     assert replay == promoted
+
+
+@pytest.mark.asyncio
+async def test_ready_promotion_accepts_deferred_required_figure_when_media_optional_is_on(
+    db_session, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "shared_document_media_optional", True)
+    source, document = _approved_source_and_document(include_figure=True)
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
+    deferred = _deferred_media(source, document)
+    kwargs = {
+        "path_lesson_id": "path-lesson-1",
+        "source": source,
+        "assembly": _ready_assembly(document),
+        "semantic_qa": _semantic_pass(document),
+        "expected_shapes": _expected_shapes(include_figure=True),
+        "required_media_by_section": {"section-1": ("figure-1",)},
+        "media_results": (deferred,),
+    }
+
+    promoted = await promote_shared_lesson_document(db_session, **kwargs)
+
+    assert promoted.status == "ready"
+
+
+@pytest.mark.asyncio
+async def test_ready_promotion_rejects_deferred_required_figure_when_media_optional_is_off(
+    db_session,
+) -> None:
+    assert settings.shared_document_media_optional is False
+    source, document = _approved_source_and_document(include_figure=True)
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
+    deferred = _deferred_media(source, document)
+
+    with pytest.raises(SharedLessonDocumentReadinessError, match="SHARED_DOCUMENT_MEDIA_OPTIONAL"):
+        await promote_shared_lesson_document(
+            db_session,
+            path_lesson_id="path-lesson-1",
+            source=source,
+            assembly=_ready_assembly(document),
+            semantic_qa=_semantic_pass(document),
+            expected_shapes=_expected_shapes(include_figure=True),
+            required_media_by_section={"section-1": ("figure-1",)},
+            media_results=(deferred,),
+        )
+
+
+@pytest.mark.asyncio
+async def test_ready_promotion_rejects_deferred_figure_with_stale_identity_even_when_on(
+    db_session, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "shared_document_media_optional", True)
+    source, document = _approved_source_and_document(include_figure=True)
+    await save_shared_lesson_document(db_session, path_lesson_id="path-lesson-1", document=document)
+    deferred = _deferred_media(source, document).model_copy(
+        update={"figure_semantic_hash": "b" * 64}
+    )
+
+    with pytest.raises(SharedLessonDocumentReadinessError, match="invalid"):
+        await promote_shared_lesson_document(
+            db_session,
+            path_lesson_id="path-lesson-1",
+            source=source,
+            assembly=_ready_assembly(document),
+            semantic_qa=_semantic_pass(document),
+            expected_shapes=_expected_shapes(include_figure=True),
+            required_media_by_section={"section-1": ("figure-1",)},
+            media_results=(deferred,),
+        )
 
 
 @pytest.mark.asyncio

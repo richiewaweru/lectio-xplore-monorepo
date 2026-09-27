@@ -39,7 +39,12 @@ from document.shared_lesson.boundary_runtime import (
 )
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
-from document.shared_lesson.media import FigureMediaResult, ReadyFigureMediaResult
+from document.shared_lesson.media import (
+    DeferredFigureMediaBinding,
+    DeferredFigureMediaResult,
+    FigureMediaResult,
+    ReadyFigureMediaResult,
+)
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
 from document.shared_lesson.qa_runtime import (
     DocumentQARuntimeError,
@@ -66,6 +71,7 @@ from document.shared_lesson.work_item_inputs import (
     load_verified_shared_lesson_inputs,
 )
 from document.shared_lesson.writer import SectionSource, SectionWriteResult
+from infra.config import settings
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (
@@ -117,7 +123,13 @@ class SharedLessonFinalizationRequest(BaseModel):
     approved_source_ids: tuple[str, ...]
     source_facts_by_section: Mapping[str, tuple[str, ...]] | None
     required_media_by_section: Mapping[str, tuple[str, ...]] | None
-    media_results: tuple[FigureMediaResult, ...]
+    # A figure normally supplies a ready ``FigureMediaResult``. When the
+    # local-only ``shared_document_media_optional`` switch is enabled a
+    # figure may instead supply a closed ``DeferredFigureMediaBinding``; the
+    # switch being OFF still fails closed, since ``_verify_media_matches_
+    # work_items``/repository validation only accept a deferred binding when
+    # the setting is on.
+    media_results: tuple[FigureMediaResult | DeferredFigureMediaBinding, ...]
 
     @model_validator(mode="after")
     def identities_match(self) -> SharedLessonFinalizationRequest:
@@ -581,14 +593,83 @@ def _verify_boundary_coverage(
             )
 
 
+_READY_MEDIA_COMPARISON_FIELDS = (
+    "source_plan_id",
+    "source_plan_revision",
+    "source_plan_hash",
+    "section_id",
+    "section_output_hash",
+    "figure_node_id",
+    "figure_semantic_hash",
+    "work_order_id",
+    "visual_id",
+    "asset_id",
+    "asset_url",
+    "mode",
+    "required",
+    "source_facts",
+    "status",
+)
+
+_DEFERRED_MEDIA_COMPARISON_FIELDS = (
+    "source_plan_id",
+    "source_plan_revision",
+    "source_plan_hash",
+    "section_id",
+    "section_output_hash",
+    "figure_node_id",
+    "figure_semantic_hash",
+    "work_order_id",
+    "visual_id",
+    "mode",
+    "required",
+    "source_facts",
+    "reason_code",
+    "status",
+)
+
+
+def _parse_media_work_item_output(
+    payload: Any, *, item_id: str
+) -> ReadyFigureMediaResult | DeferredFigureMediaResult:
+    """Parse one durable media output, fail-closed when deferred is not enabled.
+
+    A ``status="deferred"`` output can only exist because the local-only
+    ``shared_document_media_optional`` switch was enabled at execution time.
+    If the switch is off now -- including a Run produced while it was on --
+    the deferred output is rejected exactly like any other invalid media
+    output, never silently accepted.
+    """
+    status = payload.get("status") if isinstance(payload, Mapping) else None
+    if status == "deferred":
+        if not settings.shared_document_media_optional:
+            raise SharedLessonFinalizationError(
+                f"durable media output for work item {item_id!r} is deferred, but "
+                "SHARED_DOCUMENT_MEDIA_OPTIONAL is not enabled"
+            )
+        try:
+            return DeferredFigureMediaResult.model_validate(payload)
+        except (TypeError, ValueError) as exc:
+            raise SharedLessonFinalizationError(
+                f"durable media output for work item {item_id!r} is invalid"
+            ) from exc
+    try:
+        return ReadyFigureMediaResult.model_validate(payload)
+    except (TypeError, ValueError) as exc:
+        raise SharedLessonFinalizationError(
+            f"durable media output for work item {item_id!r} is invalid"
+        ) from exc
+
+
 def _verify_media_matches_work_items(
     *,
     document: SharedLessonDocument,
-    media_results: Sequence[FigureMediaResult],
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
     active_items: Sequence[GenerationWorkItemModel],
     loaded_outputs: Sequence[VerifiedWorkItemOutput],
 ) -> None:
-    """Bind each document figure to its ready media work-item output."""
+    """Bind each document figure to its ready (or, if enabled, deferred) media
+    work-item output."""
     expected_figures = {
         (section.id, node.id)
         for section in document.sections
@@ -606,55 +687,46 @@ def _verify_media_matches_work_items(
         raise SharedLessonFinalizationError(
             "durable media work items do not cover exactly the document figure identities"
         )
-    ready_by_figure: dict[tuple[str, str], ReadyFigureMediaResult] = {}
+    outputs_by_figure: dict[tuple[str, str], ReadyFigureMediaResult | DeferredFigureMediaResult] = (
+        {}
+    )
     for item in media_items:
         output = output_by_id.get(item.id)
         if output is None:
             raise SharedLessonFinalizationError(
                 f"durable media output is missing for work item {item.id!r}"
             )
-        try:
-            ready = ReadyFigureMediaResult.model_validate(output.output_json)
-        except (TypeError, ValueError) as exc:
-            raise SharedLessonFinalizationError(
-                f"durable media output for work item {item.id!r} is invalid"
-            ) from exc
-        if item.item_key != f"media:{ready.work_order_id}":
+        parsed = _parse_media_work_item_output(output.output_json, item_id=item.id)
+        if item.item_key != f"media:{parsed.work_order_id}":
             raise SharedLessonFinalizationError(
                 f"durable media work item {item.id!r} has a mismatched work order"
             )
-        identity = (ready.section_id, ready.figure_node_id)
-        if identity in ready_by_figure:
+        identity = (parsed.section_id, parsed.figure_node_id)
+        if identity in outputs_by_figure:
             raise SharedLessonFinalizationError(
                 f"durable media outputs duplicate figure identity {identity!r}"
             )
-        ready_by_figure[identity] = ready
+        outputs_by_figure[identity] = parsed
     for result in media_results:
-        ready = ready_by_figure.get((result.section_id, result.figure_node_id))
-        if ready is None:
+        parsed = outputs_by_figure.get((result.section_id, result.figure_node_id))
+        if parsed is None:
             raise SharedLessonFinalizationError(
                 f"bound media has no matching durable output for {result.figure_node_id!r}"
             )
-        ready_payload = ready.model_dump(mode="json")
+        is_ready_result = isinstance(result, FigureMediaResult)
+        is_ready_output = isinstance(parsed, ReadyFigureMediaResult)
+        if is_ready_result != is_ready_output:
+            raise SharedLessonFinalizationError(
+                f"bound media status for {result.figure_node_id!r} differs from its "
+                "durable work-item output"
+            )
+        comparison_fields = (
+            _READY_MEDIA_COMPARISON_FIELDS if is_ready_result else _DEFERRED_MEDIA_COMPARISON_FIELDS
+        )
+        parsed_payload = parsed.model_dump(mode="json")
         result_payload = result.model_dump(mode="json")
-        for field in (
-            "source_plan_id",
-            "source_plan_revision",
-            "source_plan_hash",
-            "section_id",
-            "section_output_hash",
-            "figure_node_id",
-            "figure_semantic_hash",
-            "work_order_id",
-            "visual_id",
-            "asset_id",
-            "asset_url",
-            "mode",
-            "required",
-            "source_facts",
-            "status",
-        ):
-            if result_payload[field] != ready_payload[field]:
+        for field in comparison_fields:
+            if result_payload[field] != parsed_payload[field]:
                 raise SharedLessonFinalizationError(
                     f"bound media field {field!r} differs from its durable work-item output"
                 )
