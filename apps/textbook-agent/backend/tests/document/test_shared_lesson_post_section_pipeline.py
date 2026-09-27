@@ -17,7 +17,7 @@ from document.shared_lesson.media_runtime import MediaReadiness
 from document.shared_lesson.qa_runtime import VerifiedDocumentQA
 
 
-def _run(run_id: str = "post-section-run") -> SimpleNamespace:
+def _run(run_id: str = "7d3c5b1e-4f2a-4c8e-9b6d-2a1f0e9c8b7a") -> SimpleNamespace:
     return SimpleNamespace(
         id=run_id,
         created_at=datetime(2026, 9, 26, 12, tzinfo=UTC),
@@ -32,7 +32,7 @@ async def test_one_section_pipeline_reaches_ready_without_a_second_qa_call(
 ) -> None:
     source, composition, section = _accepted()
     assembled = assemble_shared_lesson_document(
-        document_id="shared-document:post-section-run:revision:1",
+        document_id="shared-document:7d3c5b1e-4f2a-4c8e-9b6d-2a1f0e9c8b7a:revision:1",
         revision=1,
         source=source,
         accepted_sections={section.id: section},
@@ -48,7 +48,7 @@ async def test_one_section_pipeline_reaches_ready_without_a_second_qa_call(
         semantic_calls=1,
     )
     qa_result = SharedDocumentQADispatchResult(
-        run_id="post-section-run",
+        run_id="7d3c5b1e-4f2a-4c8e-9b6d-2a1f0e9c8b7a",
         work_item_id="qa-item",
         document=assembled.document,
         deterministic_qa=assembled.qa,
@@ -117,7 +117,7 @@ async def test_one_section_pipeline_reaches_ready_without_a_second_qa_call(
 
     outcome = await pipeline.run_post_section_pipeline(
         db_session_factory,
-        run_id="post-section-run",
+        run_id="7d3c5b1e-4f2a-4c8e-9b6d-2a1f0e9c8b7a",
         owner_user_id="owner",
         path_lesson_id="lesson",
         preparation_generation_id="prep",
@@ -196,7 +196,7 @@ async def test_invalid_accepted_figure_section_returns_blocked_outcome(
 
     outcome = await pipeline.run_post_section_pipeline(
         db_session_factory,
-        run_id="post-section-run",
+        run_id="7d3c5b1e-4f2a-4c8e-9b6d-2a1f0e9c8b7a",
         owner_user_id="owner",
         path_lesson_id="lesson",
         preparation_generation_id="prep",
@@ -208,7 +208,7 @@ async def test_invalid_accepted_figure_section_returns_blocked_outcome(
 
 
 def _passed_boundaries() -> BoundaryDispatchResult:
-    return BoundaryDispatchResult(run_id="post-section-run", state="no_boundaries")
+    return BoundaryDispatchResult(run_id="7d3c5b1e-4f2a-4c8e-9b6d-2a1f0e9c8b7a", state="no_boundaries")
 
 
 def _source(source):
