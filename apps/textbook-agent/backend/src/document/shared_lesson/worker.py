@@ -12,7 +12,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -62,6 +62,7 @@ from infra.generation_runtime import (
     WorkItemFailure,
     WorkItemUnavailable,
     active_work_items,
+    append_event,
     claim_work_item,
     fail_run_terminal,
     fail_work_item,
@@ -123,6 +124,13 @@ class SharedDocumentWorker:
     claim and checkpoint.
     """
 
+    # Bounded in-memory fairness guard: after a Run's dispatch raises an
+    # unexpected exception, skip that Run for this long so a poisoned Run
+    # cannot starve other queued Runs even when terminalization itself
+    # fails (e.g. a concurrent transition raced us).
+    _DISPATCH_FAILURE_BACKOFF_SECONDS = 300
+    _DISPATCH_FAILURE_SKIP_MAX_ENTRIES = 256
+
     def __init__(
         self,
         session_factory: Callable[[], Any],
@@ -159,6 +167,7 @@ class SharedDocumentWorker:
         self.poll_interval_seconds = poll_interval_seconds
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
+        self._dispatch_failure_skip_until: dict[str, datetime] = {}
 
     async def start(self) -> None:
         if self._task is not None and not self._task.done():
@@ -222,144 +231,227 @@ class SharedDocumentWorker:
             await self._fail_source_context(session, candidate, current)
             return True
 
-        if candidate.post_section:
-            pipeline_run_id = candidate.run.id
-            pipeline_owner_user_id = candidate.run.owner_user_id
-            await session.rollback()
-            outcome: PostSectionPipelineOutcome = await run_post_section_pipeline(
-                self.session_factory,
-                run_id=pipeline_run_id,
-                owner_user_id=pipeline_owner_user_id,
-                path_lesson_id=candidate.path_lesson_id,
-                preparation_generation_id=candidate.preparation_generation_id,
-                media_executor=self.media_executor,
-                boundary_semantic_validator=self.boundary_semantic_validator,
-                boundary_repair_engine=self.boundary_repair_engine,
-                qa_semantic_validator=self.qa_semantic_validator,
-                artifact_loader=self.artifact_loader,
-                worker_id=self.worker_id,
-            )
-            if outcome.state == "blocked":
-                LOGGER.warning(
-                    "SharedDocument Run %s post-section pipeline blocked at %s: %s",
-                    pipeline_run_id,
-                    outcome.stage,
-                    outcome.error,
-                )
-                await self._terminalize_blocked_post_section(
-                    session,
+        try:
+            if candidate.post_section:
+                pipeline_run_id = candidate.run.id
+                pipeline_owner_user_id = candidate.run.owner_user_id
+                await session.rollback()
+                outcome: PostSectionPipelineOutcome = await run_post_section_pipeline(
+                    self.session_factory,
                     run_id=pipeline_run_id,
                     owner_user_id=pipeline_owner_user_id,
-                    now=current,
+                    path_lesson_id=candidate.path_lesson_id,
+                    preparation_generation_id=candidate.preparation_generation_id,
+                    media_executor=self.media_executor,
+                    boundary_semantic_validator=self.boundary_semantic_validator,
+                    boundary_repair_engine=self.boundary_repair_engine,
+                    qa_semantic_validator=self.qa_semantic_validator,
+                    artifact_loader=self.artifact_loader,
+                    worker_id=self.worker_id,
                 )
-            return True
-
-        if candidate.admit_tasks:
-            try:
-                verified = await load_verified_sourcebook_input(
-                    session,
-                    run_id=candidate.run.id,
-                    owner_user_id=candidate.run.owner_user_id,
-                    source=source,
-                )
-                await admit_shared_task_work_item(
-                    session,
-                    run_id=candidate.run.id,
-                    owner_user_id=candidate.run.owner_user_id,
-                    source=source,
-                    sourcebook_output_hash=verified.sourcebook_output_hash,
-                )
-            except SemanticInputError as exc:
-                await self._fail_admission_run(
-                    session,
-                    candidate,
-                    error_code="shared_document_dependency_contract",
-                    error_class=ErrorClass.UNSUPPORTED_CONTRACT,
-                    safe_summary=(
-                        "The approved dependency snapshot or ready sourcebook no longer "
-                        "matches the SharedDocument contract."
-                    ),
-                    now=current,
-                )
-                LOGGER.warning(
-                    "SharedDocument Run %s failed while admitting task work: %s",
-                    candidate.run.id,
-                    exc,
-                )
+                if outcome.state == "blocked":
+                    LOGGER.warning(
+                        "SharedDocument Run %s post-section pipeline blocked at %s: %s",
+                        pipeline_run_id,
+                        outcome.stage,
+                        outcome.error,
+                    )
+                    await self._terminalize_blocked_post_section(
+                        session,
+                        run_id=pipeline_run_id,
+                        owner_user_id=pipeline_owner_user_id,
+                        now=current,
+                    )
                 return True
-            candidate.run.stage = "shared_task_generation"
-            await session.commit()
-            return True
 
-        if candidate.dispatch_sections:
-            dispatcher = SharedSectionDispatcher(
-                self.session_factory,
-                worker_id=self.worker_id,
-                composer_provider=self.composer_provider,
-                writer_provider=self.writer_provider,
-                lease_seconds=self.lease_seconds,
-                writer_lease_seconds=max(
-                    self.lease_seconds,
-                    SECTION_WRITER_LEASE_SECONDS,
-                ),
-            )
-            outcome = await dispatcher.run_one(
-                run_id=candidate.run.id,
-                owner_user_id=candidate.run.owner_user_id,
-                source=source,
-                source_verifier=verifier,
-                session=session,
-                now=current,
-            )
-            if not outcome.blocked:
-                candidate.run.stage = "section_writing"
+            if candidate.admit_tasks:
+                try:
+                    verified = await load_verified_sourcebook_input(
+                        session,
+                        run_id=candidate.run.id,
+                        owner_user_id=candidate.run.owner_user_id,
+                        source=source,
+                    )
+                    await admit_shared_task_work_item(
+                        session,
+                        run_id=candidate.run.id,
+                        owner_user_id=candidate.run.owner_user_id,
+                        source=source,
+                        sourcebook_output_hash=verified.sourcebook_output_hash,
+                    )
+                except SemanticInputError as exc:
+                    await self._fail_admission_run(
+                        session,
+                        candidate,
+                        error_code="shared_document_dependency_contract",
+                        error_class=ErrorClass.UNSUPPORTED_CONTRACT,
+                        safe_summary=(
+                            "The approved dependency snapshot or ready sourcebook no longer "
+                            "matches the SharedDocument contract."
+                        ),
+                        now=current,
+                    )
+                    LOGGER.warning(
+                        "SharedDocument Run %s failed while admitting task work: %s",
+                        candidate.run.id,
+                        exc,
+                    )
+                    return True
+                candidate.run.stage = "shared_task_generation"
+                await session.commit()
+                return True
+
+            if candidate.dispatch_sections:
+                dispatcher = SharedSectionDispatcher(
+                    self.session_factory,
+                    worker_id=self.worker_id,
+                    composer_provider=self.composer_provider,
+                    writer_provider=self.writer_provider,
+                    lease_seconds=self.lease_seconds,
+                    writer_lease_seconds=max(
+                        self.lease_seconds,
+                        SECTION_WRITER_LEASE_SECONDS,
+                    ),
+                )
+                outcome = await dispatcher.run_one(
+                    run_id=candidate.run.id,
+                    owner_user_id=candidate.run.owner_user_id,
+                    source=source,
+                    source_verifier=verifier,
+                    session=session,
+                    now=current,
+                )
+                if not outcome.blocked:
+                    candidate.run.stage = "section_writing"
+                else:
+                    candidate.run.stage = "section_composition"
+                await session.commit()
+                return True
+
+            if candidate.item is None:
+                return False
+            status = "queued"
+            if candidate.item.item_key == SOURCEBOOK_ITEM_KEY:
+                await execute_sourcebook_work_item(
+                    SourcebookWorkItemJob(
+                        session=session,
+                        work_item_id=candidate.item.id,
+                        worker_id=self.worker_id,
+                        source=source,
+                        provider=self.provider,
+                        engine=self.engine,
+                        source_verifier=verifier,
+                        owner_user_id=candidate.run.owner_user_id,
+                        status=status,
+                        lease_seconds=self.lease_seconds,
+                    ),
+                    source_verifier=verifier,
+                    now=current,
+                )
+            elif candidate.item.item_key == TASK_ITEM_KEY:
+                await execute_shared_task_work_item(
+                    SharedTaskWorkItemJob(
+                        session=session,
+                        work_item_id=candidate.item.id,
+                        worker_id=self.worker_id,
+                        source=source,
+                        owner_user_id=candidate.run.owner_user_id,
+                        approved_item_snapshot_loader=snapshot_loader,
+                        provider=self.provider,
+                        engine=self.engine,
+                        source_verifier=verifier,
+                        status=status,
+                        lease_seconds=self.lease_seconds,
+                    ),
+                    source_verifier=verifier,
+                    now=current,
+                )
             else:
-                candidate.run.stage = "section_composition"
+                return False
             await session.commit()
             return True
+        except (asyncio.CancelledError, LeaseLostError):
+            raise
+        except Exception as exc:  # noqa: BLE001 - isolate an unexpected per-Run failure
+            await self._handle_unexpected_dispatch_failure(session, candidate, exc, current)
+            return True
 
-        if candidate.item is None:
-            return False
-        status = "queued"
-        if candidate.item.item_key == SOURCEBOOK_ITEM_KEY:
-            await execute_sourcebook_work_item(
-                SourcebookWorkItemJob(
-                    session=session,
-                    work_item_id=candidate.item.id,
-                    worker_id=self.worker_id,
-                    source=source,
-                    provider=self.provider,
-                    engine=self.engine,
-                    source_verifier=verifier,
-                    owner_user_id=candidate.run.owner_user_id,
-                    status=status,
-                    lease_seconds=self.lease_seconds,
-                ),
-                source_verifier=verifier,
-                now=current,
+    def _mark_dispatch_failure(self, run_id: str, now: datetime) -> None:
+        """Record that ``run_id`` just raised an unexpected dispatch failure.
+
+        The Run is skipped by ``_find_candidate`` for a bounded backoff
+        window regardless of whether terminalization succeeds, so a Run
+        that keeps raising cannot starve other queued Runs.
+        """
+        self._dispatch_failure_skip_until[run_id] = now + timedelta(
+            seconds=self._DISPATCH_FAILURE_BACKOFF_SECONDS
+        )
+        if len(self._dispatch_failure_skip_until) > self._DISPATCH_FAILURE_SKIP_MAX_ENTRIES:
+            oldest_run_id = min(
+                self._dispatch_failure_skip_until,
+                key=lambda key: self._dispatch_failure_skip_until[key],
             )
-        elif candidate.item.item_key == TASK_ITEM_KEY:
-            await execute_shared_task_work_item(
-                SharedTaskWorkItemJob(
-                    session=session,
-                    work_item_id=candidate.item.id,
-                    worker_id=self.worker_id,
-                    source=source,
-                    owner_user_id=candidate.run.owner_user_id,
-                    approved_item_snapshot_loader=snapshot_loader,
-                    provider=self.provider,
-                    engine=self.engine,
-                    source_verifier=verifier,
-                    status=status,
-                    lease_seconds=self.lease_seconds,
-                ),
-                source_verifier=verifier,
-                now=current,
-            )
-        else:
+            del self._dispatch_failure_skip_until[oldest_run_id]
+
+    def _is_dispatch_skipped(self, run_id: str, now: datetime) -> bool:
+        skip_until = self._dispatch_failure_skip_until.get(run_id)
+        if skip_until is None:
             return False
-        await session.commit()
+        if now >= skip_until:
+            del self._dispatch_failure_skip_until[run_id]
+            return False
         return True
+
+    async def _handle_unexpected_dispatch_failure(
+        self,
+        session: Any,
+        candidate: _Candidate,
+        exc: Exception,
+        now: datetime,
+    ) -> None:
+        """Isolate a poisoned Run: terminalize it and never fall through to a
+
+        semantic fallback. Programming errors must stay programming errors.
+        """
+        # Capture identity before rolling back: the ORM instance's attributes
+        # are expired by rollback, and re-loading them lazily here would
+        # attempt synchronous IO outside the async greenlet context.
+        run_id = candidate.run.id
+        owner_user_id = candidate.run.owner_user_id
+        LOGGER.exception(
+            "SharedDocument Run %s dispatch raised an unexpected exception; terminalizing",
+            run_id,
+        )
+        self._mark_dispatch_failure(run_id, now)
+        await session.rollback()
+        try:
+            await fail_run_terminal(
+                session,
+                run_id=run_id,
+                owner_user_id=owner_user_id,
+                failure=RunFailure(
+                    error_code="shared_document_dispatch_error",
+                    error_class=ErrorClass.INTERNAL_PROGRAMMING,
+                    safe_summary=(
+                        "The SharedDocument worker hit an unexpected internal error while "
+                        "dispatching this run."
+                    ),
+                ),
+                now=now,
+            )
+            await append_event(
+                session,
+                run_id=run_id,
+                event_type="shared_document_dispatch_error_diagnostic",
+                error_code="shared_document_dispatch_error",
+                safe_payload={"original_exception_type": type(exc).__name__},
+            )
+            await session.commit()
+        except (InvalidRunTransition, RunNotFound):
+            # Already terminal, or racing another transition (e.g. active
+            # work items still queued/running). Fairness guard above still
+            # applies, so we simply move on rather than retrying here.
+            await session.rollback()
 
     async def _find_candidate(self, session: Any, now: datetime) -> _Candidate | None:
         runs = list(
@@ -375,6 +467,8 @@ class SharedDocumentWorker:
             ).all()
         )
         for run in runs:
+            if self._is_dispatch_skipped(run.id, now):
+                continue
             items = list(
                 (
                     await session.scalars(

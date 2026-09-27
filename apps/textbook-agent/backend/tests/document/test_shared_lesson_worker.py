@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
@@ -29,10 +30,12 @@ def _identity(source) -> SourceIdentity:
     )
 
 
-async def _admitted(db_session, *, source, lesson, generation, request_key: str):
+async def _admitted(
+    db_session, *, source, lesson, generation, request_key: str, owner_user_id: str = "source-owner"
+):
     result = await admit_shared_document_run(
         db_session,
-        owner_user_id="source-owner",
+        owner_user_id=owner_user_id,
         path_lesson_id=lesson.id,
         preparation_generation_id=generation.id,
         request_key=request_key,
@@ -425,7 +428,14 @@ async def test_ready_sourcebook_programming_error_is_not_classified_as_source_co
 
 
 async def _ready_semantic_dependencies(
-    db_session, *, source, lesson, generation, request_key, task_status="ready"
+    db_session,
+    *,
+    source,
+    lesson,
+    generation,
+    request_key,
+    task_status="ready",
+    owner_user_id="source-owner",
 ):
     admission = await _admitted(
         db_session,
@@ -433,6 +443,7 @@ async def _ready_semantic_dependencies(
         lesson=lesson,
         generation=generation,
         request_key=request_key,
+        owner_user_id=owner_user_id,
     )
     sourcebook_item = await db_session.get(
         GenerationWorkItemModel, admission.sourcebook_work_item.id
@@ -736,3 +747,246 @@ async def test_failed_task_dependency_never_dispatches_sections(db_session, monk
     assert dispatch_calls == []
     run = await db_session.get(GenerationRunModel, admission.run.id)
     assert run is not None and run.stage == "shared_task_generation"
+
+
+@pytest.mark.asyncio
+async def test_unexpected_dispatch_failure_terminalizes_run_and_frees_other_runs(
+    db_session, monkeypatch
+):
+    """A poisoned Run's dispatch failure must not starve a fresh queued Run.
+
+    Regression for the live incident: a WorkItemConflict raised from section
+    dispatch every iteration, and the worker only logged and retried the
+    same Run, starving every other queued Run.
+    """
+    generation_a, lesson_a, _prov_a, source_a = await _prepared(db_session, user_id="owner-poison-a")
+    generation_b, lesson_b, _prov_b, source_b = await _prepared(db_session, user_id="owner-poison-b")
+
+    admission_a, _task_a = await _ready_semantic_dependencies(
+        db_session,
+        source=source_a,
+        lesson=lesson_a,
+        generation=generation_a,
+        request_key="worker-poison-a",
+        owner_user_id="owner-poison-a",
+    )
+    run_a_id = admission_a.run.id
+
+    admission_b = await _admitted(
+        db_session,
+        source=source_b,
+        lesson=lesson_b,
+        generation=generation_b,
+        request_key="worker-poison-b",
+        owner_user_id="owner-poison-b",
+    )
+    run_b_id = admission_b.run.id
+
+    # Run A must be older so `_find_candidate` visits it before Run B.
+    run_a = await db_session.get(GenerationRunModel, run_a_id)
+    run_b = await db_session.get(GenerationRunModel, run_b_id)
+    assert run_a is not None and run_b is not None
+    run_a.created_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=5)
+    run_b.created_at = datetime.now(UTC).replace(tzinfo=None)
+    await db_session.commit()
+
+    _bind_source_context(monkeypatch, source_a)
+
+    class PoisonedDispatcher:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        async def run_one(self, **_kwargs):
+            raise RuntimeError(
+                "item key is already bound to a different work-item identity"
+            )
+
+    monkeypatch.setattr(worker, "SharedSectionDispatcher", PoisonedDispatcher)
+
+    sourcebook_calls: list[str] = []
+
+    async def execute_sourcebook(job, **_kwargs):
+        sourcebook_calls.append(job.work_item_id)
+        row = await db_session.get(GenerationWorkItemModel, job.work_item_id)
+        row.status = "ready"
+        row.output_json = {"entries": []}
+        row.output_hash = content_hash(row.output_json)
+
+    monkeypatch.setattr(worker, "execute_sourcebook_work_item", execute_sourcebook)
+
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-poison")
+
+    # First iteration: Run A is the only eligible candidate (initial section
+    # dispatch). Its dispatcher raises unexpectedly, so Run A must be
+    # terminalized rather than silently retried as a semantic outcome.
+    assert await instance.run_one(db_session)
+
+    failed_run = await db_session.get(GenerationRunModel, run_a_id)
+    assert failed_run is not None
+    assert failed_run.status == "failed_terminal"
+    assert failed_run.error_code == "shared_document_dispatch_error"
+    assert failed_run.error_class == "internal_programming"
+    assert failed_run.recovery_action == "none"
+    assert failed_run.error_summary is not None
+    assert "RuntimeError" not in failed_run.error_summary
+    assert "already bound" not in failed_run.error_summary
+
+    diagnostic = await db_session.scalar(
+        select(GenerationEventModel).where(
+            GenerationEventModel.run_id == run_a_id,
+            GenerationEventModel.event_type == "shared_document_dispatch_error_diagnostic",
+        )
+    )
+    assert diagnostic is not None
+    assert diagnostic.safe_payload_json == {"original_exception_type": "RuntimeError"}
+
+    # Second iteration: Run B (a fresh Run queued at sourcebook_generation)
+    # must now be dispatched -- it must not have starved behind Run A.
+    assert await instance.run_one(db_session)
+    assert sourcebook_calls == [admission_b.sourcebook_work_item.id]
+
+
+@pytest.mark.asyncio
+async def test_dispatch_failure_with_terminalization_race_still_frees_other_runs(
+    db_session, monkeypatch
+):
+    """Even when terminalizing the poisoned Run itself fails, the in-memory
+
+    fairness guard must still keep the worker from re-picking it forever.
+    """
+    generation_a, lesson_a, _prov_a, source_a = await _prepared(db_session, user_id="owner-race-a")
+    generation_b, lesson_b, _prov_b, source_b = await _prepared(db_session, user_id="owner-race-b")
+
+    admission_a, _task_a = await _ready_semantic_dependencies(
+        db_session,
+        source=source_a,
+        lesson=lesson_a,
+        generation=generation_a,
+        request_key="worker-race-a",
+        owner_user_id="owner-race-a",
+    )
+    run_a_id = admission_a.run.id
+    # A concurrently-admitted, still-active section item makes
+    # `fail_run_terminal` raise `InvalidRunTransition`, simulating a race
+    # with another in-flight admission/transition.
+    db_session.add(
+        GenerationWorkItemModel(
+            run_id=run_a_id,
+            item_key="compose:orient",
+            stage="section_composition",
+            status="queued",
+            input_hash="i" * 64,
+            definition_hash="d" * 64,
+        )
+    )
+    await db_session.commit()
+
+    admission_b = await _admitted(
+        db_session,
+        source=source_b,
+        lesson=lesson_b,
+        generation=generation_b,
+        request_key="worker-race-b",
+        owner_user_id="owner-race-b",
+    )
+    run_b_id = admission_b.run.id
+
+    run_a = await db_session.get(GenerationRunModel, run_a_id)
+    run_b = await db_session.get(GenerationRunModel, run_b_id)
+    assert run_a is not None and run_b is not None
+    run_a.created_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=5)
+    run_b.created_at = datetime.now(UTC).replace(tzinfo=None)
+    await db_session.commit()
+
+    _bind_source_context(monkeypatch, source_a)
+
+    class PoisonedDispatcher:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        async def run_one(self, **_kwargs):
+            raise RuntimeError(
+                "item key is already bound to a different work-item identity"
+            )
+
+    monkeypatch.setattr(worker, "SharedSectionDispatcher", PoisonedDispatcher)
+
+    sourcebook_calls: list[str] = []
+
+    async def execute_sourcebook(job, **_kwargs):
+        sourcebook_calls.append(job.work_item_id)
+        row = await db_session.get(GenerationWorkItemModel, job.work_item_id)
+        row.status = "ready"
+        row.output_json = {"entries": []}
+        row.output_hash = content_hash(row.output_json)
+
+    monkeypatch.setattr(worker, "execute_sourcebook_work_item", execute_sourcebook)
+
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-race")
+
+    assert await instance.run_one(db_session)
+
+    # Terminalization itself failed (an active work item is still
+    # queued/running), so the Run must be left exactly as it was -- not
+    # silently marked failed, and not left retriable as a semantic outcome.
+    raced_run = await db_session.get(GenerationRunModel, run_a_id)
+    assert raced_run is not None
+    assert raced_run.status in {"queued", "running"}
+    assert raced_run.error_code is None
+
+    diagnostic = await db_session.scalar(
+        select(GenerationEventModel).where(
+            GenerationEventModel.run_id == run_a_id,
+            GenerationEventModel.event_type == "shared_document_dispatch_error_diagnostic",
+        )
+    )
+    assert diagnostic is None
+
+    # Even though Run A could not be terminalized, the bounded skip set
+    # must still keep it from starving Run B on the next iteration.
+    assert await instance.run_one(db_session)
+    assert sourcebook_calls == [admission_b.sourcebook_work_item.id]
+
+
+@pytest.mark.asyncio
+async def test_dispatch_cancelled_error_propagates_without_terminalizing(db_session, monkeypatch):
+    generation, lesson, _prov, source = await _prepared(db_session, user_id="owner-cancel")
+    admission, _task = await _ready_semantic_dependencies(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-cancel",
+        owner_user_id="owner-cancel",
+    )
+    run_id = admission.run.id
+    _bind_source_context(monkeypatch, source)
+
+    class CancellingDispatcher:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        async def run_one(self, **_kwargs):
+            raise asyncio.CancelledError()
+
+    monkeypatch.setattr(worker, "SharedSectionDispatcher", CancellingDispatcher)
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-cancel")
+
+    with pytest.raises(asyncio.CancelledError):
+        await instance.run_one(db_session)
+
+    run = await db_session.get(GenerationRunModel, run_id)
+    assert run is not None
+    assert run.status in {"queued", "running"}
+    assert run.error_code is None
+    now = datetime.now(UTC).replace(tzinfo=None)
+    assert instance._is_dispatch_skipped(run_id, now) is False
+
+
+def test_dispatch_failure_skip_set_is_bounded():
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-bounds")
+    now = datetime.now(UTC).replace(tzinfo=None)
+    cap = instance._DISPATCH_FAILURE_SKIP_MAX_ENTRIES
+    for index in range(cap + 5):
+        instance._mark_dispatch_failure(f"run-{index}", now)
+    assert len(instance._dispatch_failure_skip_until) <= cap
