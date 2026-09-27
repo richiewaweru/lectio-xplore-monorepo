@@ -160,46 +160,63 @@ async def review_teaching_plan_draft(
             "candidate section identities are missing or duplicated",
         )
 
-    try:
-        raw_review = await _run_structured(
-            node=TEACHING_PLAN_SEMANTIC_REVIEWER,
-            caller="teaching_plan_semantic_reviewer",
-            output_type=TeachingPlanSemanticReviewDraft,
-            system_prompt=teaching_plan_semantic_reviewer_prompt(),
-            user_payload={
-                "lesson_context": lesson_context,
-                "teaching_plan_draft": draft.model_dump(mode="json"),
-                "materialized_candidate": plan.model_dump(mode="json"),
-                "section_block_identity_map": [
-                    {"section_id": section_id, "block_ids": sorted(block_ids)}
-                    for section_id, block_ids in section_to_blocks.items()
-                ],
-            },
-            trace_id=trace_id,
-        )
-        review = TeachingPlanSemanticReviewDraft.model_validate(
-            raw_review.model_dump(mode="json")
-            if hasattr(raw_review, "model_dump")
-            else raw_review
-        )
-    except ValidationError as exc:
-        raise TeachingPlanSemanticReviewError(
-            "TEACHING_SEMANTIC_REVIEW_INVALID",
-            "Teaching Plan semantic reviewer returned a malformed review",
-        ) from exc
-    except Exception as exc:
-        raise TeachingPlanSemanticReviewError(
-            "TEACHING_SEMANTIC_REVIEW_FAILED",
-            "Teaching Plan semantic reviewer failed; candidate is not approval-ready",
-        ) from exc
+    base_payload = {
+        "lesson_context": lesson_context,
+        "teaching_plan_draft": draft.model_dump(mode="json"),
+        "materialized_candidate": plan.model_dump(mode="json"),
+        "section_block_identity_map": [
+            {"section_id": section_id, "block_ids": sorted(block_ids)}
+            for section_id, block_ids in section_to_blocks.items()
+        ],
+    }
+    binding_error: str | None = None
+    # One bounded re-ask: a finding bound to a non-existent section/block is a
+    # reviewer output defect, so the exact binding error is fed back once.
+    for attempt in range(2):
+        payload = dict(base_payload)
+        if binding_error is not None:
+            payload["previous_attempt_binding_error"] = (
+                "Your previous review cited sections or blocks that do not exist or used the "
+                "wrong number of sections/blocks for a finding code: "
+                f"{binding_error}. Cite only ids from section_block_identity_map, exactly as "
+                "the finding code requires."
+            )
+        try:
+            raw_review = await _run_structured(
+                node=TEACHING_PLAN_SEMANTIC_REVIEWER,
+                caller="teaching_plan_semantic_reviewer",
+                output_type=TeachingPlanSemanticReviewDraft,
+                system_prompt=teaching_plan_semantic_reviewer_prompt(),
+                user_payload=payload,
+                trace_id=trace_id,
+            )
+            review = TeachingPlanSemanticReviewDraft.model_validate(
+                raw_review.model_dump(mode="json")
+                if hasattr(raw_review, "model_dump")
+                else raw_review
+            )
+        except ValidationError as exc:
+            raise TeachingPlanSemanticReviewError(
+                "TEACHING_SEMANTIC_REVIEW_INVALID",
+                "Teaching Plan semantic reviewer returned a malformed review",
+            ) from exc
+        except Exception as exc:
+            raise TeachingPlanSemanticReviewError(
+                "TEACHING_SEMANTIC_REVIEW_FAILED",
+                "Teaching Plan semantic reviewer failed; candidate is not approval-ready",
+            ) from exc
 
-    try:
-        _validate_finding_bindings(review, section_to_blocks=section_to_blocks)
-    except (TypeError, ValueError) as exc:
-        raise TeachingPlanSemanticReviewError(
-            "TEACHING_SEMANTIC_REVIEW_INVALID",
-            "Teaching Plan semantic reviewer returned an invalid or unbound finding",
-        ) from exc
+        try:
+            _validate_finding_bindings(review, section_to_blocks=section_to_blocks)
+        except (TypeError, ValueError) as exc:
+            if attempt == 0:
+                binding_error = str(exc)[:500]
+                continue
+            raise TeachingPlanSemanticReviewError(
+                "TEACHING_SEMANTIC_REVIEW_INVALID",
+                "Teaching Plan semantic reviewer returned an invalid or unbound finding",
+            ) from exc
+        break
 
     return TeachingPlanSemanticReviewResult(
         content_hash=teaching_plan_content_hash(plan),

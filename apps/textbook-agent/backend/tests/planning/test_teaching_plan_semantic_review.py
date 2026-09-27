@@ -537,3 +537,30 @@ def test_frozen_assessment_reuse_ignores_the_owning_assessment_block() -> None:
     errors = _frozen_assessment_reuse_errors(plan, packet)
 
     assert errors == []
+
+
+@pytest.mark.asyncio
+async def test_reviewer_reasks_once_after_unbound_finding(monkeypatch) -> None:
+    draft = _draft()
+    plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
+    unbound = TeachingPlanSemanticReviewDraft(
+        reviewed=True,
+        findings=[_finding("target_coverage_gap", ["section-that-does-not-exist"])],
+    )
+    clean = TeachingPlanSemanticReviewDraft(reviewed=True, findings=[])
+    payloads: list[dict] = []
+
+    async def _fake_structured(**kwargs):
+        payloads.append(kwargs["user_payload"])
+        return unbound if len(payloads) == 1 else clean
+
+    monkeypatch.setattr(semantic_review, "_run_structured", _fake_structured)
+    result = await semantic_review.review_teaching_plan_draft(
+        draft=draft,
+        plan=plan,
+        lesson_context={},
+    )
+    assert result.findings == []
+    assert len(payloads) == 2
+    assert "previous_attempt_binding_error" not in payloads[0]
+    assert "previous_attempt_binding_error" in payloads[1]
