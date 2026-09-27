@@ -56,6 +56,7 @@ from infra.generation_runtime import (
     WorkItemFailure,
     add_work_item,
     admit_run,
+    append_event,
     cancel_run,
     claim_work_item,
     complete_work_item,
@@ -262,7 +263,7 @@ async def _record_execution_failure(
         recovery = RecoveryAction.NONE
         code = "section_runtime_error"
         summary = "Section runtime failed unexpectedly."
-    await fail_work_item(
+    failed_item = await fail_work_item(
         session,
         work_item_id=work_item_id,
         worker_id=worker_id,
@@ -273,6 +274,14 @@ async def _record_execution_failure(
             safe_summary=summary,
             recovery_action=recovery,
         ),
+    )
+    await append_event(
+        session,
+        run_id=failed_item.run_id,
+        work_item_id=failed_item.id,
+        event_type="section_writer_failure_diagnostic",
+        error_code=code,
+        safe_payload={"original_exception_type": type(error).__name__},
     )
 
 
@@ -516,6 +525,7 @@ async def _write_section_work_item(
         source=identity,
         lease_seconds=lease_seconds,
     )
+    lease_checkpoint_committed = False
     try:
         checkpoint = await load_compatible_checkpoint(
             session,
@@ -548,6 +558,7 @@ async def _write_section_work_item(
         # Publish both the claim and its compatible composition checkpoint
         # before the writer makes any provider call.
         await session.commit()
+        lease_checkpoint_committed = True
         if provider is None:
             from document.shared_lesson.writer import _default_provider
 
@@ -581,11 +592,30 @@ async def _write_section_work_item(
     except LeaseLostError:
         raise
     except Exception as exc:
+        # A provider or SQL error may leave PostgreSQL's transaction aborted.
+        # The initial claim/checkpoint commit above is durable, so rollback
+        # clears only this session's failed transaction before fenced failure
+        # persistence. Earlier failures have an uncommitted claim; rollback
+        # and reclaim a fresh fence before recording their typed failure.
+        rollback = getattr(session, "rollback", None)
+        failure_lease_token = item.lease_token
+        transaction_failed = getattr(session, "is_active", True) is False
+        if callable(rollback) and (lease_checkpoint_committed or transaction_failed):
+            await rollback()
+        if not lease_checkpoint_committed and transaction_failed and callable(rollback):
+            item = await claim_work_item(
+                session,
+                work_item_id=work_item_id,
+                worker_id=worker_id,
+                source=identity,
+                lease_seconds=lease_seconds,
+            )
+            failure_lease_token = item.lease_token
         await _record_execution_failure(
             session,
             work_item_id=work_item_id,
             worker_id=worker_id,
-            lease_token=item.lease_token,
+            lease_token=failure_lease_token,
             error=exc,
         )
         raise

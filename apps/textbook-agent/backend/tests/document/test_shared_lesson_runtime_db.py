@@ -5,7 +5,8 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import OperationalError
 
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import (
@@ -649,6 +650,7 @@ async def test_bad_checkpoint_fails_item_and_preserves_ready_sibling(
         expected_code = "checkpoint_compatibility_conflict"
         expected_class = "source_conflict"
     await db_session.commit()
+    ready_item_id = ready_item.id
 
     with pytest.raises(expected_error):
         if worker_kind == "composer":
@@ -673,7 +675,7 @@ async def test_bad_checkpoint_fails_item_and_preserves_ready_sibling(
 
     async with db_session_factory() as verify:
         failed = await verify.get(GenerationWorkItemModel, target_id)
-        preserved = await verify.get(GenerationWorkItemModel, ready_item.id)
+        preserved = await verify.get(GenerationWorkItemModel, ready_item_id)
         failed_run = await verify.get(GenerationRunModel, run.id)
         assert failed is not None
         assert failed.status == "failed_terminal"
@@ -696,6 +698,100 @@ async def test_bad_checkpoint_fails_item_and_preserves_ready_sibling(
             ).all()
         )
         assert any(event.event_type == "work_item_failed" for event in events)
+
+
+@pytest.mark.asyncio
+async def test_writer_rolls_back_poisoned_session_before_failure_record_and_keeps_sibling(
+    db_session, db_session_factory, monkeypatch
+) -> None:
+    owner_id, lesson_id = await _seed_build(db_session, suffix="writer-poisoned-session")
+    source = _source()
+    _build, (run, _composition_items) = await _admit_run(
+        db_session,
+        owner_id=owner_id,
+        lesson_id=lesson_id,
+        source=source,
+        request_key="writer-poisoned-session-request",
+    )
+    sections = {section.slot_id: section for section in source.plan.sections}
+    ready = await admit_writer_work_item(
+        db_session,
+        run_id=run.id,
+        section=sections["orient"],
+        request=_writer_request(sections["orient"]),
+    )
+    target_request = _writer_request(sections["explain"])
+    target = await admit_writer_work_item(
+        db_session,
+        run_id=run.id,
+        section=sections["explain"],
+        request=target_request,
+    )
+    ready_claim = await claim_work_item(
+        db_session,
+        work_item_id=ready.id,
+        worker_id="writer-ready-sibling",
+        source=verify_teaching_plan_source(source),
+    )
+    ready_output = {"section_slot_id": "orient", "title": "Ready sibling", "nodes": []}
+    await complete_work_item(
+        db_session,
+        work_item_id=ready.id,
+        worker_id="writer-ready-sibling",
+        lease_token=ready_claim.lease_token,
+        output_json=ready_output,
+        output_hash=content_hash(ready_output),
+    )
+    await db_session.commit()
+    ready_id = ready.id
+    target_id = target.id
+
+    async def poison_writer(**_kwargs):
+        # SQLite marks this AsyncSession transaction inactive, mirroring the
+        # PostgreSQL failed-transaction state the writer failure handler must clear.
+        await db_session.execute(text("SELECT * FROM missing_shared_writer_table"))
+
+    monkeypatch.setattr(shared_runtime, "write_section", poison_writer)
+    with pytest.raises(OperationalError):
+        await _write_section_work_item(
+            db_session,
+            work_item_id=target_id,
+            worker_id="writer-poisoned-failure",
+            source=source,
+            request=target_request,
+            provider_semaphore=asyncio.Semaphore(1),
+        )
+    await db_session.commit()
+
+    async with db_session_factory() as verify:
+        failed = await verify.get(GenerationWorkItemModel, target_id)
+        preserved = await verify.get(GenerationWorkItemModel, ready_id)
+        failed_run = await verify.get(GenerationRunModel, run.id)
+        assert failed is not None
+        assert failed.status == "failed_terminal"
+        assert failed.error_code == "section_runtime_error"
+        assert failed.error_class == "internal_programming"
+        assert failed.lease_owner is None
+        assert preserved is not None
+        assert preserved.status == "ready"
+        assert preserved.output_json == ready_output
+        assert preserved.output_hash == content_hash(ready_output)
+        assert failed_run is not None and failed_run.status == "failed_terminal"
+        events = list(
+            (
+                await verify.scalars(
+                    select(GenerationEventModel).where(
+                        GenerationEventModel.work_item_id == target_id
+                    )
+                )
+            ).all()
+        )
+        diagnostic = next(
+            event
+            for event in events
+            if event.event_type == "section_writer_failure_diagnostic"
+        )
+        assert diagnostic.safe_payload_json == {"original_exception_type": "OperationalError"}
 
 
 async def _admit_run(

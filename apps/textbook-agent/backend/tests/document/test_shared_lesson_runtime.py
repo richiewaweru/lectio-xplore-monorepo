@@ -44,6 +44,10 @@ async def _commit_noop() -> None:
     return None
 
 
+async def _append_event_noop(*_args, **_kwargs):
+    return None
+
+
 def _approved_source(plan: TeachingPlan) -> TeachingPlanSource:
     plan = plan.model_copy(update={"approval_status": "approved"})
     plan_id = str(plan.teaching_plan_id)
@@ -331,8 +335,10 @@ async def test_provider_validation_error_keeps_provider_output_classification(mo
 
     async def fake_fail(_session, **kwargs):
         recorded.append(kwargs["failure"])
+        return SimpleNamespace(id=kwargs["work_item_id"], run_id="run-1")
 
     monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", _append_event_noop)
     await _record_execution_failure(
         "session",
         work_item_id="item-1",
@@ -365,6 +371,7 @@ async def test_writer_total_timeout_is_recorded_as_retryable_transport_failure(m
 
     async def fake_fail(_session, **kwargs):
         recorded.append(kwargs["failure"])
+        return SimpleNamespace(id=kwargs["work_item_id"], run_id="run-1")
 
     async def stalled_writer(**_kwargs):
         await asyncio.Event().wait()
@@ -375,6 +382,7 @@ async def test_writer_total_timeout_is_recorded_as_retryable_transport_failure(m
     )
     monkeypatch.setattr("document.shared_lesson.runtime.persist_checkpoint", fake_no_checkpoint)
     monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", _append_event_noop)
     monkeypatch.setattr("document.shared_lesson.runtime.write_section", stalled_writer)
     monkeypatch.setattr("document.shared_lesson.runtime.SECTION_WRITER_TIMEOUT_SECONDS", 0.01)
 
@@ -420,6 +428,7 @@ async def test_writer_timeout_records_failure_without_awaiting_cancel_resistant_
 
     async def fake_fail(_session, **kwargs):
         recorded.append(kwargs["failure"])
+        return SimpleNamespace(id=kwargs["work_item_id"], run_id="run-1")
 
     async def cancel_resistant_provider(_payload):
         provider_started.set()
@@ -440,6 +449,7 @@ async def test_writer_timeout_records_failure_without_awaiting_cancel_resistant_
     )
     monkeypatch.setattr("document.shared_lesson.runtime.persist_checkpoint", fake_no_checkpoint)
     monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", _append_event_noop)
     monkeypatch.setattr("document.shared_lesson.runtime.write_section", writer_with_provider)
     monkeypatch.setattr("document.shared_lesson.runtime.SECTION_WRITER_TIMEOUT_SECONDS", 0.02)
 
@@ -501,6 +511,7 @@ async def test_detached_writer_retains_shared_provider_cap_across_batches(monkey
 
     async def fake_fail(_session, **kwargs):
         failures.append(kwargs["failure"])
+        return SimpleNamespace(id=kwargs["work_item_id"], run_id="run-1")
 
     async def fake_complete(*_args, **_kwargs):
         return None
@@ -535,6 +546,7 @@ async def test_detached_writer_retains_shared_provider_cap_across_batches(monkey
     )
     monkeypatch.setattr("document.shared_lesson.runtime.persist_checkpoint", fake_no_checkpoint)
     monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", _append_event_noop)
     monkeypatch.setattr("document.shared_lesson.runtime.complete_work_item", fake_complete)
     monkeypatch.setattr("document.shared_lesson.runtime.write_section", fake_write)
     monkeypatch.setattr("document.shared_lesson.runtime.SECTION_WRITER_TIMEOUT_SECONDS", 0.02)
