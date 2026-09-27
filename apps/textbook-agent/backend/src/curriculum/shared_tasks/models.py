@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from curriculum.teaching_plan.models import LearnerActionId
 
@@ -73,6 +73,57 @@ PASSIVE_ACTION_MEANINGS: dict[LearnerActionId, str] = {
 }
 
 
+_FEEDBACK_META_KEYS = frozenset({"correct", "incorrect", "partial", "by_option"})
+
+
+def normalize_choice_feedback(
+    response: dict[str, Any], evaluation: dict[str, Any], feedback: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """Deterministically move per-option feedback keyed to a correct option.
+
+    Providers repeatedly attach explanation text to the correct option's key.
+    Per-option feedback is reserved for wrong options, so that text belongs in
+    ``correct`` (kept if ``correct`` is absent, otherwise dropped). Feedback on
+    unknown or wrong options is left untouched for validation to judge.
+    """
+    if not isinstance(feedback, dict) or response.get("type") not in {
+        "single_choice",
+        "multiple_choice",
+    }:
+        return feedback
+    correct: set[str] = set()
+    if evaluation.get("correct_option_id") is not None:
+        correct.add(str(evaluation["correct_option_id"]))
+    for key in evaluation.get("correct_keys") or ():
+        correct.add(str(key))
+    if not correct:
+        return feedback
+    if not any(key in feedback for key in correct) and not (
+        isinstance(feedback.get("by_option"), dict)
+        and any(key in feedback["by_option"] for key in correct)
+    ):
+        return feedback
+    normalized = dict(feedback)
+    moved: list[str] = []
+    for key in sorted(correct):
+        if key in normalized and key not in _FEEDBACK_META_KEYS:
+            value = normalized.pop(key)
+            if isinstance(value, str) and value.strip():
+                moved.append(value)
+    by_option = normalized.get("by_option")
+    if isinstance(by_option, dict):
+        by_option = dict(by_option)
+        for key in sorted(correct):
+            if key in by_option:
+                value = by_option.pop(key)
+                if isinstance(value, str) and value.strip():
+                    moved.append(value)
+        normalized["by_option"] = by_option
+    if moved and not (isinstance(normalized.get("correct"), str) and normalized["correct"].strip()):
+        normalized["correct"] = moved[0]
+    return normalized
+
+
 class SharedTaskSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -93,6 +144,19 @@ class SharedTaskSpec(BaseModel):
     feedback: dict[str, Any] | None = None
     approved_source_ids: list[str] = Field(default_factory=list)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_feedback(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        response, evaluation = data.get("response"), data.get("evaluation")
+        if not isinstance(response, dict) or not isinstance(evaluation, dict):
+            return data
+        normalized = normalize_choice_feedback(response, evaluation, data.get("feedback"))
+        if normalized is data.get("feedback"):
+            return data
+        return {**data, "feedback": normalized}
+
     @property
     def response_type(self) -> str | None:
         value = self.response.get("type")
@@ -110,3 +174,17 @@ class SharedTaskDraft(BaseModel):
     feedback: dict[str, Any] | None = None
     expected_evidence: str = Field(min_length=1)
     difficulty: Literal["guided", "independent"]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_feedback(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        response, evaluation = data.get("response"), data.get("evaluation")
+        if not isinstance(response, dict) or not isinstance(evaluation, dict):
+            return data
+        normalized = normalize_choice_feedback(response, evaluation, data.get("feedback"))
+        if normalized is data.get("feedback"):
+            return data
+        return {**data, "feedback": normalized}
+

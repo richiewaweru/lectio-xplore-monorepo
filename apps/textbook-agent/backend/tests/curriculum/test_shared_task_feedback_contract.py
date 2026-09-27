@@ -76,7 +76,12 @@ def test_live_defect_shape_is_rejected_with_correct_and_missing_option_codes() -
 
     errors = validate_final_task_response_contract(task)
 
-    assert any("feedback_on_correct_option" in error and "'a'" in error for error in errors)
+    # The misleading text keyed to the correct option is removed
+    # deterministically (``correct`` already exists); the genuinely missing
+    # explanation for wrong option "b" still fails closed.
+    assert "a" not in (task.feedback or {})
+    assert task.feedback["correct"].startswith("Glucose and oxygen")
+    assert not any("feedback_on_correct_option" in error for error in errors)
     assert any("feedback_missing_wrong_option" in error and "'b'" in error for error in errors)
 
 
@@ -218,7 +223,13 @@ def test_single_choice_feedback_uses_the_same_contract() -> None:
 
     errors = validate_final_task_response_contract(task)
 
-    assert any("feedback_on_correct_option" in error and "'a'" in error for error in errors)
+    # Correct-option text becomes the ``correct`` feedback; wrong options keep theirs.
+    assert task.feedback == {
+        "b": "B is wrong.",
+        "c": "C is wrong.",
+        "correct": "This is the correct option, so it must not carry wrong-answer feedback.",
+    }
+    assert errors == []
 
 
 def test_null_feedback_entries_are_treated_as_omitted():
