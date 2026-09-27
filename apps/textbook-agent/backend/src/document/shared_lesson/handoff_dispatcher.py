@@ -14,9 +14,10 @@ from document.shared_lesson.handoff import (
 )
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.media import (
+    DeferredFigureMediaBinding,
     FigureMediaResult,
     SharedFigureMediaError,
-    verify_bound_figure_media,
+    verify_bound_durable_media,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument, SharedSection
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
@@ -49,7 +50,7 @@ def _required_media(document: SharedLessonDocument) -> dict[str, tuple[str, ...]
 def _verify_media(
     document: SharedLessonDocument,
     required_media_by_section: Mapping[str, Sequence[str]] | None,
-    media_results: Sequence[FigureMediaResult],
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
 ) -> tuple[str, ...]:
     expected = _required_media(document)
     declared = {
@@ -66,7 +67,7 @@ def _verify_media(
     expected_ids = {
         (section_id, figure_id) for section_id, values in expected.items() for figure_id in values
     }
-    supplied: dict[tuple[str, str], FigureMediaResult] = {}
+    supplied: dict[tuple[str, str], FigureMediaResult | DeferredFigureMediaBinding] = {}
     for result in media_results:
         identity = (result.section_id, result.figure_node_id)
         if identity in supplied:
@@ -74,7 +75,7 @@ def _verify_media(
                 f"duplicate durable media evidence for {identity!r}"
             )
         try:
-            verify_bound_figure_media(result, document)
+            verify_bound_durable_media(result, document)
         except SharedFigureMediaError as exc:
             raise SharedDocumentHandoffDispatchError(
                 f"durable media evidence is stale for {identity!r}"
@@ -130,7 +131,7 @@ async def handoff_qa_dispatch_result(
     sections: Mapping[str, SharedSection] | Sequence[SharedSection],
     tasks: Sequence[SharedTaskSpec] = (),
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult] = (),
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
 ) -> SharedLessonHandoffEvidence:
     """Handoff one already-QA'd document without making another provider call."""
     if not isinstance(result, SharedDocumentQADispatchResult):

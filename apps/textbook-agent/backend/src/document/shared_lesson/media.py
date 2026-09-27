@@ -17,6 +17,7 @@ from document.shared_lesson.continuity import (
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import FigureNode, SharedLessonDocument, SharedSection
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from infra.config import settings
 from infra.generation_runtime.contracts import SourceIdentity
 from media.generation.contracts import (
     GeneratedVisualBlock,
@@ -711,6 +712,67 @@ def verify_bound_deferred_figure_media(
     return media
 
 
+def bind_durable_media_output(
+    payload: Any,
+    document: SharedLessonDocument,
+    *,
+    media_optional: bool | None = None,
+) -> FigureMediaResult | DeferredFigureMediaBinding:
+    """Parse and bind one durable media WorkItem output to the assembled document.
+
+    Every real-Run consumer of a media WorkItem's ``output_json`` (document QA
+    dispatch, handoff, finalization) must go through this single parsing rule
+    instead of assuming a ready result. A ``status="deferred"`` payload only
+    exists because the local-only, default-OFF ``shared_document_media_
+    optional`` switch was enabled when the figure was executed. If the switch
+    is off now -- including for a Run produced while it was on -- the
+    deferred output is rejected exactly like any other invalid media output,
+    fail-closed, never silently accepted.
+
+    ``media_optional`` defaults to the live ``settings.shared_document_media_
+    optional`` value when not given explicitly, matching the executor's own
+    default-resolution rule.
+    """
+    optional_media = (
+        settings.shared_document_media_optional if media_optional is None else media_optional
+    )
+    status = payload.get("status") if isinstance(payload, Mapping) else None
+    if status == "deferred":
+        if not optional_media:
+            raise SharedFigureMediaError(
+                "durable media output is deferred, but shared_document_media_optional "
+                "is not enabled"
+            )
+        deferred = DeferredFigureMediaResult.model_validate(payload)
+        return bind_deferred_figure_media_to_document(deferred, document)
+    ready = ReadyFigureMediaResult.model_validate(payload)
+    return bind_figure_media_to_document(ready, document)
+
+
+def verify_bound_durable_media(
+    result: FigureMediaResult | DeferredFigureMediaBinding,
+    document: SharedLessonDocument,
+    *,
+    media_optional: bool | None = None,
+) -> FigureMediaResult | DeferredFigureMediaBinding:
+    """Verify one already document-bound durable media result, failing closed on deferred.
+
+    Mirrors ``bind_durable_media_output``'s switch policy at the verification
+    boundary: a ``DeferredFigureMediaBinding`` is only ever accepted when the
+    local-only ``shared_document_media_optional`` switch is enabled.
+    """
+    optional_media = (
+        settings.shared_document_media_optional if media_optional is None else media_optional
+    )
+    if isinstance(result, DeferredFigureMediaBinding):
+        if not optional_media:
+            raise SharedFigureMediaError(
+                "media evidence is deferred, but shared_document_media_optional is not enabled"
+            )
+        return verify_bound_deferred_figure_media(result, document)
+    return verify_bound_figure_media(result, document)
+
+
 async def execute_figure_work_order(
     work: SharedFigureWorkOrder,
     *,
@@ -797,6 +859,7 @@ __all__ = [
     "SharedFigureWorkOrder",
     "bind_deferred_figure_media",
     "bind_deferred_figure_media_to_document",
+    "bind_durable_media_output",
     "bind_figure_media_to_document",
     "bind_generated_figure",
     "build_figure_work_order",
@@ -804,5 +867,6 @@ __all__ = [
     "execute_figure_work_orders",
     "validate_reusable_figure_asset",
     "verify_bound_deferred_figure_media",
+    "verify_bound_durable_media",
     "verify_bound_figure_media",
 ]

@@ -22,11 +22,11 @@ from document.shared_lesson.composer import (
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.document_semantic import DocumentSemanticValidator
 from document.shared_lesson.media import (
+    DeferredFigureMediaBinding,
     FigureMediaResult,
-    ReadyFigureMediaResult,
     SharedFigureMediaError,
-    bind_figure_media_to_document,
-    verify_bound_figure_media,
+    bind_durable_media_output,
+    verify_bound_durable_media,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument, SharedSection
 from document.shared_lesson.qa import DocumentQAResult
@@ -127,7 +127,7 @@ def _verify_media_inputs(
     *,
     document: SharedLessonDocument,
     required_media_by_section: Mapping[str, Sequence[str]] | None,
-    media_results: Sequence[FigureMediaResult],
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
 ) -> tuple[str, ...]:
     expected = _required_media(document)
     declared = {
@@ -144,17 +144,18 @@ def _verify_media_inputs(
     expected_ids = {
         (section_id, figure_id) for section_id, values in expected.items() for figure_id in values
     }
-    supplied: dict[tuple[str, str], FigureMediaResult] = {}
+    supplied: dict[tuple[str, str], FigureMediaResult | DeferredFigureMediaBinding] = {}
     for result in media_results:
-        if not isinstance(result, FigureMediaResult):
+        if not isinstance(result, FigureMediaResult | DeferredFigureMediaBinding):
             raise SharedDocumentQADispatchError(
-                "required media must use verified document-bound FigureMediaResult values"
+                "required media must use verified document-bound FigureMediaResult or "
+                "DeferredFigureMediaBinding values"
             )
         identity = (result.section_id, result.figure_node_id)
         if identity in supplied:
             raise SharedDocumentQADispatchError(f"required media figure {identity!r} is duplicated")
         try:
-            verify_bound_figure_media(result, document)
+            verify_bound_durable_media(result, document)
         except SharedFigureMediaError as exc:
             raise SharedDocumentQADispatchError(
                 f"required media figure {result.figure_node_id!r} is not verified"
@@ -181,8 +182,8 @@ async def _load_durable_media_results(
     *,
     run_id: str,
     document: SharedLessonDocument,
-    supplied: Sequence[FigureMediaResult],
-) -> tuple[FigureMediaResult, ...]:
+    supplied: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
+) -> tuple[FigureMediaResult | DeferredFigureMediaBinding, ...]:
     """Rebuild caller media evidence from active READY media WorkItems."""
     async with session_factory() as session:
         rows = tuple(
@@ -198,7 +199,7 @@ async def _load_durable_media_results(
             ).all()
         )
     leaves = active_work_items(rows)
-    durable: dict[tuple[str, str], FigureMediaResult] = {}
+    durable: dict[tuple[str, str], FigureMediaResult | DeferredFigureMediaBinding] = {}
     for item in leaves:
         if item.status != "ready" or item.output_json is None or not item.output_hash:
             raise SharedDocumentQADispatchError(
@@ -207,10 +208,9 @@ async def _load_durable_media_results(
         if content_hash(item.output_json) != item.output_hash:
             raise SharedDocumentQADispatchError("durable media output hash is invalid")
         try:
-            ready = ReadyFigureMediaResult.model_validate(item.output_json)
-            if item.item_key != f"media:{ready.work_order_id}":
+            bound = bind_durable_media_output(item.output_json, document)
+            if item.item_key != f"media:{bound.work_order_id}":
                 raise ValueError("media WorkItem identity differs from its output")
-            bound = bind_figure_media_to_document(ready, document)
         except (TypeError, ValueError, SharedFigureMediaError) as exc:
             raise SharedDocumentQADispatchError(
                 f"durable media output for WorkItem {item.id!r} is invalid"
@@ -222,7 +222,7 @@ async def _load_durable_media_results(
             )
         durable[identity] = bound
 
-    caller: dict[tuple[str, str], FigureMediaResult] = {}
+    caller: dict[tuple[str, str], FigureMediaResult | DeferredFigureMediaBinding] = {}
     for result in supplied:
         identity = (result.section_id, result.figure_node_id)
         if identity in caller:
@@ -257,7 +257,7 @@ async def dispatch_shared_document_qa(
     provenance: Mapping[str, Any] | None = None,
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult] = (),
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
     semantic_validator: DocumentSemanticValidator | None = None,
     worker_id: str = "shared-document-qa-dispatcher",
     max_attempts: int = 3,

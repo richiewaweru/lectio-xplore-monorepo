@@ -6,6 +6,7 @@ import pytest
 from test_shared_lesson_finalizer import (
     _approved_source_and_document,
     _bound_media,
+    _deferred_binding,
     _expected_shapes,
     _handoff,
     _source_with_frozen_items,
@@ -16,8 +17,9 @@ from document.shared_lesson.composer import CompositionItem, SectionCompositionP
 from document.shared_lesson.finalization_dispatcher import (
     finalize_shared_lesson_document_for_run,
 )
-from document.shared_lesson.media import ReadyFigureMediaResult
+from document.shared_lesson.media import DeferredFigureMediaResult, ReadyFigureMediaResult
 from document.shared_lesson.qa_runtime import DOCUMENT_QA_STAGE, VerifiedDocumentQA
+from infra.config import settings
 from infra.execution.checkpoints import content_hash
 
 
@@ -103,6 +105,161 @@ def _ready_media_item(source, document, *, tamper=False):
         output_json=payload,
         output_hash=content_hash(payload),
     )
+
+
+def _deferred_media_item(source, document):
+    bound = _deferred_binding(source, document)
+    unbound_payload = bound.model_dump(mode="json")
+    for key in ("source_document_id", "source_document_revision", "source_document_hash"):
+        unbound_payload.pop(key)
+    unbound = DeferredFigureMediaResult.model_validate(unbound_payload)
+    payload = unbound.model_dump(mode="json")
+    return SimpleNamespace(
+        id="media-item",
+        stage="media_generation",
+        status="ready",
+        item_key=f"media:{unbound.work_order_id}",
+        replaces_work_item_id=None,
+        output_json=payload,
+        output_hash=content_hash(payload),
+    )
+
+
+@pytest.mark.asyncio
+async def test_finalization_dispatcher_admits_deferred_required_figure_when_media_optional_is_on(
+    monkeypatch,
+):
+    monkeypatch.setattr(settings, "shared_document_media_optional", True)
+    source, document = _approved_source_and_document(include_figure=True)
+    source = _source_with_frozen_items(source)
+    handoff = _handoff(
+        source,
+        document,
+        expected_shapes=_expected_shapes(include_figure=True),
+    )
+    semantic = _verified_semantic_inputs(source)
+    accepted = _accepted_inputs(document)
+    rows = [_qa_item(), _deferred_media_item(source, document)]
+    captured = {}
+
+    async def load_source(**_kwargs):
+        return source
+
+    async def load_semantic(*_args, **_kwargs):
+        return semantic
+
+    async def load_accepted(*_args, **_kwargs):
+        return accepted
+
+    async def load_qa(*_args, **_kwargs):
+        return VerifiedDocumentQA(
+            work_item_id="document-qa-item",
+            output_hash="0" * 64,
+            semantic_qa=handoff.semantic_qa,
+        )
+
+    async def finalize(_session, *, request, **_kwargs):
+        captured["request"] = request
+        return "finalized"
+
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.load_current_approved_teaching_plan_source",
+        load_source,
+    )
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.load_verified_semantic_inputs",
+        load_semantic,
+    )
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.load_verified_shared_lesson_inputs",
+        load_accepted,
+    )
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.load_verified_document_qa",
+        load_qa,
+    )
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.finalize_shared_lesson_document",
+        finalize,
+    )
+
+    outcome = await finalize_shared_lesson_document_for_run(
+        _Session(rows),
+        run_id="run-1",
+        owner_user_id="owner-1",
+        path_lesson_id="path-lesson-1",
+        preparation_generation_id="generation-1",
+        handoff=handoff,
+    )
+
+    assert outcome.ready
+    assert outcome.result == "finalized"
+    request = captured["request"]
+    assert request.required_media_by_section == {"section-1": ("figure-1",)}
+    assert request.media_results[0].figure_node_id == "figure-1"
+    assert request.media_results[0].status == "deferred"
+
+
+@pytest.mark.asyncio
+async def test_finalization_dispatcher_rejects_deferred_media_when_media_optional_is_off(
+    monkeypatch,
+):
+    assert settings.shared_document_media_optional is False
+    source, document = _approved_source_and_document(include_figure=True)
+    source = _source_with_frozen_items(source)
+    handoff = _handoff(
+        source,
+        document,
+        expected_shapes=_expected_shapes(include_figure=True),
+    )
+    semantic = _verified_semantic_inputs(source)
+    accepted = _accepted_inputs(document)
+    rows = [_qa_item(), _deferred_media_item(source, document)]
+
+    async def load_source(**_kwargs):
+        return source
+
+    async def load_semantic(*_args, **_kwargs):
+        return semantic
+
+    async def load_accepted(*_args, **_kwargs):
+        return accepted
+
+    async def load_qa(*_args, **_kwargs):
+        return VerifiedDocumentQA(
+            work_item_id="document-qa-item",
+            output_hash="0" * 64,
+            semantic_qa=handoff.semantic_qa,
+        )
+
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.load_current_approved_teaching_plan_source",
+        load_source,
+    )
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.load_verified_semantic_inputs",
+        load_semantic,
+    )
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.load_verified_shared_lesson_inputs",
+        load_accepted,
+    )
+    monkeypatch.setattr(
+        "document.shared_lesson.finalization_dispatcher.load_verified_document_qa",
+        load_qa,
+    )
+
+    outcome = await finalize_shared_lesson_document_for_run(
+        _Session(rows),
+        run_id="run-1",
+        owner_user_id="owner-1",
+        path_lesson_id="path-lesson-1",
+        preparation_generation_id="generation-1",
+        handoff=handoff,
+    )
+
+    assert outcome.status == "blocked"
+    assert "media" in (outcome.error or "")
 
 
 @pytest.mark.asyncio

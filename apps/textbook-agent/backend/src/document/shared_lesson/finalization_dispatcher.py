@@ -33,10 +33,10 @@ from document.shared_lesson.finalizer import (
 )
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import (
+    DeferredFigureMediaBinding,
     FigureMediaResult,
-    ReadyFigureMediaResult,
     SharedFigureMediaError,
-    bind_figure_media_to_document,
+    bind_durable_media_output,
 )
 from document.shared_lesson.media_runtime import MEDIA_STAGE
 from document.shared_lesson.models import FigureNode
@@ -110,7 +110,9 @@ def _all_section_sources(semantic: Any, source: Any) -> tuple[Any, ...]:
     return tuple(projected)
 
 
-def _required_media_map(results: Sequence[FigureMediaResult]) -> dict[str, tuple[str, ...]]:
+def _required_media_map(
+    results: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
+) -> dict[str, tuple[str, ...]]:
     grouped: dict[str, list[str]] = {}
     for result in results:
         grouped.setdefault(result.section_id, []).append(result.figure_node_id)
@@ -121,7 +123,7 @@ def _durable_media_results(
     *,
     document: Any,
     active_items: Sequence[GenerationWorkItemModel],
-) -> tuple[tuple[FigureMediaResult, ...], dict[str, tuple[str, ...]]]:
+) -> tuple[tuple[FigureMediaResult | DeferredFigureMediaBinding, ...], dict[str, tuple[str, ...]]]:
     expected = tuple(
         (section.id, node.id)
         for section in document.sections
@@ -138,7 +140,7 @@ def _durable_media_results(
             "durable media leaves do not cover exactly the document figures"
         )
 
-    results: list[FigureMediaResult] = []
+    results: list[FigureMediaResult | DeferredFigureMediaBinding] = []
     seen: set[tuple[str, str]] = set()
     for item in media_items:
         if item.status != "ready" or item.output_json is None or not item.output_hash:
@@ -148,12 +150,11 @@ def _durable_media_results(
                 f"media WorkItem {item.id!r} output hash is stale"
             )
         try:
-            ready = ReadyFigureMediaResult.model_validate(item.output_json)
-            if item.item_key != f"media:{ready.work_order_id}":
+            bound = bind_durable_media_output(item.output_json, document)
+            if item.item_key != f"media:{bound.work_order_id}":
                 raise SharedLessonFinalizationDispatchError(
                     f"media WorkItem {item.id!r} has a stale work-order identity"
                 )
-            bound = bind_figure_media_to_document(ready, document)
         except (TypeError, ValueError, SharedFigureMediaError) as exc:
             if isinstance(exc, SharedLessonFinalizationDispatchError):
                 raise
