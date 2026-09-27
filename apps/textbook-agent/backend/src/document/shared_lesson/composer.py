@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any, Literal
 
@@ -76,11 +77,65 @@ class CompositionPolicy(_ClosedModel):
     max_callouts: int = Field(default=1, ge=0, le=4)
 
 
+#: Closed, stable vocabulary of composer validation issue codes. Every
+#: ``CompositionValidationError`` issue code must be a member of this set.
+#: These codes (and the sanitized structural paths that accompany them) are
+#: safe to persist in diagnostics: they never carry provider output, learner
+#: content, or free-form validator text.
+COMPOSITION_ISSUE_CODES = frozenset(
+    {
+        "duplicate_block_ids",
+        "duplicate_task_ids",
+        "task_unknown_block",
+        "item_unknown_block",
+        "block_order_violation",
+        "paragraph_run_exceeded",
+        "kind_role_mismatch",
+        "heading_missing_subsection_cue",
+        "kind_missing_semantic_cue",
+        "callout_missing_cautionary_cue",
+        "block_missing_ordinary_node",
+        "block_exceeds_node_limit",
+        "section_exceeds_node_limit",
+        "section_exceeds_callout_limit",
+        "task_anchor_mismatch",
+        "plan_diverges_from_deterministic",
+        "provider_draft_schema_invalid",
+    }
+)
+
+_MAX_COMPOSITION_PATH_LENGTH = 80
+
+
+def _sanitize_composition_path(path: str) -> str:
+    """Clamp a composer-built path to a safe, structural-only representation.
+
+    Callers only ever pass paths built from node indices, ``kind``/field
+    names, or approved Teaching Plan block/section IDs -- never provider
+    output or learner text -- but this still bounds length and characters
+    defensively before the path is eligible for diagnostic persistence.
+    """
+    safe = re.sub(r"[^A-Za-z0-9_\-./\[\]]", "_", path)
+    return safe[:_MAX_COMPOSITION_PATH_LENGTH]
+
+
 class CompositionValidationError(ValueError):
     """A structurally valid provider draft violates deterministic policy."""
 
-    def __init__(self, errors: Sequence[str]):
+    def __init__(
+        self,
+        errors: Sequence[str],
+        issues: Sequence[tuple[str, str]] | None = None,
+    ):
         self.errors = tuple(errors)
+        if issues is None:
+            issues = tuple(("provider_draft_schema_invalid", "") for _ in self.errors)
+        for code, _path in issues:
+            if code not in COMPOSITION_ISSUE_CODES:
+                raise ValueError(f"unknown composition issue code {code!r}")
+        self.issues: tuple[tuple[str, str], ...] = tuple(
+            (code, _sanitize_composition_path(path)) for code, path in issues
+        )
         super().__init__("; ".join(self.errors))
 
 
@@ -147,17 +202,27 @@ def validate_and_build_composition(
     policy = policy or CompositionPolicy()
     draft_items = choices.items if isinstance(choices, SectionCompositionDraft) else tuple(choices)
     errors: list[str] = []
+    issues: list[tuple[str, str]] = []
+
+    def _fail(code: str, path: str, message: str) -> None:
+        errors.append(message)
+        issues.append((code, path))
+
     blocks = list(section.blocks)
     block_by_id = {block.id: block for block in blocks}
     if len(block_by_id) != len(blocks):
-        errors.append("Teaching Plan block IDs must be unique")
+        _fail("duplicate_block_ids", "blocks", "Teaching Plan block IDs must be unique")
 
     task_ids = [task.id for task in tasks]
     if len(task_ids) != len(set(task_ids)):
-        errors.append("section task IDs must be unique")
-    for task in tasks:
+        _fail("duplicate_task_ids", "tasks", "section task IDs must be unique")
+    for task_index, task in enumerate(tasks):
         if task.teaching_block_id not in block_by_id:
-            errors.append(f"task {task.id!r} belongs to an unknown Teaching Plan block")
+            _fail(
+                "task_unknown_block",
+                f"tasks[{task_index}]",
+                f"task {task.id!r} belongs to an unknown Teaching Plan block",
+            )
 
     block_order = {block.id: index for index, block in enumerate(blocks)}
     choices_by_block: dict[str, list[CompositionChoice]] = {block.id: [] for block in blocks}
@@ -165,52 +230,94 @@ def validate_and_build_composition(
     ordinary_count = 0
     paragraph_run = 0
     callout_count = 0
-    for choice in draft_items:
+    for choice_index, choice in enumerate(draft_items):
         block = block_by_id.get(choice.teaching_block_id)
         if block is None:
-            errors.append(f"unknown Teaching Plan block {choice.teaching_block_id!r}")
+            _fail(
+                "item_unknown_block",
+                f"choices[{choice_index}]",
+                f"unknown Teaching Plan block {choice.teaching_block_id!r}",
+            )
             continue
         index = block_order[block.id]
         if index < last_block_index:
-            errors.append("ordinary nodes must preserve Teaching Plan block order")
+            _fail(
+                "block_order_violation",
+                f"choices[{choice_index}]",
+                "ordinary nodes must preserve Teaching Plan block order",
+            )
         last_block_index = max(last_block_index, index)
         choices_by_block[block.id].append(choice)
         ordinary_count += 1
         if choice.kind == "paragraph":
             paragraph_run += 1
             if paragraph_run > 2:
-                errors.append("more than two consecutive paragraphs")
+                _fail(
+                    "paragraph_run_exceeded",
+                    f"choices[{choice_index}]",
+                    "more than two consecutive paragraphs",
+                )
         else:
             paragraph_run = 0
         if choice.kind == "callout":
             callout_count += 1
         if choice.semantic_role not in _KIND_ROLES[choice.kind]:
-            errors.append(f"{choice.kind} is unsuitable for semantic role {choice.semantic_role!r}")
+            _fail(
+                "kind_role_mismatch",
+                f"choices[{choice_index}].kind",
+                f"{choice.kind} is unsuitable for semantic role {choice.semantic_role!r}",
+            )
         if choice.kind == "heading" and not _has_genuine_subsection_cue(block):
-            errors.append(f"heading for block {block.id!r} lacks a genuine subsection cue")
+            _fail(
+                "heading_missing_subsection_cue",
+                f"blocks/{block.id}",
+                f"heading for block {block.id!r} lacks a genuine subsection cue",
+            )
         kind_cues = _KIND_CUES.get(choice.kind)
         if kind_cues and not any(cue in _block_text(block) for cue in kind_cues):
-            errors.append(f"{choice.kind} for block {block.id!r} lacks suitable semantic cues")
+            _fail(
+                "kind_missing_semantic_cue",
+                f"choices[{choice_index}].kind",
+                f"{choice.kind} for block {block.id!r} lacks suitable semantic cues",
+            )
         if choice.kind == "callout":
             text = _block_text(block)
             cues = ("misconception", "mistake", "warning", "safety", "caution")
             if not any(cue in text for cue in cues):
-                errors.append(f"callout for block {block.id!r} lacks cautionary semantics")
+                _fail(
+                    "callout_missing_cautionary_cue",
+                    f"blocks/{block.id}",
+                    f"callout for block {block.id!r} lacks cautionary semantics",
+                )
 
     for block in blocks:
         count = len(choices_by_block[block.id])
         if count == 0:
-            errors.append(f"Teaching Plan block {block.id!r} has no ordinary node")
+            _fail(
+                "block_missing_ordinary_node",
+                f"blocks/{block.id}",
+                f"Teaching Plan block {block.id!r} has no ordinary node",
+            )
         if count > policy.max_nodes_per_block:
-            errors.append(
-                f"Teaching Plan block {block.id!r} exceeds {policy.max_nodes_per_block} ordinary nodes"
+            _fail(
+                "block_exceeds_node_limit",
+                f"blocks/{block.id}",
+                f"Teaching Plan block {block.id!r} exceeds {policy.max_nodes_per_block} ordinary nodes",
             )
     if ordinary_count > policy.max_ordinary_nodes:
-        errors.append(f"section exceeds {policy.max_ordinary_nodes} ordinary nodes")
+        _fail(
+            "section_exceeds_node_limit",
+            f"section/{section.slot_id}",
+            f"section exceeds {policy.max_ordinary_nodes} ordinary nodes",
+        )
     if callout_count > policy.max_callouts:
-        errors.append(f"section exceeds {policy.max_callouts} callouts")
+        _fail(
+            "section_exceeds_callout_limit",
+            f"section/{section.slot_id}",
+            f"section exceeds {policy.max_callouts} callouts",
+        )
     if errors:
-        raise CompositionValidationError(errors)
+        raise CompositionValidationError(errors, issues)
 
     tasks_by_block: dict[str, list[SharedTaskSpec]] = {block.id: [] for block in blocks}
     for task in tasks:
@@ -266,12 +373,15 @@ def validate_composition_plan(
     if plan != expected:
         expected_anchors = [item for item in expected.items if item.kind == "task_anchor"]
         actual_anchors = [item for item in plan.items if item.kind == "task_anchor"]
+        section_path = f"section/{section.slot_id}"
         if actual_anchors != expected_anchors:
             raise CompositionValidationError(
-                ["TaskAnchors are missing, invented, reordered, or moved from their owning block"]
+                ["TaskAnchors are missing, invented, reordered, or moved from their owning block"],
+                [("task_anchor_mismatch", section_path)],
             )
         raise CompositionValidationError(
-            ["composition plan differs from deterministic composition"]
+            ["composition plan differs from deterministic composition"],
+            [("plan_diverges_from_deterministic", section_path)],
         )
 
 
@@ -325,6 +435,7 @@ async def compose_section(
     """Compose with one initial call and at most one validation-directed repair."""
     dispatch = provider or _default_provider
     previous_errors: tuple[str, ...] = ()
+    previous_issues: tuple[tuple[str, str], ...] = ()
     for attempt in range(2):
         raw = await dispatch(_section_prompt_payload(section, tasks, previous_errors))
         try:
@@ -337,17 +448,19 @@ async def compose_section(
                 section=section, choices=draft, tasks=tasks, policy=policy
             )
         except (ValidationError, CompositionValidationError) as exc:
-            previous_errors = (
-                exc.errors
-                if isinstance(exc, CompositionValidationError)
-                else ("invalid closed schema",)
-            )
+            if isinstance(exc, CompositionValidationError):
+                previous_errors = exc.errors
+                previous_issues = exc.issues
+            else:
+                previous_errors = ("invalid closed schema",)
+                previous_issues = (("provider_draft_schema_invalid", "items"),)
             if attempt == 1:
-                raise CompositionValidationError(previous_errors) from exc
+                raise CompositionValidationError(previous_errors, previous_issues) from exc
     raise AssertionError("bounded composer loop exhausted unexpectedly")
 
 
 __all__ = [
+    "COMPOSITION_ISSUE_CODES",
     "CompositionChoice",
     "CompositionItem",
     "CompositionPolicy",

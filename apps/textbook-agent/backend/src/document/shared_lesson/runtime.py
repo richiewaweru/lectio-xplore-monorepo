@@ -227,6 +227,11 @@ def _checkpoint_compatibility(
     )
 
 
+#: Bound on how many distinct validation codes/paths a single diagnostic
+#: event persists, mirroring the shared task runtime's diagnostic cap.
+_MAX_DIAGNOSTIC_VALIDATION_ENTRIES = 20
+
+
 async def _record_execution_failure(
     session: Any,
     *,
@@ -282,13 +287,21 @@ async def _record_execution_failure(
             recovery_action=recovery,
         ),
     )
+    safe_payload: dict[str, Any] = {"original_exception_type": type(error).__name__}
+    if isinstance(error, CompositionValidationError):
+        safe_payload["validation_issue_codes"] = sorted({code for code, _path in error.issues})[
+            :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
+        ]
+        safe_payload["validation_paths"] = sorted({path for _code, path in error.issues if path})[
+            :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
+        ]
     await append_event(
         session,
         run_id=failed_item.run_id,
         work_item_id=failed_item.id,
         event_type="section_writer_failure_diagnostic",
         error_code=code,
-        safe_payload={"original_exception_type": type(error).__name__},
+        safe_payload=safe_payload,
     )
 
 

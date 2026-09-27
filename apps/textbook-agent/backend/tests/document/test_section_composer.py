@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
 from document.shared_lesson.composer import (
+    COMPOSITION_ISSUE_CODES,
     CompositionChoice,
     CompositionValidationError,
     SectionCompositionDraft,
@@ -349,3 +350,259 @@ async def test_provider_failure_fails_closed_without_semantic_retry() -> None:
     with pytest.raises(RuntimeError, match="authentication"):
         await compose_section(section=section, tasks=[], provider=provider)
     assert calls == 1
+
+
+def _issue_codes(exc: CompositionValidationError) -> set[str]:
+    codes = {code for code, _path in exc.issues}
+    assert codes <= COMPOSITION_ISSUE_CODES
+    return codes
+
+
+def test_duplicate_block_ids_reports_stable_issue_code() -> None:
+    section = _section(_block("b0", "explain"), _block("b0", "explain again"))
+    with pytest.raises(CompositionValidationError) as excinfo:
+        validate_and_build_composition(section=section, choices=[], tasks=[])
+
+    assert _issue_codes(excinfo.value) == {"duplicate_block_ids", "block_missing_ordinary_node"}
+    assert ("duplicate_block_ids", "blocks") in excinfo.value.issues
+
+
+def test_duplicate_and_unknown_task_ids_report_stable_issue_codes() -> None:
+    section = _section(_block("b0", "explain"))
+    duplicate_tasks = [_task("task-a", "b0"), _task("task-a", "b0")]
+    with pytest.raises(CompositionValidationError) as duplicate_excinfo:
+        validate_and_build_composition(
+            section=section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+                )
+            ],
+            tasks=duplicate_tasks,
+        )
+    assert ("duplicate_task_ids", "tasks") in duplicate_excinfo.value.issues
+
+    unknown_tasks = [_task("task-b", "missing-block")]
+    with pytest.raises(CompositionValidationError) as unknown_excinfo:
+        validate_and_build_composition(
+            section=section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+                )
+            ],
+            tasks=unknown_tasks,
+        )
+    assert ("task_unknown_block", "tasks[0]") in unknown_excinfo.value.issues
+
+
+def test_block_order_violation_reports_stable_issue_code() -> None:
+    section = _section(_block("b0", "explain"), _block("b1", "compare evidence"))
+    choices = [
+        CompositionChoice(teaching_block_id="b1", kind="table", semantic_role="comparison"),
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+    ]
+    with pytest.raises(CompositionValidationError) as excinfo:
+        validate_and_build_composition(section=section, choices=choices, tasks=[])
+
+    assert ("block_order_violation", "choices[1]") in excinfo.value.issues
+
+
+def test_each_rejects_test_case_reports_expected_issue_code() -> None:
+    section = _section(_block("b0", "compare the evidence"))
+
+    with pytest.raises(CompositionValidationError) as no_node_excinfo:
+        validate_and_build_composition(section=section, choices=[], tasks=[])
+    assert "block_missing_ordinary_node" in _issue_codes(no_node_excinfo.value)
+    assert ("block_missing_ordinary_node", "blocks/b0") in no_node_excinfo.value.issues
+
+    with pytest.raises(CompositionValidationError) as unknown_block_excinfo:
+        validate_and_build_composition(
+            section=section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="missing", kind="paragraph", semantic_role="explanation"
+                )
+            ],
+            tasks=[],
+        )
+    assert _issue_codes(unknown_block_excinfo.value) >= {"item_unknown_block"}
+    assert ("item_unknown_block", "choices[0]") in unknown_block_excinfo.value.issues
+
+    paragraph_section = _section(_block("b0", "explain comparison evidence"))
+    with pytest.raises(CompositionValidationError) as paragraph_excinfo:
+        validate_and_build_composition(
+            section=paragraph_section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+                ),
+                CompositionChoice(
+                    teaching_block_id="b0", kind="paragraph", semantic_role="summary"
+                ),
+                CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="bridge"),
+            ],
+            tasks=[],
+        )
+    assert "paragraph_run_exceeded" in _issue_codes(paragraph_excinfo.value)
+
+    with pytest.raises(CompositionValidationError) as role_mismatch_excinfo:
+        validate_and_build_composition(
+            section=paragraph_section,
+            choices=[
+                CompositionChoice(teaching_block_id="b0", kind="figure", semantic_role="summary")
+            ],
+            tasks=[],
+        )
+    assert ("kind_role_mismatch", "choices[0].kind") in role_mismatch_excinfo.value.issues
+
+    cueless_section = _section(_block("b0", "explain the evidence"))
+    with pytest.raises(CompositionValidationError) as cue_excinfo:
+        validate_and_build_composition(
+            section=cueless_section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="figure", semantic_role="visual_model"
+                )
+            ],
+            tasks=[],
+        )
+    assert ("kind_missing_semantic_cue", "choices[0].kind") in cue_excinfo.value.issues
+
+    heading_section = _section(_block("b0", "compare the evidence"))
+    with pytest.raises(CompositionValidationError) as heading_excinfo:
+        validate_and_build_composition(
+            section=heading_section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="heading", semantic_role="subsection"
+                )
+            ],
+            tasks=[],
+        )
+    assert ("heading_missing_subsection_cue", "blocks/b0") in heading_excinfo.value.issues
+
+    callout_section = _section(
+        _block("b0", "explain why one result follows", "Show the reasoning behind the result.")
+    )
+    with pytest.raises(CompositionValidationError) as callout_excinfo:
+        validate_and_build_composition(
+            section=callout_section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="callout", semantic_role="misconception"
+                )
+            ],
+            tasks=[],
+        )
+    assert ("callout_missing_cautionary_cue", "blocks/b0") in callout_excinfo.value.issues
+
+    ceiling_section = _section(_block("b0", "compare the evidence"))
+    with pytest.raises(CompositionValidationError) as node_ceiling_excinfo:
+        validate_and_build_composition(
+            section=ceiling_section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+                ),
+                CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison"),
+                CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence"),
+            ],
+            tasks=[],
+        )
+    assert ("block_exceeds_node_limit", "blocks/b0") in node_ceiling_excinfo.value.issues
+
+    section_ceiling_section = _section(
+        *[_block(f"b{index}", "compare evidence") for index in range(6)]
+    )
+    choices = [
+        choice
+        for index in range(6)
+        for choice in (
+            CompositionChoice(
+                teaching_block_id=f"b{index}", kind="paragraph", semantic_role="explanation"
+            ),
+            CompositionChoice(
+                teaching_block_id=f"b{index}", kind="table", semantic_role="comparison"
+            ),
+        )
+    ]
+    with pytest.raises(CompositionValidationError) as section_ceiling_excinfo:
+        validate_and_build_composition(section=section_ceiling_section, choices=choices, tasks=[])
+    assert (
+        "section_exceeds_node_limit",
+        f"section/{section_ceiling_section.slot_id}",
+    ) in section_ceiling_excinfo.value.issues
+
+    callout_ceiling_section = _section(
+        _block("b0", "warning: avoid the common misconception"),
+        _block("b1", "safety warning about this misconception"),
+    )
+    with pytest.raises(CompositionValidationError) as callout_ceiling_excinfo:
+        validate_and_build_composition(
+            section=callout_ceiling_section,
+            choices=[
+                CompositionChoice(
+                    teaching_block_id="b0", kind="callout", semantic_role="misconception"
+                ),
+                CompositionChoice(
+                    teaching_block_id="b1", kind="callout", semantic_role="safety_guidance"
+                ),
+            ],
+            tasks=[],
+        )
+    assert (
+        "section_exceeds_callout_limit",
+        f"section/{callout_ceiling_section.slot_id}",
+    ) in callout_ceiling_excinfo.value.issues
+
+
+def test_anchor_mismatch_and_plan_divergence_report_stable_issue_codes() -> None:
+    section = _section(_block("b0", "explain"), _block("b1", "compare"))
+    tasks = [_task("task-a", "b0"), _task("task-b", "b1")]
+    valid = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+            ),
+            CompositionChoice(teaching_block_id="b1", kind="table", semantic_role="comparison"),
+        ],
+        tasks=tasks,
+    )
+
+    dropped = SectionCompositionPlan(section_slot_id=valid.section_slot_id, items=valid.items[:-1])
+    with pytest.raises(CompositionValidationError) as anchor_excinfo:
+        validate_composition_plan(plan=dropped, section=section, tasks=tasks)
+    assert anchor_excinfo.value.issues == (("task_anchor_mismatch", f"section/{section.slot_id}"),)
+
+    # Tamper only the stable node id of an ordinary item -- the block/kind/role
+    # choices extracted from the plan stay identical (so anchors and recomputed
+    # ordinary items still line up), but the recomputed deterministic ID no
+    # longer matches, which is the "plan differs" branch rather than the
+    # TaskAnchor-specific branch above.
+    tampered_first = valid.items[0].model_copy(update={"id": "tampered-node-id"})
+    tampered = SectionCompositionPlan(
+        section_slot_id=valid.section_slot_id,
+        items=(tampered_first, *valid.items[1:]),
+    )
+    with pytest.raises(CompositionValidationError) as divergence_excinfo:
+        validate_composition_plan(plan=tampered, section=section, tasks=tasks)
+    assert divergence_excinfo.value.issues == (
+        ("plan_diverges_from_deterministic", f"section/{section.slot_id}"),
+    )
+
+
+@pytest.mark.asyncio
+async def test_provider_schema_invalid_draft_reports_stable_issue_code() -> None:
+    section = _section(_block("b0", "explain"))
+
+    async def malformed_provider(_payload: dict[str, Any]) -> Any:
+        return {"items": []}
+
+    with pytest.raises(CompositionValidationError) as excinfo:
+        await compose_section(section=section, tasks=[], provider=malformed_provider)
+
+    # Empty items violates the closed draft schema (min_length=1), which is
+    # reported through the fixed schema-invalid code, never as free text.
+    assert excinfo.value.issues == (("provider_draft_schema_invalid", "items"),)
