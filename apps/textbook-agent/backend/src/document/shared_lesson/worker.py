@@ -25,6 +25,7 @@ from document.shared_lesson.approved_source import (
     load_current_approved_teaching_plan_source,
     make_approved_source_verifier,
 )
+from document.shared_lesson.auto_retry import scan_and_auto_retry
 from document.shared_lesson.post_section_pipeline import (
     PostSectionPipelineOutcome,
     run_post_section_pipeline,
@@ -52,6 +53,7 @@ from infra.database.models import (
     GenerationRunModel,
     GenerationWorkItemModel,
 )
+from infra.config import settings as _settings
 from infra.execution.leases import LeaseLostError
 from infra.generation_runtime import (
     ErrorClass,
@@ -156,11 +158,16 @@ class SharedDocumentWorker:
         artifact_loader: Any = None,
         lease_seconds: int = 300,
         poll_interval_seconds: float = 0.25,
+        auto_retry_enabled: bool | None = None,
+        auto_retry_delay_seconds: int | None = None,
+        auto_retry_max_runs_per_scan: int = 5,
     ) -> None:
         if lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
         if poll_interval_seconds <= 0:
             raise ValueError("poll_interval_seconds must be positive")
+        if auto_retry_max_runs_per_scan <= 0:
+            raise ValueError("auto_retry_max_runs_per_scan must be positive")
         self.session_factory = session_factory
         self.worker_id = worker_id or f"shared-document-{uuid.uuid4()}"
         self.provider = provider
@@ -174,6 +181,17 @@ class SharedDocumentWorker:
         self.artifact_loader = artifact_loader
         self.lease_seconds = lease_seconds
         self.poll_interval_seconds = poll_interval_seconds
+        self.auto_retry_enabled = (
+            _settings.shared_document_auto_retry_enabled
+            if auto_retry_enabled is None
+            else auto_retry_enabled
+        )
+        self.auto_retry_delay_seconds = (
+            _settings.shared_document_auto_retry_delay_seconds
+            if auto_retry_delay_seconds is None
+            else auto_retry_delay_seconds
+        )
+        self.auto_retry_max_runs_per_scan = auto_retry_max_runs_per_scan
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
         self._dispatch_failure_skip_until: dict[str, datetime] = {}
@@ -215,7 +233,16 @@ class SharedDocumentWorker:
         current = _now(now)
         candidate = await self._find_candidate(session, current)
         if candidate is None:
-            return False
+            if not self.auto_retry_enabled:
+                return False
+            retried = await scan_and_auto_retry(
+                session,
+                now=current,
+                delay_seconds=self.auto_retry_delay_seconds,
+                max_runs=self.auto_retry_max_runs_per_scan,
+                skip_run_ids=self._dispatch_failure_skip_until.keys(),
+            )
+            return retried > 0
 
         try:
             source, verifier, snapshot_loader = await self._source_context(session, candidate)

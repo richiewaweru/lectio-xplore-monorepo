@@ -1074,3 +1074,282 @@ def test_dispatch_failure_skip_set_is_bounded():
     for index in range(cap + 5):
         instance._mark_dispatch_failure(f"run-{index}", now)
     assert len(instance._dispatch_failure_skip_until) <= cap
+
+
+# ---------------------------------------------------------------------------
+# Auto-retry: bounded, automatic re-dispatch of failed_recoverable leaves.
+# ---------------------------------------------------------------------------
+
+
+async def _failed_recoverable_leaf(
+    db_session,
+    *,
+    source,
+    lesson,
+    generation,
+    request_key: str,
+    owner_user_id: str = "source-owner",
+    error_class: str = "provider_output",
+    recovery_action: str = "retry",
+    attempt: int = 1,
+    max_attempts: int = 3,
+    failed_seconds_ago: float = 100.0,
+):
+    """Admit a Run and drive its sourcebook leaf into failed_recoverable."""
+    admission = await _admitted(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key=request_key,
+        owner_user_id=owner_user_id,
+    )
+    run = await db_session.get(GenerationRunModel, admission.run.id)
+    item = await db_session.get(GenerationWorkItemModel, admission.sourcebook_work_item.id)
+    assert run is not None and item is not None
+    failed_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=failed_seconds_ago)
+    item.status = "failed_recoverable"
+    item.error_class = error_class
+    item.error_code = "test_error_code"
+    item.error_summary = "unsafe provider text should never reach an event payload"
+    item.recovery_action = recovery_action
+    item.attempt = attempt
+    item.max_attempts = max_attempts
+    item.completed_at = failed_at
+    item.updated_at = failed_at
+    run.status = "failed_recoverable"
+    run.updated_at = failed_at
+    await db_session.commit()
+    return admission, run, item
+
+
+@pytest.mark.asyncio
+async def test_eligible_provider_output_failure_is_auto_retried_after_delay(
+    db_session, monkeypatch
+):
+    generation, lesson, _prov, source = await _prepared(db_session, user_id="auto-retry-eligible")
+    admission, run, item = await _failed_recoverable_leaf(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="auto-retry-eligible",
+        owner_user_id="auto-retry-eligible",
+        error_class="provider_output",
+        failed_seconds_ago=100.0,
+    )
+    _bind_source_context(monkeypatch, source)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id="worker-auto-retry",
+        auto_retry_enabled=True,
+        auto_retry_delay_seconds=20,
+    )
+
+    assert await instance.run_one(db_session) is True
+
+    refreshed_run = await db_session.get(GenerationRunModel, run.id)
+    refreshed_item = await db_session.get(GenerationWorkItemModel, item.id)
+    assert refreshed_run is not None and refreshed_item is not None
+    assert refreshed_run.status in {"queued", "running"}
+    assert refreshed_item.status == "queued"
+    assert refreshed_item.attempt == 2
+    assert refreshed_item.error_class is None
+
+    events = list(
+        (
+            await db_session.scalars(
+                select(GenerationEventModel)
+                .where(
+                    GenerationEventModel.run_id == run.id,
+                    GenerationEventModel.event_type == "auto_retry_scheduled",
+                )
+            )
+        ).all()
+    )
+    assert len(events) == 1
+    payload = events[0].safe_payload_json
+    assert payload["work_item_ids"] == [item.id]
+    assert payload["attempts"] == [1]
+    assert payload["error_codes"] == ["test_error_code"]
+    assert "unsafe provider text" not in str(payload)
+
+
+@pytest.mark.asyncio
+async def test_eligible_failure_is_not_retried_before_delay_elapses(db_session, monkeypatch):
+    generation, lesson, _prov, source = await _prepared(db_session, user_id="auto-retry-early")
+    admission, run, item = await _failed_recoverable_leaf(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="auto-retry-early",
+        owner_user_id="auto-retry-early",
+        error_class="provider_transport",
+        failed_seconds_ago=5.0,
+    )
+    _bind_source_context(monkeypatch, source)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id="worker-auto-retry-early",
+        auto_retry_enabled=True,
+        auto_retry_delay_seconds=20,
+    )
+
+    assert await instance.run_one(db_session) is False
+
+    refreshed_run = await db_session.get(GenerationRunModel, run.id)
+    refreshed_item = await db_session.get(GenerationWorkItemModel, item.id)
+    assert refreshed_run is not None and refreshed_run.status == "failed_recoverable"
+    assert refreshed_item is not None and refreshed_item.status == "failed_recoverable"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "recovery_action,error_class",
+    [
+        ("review", "provider_output"),
+        ("none", "provider_output"),
+        ("retry", "validation"),
+        ("retry", "internal_programming"),
+    ],
+)
+async def test_non_retry_or_non_provider_failures_are_never_auto_retried(
+    db_session, monkeypatch, recovery_action, error_class
+):
+    generation, lesson, _prov, source = await _prepared(
+        db_session, user_id=f"auto-retry-ineligible-{recovery_action}-{error_class}"
+    )
+    admission, run, item = await _failed_recoverable_leaf(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key=f"auto-retry-ineligible-{recovery_action}-{error_class}",
+        owner_user_id=f"auto-retry-ineligible-{recovery_action}-{error_class}",
+        error_class=error_class,
+        recovery_action=recovery_action,
+        failed_seconds_ago=100.0,
+    )
+    _bind_source_context(monkeypatch, source)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id=f"worker-{recovery_action}-{error_class}",
+        auto_retry_enabled=True,
+        auto_retry_delay_seconds=20,
+    )
+
+    assert await instance.run_one(db_session) is False
+
+    refreshed_run = await db_session.get(GenerationRunModel, run.id)
+    refreshed_item = await db_session.get(GenerationWorkItemModel, item.id)
+    assert refreshed_run is not None and refreshed_run.status == "failed_recoverable"
+    assert refreshed_item is not None and refreshed_item.status == "failed_recoverable"
+
+
+@pytest.mark.asyncio
+async def test_attempt_at_max_is_never_auto_retried(db_session, monkeypatch):
+    generation, lesson, _prov, source = await _prepared(db_session, user_id="auto-retry-exhausted")
+    admission, run, item = await _failed_recoverable_leaf(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="auto-retry-exhausted",
+        owner_user_id="auto-retry-exhausted",
+        error_class="provider_output",
+        attempt=3,
+        max_attempts=3,
+        failed_seconds_ago=100.0,
+    )
+    _bind_source_context(monkeypatch, source)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id="worker-auto-retry-exhausted",
+        auto_retry_enabled=True,
+        auto_retry_delay_seconds=20,
+    )
+
+    assert await instance.run_one(db_session) is False
+
+    refreshed_item = await db_session.get(GenerationWorkItemModel, item.id)
+    assert refreshed_item is not None
+    assert refreshed_item.status == "failed_recoverable"
+    assert refreshed_item.attempt == 3
+
+
+@pytest.mark.asyncio
+async def test_auto_retry_disabled_setting_never_retries(db_session, monkeypatch):
+    generation, lesson, _prov, source = await _prepared(db_session, user_id="auto-retry-disabled")
+    admission, run, item = await _failed_recoverable_leaf(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="auto-retry-disabled",
+        owner_user_id="auto-retry-disabled",
+        error_class="provider_output",
+        failed_seconds_ago=100.0,
+    )
+    _bind_source_context(monkeypatch, source)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id="worker-auto-retry-disabled",
+        auto_retry_enabled=False,
+        auto_retry_delay_seconds=20,
+    )
+
+    assert await instance.run_one(db_session) is False
+
+    refreshed_run = await db_session.get(GenerationRunModel, run.id)
+    refreshed_item = await db_session.get(GenerationWorkItemModel, item.id)
+    assert refreshed_run is not None and refreshed_run.status == "failed_recoverable"
+    assert refreshed_item is not None and refreshed_item.status == "failed_recoverable"
+
+
+@pytest.mark.asyncio
+async def test_mixed_run_with_one_ineligible_failed_leaf_is_not_retried(db_session, monkeypatch):
+    generation, lesson, _prov, source = await _prepared(db_session, user_id="auto-retry-mixed")
+    admission, run, item = await _failed_recoverable_leaf(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="auto-retry-mixed",
+        owner_user_id="auto-retry-mixed",
+        error_class="provider_output",
+        failed_seconds_ago=100.0,
+    )
+    # A second active failed leaf on the same Run that needs human review.
+    failed_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=100)
+    review_item = GenerationWorkItemModel(
+        run_id=run.id,
+        item_key="document_qa:post",
+        stage="document_qa",
+        status="failed_recoverable",
+        input_hash="i" * 64,
+        definition_hash="d" * 64,
+        error_class="provider_output",
+        error_code="qa_review_needed",
+        recovery_action="review",
+        attempt=1,
+        max_attempts=3,
+        completed_at=failed_at,
+        updated_at=failed_at,
+    )
+    db_session.add(review_item)
+    await db_session.commit()
+    _bind_source_context(monkeypatch, source)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id="worker-auto-retry-mixed",
+        auto_retry_enabled=True,
+        auto_retry_delay_seconds=20,
+    )
+
+    assert await instance.run_one(db_session) is False
+
+    refreshed_run = await db_session.get(GenerationRunModel, run.id)
+    refreshed_item = await db_session.get(GenerationWorkItemModel, item.id)
+    assert refreshed_run is not None and refreshed_run.status == "failed_recoverable"
+    assert refreshed_item is not None and refreshed_item.status == "failed_recoverable"

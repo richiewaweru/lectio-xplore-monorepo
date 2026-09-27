@@ -285,6 +285,21 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("SHARED_DOCUMENT_MEDIA_OPTIONAL"),
     )
 
+    # SharedDocument auto-retry: bounded, automatic re-dispatch of
+    # failed_recoverable WorkItems whose recovery_action is "retry" and
+    # error_class is a provider hiccup (provider_output/provider_transport).
+    # Never widens the existing per-item max_attempts cap; review/none
+    # recovery actions and non-provider error classes are never auto-retried.
+    shared_document_auto_retry_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("SHARED_DOCUMENT_AUTO_RETRY_ENABLED"),
+    )
+    shared_document_auto_retry_delay_seconds: int = Field(
+        default=20,
+        ge=0,
+        validation_alias=AliasChoices("SHARED_DOCUMENT_AUTO_RETRY_DELAY_SECONDS"),
+    )
+
     @field_validator("app_env", mode="before")
     @classmethod
     def _normalize_app_env(cls, value: str | None) -> str:
