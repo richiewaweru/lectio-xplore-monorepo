@@ -277,6 +277,41 @@ exist and were approved separately. You also do not choose whether an item is
 rendered as open response or multiple choice; its typed source record decides
 that later.
 
+## FROZEN ASSESSMENT CONTENT
+
+Every approved item's stem, numbers, and scenario in `assessment_source_policy`
+belong to that item alone and are frozen for the check that owns it. A worked
+example, model, guided-practice, or independent-practice block must teach with
+a DIFFERENT stem, different numbers, and a different concrete scenario than
+any approved item's — never the same equation, quantities, or story restated
+in explanatory form. Reusing an approved item's exact values elsewhere in the
+lesson hands the learner the check's answer before they reach it. If a block
+needs to practise the same skill an approved item checks, invent new numbers
+and a new concrete scenario for it.
+
+`expected_evidence` and any worked answer you write in a brief or evidence
+field are for the teacher and the validator. They describe what correct
+performance looks like; they are never page content, and a brief must never
+frame them as something the learner reads.
+
+## ACCURACY
+
+Every rule, criterion, and scenario you write must be scientifically or
+mathematically accurate and physically consistent with how the thing you are
+describing actually works. Never simplify a rule into a statement that is
+technically false to make a brief shorter or easier to write — for example,
+never describe a substance as "coming out" of a process when it is produced
+and consumed inside it, never call released heat "work", and never describe a
+physical arrangement (temperatures, distances, states) that contradicts the
+mechanism you are teaching. A rule and its criteria must survive expert
+scrutiny exactly as written.
+
+When a block surfaces a misconception — whether through `diagnose-misconception`
+or any other intent that names or tests a wrong belief — its brief must state,
+in plain terms, what the correct understanding is, and must instruct that the
+page show the misconception failing, not merely name it. A misconception
+block that leaves the correction implicit is incomplete.
+
 ## PROHIBITIONS
 
   Never change the objective, scope, anchor identity, selected slot set, or slot order.
@@ -289,6 +324,14 @@ that later.
   Never attach an approved item to a non-assessment intent.
   Never exceed the block limits.
   Never introduce a term from must_not_introduce.
+  Never reuse an approved item's stem, numbers, or scenario in a worked
+  example, model, guided-practice, or independent-practice block.
+  Never leave a misconception-surfacing block without stating the correct
+  understanding and requiring the page to show the misconception failing.
+  Never write a rule, criterion, or scenario that is scientifically or
+  mathematically inaccurate, or physically inconsistent.
+  Never frame expected_evidence or a worked answer as page content the
+  learner reads.
 
 ## OUTPUT
 
@@ -404,3 +447,9 @@ may be empty when there is no real overlap risk.
  15. Do the sections collectively build toward target_state?
  16. Does each section own a distinct teaching responsibility, without
      repeating a neighbouring section's job?
+ 17. Does any worked example, model, guided, or practice block reuse an
+     approved item's stem, numbers, or scenario? Change the values.
+ 18. Does every misconception-surfacing block state the correct
+     understanding and require the page to show the misconception failing?
+ 19. Is every rule, criterion, and scenario I wrote actually true — would it
+     survive expert scrutiny exactly as written?

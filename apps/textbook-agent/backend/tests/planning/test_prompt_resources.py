@@ -16,7 +16,7 @@ from curriculum.prompts import (
 from print.generation.whole_lesson.validation import SPATIAL_PROCESS_REPRESENTATION_INTENTS
 
 V1_SHA256 = "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
-V2_SHA256 = "a2f9291530011049bc8461fa60a5f29a34d249737a03954dda872d98cca86329"
+V2_SHA256 = "a5a12ef05fc814edfcafd794e6b0ef9ff232d3aef17945603a583fb195b2706f"
 
 
 def _sha256(text: str) -> str:
@@ -77,6 +77,24 @@ def test_active_v2_prompt_requires_enriched_continuity_without_format_leaks() ->
         '"questions"',
     ):
         assert primitive not in output_schema
+
+
+def test_active_v2_prompt_states_new_plan_quality_rules() -> None:
+    prompt = lesson_approach_planner_prompt()
+    normalized = " ".join(prompt.split())
+    assert (
+        "Never reuse an approved item's stem, numbers, or scenario in a worked"
+        in normalized
+    )
+    assert (
+        "Never leave a misconception-surfacing block without stating the correct"
+        in normalized
+    )
+    assert (
+        "Never write a rule, criterion, or scenario that is scientifically or"
+        in normalized
+    )
+    assert "never page content" in normalized
 
 
 def test_active_v2_prompt_binds_sourcebook_needs_to_stable_refs() -> None:

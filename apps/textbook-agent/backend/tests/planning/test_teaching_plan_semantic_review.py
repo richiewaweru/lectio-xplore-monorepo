@@ -182,6 +182,10 @@ async def test_semantic_reviewer_clean_pass_binds_exact_plan_hash(monkeypatch) -
         ("target_coverage_gap", ["explain"], [], False),
         ("duplicate_section_responsibility", ["orient", "explain"], [], False),
         ("task_evidence_gap", ["explain"], ["explain-b1"], True),
+        ("assessment_item_reused", ["explain"], ["explain-b1"], False),
+        ("misconception_unresolved", ["explain"], ["explain-b1"], False),
+        ("factual_inaccuracy", ["explain"], ["explain-b1"], False),
+        ("factual_inaccuracy", ["explain"], [], False),
     ],
 )
 @pytest.mark.asyncio
@@ -261,6 +265,52 @@ async def test_reviewer_rejects_unbound_section_finding(monkeypatch) -> None:
 
     async def _fake_structured(**_kwargs):
         return unbound
+
+    monkeypatch.setattr(semantic_review, "_run_structured", _fake_structured)
+    with pytest.raises(TeachingPlanSemanticReviewError) as raised:
+        await semantic_review.review_teaching_plan_draft(
+            draft=draft,
+            plan=plan,
+            lesson_context={},
+        )
+    assert raised.value.code == "TEACHING_SEMANTIC_REVIEW_INVALID"
+
+
+@pytest.mark.asyncio
+async def test_reviewer_rejects_new_codes_with_wrong_binding_shape(monkeypatch) -> None:
+    draft = _draft()
+    plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
+
+    async def _fake_structured(**_kwargs):
+        return TeachingPlanSemanticReviewDraft(
+            reviewed=True,
+            findings=[
+                _finding("assessment_item_reused", ["orient", "explain"], []),
+            ],
+        )
+
+    monkeypatch.setattr(semantic_review, "_run_structured", _fake_structured)
+    with pytest.raises(TeachingPlanSemanticReviewError) as raised:
+        await semantic_review.review_teaching_plan_draft(
+            draft=draft,
+            plan=plan,
+            lesson_context={},
+        )
+    assert raised.value.code == "TEACHING_SEMANTIC_REVIEW_INVALID"
+
+
+@pytest.mark.asyncio
+async def test_reviewer_rejects_factual_inaccuracy_with_two_sections(monkeypatch) -> None:
+    draft = _draft()
+    plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
+
+    async def _fake_structured(**_kwargs):
+        return TeachingPlanSemanticReviewDraft(
+            reviewed=True,
+            findings=[
+                _finding("factual_inaccuracy", ["orient", "explain"], []),
+            ],
+        )
 
     monkeypatch.setattr(semantic_review, "_run_structured", _fake_structured)
     with pytest.raises(TeachingPlanSemanticReviewError) as raised:
@@ -383,3 +433,107 @@ async def test_invalid_reviewer_code_is_not_treated_as_clean(monkeypatch) -> Non
             lesson_context={},
         )
     assert raised.value.code == "TEACHING_SEMANTIC_REVIEW_INVALID"
+
+
+@pytest.mark.asyncio
+async def test_reviewer_receives_frozen_approved_item_stems(monkeypatch) -> None:
+    from print.generation.whole_lesson.packet import ApprovedItemRef
+
+    packet = _packet().model_copy(
+        update={
+            "approved_items": [
+                ApprovedItemRef(id="mcq-1", card_id="card", stem="Solve for x: 7x = 56", options=[])
+            ]
+        }
+    )
+    legality = _make_snapshot()
+    draft = _draft()
+    reviewer_calls = []
+
+    async def _planner_call(**_kwargs):
+        return draft, draft.model_dump_json()
+
+    async def _review(**kwargs):
+        reviewer_calls.append(kwargs)
+        plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
+        return TeachingPlanSemanticReviewResult(
+            content_hash=teaching_plan_content_hash(plan), findings=[]
+        )
+
+    with (
+        patch.object(teaching_agent, "_call_teaching_model", new=_planner_call),
+        patch.object(teaching_agent, "review_teaching_plan_draft", new=_review),
+    ):
+        await run_lesson_approach_planner(packet, legality=legality, require_items=False)
+
+    assert len(reviewer_calls) == 1
+    approved_items = reviewer_calls[0]["lesson_context"]["approved_items"]
+    assert approved_items == [{"id": "mcq-1", "stem": "Solve for x: 7x = 56"}]
+
+
+def test_frozen_assessment_reuse_flags_verbatim_stem_leak() -> None:
+    from print.generation.whole_lesson.packet import ApprovedItemRef
+    from print.generation.whole_lesson.teaching_agent import _frozen_assessment_reuse_errors
+
+    packet = _packet().model_copy(
+        update={
+            "approved_items": [
+                ApprovedItemRef(id="mcq-1", card_id="card", stem="Solve for x: 7x = 56", options=[])
+            ]
+        }
+    )
+    draft = _draft()
+    plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
+    plan.sections[1].blocks[0].brief = (
+        "Work through the model: Solve for x: 7x = 56, showing each step."
+    )
+
+    errors = _frozen_assessment_reuse_errors(plan, packet)
+
+    assert len(errors) == 1
+    assert "TEACHING_FROZEN_ITEM_REUSED" in errors[0]
+    assert "mcq-1" in errors[0]
+
+
+def test_frozen_assessment_reuse_allows_different_values() -> None:
+    from print.generation.whole_lesson.packet import ApprovedItemRef
+    from print.generation.whole_lesson.teaching_agent import _frozen_assessment_reuse_errors
+
+    packet = _packet().model_copy(
+        update={
+            "approved_items": [
+                ApprovedItemRef(id="mcq-1", card_id="card", stem="Solve for x: 7x = 56", options=[])
+            ]
+        }
+    )
+    draft = _draft()
+    plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
+    plan.sections[1].blocks[0].brief = (
+        "Work through the model: solve for x: 3x = 12, showing each step."
+    )
+
+    errors = _frozen_assessment_reuse_errors(plan, packet)
+
+    assert errors == []
+
+
+def test_frozen_assessment_reuse_ignores_the_owning_assessment_block() -> None:
+    from print.generation.whole_lesson.packet import ApprovedItemRef
+    from print.generation.whole_lesson.teaching_agent import _frozen_assessment_reuse_errors
+
+    packet = _packet().model_copy(
+        update={
+            "approved_items": [
+                ApprovedItemRef(id="mcq-1", card_id="card", stem="Solve for x: 7x = 56", options=[])
+            ]
+        }
+    )
+    draft = _draft(task=True)
+    plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
+    plan.sections[1].blocks[0].brief = "Solve for x: 7x = 56"
+    plan.sections[1].blocks[0].task_mode = "assessment"
+    plan.sections[1].blocks[0].source_question_ids = ["mcq-1"]
+
+    errors = _frozen_assessment_reuse_errors(plan, packet)
+
+    assert errors == []

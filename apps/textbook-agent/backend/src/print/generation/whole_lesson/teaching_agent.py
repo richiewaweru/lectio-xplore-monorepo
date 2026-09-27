@@ -308,6 +308,50 @@ def _unknown_learner_action_errors(plan: TeachingPlan) -> list[str]:
     return errors
 
 
+def _normalize_whitespace(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _frozen_assessment_reuse_errors(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> list[str]:
+    """Deterministically flag a non-assessment block that restates a frozen
+    approved assessment item's exact stem text.
+
+    This is a cheap, low-risk textual check (whitespace-normalized substring
+    match) that catches a worked example, model, or practice block leaking an
+    approved check's stem, numbers, or scenario verbatim. It never judges
+    paraphrase or meaning; the semantic reviewer's `assessment_item_reused`
+    finding covers subtler reuse.
+    """
+    errors: list[str] = []
+    stems = [
+        (item.id, _normalize_whitespace(item.stem))
+        for item in packet.approved_items
+        if item.stem.strip()
+    ]
+    if not stems:
+        return errors
+    for section in plan.sections:
+        for block in section.blocks:
+            if block.task_mode == "assessment" and block.source_question_ids:
+                # This block IS the frozen check; its own stem is expected.
+                continue
+            brief_normalized = _normalize_whitespace(block.brief)
+            if not brief_normalized:
+                continue
+            for item_id, stem_normalized in stems:
+                if stem_normalized and stem_normalized in brief_normalized:
+                    errors.append(
+                        "TEACHING_FROZEN_ITEM_REUSED: "
+                        f"block {block.id!r} brief reuses approved item "
+                        f"{item_id!r}'s frozen stem text verbatim. Use different "
+                        "values, numbers, or scenario for this non-assessment block."
+                    )
+    return errors
+
+
 _STOPWORDS = frozenset(
     {
         "the",
@@ -842,6 +886,7 @@ async def run_lesson_approach_planner(
             ownership_errors.extend(_unknown_learner_action_errors(plan))
             ownership_errors.extend(_task_source_contract_errors(plan))
             ownership_errors.extend(_action_source_compatibility_errors(plan, packet))
+            ownership_errors.extend(_frozen_assessment_reuse_errors(plan, packet))
 
             validation = validate_teaching_plan(
                 plan,
@@ -858,7 +903,16 @@ async def run_lesson_approach_planner(
                 semantic_review = await review_teaching_plan_draft(
                     draft=draft,
                     plan=plan,
-                    lesson_context=packet.planner_payload(),
+                    lesson_context={
+                        **packet.planner_payload(),
+                        # The reviewer must see the frozen assessment stems it
+                        # is checking worked examples and practice blocks
+                        # against; `planner_payload()` alone only carries IDs.
+                        "approved_items": [
+                            {"id": item.id, "stem": item.stem}
+                            for item in packet.approved_items
+                        ],
+                    },
                     trace_id=f"{tid}:semantic-review:attempt{attempt}",
                 )
                 if semantic_review.content_hash != teaching_plan_content_hash(plan):

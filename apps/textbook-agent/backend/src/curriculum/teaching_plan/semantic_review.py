@@ -16,7 +16,15 @@ SemanticFindingCode = Literal[
     "target_coverage_gap",
     "duplicate_section_responsibility",
     "task_evidence_gap",
+    "assessment_item_reused",
+    "misconception_unresolved",
+    "factual_inaccuracy",
 ]
+
+# Codes that must cite exactly one section and exactly one block.
+_SINGLE_SECTION_SINGLE_BLOCK_CODES = frozenset(
+    {"task_evidence_gap", "assessment_item_reused", "misconception_unresolved"}
+)
 
 
 class TeachingPlanSemanticFinding(BaseModel):
@@ -109,10 +117,15 @@ def _validate_finding_bindings(
                 raise TeachingPlanSemanticReviewProtocolError(
                     "duplicate_section_responsibility must cite multiple sections only"
                 )
-        elif finding.code == "task_evidence_gap":
+        elif finding.code in _SINGLE_SECTION_SINGLE_BLOCK_CODES:
             if len(finding.section_ids) != 1 or len(finding.block_ids) != 1:
                 raise TeachingPlanSemanticReviewProtocolError(
-                    "task_evidence_gap must cite exactly one section and one block"
+                    f"{finding.code} must cite exactly one section and one block"
+                )
+        elif finding.code == "factual_inaccuracy":
+            if len(finding.section_ids) != 1 or len(finding.block_ids) not in (0, 1):
+                raise TeachingPlanSemanticReviewProtocolError(
+                    "factual_inaccuracy must cite exactly one section and at most one block"
                 )
         elif finding.block_ids:
             raise TeachingPlanSemanticReviewProtocolError(
