@@ -436,6 +436,89 @@ async def test_composition_validation_error_diagnostic_bounds_codes_and_paths(
 
 
 @pytest.mark.asyncio
+async def test_section_write_validation_error_persists_safe_issue_codes_without_provider_text(
+    monkeypatch,
+) -> None:
+    from document.shared_lesson.writer import SectionWriteValidationError
+
+    # A sentinel standing in for real provider output / learner text. It must
+    # never reach the persisted diagnostic payload -- only fixed-vocabulary
+    # codes and sanitized structural paths may.
+    sentinel = "PROVIDER_SENTINEL_DO_NOT_PERSIST_9f13"
+    error = SectionWriteValidationError(
+        [f"{sentinel}: learner-facing content contains unsupported numeric fact '900'"],
+        issues=(("unsupported_number", "nodes[0].text"),),
+    )
+
+    recorded_failures = []
+    recorded_events = []
+
+    async def fake_fail(_session, **kwargs):
+        recorded_failures.append(kwargs["failure"])
+        return SimpleNamespace(id=kwargs["work_item_id"], run_id="run-1")
+
+    async def fake_append_event(_session, **kwargs):
+        recorded_events.append(kwargs)
+
+    monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", fake_append_event)
+
+    await _record_execution_failure(
+        "session",
+        work_item_id="item-1",
+        worker_id="worker-1",
+        lease_token=1,
+        error=error,
+    )
+
+    assert recorded_failures[0].error_code == "invalid_section_output"
+    payload = recorded_events[0]["safe_payload"]
+    assert payload == {
+        "original_exception_type": "SectionWriteValidationError",
+        "validation_issue_codes": ["unsupported_number"],
+        "validation_paths": ["nodes[0].text"],
+    }
+    serialized = repr(payload)
+    assert sentinel not in serialized
+    assert "unsupported numeric fact" not in serialized
+
+
+@pytest.mark.asyncio
+async def test_section_write_validation_error_diagnostic_bounds_codes_and_paths(
+    monkeypatch,
+) -> None:
+    from document.shared_lesson.writer import SectionWriteValidationError
+
+    many_issues = [("unsupported_number", f"nodes[{index}].text") for index in range(25)]
+    error = SectionWriteValidationError([f"issue {index}" for index in range(25)], issues=many_issues)
+
+    recorded_events = []
+
+    async def fake_fail(_session, **kwargs):
+        return SimpleNamespace(id=kwargs["work_item_id"], run_id="run-1")
+
+    async def fake_append_event(_session, **kwargs):
+        recorded_events.append(kwargs)
+
+    monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", fake_append_event)
+
+    await _record_execution_failure(
+        "session",
+        work_item_id="item-1",
+        worker_id="worker-1",
+        lease_token=1,
+        error=error,
+    )
+
+    payload = recorded_events[0]["safe_payload"]
+    # Only one distinct code across all 25 issues, but 25 distinct paths --
+    # the path list must be bounded even though the code list is not affected.
+    assert payload["validation_issue_codes"] == ["unsupported_number"]
+    assert len(payload["validation_paths"]) == 20
+
+
+@pytest.mark.asyncio
 async def test_composition_style_warning_event_is_safe_and_bounded(monkeypatch) -> None:
     sentinel = "PROVIDER_SENTINEL_DO_NOT_PERSIST_9f13"
     recorded_events = []

@@ -229,12 +229,66 @@ class SectionWriteResult(_ClosedModel):
         )
 
 
+#: Closed, stable vocabulary of writer validation issue codes. Every
+#: ``SectionWriteValidationError`` issue code must be a member of this set.
+#: These codes (and the sanitized structural paths that accompany them) are
+#: safe to persist in diagnostics: they never carry provider output, learner
+#: content, or free-form validator text. Mirrors the composer's
+#: ``COMPOSITION_ISSUE_CODES`` convention (see composer.py).
+SECTION_WRITE_ISSUE_CODES = frozenset(
+    {
+        "writer_draft_schema_invalid",
+        "node_count_mismatch",
+        "node_id_mismatch",
+        "node_kind_mismatch",
+        "node_block_mismatch",
+        "node_shape_mismatch",
+        "table_missing_headers_or_rows",
+        "table_row_width_mismatch",
+        "blank_text",
+        "metadata_leaked",
+        "task_answer_leaked",
+        "internal_id_leaked",
+        "unsupported_number",
+        "task_anchor_ownership_mismatch",
+    }
+)
+
+_MAX_WRITER_ISSUE_PATH_LENGTH = 80
+
+
+def _sanitize_writer_issue_path(path: str) -> str:
+    """Clamp a writer-built path to a safe, structural-only representation.
+
+    Callers only ever pass paths built from node indices, ``kind``/field
+    names, or approved Teaching Plan block/section IDs -- never provider
+    output or learner text -- but this still bounds length and characters
+    defensively before the path is eligible for diagnostic persistence.
+    """
+    safe = re.sub(r"[^A-Za-z0-9_\-./\[\]]", "_", path)
+    return safe[:_MAX_WRITER_ISSUE_PATH_LENGTH]
+
+
 class SectionWriteValidationError(ValueError):
     """A valid structured draft does not satisfy its composition/source contract."""
 
-    def __init__(self, errors: Sequence[str], *, affected_node_ids: Sequence[str] = ()):
+    def __init__(
+        self,
+        errors: Sequence[str],
+        *,
+        affected_node_ids: Sequence[str] = (),
+        issues: Sequence[tuple[str, str]] | None = None,
+    ):
         self.errors = tuple(errors)
         self.affected_node_ids = tuple(affected_node_ids)
+        if issues is None:
+            issues = tuple(("writer_draft_schema_invalid", "") for _ in self.errors)
+        for code, _path in issues:
+            if code not in SECTION_WRITE_ISSUE_CODES:
+                raise ValueError(f"unknown section write issue code {code!r}")
+        self.issues: tuple[tuple[str, str], ...] = tuple(
+            (code, _sanitize_writer_issue_path(path)) for code, path in issues
+        )
         super().__init__("; ".join(self.errors))
 
 
@@ -273,10 +327,16 @@ _RESULT_TEMPLATES = tuple(
 
 
 def _composition_error(
-    message: str, item: CompositionItem | None = None
+    message: str,
+    item: CompositionItem | None = None,
+    *,
+    code: str,
+    path: str = "",
 ) -> SectionWriteValidationError:
     return SectionWriteValidationError(
-        [message], affected_node_ids=(item.id,) if item is not None else ()
+        [message],
+        affected_node_ids=(item.id,) if item is not None else (),
+        issues=((code, path),),
     )
 
 
@@ -404,8 +464,9 @@ def _leaked_task_answer(text: str, request: SectionWriterRequest) -> str | None:
 
 
 def _check_learner_text(
-    node: WrittenNode, request: SectionWriterRequest, item: CompositionItem
+    node: WrittenNode, request: SectionWriterRequest, item: CompositionItem, *, node_index: int
 ) -> None:
+    node_path = f"nodes[{node_index}]"
     values = _node_text_values(node)
     required: list[str] = []
     if isinstance(node, (WrittenParagraph, WrittenHeading)):
@@ -416,25 +477,48 @@ def _check_learner_text(
         required.append(node.accessibility.alt_text)
     elif isinstance(node, WrittenTable):
         if not node.display.headers or not node.display.rows:
-            raise _composition_error("tables require headers and at least one row", item)
+            raise _composition_error(
+                "tables require headers and at least one row",
+                item,
+                code="table_missing_headers_or_rows",
+                path=f"{node_path}.table",
+            )
         width = len(node.display.headers)
         if any(len(row) != width for row in node.display.rows):
-            raise _composition_error("table rows must match the header width", item)
+            raise _composition_error(
+                "table rows must match the header width",
+                item,
+                code="table_row_width_mismatch",
+                path=f"{node_path}.table.rows",
+            )
         required.extend(node.display.headers)
         required.extend(cell for row in node.display.rows for cell in row)
     elif isinstance(node, WrittenCallout):
         required.append(node.display.body)
     for text in required:
         if not text.strip():
-            raise _composition_error("learner-facing content must not be blank", item)
+            raise _composition_error(
+                "learner-facing content must not be blank",
+                item,
+                code="blank_text",
+                path=f"{node_path}.text",
+            )
     all_inputs = _approved_numbers(request)
     identifiers = _internal_identifiers(request)
     for value in values:
         if not value.strip() and value:
-            raise _composition_error("learner-facing content must not be blank", item)
+            raise _composition_error(
+                "learner-facing content must not be blank",
+                item,
+                code="blank_text",
+                path=f"{node_path}.text",
+            )
         if _INTERNAL_TERMS.search(value) or _PLACEHOLDER.search(value):
             raise _composition_error(
-                "learner-facing content leaks planning text or a placeholder", item
+                "learner-facing content leaks planning text or a placeholder",
+                item,
+                code="metadata_leaked",
+                path=f"{node_path}.text",
             )
         leaked_answer = _leaked_task_answer(value, request)
         if leaked_answer is not None:
@@ -442,17 +526,24 @@ def _check_learner_text(
                 "learner-facing content states the result of an anchored task "
                 f"({leaked_answer!r}) instead of leaving it for the learner to solve",
                 item,
+                code="task_answer_leaked",
+                path=f"{node_path}.text",
             )
         for identifier in identifiers:
             if re.search(rf"(?<!\w){re.escape(identifier)}(?!\w)", value, flags=re.IGNORECASE):
                 raise _composition_error(
-                    "learner-facing content leaks an internal identifier", item
+                    "learner-facing content leaks an internal identifier",
+                    item,
+                    code="internal_id_leaked",
+                    path=f"{node_path}.text",
                 )
         for number in _NUMBER.finditer(value):
             if number.group(0) not in all_inputs:
                 raise _composition_error(
                     f"learner-facing content contains unsupported numeric fact {number.group(0)!r}",
                     item,
+                    code="unsupported_number",
+                    path=f"{node_path}.text",
                 )
 
 
@@ -468,7 +559,8 @@ def validate_and_build_section(
         )
     except ValidationError as exc:
         raise SectionWriteValidationError(
-            ("writer output violates the closed node schema",)
+            ("writer output violates the closed node schema",),
+            issues=(("writer_draft_schema_invalid", ""),),
         ) from exc
 
     expected = [item for item in request.composition_plan.items if item.kind != "task_anchor"]
@@ -476,28 +568,46 @@ def validate_and_build_section(
         raise SectionWriteValidationError(
             [f"writer must return exactly {len(expected)} ordinary nodes"],
             affected_node_ids=tuple(item.id for item in expected),
+            issues=(("node_count_mismatch", "nodes"),),
         )
     node_by_id: dict[str, SharedLessonNode] = {}
-    for expected_item, written in zip(expected, parsed.nodes, strict=True):
+    for node_index, (expected_item, written) in enumerate(zip(expected, parsed.nodes, strict=True)):
+        node_path = f"nodes[{node_index}]"
         if written.id != expected_item.id:
             raise _composition_error(
-                "writer changed, omitted, or reordered a node ID", expected_item
+                "writer changed, omitted, or reordered a node ID",
+                expected_item,
+                code="node_id_mismatch",
+                path=f"{node_path}.id",
             )
         if written.kind != expected_item.kind:
-            raise _composition_error("writer changed a composed node kind", expected_item)
+            raise _composition_error(
+                "writer changed a composed node kind",
+                expected_item,
+                code="node_kind_mismatch",
+                path=f"{node_path}.kind",
+            )
         if written.teaching_block_id != expected_item.teaching_block_id:
-            raise _composition_error("writer changed teaching block ownership", expected_item)
-        _check_learner_text(written, request, expected_item)
+            raise _composition_error(
+                "writer changed teaching block ownership",
+                expected_item,
+                code="node_block_mismatch",
+                path=f"{node_path}.teaching_block_id",
+            )
+        _check_learner_text(written, request, expected_item, node_index=node_index)
         payload = written.model_dump(mode="json")
         try:
             node_by_id[written.id] = shared_lesson_node_adapter.validate_python(payload)
         except ValidationError as exc:
             raise _composition_error(
-                "writer node failed the shared document schema", expected_item
+                "writer node failed the shared document schema",
+                expected_item,
+                code="node_shape_mismatch",
+                path=node_path,
             ) from exc
 
     final_nodes: list[SharedLessonNode] = []
-    for item in request.composition_plan.items:
+    for item_index, item in enumerate(request.composition_plan.items):
         if item.kind == "task_anchor":
             task = next(
                 summary
@@ -506,7 +616,10 @@ def validate_and_build_section(
             )
             if task.teaching_block_id != item.teaching_block_id:
                 raise _composition_error(
-                    "TaskAnchor ownership differs from its finalized task", item
+                    "TaskAnchor ownership differs from its finalized task",
+                    item,
+                    code="task_anchor_ownership_mismatch",
+                    path=f"composition_plan.items[{item_index}].teaching_block_id",
                 )
             final_nodes.append(
                 TaskAnchor(
@@ -644,6 +757,7 @@ async def write_section(
 
 
 __all__ = [
+    "SECTION_WRITE_ISSUE_CODES",
     "SectionSource",
     "SectionTaskSummary",
     "SectionWriteResult",

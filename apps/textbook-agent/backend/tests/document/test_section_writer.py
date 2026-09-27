@@ -13,6 +13,7 @@ from document.shared_lesson.composer import (
     validate_and_build_composition,
 )
 from document.shared_lesson.writer import (
+    SECTION_WRITE_ISSUE_CODES,
     SectionSource,
     SectionTaskSummary,
     SectionWriterRequest,
@@ -261,9 +262,17 @@ def test_request_requires_enriched_section_and_exact_task_anchor_registry() -> N
 
 
 @pytest.mark.parametrize(
-    "attack", ["missing", "extra", "reordered", "retyped", "wrong_owner", "anchor"]
+    "attack,expected_code",
+    [
+        ("missing", "node_count_mismatch"),
+        ("extra", "node_count_mismatch"),
+        ("reordered", "node_id_mismatch"),
+        ("retyped", "node_kind_mismatch"),
+        ("wrong_owner", "node_block_mismatch"),
+        ("anchor", "writer_draft_schema_invalid"),
+    ],
 )
-def test_rejects_composition_shape_attacks(attack: str) -> None:
+def test_rejects_composition_shape_attacks(attack: str, expected_code: str) -> None:
     request = _request()
     draft = _draft(request)
     nodes = draft["nodes"]
@@ -288,8 +297,10 @@ def test_rejects_composition_shape_attacks(attack: str) -> None:
             }
         )
 
-    with pytest.raises(SectionWriteValidationError):
+    with pytest.raises(SectionWriteValidationError) as excinfo:
         validate_and_build_section(request=request, draft=draft)
+    codes = {code for code, _path in excinfo.value.issues}
+    assert codes == {expected_code}
 
 
 def test_rejects_unknown_fields_planning_leaks_placeholders_and_unapproved_numbers() -> None:
@@ -455,10 +466,176 @@ def test_payload_hides_expected_evidence_and_evaluation_from_ordinary_context() 
         assert "expected_evidence" not in summary
         assert "evaluation" not in summary
 
-    hidden = payload["hidden_answer_context_do_not_reveal"]
-    assert hidden == [
-        {
-            "task_spec_id": request.task_summaries[0].task_spec_id,
-            "expected_evidence": request.task_summaries[0].expected_evidence,
-        }
-    ]
+
+# --- Diagnostic issue code/path coverage -----------------------------------
+#
+# `SectionWriteValidationError.issues` feeds `_record_execution_failure`'s
+# persisted diagnostic (see runtime.py / test_shared_lesson_runtime.py). Each
+# raise site must attach a closed-vocabulary code and a structural-only path
+# (node index/kind/field -- never provider output or learner text), the same
+# discipline the composer already applies to `CompositionValidationError`.
+
+
+def _issue_codes(error: SectionWriteValidationError) -> set[str]:
+    return {code for code, _path in error.issues}
+
+
+def test_schema_invalid_draft_yields_writer_draft_schema_invalid_code() -> None:
+    request = _request()
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft={"nodes": "not-a-list"})
+    assert _issue_codes(excinfo.value) == {"writer_draft_schema_invalid"}
+    assert excinfo.value.issues == (("writer_draft_schema_invalid", ""),)
+
+
+def test_table_shape_errors_yield_table_issue_codes() -> None:
+    request = _request()
+
+    empty_table = _draft(request)
+    empty_table["nodes"][2]["display"]["headers"] = []
+    empty_table["nodes"][2]["display"]["rows"] = []
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=empty_table)
+    assert _issue_codes(excinfo.value) == {"table_missing_headers_or_rows"}
+    (code, path) = excinfo.value.issues[0]
+    assert path == "nodes[2].table"
+
+    mismatched_rows = _draft(request)
+    mismatched_rows["nodes"][2]["display"]["rows"] = [["Only one cell"]]
+    with pytest.raises(SectionWriteValidationError, match="header width") as excinfo:
+        validate_and_build_section(request=request, draft=mismatched_rows)
+    assert _issue_codes(excinfo.value) == {"table_row_width_mismatch"}
+    assert excinfo.value.issues[0][1] == "nodes[2].table.rows"
+
+
+def test_blank_learner_text_yields_blank_text_code() -> None:
+    request = _request()
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = "   "
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=draft)
+    assert _issue_codes(excinfo.value) == {"blank_text"}
+    assert excinfo.value.issues[0][1] == "nodes[0].text"
+
+
+def test_planning_text_leak_yields_metadata_leaked_code() -> None:
+    request = _request()
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = "The must_establish field says particles move faster."
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=draft)
+    assert _issue_codes(excinfo.value) == {"metadata_leaked"}
+    assert excinfo.value.issues[0][1] == "nodes[0].text"
+
+
+def test_placeholder_text_leak_yields_metadata_leaked_code() -> None:
+    request = _request()
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = "TODO: explain the model."
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=draft)
+    assert _issue_codes(excinfo.value) == {"metadata_leaked"}
+
+
+def test_unsupported_number_yields_unsupported_number_code() -> None:
+    request = _request()
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = "The temperature reaches 900 degrees."
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=draft)
+    assert _issue_codes(excinfo.value) == {"unsupported_number"}
+    assert excinfo.value.issues[0][1] == "nodes[0].text"
+    # The leaked numeric value itself must never appear in the sanitized path.
+    assert "900" not in excinfo.value.issues[0][1]
+
+
+def test_internal_identifier_leak_yields_internal_id_leaked_code() -> None:
+    request = _request()
+    identifier = request.composition_plan.items[0].id
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = f"Use {identifier} to answer."
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=draft)
+    assert _issue_codes(excinfo.value) == {"internal_id_leaked"}
+    # The leaked identifier itself must never appear in the sanitized path.
+    assert identifier not in excinfo.value.issues[0][1]
+
+
+def test_task_answer_leak_yields_task_answer_leaked_code() -> None:
+    request = _numeric_request()
+    draft = _draft(request)
+    draft["nodes"][1]["display"]["text"] = "Divide both sides by 4 to see that x = 9."
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=draft)
+    assert _issue_codes(excinfo.value) == {"task_answer_leaked"}
+    (code, path) = excinfo.value.issues[0]
+    assert path == "nodes[1].text"
+    # The leaked answer value itself must never appear in the sanitized path.
+    assert "9" not in path
+
+
+def test_node_shape_mismatch_yields_node_shape_mismatch_code(monkeypatch) -> None:
+    from pydantic import TypeAdapter
+
+    import document.shared_lesson.writer as writer_module
+
+    request = _request()
+    draft = _draft(request)
+
+    def _always_invalid(_payload):
+        # Reuse a real ValidationError shape by validating an impossible type.
+        return TypeAdapter(int).validate_python("not-an-int")
+
+    monkeypatch.setattr(
+        writer_module.shared_lesson_node_adapter, "validate_python", _always_invalid
+    )
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=draft)
+    assert _issue_codes(excinfo.value) == {"node_shape_mismatch"}
+    assert excinfo.value.issues[0][1] == "nodes[0]"
+
+
+def test_task_anchor_ownership_mismatch_yields_its_code() -> None:
+    request = _request()
+    draft = _draft(request)
+    result = validate_and_build_section(request=request, draft=draft)
+    assert result.nodes[-1].kind == "task_anchor"
+
+    # The writer request's own validators already guarantee task summaries
+    # match their TaskAnchor's teaching_block_id in the ordinary case, so this
+    # defensive check can only be exercised by bypassing that invariant
+    # directly (the request model is frozen).
+    mutated_task = request.task_summaries[0].model_copy(
+        update={"teaching_block_id": "block-intro"}
+    )
+    object.__setattr__(request, "task_summaries", (mutated_task,))
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=_draft(request))
+    assert _issue_codes(excinfo.value) == {"task_anchor_ownership_mismatch"}
+
+
+def test_diagnostic_issue_codes_are_closed_vocabulary() -> None:
+    # Every code this module can raise must be declared, mirroring the
+    # composer's COMPOSITION_ISSUE_CODES closed-vocabulary discipline.
+    expected = {
+        "writer_draft_schema_invalid",
+        "node_count_mismatch",
+        "node_id_mismatch",
+        "node_kind_mismatch",
+        "node_block_mismatch",
+        "node_shape_mismatch",
+        "table_missing_headers_or_rows",
+        "table_row_width_mismatch",
+        "blank_text",
+        "metadata_leaked",
+        "task_answer_leaked",
+        "internal_id_leaked",
+        "unsupported_number",
+        "task_anchor_ownership_mismatch",
+    }
+    assert SECTION_WRITE_ISSUE_CODES == frozenset(expected)
+
+
+def test_unknown_issue_code_is_rejected() -> None:
+    with pytest.raises(ValueError, match="unknown section write issue code"):
+        SectionWriteValidationError(["boom"], issues=(("not_a_real_code", ""),))

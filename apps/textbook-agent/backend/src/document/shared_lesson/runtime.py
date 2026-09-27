@@ -288,7 +288,7 @@ async def _record_execution_failure(
         ),
     )
     safe_payload: dict[str, Any] = {"original_exception_type": type(error).__name__}
-    if isinstance(error, CompositionValidationError):
+    if isinstance(error, (CompositionValidationError, SectionWriteValidationError)):
         safe_payload["validation_issue_codes"] = sorted({code for code, _path in error.issues})[
             :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
         ]
