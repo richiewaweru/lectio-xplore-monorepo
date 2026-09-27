@@ -1353,3 +1353,49 @@ async def test_mixed_run_with_one_ineligible_failed_leaf_is_not_retried(db_sessi
     refreshed_item = await db_session.get(GenerationWorkItemModel, item.id)
     assert refreshed_run is not None and refreshed_run.status == "failed_recoverable"
     assert refreshed_item is not None and refreshed_item.status == "failed_recoverable"
+
+
+@pytest.mark.asyncio
+async def test_blocked_post_section_with_active_leaf_is_backed_off_not_looped(
+    db_session, monkeypatch
+):
+    """Regression: a blocked post-section Run with a still-queued leaf was
+    re-picked every iteration, starving every other Run."""
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, _task = await _ready_semantic_dependencies(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-post-blocked-active",
+    )
+    run_id = admission.run.id
+    await _ready_section_leaves_for_post_pipeline(db_session, admission)
+    db_session.add(
+        GenerationWorkItemModel(
+            run_id=run_id,
+            item_key="boundary:orient->practice",
+            stage="continuity_validation",
+            status="queued",
+            input_hash="i" * 64,
+            definition_hash="d" * 64,
+        )
+    )
+    await db_session.commit()
+    _bind_source_context(monkeypatch, source)
+    calls = []
+
+    async def pipeline(_session_factory, **kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(state="blocked", stage="boundaries", error="stale inputs")
+
+    monkeypatch.setattr(worker, "run_post_section_pipeline", pipeline)
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-post-blocked-active")
+
+    assert await instance.run_one(db_session)
+    assert await instance.run_one(db_session) is False
+    assert len(calls) == 1
+    run = await db_session.get(GenerationRunModel, run_id)
+    assert run is not None
+    await db_session.refresh(run)
+    assert run.status != "failed_terminal"

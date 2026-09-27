@@ -292,6 +292,10 @@ class SharedDocumentWorker:
                         outcome.stage,
                         outcome.error,
                     )
+                    # A blocked Run that still has active leaves cannot be
+                    # terminalized yet; back it off so it cannot monopolise
+                    # the worker loop and starve other queued Runs.
+                    self._mark_dispatch_failure(pipeline_run_id, current)
                     await self._terminalize_blocked_post_section(
                         session,
                         run_id=pipeline_run_id,
