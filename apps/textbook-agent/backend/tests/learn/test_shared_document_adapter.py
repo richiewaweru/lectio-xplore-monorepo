@@ -312,6 +312,35 @@ def test_rubric_text_task_maps_to_teacher_review_in_three_anchor_document() -> N
     assert ordinary.text == "Shared authored prose."
 
 
+def test_rubric_string_is_preserved_verbatim_as_teacher_review_guidance() -> None:
+    rubric = "Assess the explanation against the approved evidence and reasoning rubric."
+    rubric_task = _task(task_id="task-2", response_type="text").model_copy(
+        update={"evaluation": {"type": "rubric", "criteria": rubric}}
+    )
+    stored = _stored(second_task=rubric_task)
+
+    result = realize_shared_document_for_learn(
+        stored,
+        expected_identity=_identity(stored),
+        subject="Science",
+    )
+    interaction = next(node for node in result.document.nodes if node.id == "anchor-2")
+
+    assert interaction.config["evaluation"] == "teacher-review"
+    assert interaction.config["review_guidance"] == rubric
+    assert interaction.config["rubric_criteria"] == rubric
+    evaluation = evaluate_interaction(
+        {
+            "kind": interaction.interaction_type,
+            "config": interaction.config,
+            "feedback": interaction.feedback,
+        },
+        {"text": "The learner's response."},
+    )
+    assert evaluation.outcome == "pending-review"
+    assert evaluation.details["review_guidance"] == rubric
+
+
 @pytest.mark.parametrize("criteria", [[], ["   "], ["valid", 3]])
 def test_rubric_text_task_rejects_empty_or_invalid_criteria(criteria) -> None:
     rubric_task = _task(task_id="task-2", response_type="text").model_copy(
