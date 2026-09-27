@@ -824,6 +824,7 @@ async def test_media_batch_waits_for_siblings_before_closing_sessions_on_claim_c
         def __init__(self, item_id: str) -> None:
             self.item_id = item_id
             self.commits = 0
+            self.rollbacks = 0
 
         async def __aenter__(self):
             return self
@@ -832,13 +833,15 @@ async def test_media_batch_waits_for_siblings_before_closing_sessions_on_claim_c
             # The real dispatcher exits its AsyncExitStack only after the batch
             # function returns. No media task may still be touching a session.
             assert finished == {"unavailable", "slow-sibling", "healthy-sibling"}
-            if self.commits == 0:
-                rolled_back.append(self.item_id)
             closed.append(self.item_id)
             return False
 
         async def commit(self) -> None:
             self.commits += 1
+
+        async def rollback(self) -> None:
+            self.rollbacks += 1
+            rolled_back.append(self.item_id)
 
     sessions = {
         item_id: TrackedSession(item_id)
@@ -897,6 +900,7 @@ async def test_media_batch_waits_for_siblings_before_closing_sessions_on_claim_c
         "media_claim_unavailable"
     )
     assert sessions["unavailable"].commits == 0
+    assert sessions["unavailable"].rollbacks == 1
     assert sessions["slow-sibling"].commits == 1
     assert sessions["healthy-sibling"].commits == 1
     assert not {"slow-sibling", "healthy-sibling"} & set(rolled_back)
@@ -957,3 +961,80 @@ async def test_media_batch_propagates_unexpected_error_after_committing_sibling(
     assert sibling_finished.is_set()
     assert failing_session.commits == 0
     assert sibling_session.commits == 1
+
+
+@pytest.mark.asyncio
+async def test_handled_provider_failure_is_committed_before_sibling_exception(
+    db_session,
+    db_session_factory,
+    monkeypatch,
+) -> None:
+    owner, run_id = await _seed_run(db_session, suffix="batch-handled-failure")
+    failed_work = _work(suffix="batch-provider-timeout")
+    error_work = _work(suffix="batch-unexpected-error")
+    failed_admission = await admit_figure_media_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=SOURCE,
+        work=failed_work,
+        accepted_section=_accepted_for(failed_work),
+    )
+    error_admission = await admit_figure_media_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=SOURCE,
+        work=error_work,
+        accepted_section=_accepted_for(error_work),
+    )
+    await db_session.commit()
+
+    class TimeoutExecutor:
+        async def execute_figure(self, _order):
+            raise TimeoutError
+
+    failed_session = db_session_factory()
+    error_session = db_session_factory()
+    jobs = (
+        MediaWorkItemJob(
+            session=failed_session,
+            work_item_id=failed_admission.record.id,
+            worker_id="media-batch",
+            source=SOURCE,
+            work=failed_work,
+            accepted_section=_accepted_for(failed_work),
+            executor=TimeoutExecutor(),
+        ),
+        MediaWorkItemJob(
+            session=error_session,
+            work_item_id=error_admission.record.id,
+            worker_id="media-batch",
+            source=SOURCE,
+            work=error_work,
+            accepted_section=_accepted_for(error_work),
+            executor=SimpleNamespace(),
+        ),
+    )
+    original_execute = media_runtime.execute_figure_media_work_item
+
+    async def execute(job: MediaWorkItemJob) -> MediaRuntimeOutcome:
+        if job.work_item_id == error_admission.record.id:
+            raise RuntimeError("database operation failed")
+        return await original_execute(job)
+
+    monkeypatch.setattr(media_runtime, "execute_figure_media_work_item", execute)
+    async with AsyncExitStack() as stack:
+        for job in jobs:
+            await stack.enter_async_context(job.session)
+        with pytest.raises(RuntimeError, match="database operation failed"):
+            await execute_figure_media_work_items(jobs, concurrency=2)
+
+    async with db_session_factory() as verifier:
+        failed_row = await verifier.get(GenerationWorkItemModel, failed_admission.record.id)
+        error_row = await verifier.get(GenerationWorkItemModel, error_admission.record.id)
+    assert failed_row is not None
+    assert failed_row.status == "failed_recoverable"
+    assert failed_row.error_code == "media_provider_transport"
+    assert error_row is not None
+    assert error_row.status == "queued"

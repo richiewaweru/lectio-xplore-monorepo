@@ -648,12 +648,14 @@ async def execute_figure_media_work_items(
             try:
                 outcome = await execute_figure_media_work_item(job)
             except LeaseLostError:
+                await job.session.rollback()
                 return MediaRuntimeOutcome(
                     work_item_id=job.work_item_id,
                     error_code="media_lease_lost",
                     error_summary="Figure worker lease was lost before commit.",
                 )
             except WorkItemUnavailable:
+                await job.session.rollback()
                 # A competing claimant may have the row lock, or the item may
                 # have changed state after this batch was assembled. Keep this
                 # item pending for the normal next worker pass; this is not a
@@ -664,6 +666,7 @@ async def execute_figure_media_work_items(
                     error_summary="Figure media work was not available to claim.",
                 )
             except MediaRuntimeError as exc:
+                await job.session.rollback()
                 return MediaRuntimeOutcome(
                     work_item_id=job.work_item_id,
                     error_code="media_contract_failure",
