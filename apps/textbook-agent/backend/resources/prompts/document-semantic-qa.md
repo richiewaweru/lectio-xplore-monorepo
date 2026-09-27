@@ -45,6 +45,10 @@ defect does not fit one of these, do not report it.
   answer to a task before or around its `task_anchor`, undermining the task's
   `evaluation`. Compare the surrounding prose against the task's `response`
   and `evaluation` to decide whether the answer has been given away.
+  Task `response` payloads are stored in canonical (answer) order — for
+  example the items of an ordering task or the pairs of a matching task.
+  Learn and Print shuffle them when presenting, so the stored order of a
+  task's own items is never leakage; judge only the learner-facing prose.
 - `assessment_duplicates_example` — an assessment-mode task (`mode:
   "assessment"`) reuses the same values, numbers, or stem as an earlier
   worked example in the document, so the assessment no longer tests
