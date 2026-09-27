@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
 from typing import Any
@@ -29,14 +30,19 @@ from document.shared_lesson.media import (
     verify_bound_durable_media,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument, SharedSection
-from document.shared_lesson.qa import DocumentQAResult
+from document.shared_lesson.qa import DocumentQAResult, qa_shared_lesson_document
 from document.shared_lesson.qa_runtime import (
+    DOCUMENT_QA_STAGE,
     DocumentQAOutcome,
     DocumentQAWorkItemJob,
     VerifiedDocumentQA,
     admit_document_qa_work_item,
     execute_document_qa_work_item,
     load_verified_document_qa,
+)
+from document.shared_lesson.repository import (
+    SharedLessonDocumentRepositoryError,
+    load_shared_lesson_document,
 )
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
 from infra.database.models import GenerationWorkItemModel
@@ -416,8 +422,144 @@ async def dispatch_shared_document_qa(
     )
 
 
+async def dispatch_reviewed_document_qa(
+    session_factory: Callable[[], Any],
+    *,
+    run_id: str,
+    owner_user_id: str,
+    path_lesson_id: str,
+    source: TeachingPlanSource,
+    leaf: GenerationWorkItemModel,
+    compositions: Mapping[str, SectionCompositionPlan] | Sequence[SectionCompositionPlan],
+    required_media_by_section: Mapping[str, Sequence[str]] | None = None,
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
+    semantic_validator: DocumentSemanticValidator | None = None,
+    worker_id: str = "shared-document-qa-dispatcher",
+) -> SharedDocumentQADispatchResult:
+    """Execute (or load) an already-admitted reviewer-repair QA replacement.
+
+    Unlike :func:`dispatch_shared_document_qa`, this never re-assembles the
+    document from durable writer/composer outputs.  ``leaf`` must be the
+    active document QA WorkItem admitted by
+    ``admit_repaired_document_qa_work_item`` for one reviewer-edited draft
+    revision; this loads and revalidates that exact stored revision by the
+    identity bound in the leaf's own composition identity, recomputes
+    deterministic QA against it, and only then executes (or reloads) the
+    already-admitted semantic QA leaf.
+    """
+    if not run_id.strip() or not owner_user_id.strip() or not path_lesson_id.strip():
+        raise ValueError("run_id, owner_user_id, and path_lesson_id must be non-empty")
+    try:
+        identity = verify_teaching_plan_source(source)
+    except ValueError as exc:
+        raise SharedDocumentQADispatchError("approved Teaching Plan source is invalid") from exc
+    if leaf.stage != DOCUMENT_QA_STAGE or leaf.replaces_work_item_id is None:
+        raise SharedDocumentQADispatchError(
+            "leaf is not an admitted document QA review replacement"
+        )
+
+    try:
+        bound = json.loads(leaf.composition_identity)
+        document_id = bound["document_id"]
+        document_revision = bound["document_revision"]
+        document_hash = bound["document_hash"]
+        if not isinstance(document_id, str) or not isinstance(document_revision, int):
+            raise ValueError("bound document identity is malformed")
+        if not isinstance(document_hash, str) or len(document_hash) != 64:
+            raise ValueError("bound document hash is malformed")
+    except (TypeError, ValueError, KeyError) as exc:
+        raise SharedDocumentQADispatchError(
+            "review replacement composition identity is invalid"
+        ) from exc
+
+    async with session_factory() as load_session:
+        try:
+            stored = await load_shared_lesson_document(
+                load_session,
+                document_id=document_id,
+                revision=document_revision,
+                path_lesson_id=path_lesson_id,
+            )
+        except SharedLessonDocumentRepositoryError as exc:
+            raise SharedDocumentQADispatchError(
+                "review replacement draft revision is unavailable"
+            ) from exc
+    document = stored.document
+    if document.content_hash != document_hash:
+        raise SharedDocumentQADispatchError("review replacement draft revision is stale")
+    if (
+        document.teaching_plan_id,
+        document.teaching_plan_revision,
+        document.teaching_plan_hash,
+    ) != (identity.source_artifact_id, identity.source_revision, identity.source_hash):
+        raise SharedDocumentQADispatchError(
+            "review replacement draft lineage differs from the approved Teaching Plan"
+        )
+
+    composition_by_section = (
+        dict(compositions)
+        if isinstance(compositions, Mapping)
+        else {item.section_slot_id: item for item in compositions}
+    )
+    deterministic_qa = qa_shared_lesson_document(
+        document=document,
+        teaching_plan_sections=tuple(source.plan.sections),
+        expected_shapes=_expected_shapes(composition_by_section),
+        expected_title=source.plan.learner_title,
+        approved_source_ids=_approved_source_ids(source),
+        required_media_by_section=required_media_by_section,
+        available_media_ids=tuple(result.figure_node_id for result in media_results),
+    )
+    if not deterministic_qa.ready:
+        raise SharedDocumentQADispatchError(
+            "deterministic document QA failed for the review replacement: "
+            + ", ".join(issue.issue_code for issue in deterministic_qa.issues)
+        )
+
+    if leaf.status == "queued":
+        async with session_factory() as execution_session:
+            outcome: DocumentQAOutcome = await execute_document_qa_work_item(
+                DocumentQAWorkItemJob(
+                    session=execution_session,
+                    work_item_id=leaf.id,
+                    worker_id=worker_id,
+                    owner_user_id=owner_user_id,
+                    source=source,
+                    document=document,
+                    deterministic_qa=deterministic_qa,
+                    semantic_validator=semantic_validator,
+                )
+            )
+            await execution_session.commit()
+        if outcome.qa is None:
+            raise SharedDocumentQADispatchError(
+                outcome.error_summary or "review replacement document QA did not produce a PASS"
+            )
+    elif leaf.status != "ready":
+        raise SharedDocumentQADispatchError(
+            f"review replacement document QA is not dispatchable from {leaf.status!r}"
+        )
+
+    async with session_factory() as verify_session:
+        verified = await load_verified_document_qa(
+            verify_session,
+            run_id=run_id,
+            owner_user_id=owner_user_id,
+            source=source,
+            document=document,
+        )
+    return SharedDocumentQADispatchResult(
+        run_id=run_id,
+        work_item_id=verified.work_item_id,
+        document=document,
+        deterministic_qa=deterministic_qa,
+        verified_qa=verified,
+    )
+
+
 __all__ = [
     "SharedDocumentQADispatchError",
     "SharedDocumentQADispatchResult",
+    "dispatch_reviewed_document_qa",
     "dispatch_shared_document_qa",
 ]

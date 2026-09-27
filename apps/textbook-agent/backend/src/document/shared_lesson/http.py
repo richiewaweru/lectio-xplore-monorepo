@@ -26,18 +26,20 @@ from document.shared_lesson.review_revision import (
     ReviewRevisionValidationError,
     prove_review_draft_revision,
 )
+from document.shared_lesson.review_submit import (
+    ReviewSubmitConflict,
+    ReviewSubmitError,
+    ReviewSubmitInvalid,
+    ReviewSubmitNotFound,
+    load_review_draft_context,
+    submit_review_draft_for_requalification,
+)
 from document.shared_lesson.run_admission import (
     SharedRunAdmissionError,
     admit_shared_document_run,
 )
 from infra.auth.middleware import get_current_user
-from infra.database.models import (
-    GenerationBuildModel,
-    GenerationEventModel,
-    GenerationRunModel,
-    SharedLessonDocumentModel,
-    GenerationWorkItemModel,
-)
+from infra.database.models import GenerationBuildModel, GenerationRunModel
 from infra.database.session import get_async_session
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime.http import _run_status
@@ -242,106 +244,13 @@ async def _load_review_draft_context(
     session: AsyncSession, *, run_id: str, owner_user_id: str
 ) -> tuple[GenerationRunModel, str, SharedLessonDocument, list[ContinuityIssue]]:
     """Resolve the immutable semantic-issue origin and its latest saved revision."""
-    run_row = await session.execute(
-        select(GenerationRunModel, GenerationBuildModel.path_lesson_id)
-        .join(GenerationBuildModel, GenerationBuildModel.id == GenerationRunModel.build_id)
-        .where(
-            GenerationRunModel.id == run_id,
-            GenerationRunModel.owner_user_id == owner_user_id,
-            GenerationBuildModel.owner_user_id == owner_user_id,
-            GenerationRunModel.run_type == "shared_document",
-            GenerationRunModel.status != "ready",
-        )
-    )
-    candidate = run_row.one_or_none()
-    if candidate is None:
-        raise _not_found()
-    run, path_lesson_id = candidate
-
-    event = await session.scalar(
-        select(GenerationEventModel)
-        .join(
-            GenerationWorkItemModel,
-            GenerationWorkItemModel.id == GenerationEventModel.work_item_id,
-        )
-        .where(
-            GenerationEventModel.run_id == run.id,
-            GenerationEventModel.event_type == "document_qa_semantic_issues",
-            GenerationEventModel.error_code == "document_qa_semantic_issue",
-            GenerationWorkItemModel.run_id == run.id,
-            GenerationWorkItemModel.stage == "document_qa",
-            GenerationWorkItemModel.status == "failed_recoverable",
-        )
-        .order_by(GenerationEventModel.seq.desc())
-    )
-    if event is None or not isinstance(event.safe_payload_json, dict):
-        raise _not_found()
-
-    payload = event.safe_payload_json
     try:
-        document_id = payload["document_id"]
-        origin_revision = payload["document_revision"]
-        digest = payload["document_hash"]
-        if not isinstance(document_id, str) or not isinstance(origin_revision, int):
-            raise ValueError("document identity is malformed")
-        if not isinstance(digest, str) or len(digest) != 64:
-            raise ValueError("document hash is malformed")
-        issues = [ContinuityIssue.model_validate(issue) for issue in payload["issues"]]
-        if not issues:
-            raise ValueError("semantic issue list is empty")
-        origin = await load_shared_lesson_document(
-            session,
-            document_id=document_id,
-            revision=origin_revision,
-            path_lesson_id=path_lesson_id,
+        context = await load_review_draft_context(
+            session, run_id=run_id, owner_user_id=owner_user_id
         )
-    except (KeyError, TypeError, ValueError, SharedLessonDocumentRepositoryError):
+    except ReviewSubmitError:
         raise _not_found() from None
-
-    original_document = origin.document
-    expected_origin_storage_hash = content_hash(original_document.model_dump(mode="json"))
-    if (
-        origin.status != "draft"
-        or original_document.teaching_plan_id != run.source_artifact_id
-        or original_document.teaching_plan_revision != run.source_revision
-        or original_document.teaching_plan_hash != run.source_hash
-        or shared_lesson_content_hash(original_document) != digest
-        or original_document.content_hash != digest
-        or origin.storage_hash != expected_origin_storage_hash
-    ):
-        raise _not_found()
-
-    latest_revision = await session.scalar(
-        select(SharedLessonDocumentModel.revision)
-        .where(
-            SharedLessonDocumentModel.id == document_id,
-            SharedLessonDocumentModel.path_lesson_id == path_lesson_id,
-            SharedLessonDocumentModel.status == "draft",
-        )
-        .order_by(SharedLessonDocumentModel.revision.desc())
-        .limit(1)
-    )
-    if latest_revision is None:
-        raise _not_found()
-    try:
-        latest = await load_shared_lesson_document(
-            session,
-            document_id=document_id,
-            revision=latest_revision,
-            path_lesson_id=path_lesson_id,
-        )
-    except SharedLessonDocumentRepositoryError:
-        raise _not_found() from None
-    document = latest.document
-    if (
-        latest.status != "draft"
-        or document.teaching_plan_id != run.source_artifact_id
-        or document.teaching_plan_revision != run.source_revision
-        or document.teaching_plan_hash != run.source_hash
-        or latest.storage_hash != content_hash(document.model_dump(mode="json"))
-    ):
-        raise _not_found()
-    return run, path_lesson_id, document, issues
+    return context.run, context.path_lesson_id, context.latest, list(context.issues)
 
 
 @router.get("/runs/{run_id}/review-draft")
@@ -453,11 +362,71 @@ async def post_shared_document_review_draft_revision(
     )
 
 
+class ReviewDraftSubmitRequest(BaseModel):
+    """Closed optimistic-concurrency request to requalify the latest draft."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    expected_revision: int = Field(ge=1)
+    expected_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+@router.post("/runs/{run_id}/review-draft/submit", status_code=202)
+async def post_shared_document_review_draft_submit(
+    run_id: str,
+    body: ReviewDraftSubmitRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    """Revalidate the latest saved draft and admit it for requalification.
+
+    This never calls the semantic QA provider inline. It proves the saved
+    edits are allowlisted text-only corrections, rejects any edit that
+    touched a figure-containing section (the figure's media binding is keyed
+    to the original section output hash and would go stale), recomputes
+    deterministic QA, and admits a linked document QA replacement in the same
+    transaction. The existing post-section pipeline then executes semantic QA
+    against this exact edited revision and finalizes it on PASS.
+    """
+    try:
+        async with session.begin():
+            outcome = await submit_review_draft_for_requalification(
+                session,
+                run_id=run_id,
+                owner_user_id=current_user.id,
+                expected_revision=body.expected_revision,
+                expected_hash=body.expected_hash,
+            )
+    except ReviewSubmitNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    except ReviewSubmitConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except ReviewSubmitInvalid as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except Exception as exc:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail="Review draft submission failed") from exc
+
+    run = await get_run_status(session, run_id=run_id, owner_user_id=current_user.id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="SharedDocument Run not found")
+    status = _run_status(run)
+    return {
+        **status,
+        "run_id": run_id,
+        "document_id": outcome.document_id,
+        "document_revision": outcome.document_revision,
+        "work_item_id": outcome.work_item_id,
+    }
+
+
 __all__ = [
+    "ReviewDraftSubmitRequest",
     "SharedDocumentAdmissionRequest",
     "get_shared_document_preview",
     "get_shared_document_review_draft",
     "post_shared_document_review_draft_revision",
+    "post_shared_document_review_draft_submit",
     "post_shared_document_generation",
     "router",
 ]

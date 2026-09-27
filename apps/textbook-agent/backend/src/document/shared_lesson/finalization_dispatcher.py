@@ -30,6 +30,7 @@ from document.shared_lesson.finalizer import (
     _verify_document_qa_matches_handoff,
     _verify_durable_inputs_match_handoff,
     finalize_shared_lesson_document,
+    resolve_review_structural_document,
 )
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import (
@@ -222,8 +223,13 @@ async def finalize_shared_lesson_document_for_run(
             tasks=semantic.tasks,
             sources=sources,
         )
-        _verify_durable_inputs_match_handoff(
+        structural_document = await resolve_review_structural_document(
+            session,
+            path_lesson_id=path_lesson_id,
             document=handoff.document,
+        )
+        _verify_durable_inputs_match_handoff(
+            document=structural_document,
             tasks=semantic.tasks,
             verified_inputs=accepted,
             handoff_expected_shapes=handoff.expected_shapes,
@@ -232,7 +238,7 @@ async def finalize_shared_lesson_document_for_run(
         all_items, active_items = await _active_run_items(session, run_id=run_id)
         _verify_boundary_coverage(
             source=source,
-            document=handoff.document,
+            document=structural_document,
             verified_inputs=accepted,
             active_items=active_items,
             all_items=all_items,

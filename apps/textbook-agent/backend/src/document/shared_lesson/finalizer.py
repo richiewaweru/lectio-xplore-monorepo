@@ -52,9 +52,15 @@ from document.shared_lesson.qa_runtime import (
     load_verified_document_qa,
 )
 from document.shared_lesson.repository import (
+    SharedLessonDocumentRepositoryError,
     StoredSharedLessonDocument,
+    load_shared_lesson_document,
     promote_shared_lesson_document,
     save_shared_lesson_document,
+)
+from document.shared_lesson.review_revision import (
+    ReviewRevisionValidationError,
+    prove_review_draft_chain,
 )
 from document.shared_lesson.runtime import (
     TeachingPlanSource,
@@ -78,6 +84,7 @@ from infra.generation_runtime import (
     RunFinalization,
     SourceIdentity,
     active_work_items,
+    append_event,
     finalize_run,
 )
 from infra.generation_runtime.repository import ArtifactLoader, SourceVerifier
@@ -252,6 +259,56 @@ def _json_equal(left: Any, right: Any) -> bool:
     if hasattr(right, "model_dump"):
         right = right.model_dump(mode="json")
     return left == right
+
+
+async def resolve_review_structural_document(
+    session: AsyncSession,
+    *,
+    path_lesson_id: str,
+    document: SharedLessonDocument,
+) -> SharedLessonDocument:
+    """Return the writer-composed structural document backing ``document``.
+
+    For the unedited revision-1 path this is ``document`` itself.  For a
+    reviewer-edited revision this walks and revalidates the immutable
+    save-time proof chain back to revision 1 -- reproving every adjacent pair
+    exactly as ``review-draft/revisions`` did when it was saved -- and
+    requires that no figure-containing section was ever touched anywhere in
+    the chain.  Only a proven pure-text correction may reach READY; the
+    returned revision-1 document is the one durable writer/boundary evidence
+    must still match.
+    """
+    if document.revision == 1:
+        return document
+    chain: list[SharedLessonDocument] = []
+    for revision in range(1, document.revision + 1):
+        try:
+            stored = await load_shared_lesson_document(
+                session,
+                document_id=document.id,
+                revision=revision,
+                path_lesson_id=path_lesson_id,
+            )
+        except SharedLessonDocumentRepositoryError as exc:
+            raise SharedLessonFinalizationError(
+                f"review revision chain is missing revision {revision}"
+            ) from exc
+        chain.append(stored.document)
+    if chain[-1].content_hash != document.content_hash:
+        raise SharedLessonFinalizationError(
+            "requested review revision differs from its stored draft"
+        )
+    try:
+        proof = prove_review_draft_chain(chain)
+    except ReviewRevisionValidationError as exc:
+        raise SharedLessonFinalizationError(
+            f"review revision chain failed proof: {exc}"
+        ) from exc
+    if proof.figure_section_ids:
+        raise SharedLessonFinalizationError(
+            "review revision edited a figure-containing section and cannot be finalized"
+        )
+    return chain[0]
 
 
 def _verify_durable_inputs_match_handoff(
@@ -876,15 +933,20 @@ async def finalize_shared_lesson_document(
             raise SharedLessonFinalizationError(
                 "durable composer/writer outputs failed shared lesson input verification"
             ) from exc
-        _verify_durable_inputs_match_handoff(
+        structural_document = await resolve_review_structural_document(
+            session,
+            path_lesson_id=request.path_lesson_id,
             document=request.handoff.document,
+        )
+        _verify_durable_inputs_match_handoff(
+            document=structural_document,
             tasks=request.tasks,
             verified_inputs=verified_inputs,
             handoff_expected_shapes=request.handoff.expected_shapes,
         )
         _verify_boundary_coverage(
             source=request.source,
-            document=request.handoff.document,
+            document=structural_document,
             verified_inputs=verified_inputs,
             active_items=active_items,
             all_items=locked_items,
@@ -952,6 +1014,16 @@ async def finalize_shared_lesson_document(
             required_media_by_section=request.required_media_by_section,
             media_results=request.media_results,
         )
+        if document.revision != 1:
+            await append_event(
+                session,
+                run_id=request.run_id,
+                event_type="review_revision_promoted",
+                safe_payload={
+                    "document_revision": document.revision,
+                    "content_hash": document.content_hash,
+                },
+            )
         finalized = await finalize_run(
             session,
             run_id=request.run_id,

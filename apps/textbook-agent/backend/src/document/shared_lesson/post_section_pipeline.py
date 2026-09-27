@@ -27,6 +27,7 @@ from document.shared_lesson.composer import SectionCompositionPlan
 from document.shared_lesson.document_qa_dispatcher import (
     SharedDocumentQADispatchError,
     SharedDocumentQADispatchResult,
+    dispatch_reviewed_document_qa,
     dispatch_shared_document_qa,
 )
 from document.shared_lesson.figure_executor_adapter import SharedFigureExecutorAdapter
@@ -37,11 +38,12 @@ from document.shared_lesson.finalization_dispatcher import (
     _durable_media_results,
     finalize_shared_lesson_document_for_run,
 )
-from document.shared_lesson.handoff import SharedLessonHandoffError
+from document.shared_lesson.handoff import SharedLessonHandoffError, SharedLessonHandoffEvidence
 from document.shared_lesson.handoff_dispatcher import (
     SharedDocumentHandoffDispatchError,
     handoff_qa_dispatch_result,
 )
+from document.shared_lesson.qa_runtime import DOCUMENT_QA_STAGE
 from document.shared_lesson.media import SharedFigureMediaError
 from document.shared_lesson.media_dispatcher import (
     SharedMediaDispatcher,
@@ -325,32 +327,69 @@ async def run_post_section_pipeline(
             document=draft.document,
             active_items=active_items,
         )
-        qa_result: SharedDocumentQADispatchResult = await dispatch_shared_document_qa(
-            session_factory,
-            run_id=run_id,
-            owner_user_id=owner_user_id,
-            source=source,
-            compositions=compositions,
-            sections=sections,
-            tasks=tasks,
-            document_id=document_id,
-            document_revision=1,
-            created_at=created_at,
-            provenance=draft.document.provenance,
-            required_media_by_section=required_media,
-            media_results=media_results,
-            semantic_validator=qa_semantic_validator,
-            worker_id=f"{worker_id}:qa",
+        review_leaf = next(
+            (
+                item
+                for item in active_items
+                if item.stage == DOCUMENT_QA_STAGE and item.replaces_work_item_id is not None
+            ),
+            None,
         )
-        handoff = await handoff_qa_dispatch_result(
-            qa_result,
-            source=source,
-            compositions=compositions,
-            sections=sections,
-            tasks=tasks,
-            required_media_by_section=required_media,
-            media_results=media_results,
-        )
+        if review_leaf is not None:
+            # A reviewer already saved and submitted a text-only correction for
+            # a prior semantic ISSUE. Execute (or reload) that exact admitted
+            # replacement bound to the edited draft revision; never re-assemble
+            # a fresh revision-1 document over the reviewer's edits.
+            qa_result = await dispatch_reviewed_document_qa(
+                session_factory,
+                run_id=run_id,
+                owner_user_id=owner_user_id,
+                path_lesson_id=path_lesson_id,
+                source=source,
+                leaf=review_leaf,
+                compositions=compositions,
+                required_media_by_section=required_media,
+                media_results=media_results,
+                semantic_validator=qa_semantic_validator,
+                worker_id=f"{worker_id}:qa",
+            )
+            handoff = SharedLessonHandoffEvidence(
+                status="ready",
+                document=qa_result.document,
+                deterministic_qa=qa_result.deterministic_qa,
+                semantic_qa=qa_result.verified_qa.semantic_qa,
+                expected_shapes=_expected_shapes(compositions),
+                teaching_plan_id=source.id,
+                teaching_plan_revision=source.revision,
+                teaching_plan_hash=source.content_hash,
+            )
+        else:
+            qa_result: SharedDocumentQADispatchResult = await dispatch_shared_document_qa(
+                session_factory,
+                run_id=run_id,
+                owner_user_id=owner_user_id,
+                source=source,
+                compositions=compositions,
+                sections=sections,
+                tasks=tasks,
+                document_id=document_id,
+                document_revision=1,
+                created_at=created_at,
+                provenance=draft.document.provenance,
+                required_media_by_section=required_media,
+                media_results=media_results,
+                semantic_validator=qa_semantic_validator,
+                worker_id=f"{worker_id}:qa",
+            )
+            handoff = await handoff_qa_dispatch_result(
+                qa_result,
+                source=source,
+                compositions=compositions,
+                sections=sections,
+                tasks=tasks,
+                required_media_by_section=required_media,
+                media_results=media_results,
+            )
     except (
         ApprovedSourceVerificationError,
         SemanticInputError,

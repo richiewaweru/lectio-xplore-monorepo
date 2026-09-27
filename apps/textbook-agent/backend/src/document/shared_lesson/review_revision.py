@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -195,8 +196,60 @@ def prove_review_draft_revision(
     )
 
 
+@dataclass(frozen=True)
+class ReviewRevisionChainProof:
+    """Verified end-to-end identity for a contiguous run of saved revisions."""
+
+    document_id: str
+    baseline_revision: int
+    baseline_hash: str
+    revision: int
+    content_hash: str
+    changed_section_ids: tuple[str, ...]
+    figure_section_ids: tuple[str, ...]
+
+
+def prove_review_draft_chain(
+    revisions: Sequence[SharedLessonDocument],
+) -> ReviewRevisionChainProof:
+    """Verify a contiguous chain of saved review-draft revisions.
+
+    ``revisions`` must be ordered from the last QA-validated baseline through
+    the latest saved draft (inclusive). Each adjacent pair is independently
+    proven with :func:`prove_review_draft_revision`; the aggregate changed and
+    figure-touched section sets span the whole chain, so a caller can reject
+    any figure-containing edit made across any intermediate save, not only the
+    final one.
+    """
+    if len(revisions) < 2:
+        raise ReviewRevisionValidationError("review revision chain requires at least one edit")
+    changed: dict[str, None] = {}
+    figures: dict[str, None] = {}
+    baseline = revisions[0]
+    current = baseline
+    for step in revisions[1:]:
+        proof = prove_review_draft_revision(current, step)
+        for section_id in proof.changed_section_ids:
+            changed[section_id] = None
+        for section_id in proof.figure_section_ids:
+            figures[section_id] = None
+        current = step
+    final = current
+    return ReviewRevisionChainProof(
+        document_id=baseline.id,
+        baseline_revision=baseline.revision,
+        baseline_hash=baseline.content_hash,
+        revision=final.revision,
+        content_hash=final.content_hash,
+        changed_section_ids=tuple(changed),
+        figure_section_ids=tuple(figures),
+    )
+
+
 __all__ = [
+    "ReviewRevisionChainProof",
     "ReviewRevisionProof",
     "ReviewRevisionValidationError",
+    "prove_review_draft_chain",
     "prove_review_draft_revision",
 ]
