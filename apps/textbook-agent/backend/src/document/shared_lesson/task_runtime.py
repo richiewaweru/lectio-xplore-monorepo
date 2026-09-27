@@ -180,6 +180,16 @@ def _safe_validation_issue_code(error: Any) -> str:
     if message == "duplicate item":
         return "schema_duplicate_item"
 
+    for feedback_code in (
+        "feedback_unknown_option",
+        "feedback_on_correct_option",
+        "feedback_missing_wrong_option",
+        "feedback_unknown_item",
+        "feedback_blank",
+    ):
+        if feedback_code in normalized:
+            return f"semantic_{feedback_code}"
+
     if "provider must return exactly" in normalized:
         return "semantic_task_count_mismatch"
     if "expected_evidence must match" in normalized:
