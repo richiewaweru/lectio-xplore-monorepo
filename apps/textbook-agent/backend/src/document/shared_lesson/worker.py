@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from sqlalchemy import exc as sqlalchemy_exc
 from sqlalchemy import select
 
 from core.database.models import PathLessonModel
@@ -70,6 +71,14 @@ from infra.generation_runtime import (
 
 LOGGER = logging.getLogger(__name__)
 
+
+
+_TRANSIENT_DISPATCH_ERRORS: tuple[type[BaseException], ...] = (
+    sqlalchemy_exc.OperationalError,
+    sqlalchemy_exc.InterfaceError,
+    TimeoutError,
+    ConnectionError,
+)
 
 class SharedDocumentWorkerError(RuntimeError):
     """The worker cannot reconstruct the admitted source context."""
@@ -424,6 +433,15 @@ class SharedDocumentWorker:
         )
         self._mark_dispatch_failure(run_id, now)
         await session.rollback()
+        if isinstance(exc, _TRANSIENT_DISPATCH_ERRORS):
+            # Database/transport blips are not programming errors: back off and
+            # let a later iteration retry this Run instead of terminalizing it.
+            LOGGER.warning(
+                "SharedDocument Run %s dispatch hit a transient %s; backing off",
+                run_id,
+                type(exc).__name__,
+            )
+            return
         try:
             await fail_run_terminal(
                 session,

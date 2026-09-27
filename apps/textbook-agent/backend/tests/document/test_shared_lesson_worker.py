@@ -847,6 +847,90 @@ async def test_unexpected_dispatch_failure_terminalizes_run_and_frees_other_runs
 
 
 @pytest.mark.asyncio
+async def test_transient_dispatch_failure_backs_off_without_terminalizing(
+    db_session, monkeypatch
+):
+    """A poisoned Run's dispatch failure must not starve a fresh queued Run.
+
+    Regression for the live incident: a WorkItemConflict raised from section
+    dispatch every iteration, and the worker only logged and retried the
+    same Run, starving every other queued Run.
+    """
+    generation_a, lesson_a, _prov_a, source_a = await _prepared(db_session, user_id="owner-transient-a")
+    generation_b, lesson_b, _prov_b, source_b = await _prepared(db_session, user_id="owner-transient-b")
+
+    admission_a, _task_a = await _ready_semantic_dependencies(
+        db_session,
+        source=source_a,
+        lesson=lesson_a,
+        generation=generation_a,
+        request_key="worker-transient-a",
+        owner_user_id="owner-transient-a",
+    )
+    run_a_id = admission_a.run.id
+
+    admission_b = await _admitted(
+        db_session,
+        source=source_b,
+        lesson=lesson_b,
+        generation=generation_b,
+        request_key="worker-transient-b",
+        owner_user_id="owner-transient-b",
+    )
+    run_b_id = admission_b.run.id
+
+    # Run A must be older so `_find_candidate` visits it before Run B.
+    run_a = await db_session.get(GenerationRunModel, run_a_id)
+    run_b = await db_session.get(GenerationRunModel, run_b_id)
+    assert run_a is not None and run_b is not None
+    run_a.created_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=5)
+    run_b.created_at = datetime.now(UTC).replace(tzinfo=None)
+    await db_session.commit()
+
+    _bind_source_context(monkeypatch, source_a)
+
+    class PoisonedDispatcher:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        async def run_one(self, **_kwargs):
+            from sqlalchemy.exc import OperationalError
+
+            raise OperationalError("SELECT 1", {}, Exception("connection reset"))
+
+    monkeypatch.setattr(worker, "SharedSectionDispatcher", PoisonedDispatcher)
+
+    sourcebook_calls: list[str] = []
+
+    async def execute_sourcebook(job, **_kwargs):
+        sourcebook_calls.append(job.work_item_id)
+        row = await db_session.get(GenerationWorkItemModel, job.work_item_id)
+        row.status = "ready"
+        row.output_json = {"entries": []}
+        row.output_hash = content_hash(row.output_json)
+
+    monkeypatch.setattr(worker, "execute_sourcebook_work_item", execute_sourcebook)
+
+    instance = worker.SharedDocumentWorker(lambda: None, worker_id="worker-transient")
+
+    # First iteration: Run A is the only eligible candidate (initial section
+    # dispatch). Its dispatcher raises unexpectedly, so Run A must be
+    # terminalized rather than silently retried as a semantic outcome.
+    assert await instance.run_one(db_session)
+
+    still_active = await db_session.get(GenerationRunModel, run_a_id)
+    assert still_active is not None
+    await db_session.refresh(still_active)
+    assert still_active.status != "failed_terminal"
+    assert still_active.error_code is None
+
+    # Second iteration: Run B (a fresh Run queued at sourcebook_generation)
+    # must now be dispatched -- it must not have starved behind Run A.
+    assert await instance.run_one(db_session)
+    assert sourcebook_calls == [admission_b.sourcebook_work_item.id]
+
+
+@pytest.mark.asyncio
 async def test_dispatch_failure_with_terminalization_race_still_frees_other_runs(
     db_session, monkeypatch
 ):
