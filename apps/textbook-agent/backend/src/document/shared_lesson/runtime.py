@@ -479,6 +479,7 @@ def make_section_writer_request(
             purpose=task.purpose,
             prompt=task.prompt,
             expected_evidence=task.expected_evidence,
+            evaluation=dict(task.evaluation),
         )
         for task in task_slice
     )
