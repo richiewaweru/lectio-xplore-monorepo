@@ -805,3 +805,26 @@ async def test_provider_schema_invalid_draft_reports_stable_issue_code() -> None
     # Empty items violates the closed draft schema (min_length=1), which is
     # reported through the fixed schema-invalid code, never as free text.
     assert excinfo.value.issues == (("provider_draft_schema_invalid", "items"),)
+
+
+def test_empty_warnings_are_omitted_so_pre_warning_outputs_hash_identically():
+    from document.shared_lesson.composer import SectionCompositionPlan
+
+    legacy = {
+        "section_slot_id": "s1",
+        "items": [
+            {
+                "id": "n1",
+                "kind": "paragraph",
+                "teaching_block_id": "b1",
+                "semantic_role": "explanation",
+            }
+        ],
+    }
+    plan = SectionCompositionPlan.model_validate(legacy)
+    assert plan.model_dump(mode="json") == {
+        "section_slot_id": "s1",
+        "items": [{**legacy["items"][0], "task_spec_id": None}],
+    }
+    warned = plan.model_copy(update={"warnings": (("paragraph_run_exceeded", "choices[2]"),)})
+    assert warned.model_dump(mode="json")["warnings"] == [["paragraph_run_exceeded", "choices[2]"]]

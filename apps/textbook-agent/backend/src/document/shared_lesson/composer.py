@@ -70,7 +70,7 @@ class SectionCompositionPlan(_ClosedModel):
     #: Soft-issue (code, sanitized path) pairs accepted and auto-fixed rather
     #: than failed. Every code here is a member of ``SOFT_COMPOSITION_ISSUE_CODES``;
     #: never provider output or learner text.
-    warnings: tuple[tuple[str, str], ...] = Field(default=())
+    warnings: tuple[tuple[str, str], ...] = Field(default=(), exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
     def _validate_warnings(self) -> SectionCompositionPlan:
