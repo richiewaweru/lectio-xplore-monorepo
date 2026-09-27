@@ -22,6 +22,10 @@ from document.shared_lesson.repository import (
     load_shared_lesson_document,
     save_shared_lesson_document,
 )
+from document.shared_lesson.review_revision import (
+    ReviewRevisionValidationError,
+    prove_review_draft_revision,
+)
 from document.shared_lesson.run_admission import (
     SharedRunAdmissionError,
     admit_shared_document_run,
@@ -423,6 +427,17 @@ async def post_shared_document_review_draft_revision(
     payload.pop("content_hash", None)
     try:
         revised = build_shared_lesson_document(payload)
+    except (TypeError, ValueError) as exc:
+        await session.rollback()
+        raise HTTPException(status_code=422, detail="Review draft revision is invalid") from exc
+    try:
+        prove_review_draft_revision(current, revised)
+    except ReviewRevisionValidationError as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=422, detail="Review draft revision contains a forbidden change"
+        ) from exc
+    try:
         await save_shared_lesson_document(
             session,
             path_lesson_id=path_lesson_id,

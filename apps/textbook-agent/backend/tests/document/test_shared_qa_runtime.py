@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from types import SimpleNamespace
 
+from document.shared_lesson import http as shared_document_http
 from document.shared_lesson.document_semantic import (
     DocumentSemanticQAResult,
     DocumentSemanticVerdict,
@@ -324,7 +325,7 @@ async def test_document_qa_transport_retry_and_configuration_fail_closed(db_sess
 
 
 @pytest.mark.asyncio
-async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
+async def test_document_qa_semantic_issue_never_becomes_ready(db_session, monkeypatch):
     source, document = _source_and_document()
     owner, run_id = await _seed_run(db_session, source, suffix="issue")
     admitted = await admit_document_qa_work_item(
@@ -335,6 +336,7 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
         document=document,
         deterministic_qa=_deterministic(document),
     )
+    qa_work_item_id = admitted.record.id
 
     async def issue(_request):
         return DocumentSemanticVerdict(
@@ -352,7 +354,7 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
     outcome = await execute_document_qa_work_item(
         DocumentQAWorkItemJob(
             session=db_session,
-            work_item_id=admitted.record.id,
+            work_item_id=qa_work_item_id,
             worker_id="qa-worker",
             owner_user_id=owner,
             source=source,
@@ -362,7 +364,7 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
         )
     )
     assert outcome.qa is None
-    item = await db_session.get(GenerationWorkItemModel, admitted.record.id)
+    item = await db_session.get(GenerationWorkItemModel, qa_work_item_id)
     assert item is not None
     assert item.status == "failed_recoverable"
     draft_row = await db_session.get(
@@ -420,6 +422,65 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
     )
     assert latest_review["draft"]["revision"] == document.revision + 1
     assert latest_review["issues"] == review["issues"]
+
+    latest_hash = latest_review["draft"]["hash"]
+    forged_task_edit = ReviewDraftRevisionRequest.model_validate(
+        {
+            "expected_revision": latest_review["draft"]["revision"],
+            "expected_hash": latest_hash,
+            "edits": [
+                {
+                    "section_id": document.sections[0].id,
+                    "node_id": document.sections[0].nodes[0].id,
+                    "field": "callout_body",
+                    "value": "Forged field edit.",
+                }
+            ],
+        }
+    )
+    with pytest.raises(HTTPException) as forged_edit:
+        await post_shared_document_review_draft_revision(
+            run_id,
+            forged_task_edit,
+            current_user=SimpleNamespace(id=owner),
+            session=db_session,
+        )
+    assert forged_edit.value.status_code == 422
+
+    forged_request = ReviewDraftRevisionRequest.model_validate(
+        {
+            "expected_revision": latest_review["draft"]["revision"],
+            "expected_hash": latest_hash,
+            "edits": [
+                {
+                    "section_id": document.sections[0].id,
+                    "node_id": document.sections[0].nodes[0].id,
+                    "field": "text",
+                    "value": "Another valid text edit before a forged identity.",
+                }
+            ],
+        }
+    )
+    original_builder = shared_document_http.build_shared_lesson_document
+
+    def forged_builder(payload):
+        return original_builder(payload).model_copy(update={"id": "forged-document-id"})
+
+    with monkeypatch.context() as patch:
+        patch.setattr(shared_document_http, "build_shared_lesson_document", forged_builder)
+        with pytest.raises(HTTPException) as forged:
+            await post_shared_document_review_draft_revision(
+                run_id,
+                forged_request,
+                current_user=SimpleNamespace(id=owner),
+                session=db_session,
+            )
+    assert forged.value.status_code == 422
+    not_saved = await db_session.get(
+        SharedLessonDocumentModel,
+        {"id": document.id, "revision": latest_review["draft"]["revision"] + 1},
+    )
+    assert not_saved is None
     with pytest.raises(HTTPException) as stale:
         await post_shared_document_review_draft_revision(
             run_id,
@@ -446,14 +507,14 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
     with pytest.raises(InvalidWorkItemTransition, match="recovery action"):
         await retry_work_item(
             db_session,
-            work_item_id=admitted.record.id,
+            work_item_id=qa_work_item_id,
             owner_user_id=owner,
         )
     issue_events = list(
         (
             await db_session.scalars(
                 select(GenerationEventModel)
-                .where(GenerationEventModel.work_item_id == admitted.record.id)
+                .where(GenerationEventModel.work_item_id == qa_work_item_id)
                 .order_by(GenerationEventModel.seq)
             )
         ).all()
@@ -463,15 +524,15 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
     repaired = document.model_copy(update={"revision": document.revision + 1})
     replacement = await admit_repaired_document_qa_work_item(
         db_session,
-        predecessor_work_item_id=admitted.record.id,
+        predecessor_work_item_id=qa_work_item_id,
         owner_user_id=owner,
         source=source,
         document=repaired,
         deterministic_qa=_deterministic(repaired),
     )
-    assert replacement.replaces_work_item_id == admitted.record.id
+    assert replacement.replaces_work_item_id == qa_work_item_id
     assert replacement.item_key.startswith(f"{DOCUMENT_QA_ITEM_KEY}:")
-    assert replacement.id != admitted.record.id
+    assert replacement.id != qa_work_item_id
     with pytest.raises(DocumentQAOutputError, match="not ready"):
         await load_verified_document_qa(
             db_session,
