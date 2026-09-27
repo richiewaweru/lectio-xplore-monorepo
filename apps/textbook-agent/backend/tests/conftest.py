@@ -156,3 +156,15 @@ async def db_session(db_engine):
     )() as session:
         yield session
         await session.rollback()
+
+
+@pytest.fixture(autouse=True)
+def _shared_document_media_optional_off(monkeypatch):
+    """Pin the local-only media-optional switch OFF; tests opt in explicitly.
+
+    A developer's ``backend/.env`` may enable ``SHARED_DOCUMENT_MEDIA_OPTIONAL``
+    for local quality runs; tests must not inherit that.
+    """
+    from infra.config import settings
+
+    monkeypatch.setattr(settings, "shared_document_media_optional", False)
