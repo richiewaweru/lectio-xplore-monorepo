@@ -219,3 +219,16 @@ def test_single_choice_feedback_uses_the_same_contract() -> None:
     errors = validate_final_task_response_contract(task)
 
     assert any("feedback_on_correct_option" in error and "'a'" in error for error in errors)
+
+
+def test_null_feedback_entries_are_treated_as_omitted():
+    from curriculum.shared_tasks.validation import _present_feedback
+
+    assert _present_feedback({"correct": "Yes.", "incorrect": None}) == {"correct": "Yes."}
+    assert _present_feedback(None) == {}
+
+
+def test_partial_is_a_feedback_meta_key_not_an_option():
+    from curriculum.shared_tasks.validation import _FEEDBACK_META_KEYS
+
+    assert "partial" in _FEEDBACK_META_KEYS

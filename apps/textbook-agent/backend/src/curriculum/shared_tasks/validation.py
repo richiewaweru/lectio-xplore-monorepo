@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping
+from typing import Any
 
 from curriculum.lesson_sourcebook.models import LessonSourcebook, TeachingContentBinding
 from curriculum.teaching_plan.compatibility import response_bearing_action
@@ -17,7 +18,14 @@ from .models import (
     TaskEvaluationType,
 )
 
-_FEEDBACK_META_KEYS = frozenset({"correct", "incorrect", "by_option"})
+_FEEDBACK_META_KEYS = frozenset({"correct", "incorrect", "partial", "by_option"})
+
+
+def _present_feedback(feedback: dict[str, Any] | None) -> dict[str, Any]:
+    """Treat explicit ``null`` feedback entries as omitted rather than blank."""
+    if not isinstance(feedback, dict):
+        return {}
+    return {key: value for key, value in feedback.items() if value is not None}
 
 
 def _feedback_text_blank(value: object) -> bool:
@@ -34,8 +42,8 @@ def _validate_choice_feedback(
     id, every wrong option must have feedback, and no feedback text may be
     blank.
     """
-    feedback = task.feedback
-    if feedback is None:
+    feedback = _present_feedback(task.feedback)
+    if not feedback:
         return []
     errors: list[str] = []
     by_option = feedback.get("by_option")
@@ -80,8 +88,8 @@ def _validate_classification_feedback(task: SharedTaskSpec, items: list[str]) ->
     Feedback may be omitted. When present, ``common_errors`` keys must refer
     to real classified items and no feedback text may be blank.
     """
-    feedback = task.feedback
-    if feedback is None:
+    feedback = _present_feedback(task.feedback)
+    if not feedback:
         return []
     errors: list[str] = []
     common_errors = feedback.get("common_errors")
@@ -255,7 +263,7 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
     if response_type not in {"single_choice", "multiple_choice", "classification"} and isinstance(
         task.feedback, dict
     ):
-        for key, value in task.feedback.items():
+        for key, value in _present_feedback(task.feedback).items():
             if isinstance(value, dict):
                 for sub_key, sub_value in value.items():
                     if _feedback_text_blank(sub_value):
