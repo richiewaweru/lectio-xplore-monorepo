@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import pytest
+from fastapi import HTTPException
 from pydantic import ValidationError
 from sqlalchemy import select
+from types import SimpleNamespace
 
 from document.shared_lesson.document_semantic import (
     DocumentSemanticQAResult,
     DocumentSemanticVerdict,
 )
+from document.shared_lesson.http import get_shared_document_review_draft
 from document.shared_lesson.qa import DocumentQAResult
 from document.shared_lesson.qa_runtime import (
     DOCUMENT_QA_ITEM_KEY,
@@ -25,6 +28,7 @@ from document.shared_lesson.runtime import TeachingPlanSource
 from infra.database.models import (
     ConceptModel,
     GenerationEventModel,
+    SharedLessonDocumentModel,
     GenerationWorkItemModel,
     PathLessonModel,
     PathVersionModel,
@@ -357,6 +361,31 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
     item = await db_session.get(GenerationWorkItemModel, admitted.record.id)
     assert item is not None
     assert item.status == "failed_recoverable"
+    draft_row = await db_session.get(
+        SharedLessonDocumentModel, {"id": document.id, "revision": document.revision}
+    )
+    assert draft_row is not None
+    assert draft_row.status == "draft"
+    assert draft_row.content_hash == document.content_hash
+    review = await get_shared_document_review_draft(
+        run_id,
+        current_user=SimpleNamespace(id=owner),
+        session=db_session,
+    )
+    assert review["draft"] == {
+        "id": document.id,
+        "revision": document.revision,
+        "hash": document.content_hash,
+    }
+    assert review["document"] == document.model_dump(mode="json")
+    assert review["issues"][0]["issue_code"] == "unsupported_assumption"
+    with pytest.raises(HTTPException) as foreign:
+        await get_shared_document_review_draft(
+            run_id,
+            current_user=SimpleNamespace(id="another-owner"),
+            session=db_session,
+        )
+    assert foreign.value.status_code == 404
     with pytest.raises(InvalidWorkItemTransition, match="recovery action"):
         await retry_work_item(
             db_session,
@@ -394,6 +423,44 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
             source=source,
             document=document,
         )
+
+
+@pytest.mark.asyncio
+async def test_document_qa_deterministic_failure_does_not_persist_review_draft(db_session):
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source, suffix="deterministic-block")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+
+    with pytest.raises(DocumentQARuntimeError, match="passing deterministic QA"):
+        await execute_document_qa_work_item(
+            DocumentQAWorkItemJob(
+                session=db_session,
+                work_item_id=admitted.record.id,
+                worker_id="qa-hard-failure",
+                owner_user_id=owner,
+                source=source,
+                document=document,
+                deterministic_qa=_deterministic(document, ready=False),
+                semantic_validator=_pass,
+            )
+        )
+    assert await db_session.get(
+        SharedLessonDocumentModel, {"id": document.id, "revision": document.revision}
+    ) is None
+    with pytest.raises(HTTPException) as missing_draft:
+        await get_shared_document_review_draft(
+            run_id,
+            current_user=SimpleNamespace(id=owner),
+            session=db_session,
+        )
+    assert missing_draft.value.status_code == 404
 
 
 @pytest.mark.asyncio

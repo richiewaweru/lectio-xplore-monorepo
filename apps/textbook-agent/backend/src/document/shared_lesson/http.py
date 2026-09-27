@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.entities.user import User
 from document.shared_lesson.approved_source import ApprovedSourceVerificationError
+from document.shared_lesson.continuity import ContinuityIssue
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.repository import (
     SharedLessonDocumentRepositoryError,
@@ -21,7 +22,12 @@ from document.shared_lesson.run_admission import (
     admit_shared_document_run,
 )
 from infra.auth.middleware import get_current_user
-from infra.database.models import GenerationBuildModel, GenerationRunModel
+from infra.database.models import (
+    GenerationBuildModel,
+    GenerationEventModel,
+    GenerationRunModel,
+    GenerationWorkItemModel,
+)
 from infra.database.session import get_async_session
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime.http import _run_status
@@ -176,9 +182,98 @@ async def get_shared_document_preview(
     }
 
 
+@router.get("/runs/{run_id}/review-draft")
+async def get_shared_document_review_draft(
+    run_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    """Return a deterministic-QA-passing semantic ISSUE candidate to its owner."""
+    run_row = await session.execute(
+        select(GenerationRunModel, GenerationBuildModel.path_lesson_id)
+        .join(GenerationBuildModel, GenerationBuildModel.id == GenerationRunModel.build_id)
+        .where(
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.owner_user_id == current_user.id,
+            GenerationBuildModel.owner_user_id == current_user.id,
+            GenerationRunModel.run_type == "shared_document",
+            GenerationRunModel.status != "ready",
+        )
+    )
+    candidate = run_row.one_or_none()
+    if candidate is None:
+        raise _not_found()
+    run, path_lesson_id = candidate
+
+    event = await session.scalar(
+        select(GenerationEventModel)
+        .join(
+            GenerationWorkItemModel,
+            GenerationWorkItemModel.id == GenerationEventModel.work_item_id,
+        )
+        .where(
+            GenerationEventModel.run_id == run.id,
+            GenerationEventModel.event_type == "document_qa_semantic_issues",
+            GenerationEventModel.error_code == "document_qa_semantic_issue",
+            GenerationWorkItemModel.run_id == run.id,
+            GenerationWorkItemModel.stage == "document_qa",
+            GenerationWorkItemModel.status == "failed_recoverable",
+        )
+        .order_by(GenerationEventModel.seq.desc())
+    )
+    if event is None or not isinstance(event.safe_payload_json, dict):
+        raise _not_found()
+
+    payload = event.safe_payload_json
+    try:
+        document_id = payload["document_id"]
+        revision = payload["document_revision"]
+        digest = payload["document_hash"]
+        if not isinstance(document_id, str) or not isinstance(revision, int):
+            raise ValueError("document identity is malformed")
+        if not isinstance(digest, str) or len(digest) != 64:
+            raise ValueError("document hash is malformed")
+        issues = [ContinuityIssue.model_validate(issue) for issue in payload["issues"]]
+        if not issues:
+            raise ValueError("semantic issue list is empty")
+        stored = await load_shared_lesson_document(
+            session,
+            document_id=document_id,
+            revision=revision,
+            path_lesson_id=path_lesson_id,
+        )
+    except (KeyError, TypeError, ValueError, SharedLessonDocumentRepositoryError):
+        raise _not_found() from None
+
+    document = stored.document
+    expected_hash = content_hash(document.model_dump(mode="json"))
+    if (
+        stored.status != "draft"
+        or document.teaching_plan_id != run.source_artifact_id
+        or document.teaching_plan_revision != run.source_revision
+        or document.teaching_plan_hash != run.source_hash
+        or shared_lesson_content_hash(document) != digest
+        or document.content_hash != digest
+        or stored.storage_hash != expected_hash
+    ):
+        raise _not_found()
+
+    return {
+        "status": "draft",
+        "draft": {
+            "id": document.id,
+            "revision": document.revision,
+            "hash": digest,
+        },
+        "document": document.model_dump(mode="json"),
+        "issues": [issue.model_dump(mode="json") for issue in issues],
+    }
+
+
 __all__ = [
     "SharedDocumentAdmissionRequest",
     "get_shared_document_preview",
+    "get_shared_document_review_draft",
     "post_shared_document_generation",
     "router",
 ]

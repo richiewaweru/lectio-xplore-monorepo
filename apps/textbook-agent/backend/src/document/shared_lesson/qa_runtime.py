@@ -29,8 +29,9 @@ from document.shared_lesson.document_semantic import (
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import SharedLessonDocument
 from document.shared_lesson.qa import DocumentQAResult
+from document.shared_lesson.repository import save_shared_lesson_document
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
-from infra.database.models import GenerationRunModel, GenerationWorkItemModel
+from infra.database.models import GenerationBuildModel, GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.execution.leases import LeaseLostError
 from infra.generation_runtime import (
@@ -54,7 +55,6 @@ from infra.generation_runtime import (
     persist_checkpoint,
     replace_work_item,
 )
-
 DOCUMENT_QA_STAGE = "document_qa"
 DOCUMENT_QA_ITEM_KEY = "document-qa"
 DOCUMENT_QA_DEFINITION = "shared-document-qa:v1"
@@ -505,7 +505,7 @@ async def execute_document_qa_work_item(
     work_item = await job.session.get(GenerationWorkItemModel, job.work_item_id)
     if work_item is None:
         raise DocumentQASourceConflict("document QA WorkItem does not exist")
-    await _verify_run_source(
+    run = await _verify_run_source(
         job.session,
         run_id=work_item.run_id,
         owner_user_id=job.owner_user_id,
@@ -571,6 +571,32 @@ async def execute_document_qa_work_item(
             semantic_validator=job.semantic_validator,
         )
         if not semantic.passed:
+            # Only a well-formed semantic ISSUE after the deterministic gate is
+            # reviewable. Persist that exact immutable candidate in this same
+            # transaction as its issue event and failed WorkItem state.
+            if (
+                semantic.status != "issue"
+                or not semantic.issues
+                or semantic.semantic_calls != 1
+                or semantic.deterministic_skipped_semantic
+                or semantic.document_id != job.document.id
+                or semantic.document_revision != job.document.revision
+                or semantic.document_hash != shared_lesson_content_hash(job.document)
+            ):
+                raise DocumentQAOutputError("semantic QA issue is not bound to the candidate")
+            path_lesson_id = await job.session.scalar(
+                select(GenerationBuildModel.path_lesson_id).where(
+                    GenerationBuildModel.id == run.build_id,
+                    GenerationBuildModel.owner_user_id == job.owner_user_id,
+                )
+            )
+            if path_lesson_id is None:
+                raise DocumentQASourceConflict("document QA Run build is unavailable")
+            await save_shared_lesson_document(
+                job.session,
+                path_lesson_id=path_lesson_id,
+                document=job.document,
+            )
             failure = WorkItemFailure(
                 error_code="document_qa_semantic_issue",
                 error_class=ErrorClass.VALIDATION,
