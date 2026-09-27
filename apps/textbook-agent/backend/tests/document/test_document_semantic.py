@@ -9,6 +9,7 @@ from document.shared_lesson.document_semantic import (
     DocumentSemanticInputError,
     DocumentSemanticOutputError,
     DocumentSemanticQAResult,
+    DocumentSemanticQARequest,
     DocumentSemanticVerdict,
     qa_shared_lesson_document_semantics,
 )
@@ -131,6 +132,64 @@ async def test_semantic_issue_must_bind_to_existing_section_and_node() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "issue_code",
+    [
+        "misconception_unresolved",
+        "answer_leakage",
+        "assessment_duplicates_example",
+        "factual_inaccuracy",
+    ],
+)
+async def test_new_quality_issue_codes_bind_to_real_section_and_node(
+    issue_code: str,
+) -> None:
+    document = _document()
+
+    async def reviewer(_request):
+        return {
+            "status": "issue",
+            "issues": [
+                {
+                    "issue_code": issue_code,
+                    "affected_section_id": "section-1",
+                    "affected_node_ids": ["node-1"],
+                    "explanation": f"A {issue_code} defect was found.",
+                    "required_correction": "Fix the defect in this node only.",
+                }
+            ],
+        }
+
+    result = await qa_shared_lesson_document_semantics(
+        document=document,
+        teaching_plan_sections=(_plan_section(),),
+        deterministic=_deterministic(),
+        semantic_validator=reviewer,
+    )
+
+    assert result.status == "issue"
+    assert result.issues[0].issue_code == issue_code
+
+
+def test_document_semantic_qa_prompt_documents_new_quality_checks() -> None:
+    from core.prompts import effective_prompt_text
+
+    prompt = effective_prompt_text("document-semantic-qa")
+
+    for issue_code in (
+        "misconception_unresolved",
+        "answer_leakage",
+        "assessment_duplicates_example",
+        "factual_inaccuracy",
+    ):
+        assert issue_code in prompt
+    # The prompt must tell the reviewer that evaluation/response data (not
+    # just task prompts) is available for judging leakage and duplication.
+    assert "evaluation" in prompt
+    assert "response" in prompt
+
+
+@pytest.mark.asyncio
 async def test_malformed_closed_output_is_a_semantic_contract_error() -> None:
     async def reviewer(_request):
         return {"status": "pass", "issues": [{"unexpected": True}]}
@@ -250,8 +309,29 @@ async def test_provider_operational_error_propagates() -> None:
         )
 
 
-def test_document_semantic_qa_uses_fast_existing_capability_slot() -> None:
-    assert get_v3_slot(DOCUMENT_SEMANTIC_QA).value == "fast"
+def test_document_semantic_qa_uses_standard_slot() -> None:
+    assert get_v3_slot(DOCUMENT_SEMANTIC_QA).value == "standard"
+
+
+def test_document_semantic_qa_runs_with_deepseek_thinking_enabled() -> None:
+    from infra.authoring.model_policy import V3_NODE_REASONING
+
+    assert V3_NODE_REASONING[DOCUMENT_SEMANTIC_QA] == "medium"
+
+
+def test_document_semantic_qa_payload_includes_task_evaluation_and_plan_sections() -> None:
+    """The single QA call must see task evaluation/answers, not just prompts."""
+    document = _document()
+    request = DocumentSemanticQARequest(
+        document=document, teaching_plan_sections=(_plan_section(),)
+    )
+    payload = request.model_dump(mode="json")
+
+    assert payload["teaching_plan_sections"][0]["must_establish"] == [
+        "explain energy transfer"
+    ]
+    # Tasks (with response/evaluation) travel inside the document itself.
+    assert "tasks" in payload["document"]
 
 
 @pytest.mark.asyncio

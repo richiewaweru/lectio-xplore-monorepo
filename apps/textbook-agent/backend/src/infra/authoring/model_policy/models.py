@@ -81,7 +81,12 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     SECTION_COMPOSER: ModelSlot.STANDARD,
     SHARED_SECTION_WRITER: ModelSlot.STANDARD,
     BOUNDARY_CONTINUITY_VALIDATOR: ModelSlot.STANDARD,
-    DOCUMENT_SEMANTIC_QA: ModelSlot.FAST,
+    # STANDARD (not FAST): the expanded semantic checks (misconception
+    # resolution, answer leakage, assessment/example duplication, factual
+    # accuracy) plus DeepSeek thinking need more budget than the FAST slot's
+    # 8k-token ceiling. STANDARD's 16k ceiling already accommodates DeepSeek
+    # reasoning output for other STANDARD-slot nodes below.
+    DOCUMENT_SEMANTIC_QA: ModelSlot.STANDARD,
     V3_TARGETED_LESSON_REPAIR: ModelSlot.FAST,
     SHARED_SOURCEBOOK_AUTHORING: ModelSlot.STANDARD,
     SHARED_TASK_AUTHORING: ModelSlot.STANDARD,
@@ -121,9 +126,16 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     # provider reasoning.
     V2_PATH_STRUCTURAL_PLANNER: False,
     V2_PATH_CHAT_EDITOR: False,
-    # The teaching-plan schema and validation provide the correctness guard;
-    # provider reasoning adds latency without improving the persisted contract.
-    V2_LESSON_APPROACH_PLANNER: False,
+    # Whole-lesson Teaching Plan authoring (the shared/V2 path). Unlike the
+    # constrained JSON planners above, this node's output quality is the
+    # persisted Teaching Plan's continuity contract itself (must_establish,
+    # bridges, exit states); DeepSeek thinking is enabled here for quality,
+    # not latency. It runs through the same single-call, no-output-retry
+    # path (``NO_OUTPUT_RETRY``) as ``V3_STAGE1_PLANNER``, which already
+    # runs DeepSeek thinking successfully in production, so the message-
+    # replay failure mode documented for V2_PATH_STRUCTURAL_PLANNER/
+    # V2_PATH_CHAT_EDITOR does not apply.
+    V2_LESSON_APPROACH_PLANNER: "medium",
     V2_FORM_PLANNER: False,
     NATIVE_CAPABILITY_SELECTOR: False,
     V3_CONSTRUCTOR: False,
@@ -131,11 +143,17 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V3_LESSON_SOURCEBOOK_WRITER: False,
     V3_SHARED_TASK_WRITER: False,
     V3_WHOLE_LESSON_COHERENCE_REVIEWER: False,
-    TEACHING_PLAN_SEMANTIC_REVIEWER: False,
+    # Semantic review, prose writing, and whole-document QA benefit from
+    # DeepSeek thinking: each is a single-call, no-output-retry structured
+    # node (``NO_OUTPUT_RETRY`` / ``repair_attempts=0``) that never replays
+    # a prior assistant turn, so the reasoning-only empty-content replay
+    # failure documented for V2_PATH_STRUCTURAL_PLANNER/V2_PATH_CHAT_EDITOR
+    # does not apply here.
+    TEACHING_PLAN_SEMANTIC_REVIEWER: "medium",
     SECTION_COMPOSER: False,
-    SHARED_SECTION_WRITER: False,
+    SHARED_SECTION_WRITER: "medium",
     BOUNDARY_CONTINUITY_VALIDATOR: False,
-    DOCUMENT_SEMANTIC_QA: False,
+    DOCUMENT_SEMANTIC_QA: "medium",
     V3_TARGETED_LESSON_REPAIR: False,
     SHARED_SOURCEBOOK_AUTHORING: False,
     SHARED_TASK_AUTHORING: False,

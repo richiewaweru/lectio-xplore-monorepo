@@ -125,6 +125,12 @@ def test_semantic_reviewer_uses_registered_standard_model_and_locked_prompt() ->
     assert "teaching-plan-semantic-reviewer" in closeout_prompt_hashes()
 
 
+def test_semantic_reviewer_runs_with_deepseek_thinking_enabled() -> None:
+    from infra.authoring.model_policy import V3_NODE_REASONING
+
+    assert V3_NODE_REASONING[TEACHING_PLAN_SEMANTIC_REVIEWER] == "medium"
+
+
 async def _run_with_reviewer(monkeypatch, *, reviews, task: bool = False):
     packet = _packet()
     legality = _make_snapshot()

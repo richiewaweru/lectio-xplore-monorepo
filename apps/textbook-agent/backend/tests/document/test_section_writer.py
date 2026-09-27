@@ -231,11 +231,11 @@ def test_writes_diverse_section_and_inserts_unchanged_anchor() -> None:
     assert section.nodes == result.nodes
 
 
-def test_writer_uses_standard_slot_without_provider_reasoning() -> None:
+def test_writer_uses_standard_slot_with_deepseek_thinking_enabled() -> None:
     from infra.authoring.model_policy import V3_NODE_REASONING
 
     assert get_v3_slot(SHARED_SECTION_WRITER).value == "standard"
-    assert V3_NODE_REASONING[SHARED_SECTION_WRITER] is False
+    assert V3_NODE_REASONING[SHARED_SECTION_WRITER] == "medium"
 
 
 def test_request_requires_enriched_section_and_exact_task_anchor_registry() -> None:
