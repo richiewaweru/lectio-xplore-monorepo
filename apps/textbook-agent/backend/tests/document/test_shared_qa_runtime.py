@@ -10,7 +10,11 @@ from document.shared_lesson.document_semantic import (
     DocumentSemanticQAResult,
     DocumentSemanticVerdict,
 )
-from document.shared_lesson.http import get_shared_document_review_draft
+from document.shared_lesson.http import (
+    ReviewDraftRevisionRequest,
+    get_shared_document_review_draft,
+    post_shared_document_review_draft_revision,
+)
 from document.shared_lesson.qa import DocumentQAResult
 from document.shared_lesson.qa_runtime import (
     DOCUMENT_QA_ITEM_KEY,
@@ -379,6 +383,51 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
     }
     assert review["document"] == document.model_dump(mode="json")
     assert review["issues"][0]["issue_code"] == "unsupported_assumption"
+    revision_request = ReviewDraftRevisionRequest.model_validate(
+        {
+            "expected_revision": document.revision,
+            "expected_hash": document.content_hash,
+            "edits": [
+                {
+                    "section_id": document.sections[0].id,
+                    "node_id": document.sections[0].nodes[0].id,
+                    "field": "text",
+                    "value": "Plants use light energy to make sugars.",
+                }
+            ],
+        }
+    )
+    revised = await post_shared_document_review_draft_revision(
+        run_id,
+        revision_request,
+        current_user=SimpleNamespace(id=owner),
+        session=db_session,
+    )
+    assert revised["draft"]["revision"] == document.revision + 1
+    assert revised["document"]["sections"][0]["nodes"][0]["display"]["text"] == (
+        "Plants use light energy to make sugars."
+    )
+    assert revised["draft"]["hash"] != document.content_hash
+    original_after_edit = await db_session.get(
+        SharedLessonDocumentModel, {"id": document.id, "revision": document.revision}
+    )
+    assert original_after_edit is not None
+    assert original_after_edit.content_hash == document.content_hash
+    latest_review = await get_shared_document_review_draft(
+        run_id,
+        current_user=SimpleNamespace(id=owner),
+        session=db_session,
+    )
+    assert latest_review["draft"]["revision"] == document.revision + 1
+    assert latest_review["issues"] == review["issues"]
+    with pytest.raises(HTTPException) as stale:
+        await post_shared_document_review_draft_revision(
+            run_id,
+            revision_request,
+            current_user=SimpleNamespace(id=owner),
+            session=db_session,
+        )
+    assert stale.value.status_code == 409
     with pytest.raises(HTTPException) as foreign:
         await get_shared_document_review_draft(
             run_id,
@@ -386,6 +435,14 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session):
             session=db_session,
         )
     assert foreign.value.status_code == 404
+    with pytest.raises(HTTPException) as foreign_edit:
+        await post_shared_document_review_draft_revision(
+            run_id,
+            revision_request,
+            current_user=SimpleNamespace(id="another-owner"),
+            session=db_session,
+        )
+    assert foreign_edit.value.status_code == 404
     with pytest.raises(InvalidWorkItemTransition, match="recovery action"):
         await retry_work_item(
             db_session,
@@ -461,6 +518,24 @@ async def test_document_qa_deterministic_failure_does_not_persist_review_draft(d
             session=db_session,
         )
     assert missing_draft.value.status_code == 404
+
+
+def test_review_draft_revision_request_rejects_structural_fields():
+    with pytest.raises(ValidationError):
+        ReviewDraftRevisionRequest.model_validate(
+            {
+                "expected_revision": 1,
+                "expected_hash": "0" * 64,
+                "edits": [
+                    {
+                        "section_id": "section-1",
+                        "node_id": "paragraph-1",
+                        "field": "kind",
+                        "value": "task_anchor",
+                    }
+                ],
+            }
+        )
 
 
 @pytest.mark.asyncio
