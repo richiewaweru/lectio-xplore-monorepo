@@ -23,6 +23,7 @@ from document.shared_lesson.runtime import (
     SectionRuntimeError,
     SectionWriterJob,
     TeachingPlanSource,
+    _record_composition_style_warnings,
     _record_execution_failure,
     _write_section_work_item,
     admit_section_run,
@@ -432,6 +433,48 @@ async def test_composition_validation_error_diagnostic_bounds_codes_and_paths(
     # the path list must be bounded even though the code list is not affected.
     assert payload["validation_issue_codes"] == ["kind_missing_semantic_cue"]
     assert len(payload["validation_paths"]) == 20
+
+
+@pytest.mark.asyncio
+async def test_composition_style_warning_event_is_safe_and_bounded(monkeypatch) -> None:
+    sentinel = "PROVIDER_SENTINEL_DO_NOT_PERSIST_9f13"
+    recorded_events = []
+
+    async def fake_append_event(_session, **kwargs):
+        recorded_events.append(kwargs)
+
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", fake_append_event)
+
+    many_warnings = [
+        ("kind_missing_semantic_cue", f"choices[{index}].kind") for index in range(25)
+    ]
+    await _record_composition_style_warnings(
+        "session", run_id="run-1", work_item_id="item-1", warnings=many_warnings
+    )
+
+    assert len(recorded_events) == 1
+    assert recorded_events[0]["event_type"] == "composition_style_warning"
+    payload = recorded_events[0]["safe_payload"]
+    assert payload["warning_codes"] == ["kind_missing_semantic_cue"]
+    assert len(payload["warning_paths"]) == 20
+    serialized = repr(payload)
+    assert sentinel not in serialized
+
+
+@pytest.mark.asyncio
+async def test_composition_style_warning_event_skipped_when_no_warnings(monkeypatch) -> None:
+    recorded_events = []
+
+    async def fake_append_event(_session, **kwargs):
+        recorded_events.append(kwargs)
+
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", fake_append_event)
+
+    await _record_composition_style_warnings(
+        "session", run_id="run-1", work_item_id="item-1", warnings=()
+    )
+
+    assert recorded_events == []
 
 
 @pytest.mark.asyncio

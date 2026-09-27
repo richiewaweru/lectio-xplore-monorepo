@@ -5,11 +5,14 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from core.prompts import effective_prompt_text
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
 from document.shared_lesson.composer import (
     COMPOSITION_ISSUE_CODES,
+    SOFT_COMPOSITION_ISSUE_CODES,
     CompositionChoice,
+    CompositionPolicy,
     CompositionValidationError,
     SectionCompositionDraft,
     SectionCompositionPlan,
@@ -18,7 +21,6 @@ from document.shared_lesson.composer import (
     validate_composition_plan,
 )
 from infra.authoring.model_policy import SECTION_COMPOSER, get_v3_slot
-from core.prompts import effective_prompt_text
 
 
 def _block(block_id: str, intent: str, brief: str | None = None) -> TeachingPlanBlock:
@@ -174,6 +176,203 @@ def test_rejects_too_many_consecutive_paragraphs_and_unsuitable_forms() -> None:
             ],
             tasks=[],
         )
+
+
+def test_task_anchor_breaks_paragraph_run_across_block_boundary() -> None:
+    section = _section(
+        _block("b0", "explain the model"),
+        _block("b1", "summarize the idea"),
+    )
+    tasks = [_task("task-a", "b0")]
+    choices = [
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="summary"),
+        CompositionChoice(teaching_block_id="b1", kind="paragraph", semantic_role="explanation"),
+    ]
+
+    plan = validate_and_build_composition(section=section, choices=choices, tasks=tasks)
+
+    assert [item.kind for item in plan.items if item.kind != "task_anchor"] == [
+        "paragraph",
+        "paragraph",
+        "paragraph",
+    ]
+
+
+def test_three_consecutive_paragraphs_with_no_anchor_still_fail() -> None:
+    section = _section(
+        _block("b0", "explain the model"),
+        _block("b1", "compare the results"),
+        _block("b2", "summarize the idea"),
+    )
+    choices = [
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+        CompositionChoice(teaching_block_id="b1", kind="paragraph", semantic_role="explanation"),
+        CompositionChoice(teaching_block_id="b2", kind="paragraph", semantic_role="summary"),
+    ]
+
+    with pytest.raises(CompositionValidationError, match="consecutive paragraphs") as excinfo:
+        validate_and_build_composition(section=section, choices=choices, tasks=[])
+
+    assert "paragraph_run_exceeded" in _issue_codes(excinfo.value)
+    message = "; ".join(excinfo.value.errors)
+    assert "block 'b1' is eligible for table (cue 'compare')" in message
+
+
+def test_soft_paragraph_run_is_auto_fixed_and_accepted_with_a_warning() -> None:
+    section = _section(
+        _block("b0", "explain why this happens"),
+        _block("b1", "explain why that happens"),
+        _block("b2", "explain why it happens"),
+    )
+    choices = [
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+        CompositionChoice(teaching_block_id="b1", kind="paragraph", semantic_role="explanation"),
+        CompositionChoice(teaching_block_id="b2", kind="paragraph", semantic_role="summary"),
+    ]
+
+    # Default (accept_soft_issues=False) still fails closed, unchanged.
+    with pytest.raises(CompositionValidationError, match="consecutive paragraphs"):
+        validate_and_build_composition(section=section, choices=choices, tasks=[])
+
+    plan = validate_and_build_composition(
+        section=section, choices=choices, tasks=[], accept_soft_issues=True
+    )
+
+    assert [item.kind for item in plan.items] == ["paragraph", "paragraph", "paragraph"]
+    assert ("paragraph_run_exceeded", "choices[2]") in plan.warnings
+    assert all(code in SOFT_COMPOSITION_ISSUE_CODES for code, _path in plan.warnings)
+
+
+def test_five_or_more_consecutive_paragraphs_stays_hard_even_with_soft_acceptance() -> None:
+    section = _section(
+        *[_block(f"b{index}", "explain why it happens") for index in range(5)]
+    )
+    choices = [
+        CompositionChoice(teaching_block_id=f"b{index}", kind="paragraph", semantic_role="explanation")
+        for index in range(5)
+    ]
+
+    with pytest.raises(CompositionValidationError, match="consecutive paragraphs") as excinfo:
+        validate_and_build_composition(
+            section=section, choices=choices, tasks=[], accept_soft_issues=True
+        )
+    assert "paragraph_run_exceeded" in _issue_codes(excinfo.value)
+
+
+def test_node_ceiling_soft_accepts_one_over_but_two_over_stays_hard() -> None:
+    section = _section(_block("b0", "compare the evidence"))
+    one_over = [
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="summary"),
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="bridge"),
+    ]
+    plan = validate_and_build_composition(
+        section=section,
+        choices=one_over,
+        tasks=[],
+        policy=CompositionPolicy(max_nodes_per_block=2),
+        accept_soft_issues=True,
+    )
+    assert len(plan.items) == 3
+    assert ("block_exceeds_node_limit", "blocks/b0") in plan.warnings
+
+    two_over = one_over + [
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="worked_example")
+    ]
+    with pytest.raises(CompositionValidationError, match="exceeds 2 ordinary nodes") as excinfo:
+        validate_and_build_composition(
+            section=section,
+            choices=two_over,
+            tasks=[],
+            policy=CompositionPolicy(max_nodes_per_block=2),
+            accept_soft_issues=True,
+        )
+    assert "block_exceeds_node_limit" in _issue_codes(excinfo.value)
+
+
+def test_soft_cue_issues_convert_to_paragraph_with_a_warning() -> None:
+    # "list" and "evidence" both share ground with paragraph (the role
+    # "evidence" is valid for paragraphs too), so this is fixable -- unlike
+    # a role such as "visual_model" that only "figure" accepts.
+    section = _section(_block("b0", "explain why this happens"))
+    choices = [
+        CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence")
+    ]
+
+    plan = validate_and_build_composition(
+        section=section, choices=choices, tasks=[], accept_soft_issues=True
+    )
+
+    assert plan.items[0].kind == "paragraph"
+    assert plan.items[0].semantic_role == "evidence"
+    assert ("kind_missing_semantic_cue", "choices[0].kind") in plan.warnings
+
+
+def test_soft_cue_conversion_refused_when_paragraph_does_not_allow_the_role_stays_hard() -> None:
+    section = _section(_block("b0", "explain why this happens"))
+    choices = [
+        CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison")
+    ]
+
+    with pytest.raises(CompositionValidationError, match="cannot auto-fix") as excinfo:
+        validate_and_build_composition(
+            section=section, choices=choices, tasks=[], accept_soft_issues=True
+        )
+    assert "kind_missing_semantic_cue" in _issue_codes(excinfo.value)
+
+
+def test_extra_callouts_beyond_ceiling_convert_to_paragraph_with_a_warning() -> None:
+    section = _section(
+        _block("b0", "warning: avoid the common misconception"),
+        _block("b1", "safety warning about this misconception"),
+    )
+    choices = [
+        CompositionChoice(teaching_block_id="b0", kind="callout", semantic_role="misconception"),
+        CompositionChoice(teaching_block_id="b1", kind="callout", semantic_role="safety_guidance"),
+    ]
+
+    plan = validate_and_build_composition(
+        section=section, choices=choices, tasks=[], accept_soft_issues=True
+    )
+
+    assert [item.kind for item in plan.items] == ["callout", "paragraph"]
+    assert ("section_exceeds_callout_limit", "choices[1].kind") in plan.warnings
+
+
+def test_hard_codes_still_fail_closed_even_with_soft_acceptance() -> None:
+    section = _section(_block("b0", "explain"), _block("b1", "explain again"))
+    choices = [
+        CompositionChoice(teaching_block_id="b1", kind="paragraph", semantic_role="explanation"),
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+    ]
+
+    with pytest.raises(CompositionValidationError) as excinfo:
+        validate_and_build_composition(
+            section=section, choices=choices, tasks=[], accept_soft_issues=True
+        )
+    assert _issue_codes(excinfo.value) == {"block_order_violation"}
+
+
+@pytest.mark.asyncio
+async def test_compose_section_repair_accepts_soft_only_result_with_warning() -> None:
+    section = _section(_block("b0", "explain why this happens"))
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        # A SOFT issue (uncued list) on both attempts: the first attempt
+        # still fails and drives the one bounded repair call, but the repair
+        # (post-repair) attempt auto-fixes and accepts it instead of failing
+        # forever, since no HARD issue is present.
+        calls.append(payload)
+        return {"items": [_choice("b0", "list", "evidence")]}
+
+    plan = await compose_section(section=section, tasks=[], provider=provider)
+
+    assert len(calls) == 2
+    assert calls[1]["repair_errors"]
+    assert plan.items[0].kind == "paragraph"
+    assert ("kind_missing_semantic_cue", "choices[0].kind") in plan.warnings
 
 
 def test_list_accepts_explicit_sorting_but_rejects_uncued_unrelated_block() -> None:

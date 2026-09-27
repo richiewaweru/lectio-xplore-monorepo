@@ -42,7 +42,28 @@ Match roles to kinds exactly: paragraphs allow `bridge`, `explanation`,
 and `evidence`; figures allow only `visual_model` and `visual_interpretation`;
 tables allow only `comparison` and `evidence`; callouts allow only `misconception`
 and `safety_guidance`. Keep paragraph runs to at most two, each block to at most
-two ordinary nodes, and the section to ten ordinary nodes. TaskAnchors are
-inserted by code after the final ordinary node of their owning block. Return
-only the schema fields. If `repair_errors` is non-empty, correct those specific
-violations while preserving every valid choice.
+two ordinary nodes, and the section to ten ordinary nodes.
+
+Paragraph runs are counted across block boundaries, not just within one block:
+choosing a paragraph for block A and then another paragraph for the next block
+B continues the same run. A TaskAnchor ends a run: TaskAnchors are inserted by
+code after the final ordinary node of their owning block, and a block that owns
+a section task always ends the run there, so the next block starts a fresh
+count of zero. A block with no task does not break a run.
+
+Before choosing kinds, pre-plan: scan the blocks in order and find every run of
+three or more consecutive blocks that would otherwise all need a paragraph (no
+TaskAnchor breaks them). For each such run, check every block in it against the
+cue lists above and pick an eligible non-paragraph kind (list, table, figure,
+heading, or callout) for at least one block in the run, using the exact cue
+word that block's `intent`, `brief`, or `evidence` contains. If, and only if,
+none of the blocks in that run contain any cue for any non-paragraph kind, the
+run may stay all paragraphs.
+
+Return only the schema fields. If `repair_errors` is non-empty, correct those
+specific violations while preserving every valid choice: for a paragraph-run
+error, the message names the blocks in the offending run, which non-paragraph
+kind (if any) each is eligible for, and its matched cue word -- switch one of
+those blocks to the named kind using the named cue; for a missing-cue error,
+switch to a kind the message says the block is eligible for, or fall back to a
+paragraph.

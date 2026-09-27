@@ -305,6 +305,38 @@ async def _record_execution_failure(
     )
 
 
+async def _record_composition_style_warnings(
+    session: Any,
+    *,
+    run_id: str,
+    work_item_id: str,
+    warnings: Sequence[tuple[str, str]],
+) -> None:
+    """Persist a safe, bounded event for auto-fixed SOFT composition issues.
+
+    Mirrors ``_record_execution_failure``'s diagnostic shape: only fixed
+    composer issue codes and sanitized structural paths, bounded the same
+    way, never provider output or learner text.
+    """
+    if not warnings:
+        return
+    safe_payload: dict[str, Any] = {
+        "warning_codes": sorted({code for code, _path in warnings})[
+            :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
+        ],
+        "warning_paths": sorted({path for _code, path in warnings if path})[
+            :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
+        ],
+    }
+    await append_event(
+        session,
+        run_id=run_id,
+        work_item_id=work_item_id,
+        event_type="composition_style_warning",
+        safe_payload=safe_payload,
+    )
+
+
 async def admit_section_run(
     session: Any,
     *,
@@ -422,6 +454,12 @@ async def compose_section_work_item(
                 lease_token=item.lease_token,
                 compatibility=compatibility,
                 payload=plan.model_dump(mode="json"),
+            )
+            await _record_composition_style_warnings(
+                session,
+                run_id=item.run_id,
+                work_item_id=work_item_id,
+                warnings=plan.warnings,
             )
         else:
             try:
