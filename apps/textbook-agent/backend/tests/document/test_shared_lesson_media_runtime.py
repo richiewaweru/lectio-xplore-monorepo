@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+from contextlib import AsyncExitStack
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -10,6 +12,7 @@ from sqlalchemy.dialects import postgresql
 from document.shared_lesson.media import SharedFigureWorkOrder
 from document.shared_lesson.media_runtime import (
     MediaRuntimeError,
+    MediaRuntimeOutcome,
     MediaSourceConflict,
     MediaWorkItemJob,
     _verify_run_source,
@@ -17,9 +20,11 @@ from document.shared_lesson.media_runtime import (
     admit_figure_media_work_item,
     admit_repaired_figure_media_work_item,
     execute_figure_media_work_item,
+    execute_figure_media_work_items,
     frozen_figure_semantic_hash,
     project_media_readiness,
 )
+from document.shared_lesson import media_runtime
 from document.shared_lesson.models import SharedSection
 from infra.database.models import (
     ConceptModel,
@@ -44,6 +49,7 @@ from infra.generation_runtime import (
     create_build,
     fail_work_item,
     retry_work_item,
+    WorkItemUnavailable,
 )
 from media.generation.contracts import (
     GeneratedVisualBlock,
@@ -800,3 +806,154 @@ async def test_media_provider_result_is_fenced_after_separate_session_cancellati
         assert row.status == "cancelled"
         assert row.output_json is None
         assert executor.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_media_batch_waits_for_siblings_before_closing_sessions_on_claim_conflict(
+    monkeypatch,
+) -> None:
+    started = asyncio.Event()
+    release_sibling = asyncio.Event()
+    all_started = asyncio.Event()
+    finished: set[str] = set()
+    starts = 0
+    closed: list[str] = []
+    rolled_back: list[str] = []
+
+    class TrackedSession:
+        def __init__(self, item_id: str) -> None:
+            self.item_id = item_id
+            self.commits = 0
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_exc_info):
+            # The real dispatcher exits its AsyncExitStack only after the batch
+            # function returns. No media task may still be touching a session.
+            assert finished == {"unavailable", "slow-sibling", "healthy-sibling"}
+            if self.commits == 0:
+                rolled_back.append(self.item_id)
+            closed.append(self.item_id)
+            return False
+
+        async def commit(self) -> None:
+            self.commits += 1
+
+    sessions = {
+        item_id: TrackedSession(item_id)
+        for item_id in ("unavailable", "slow-sibling", "healthy-sibling")
+    }
+    jobs = []
+    for item_id, session in sessions.items():
+        work = _work(suffix=f"batch-{item_id}")
+        jobs.append(
+            MediaWorkItemJob(
+                session=session,
+                work_item_id=item_id,
+                worker_id="media-batch",
+                source=SOURCE,
+                work=work,
+                accepted_section=_accepted_for(work),
+                executor=SimpleNamespace(),
+            )
+        )
+
+    async def execute(job: MediaWorkItemJob) -> MediaRuntimeOutcome:
+        nonlocal starts
+        starts += 1
+        if starts == len(jobs):
+            all_started.set()
+        if job.work_item_id == "unavailable":
+            started.set()
+            finished.add(job.work_item_id)
+            raise WorkItemUnavailable("another claimant owns the row lock")
+        if job.work_item_id == "slow-sibling":
+            started.set()
+            await release_sibling.wait()
+        finished.add(job.work_item_id)
+        return MediaRuntimeOutcome(work_item_id=job.work_item_id)
+
+    monkeypatch.setattr(media_runtime, "execute_figure_media_work_item", execute)
+    try:
+        async with AsyncExitStack() as stack:
+            for session in sessions.values():
+                await stack.enter_async_context(session)
+            batch = asyncio.create_task(execute_figure_media_work_items(jobs, concurrency=3))
+            await asyncio.wait_for(all_started.wait(), timeout=1)
+            assert started.is_set()
+            assert not batch.done()
+            release_sibling.set()
+            results = await batch
+    finally:
+        release_sibling.set()
+
+    assert {result.work_item_id for result in results} == {
+        "unavailable",
+        "slow-sibling",
+        "healthy-sibling",
+    }
+    assert next(r for r in results if r.work_item_id == "unavailable").error_code == (
+        "media_claim_unavailable"
+    )
+    assert sessions["unavailable"].commits == 0
+    assert sessions["slow-sibling"].commits == 1
+    assert sessions["healthy-sibling"].commits == 1
+    assert not {"slow-sibling", "healthy-sibling"} & set(rolled_back)
+    assert set(closed) == set(sessions)
+
+
+@pytest.mark.asyncio
+async def test_media_batch_propagates_unexpected_error_after_committing_sibling(
+    monkeypatch,
+) -> None:
+    started = asyncio.Event()
+    release_sibling = asyncio.Event()
+    sibling_finished = asyncio.Event()
+
+    class TrackedSession:
+        def __init__(self) -> None:
+            self.commits = 0
+
+        async def commit(self) -> None:
+            self.commits += 1
+
+    failing_session = TrackedSession()
+    sibling_session = TrackedSession()
+    jobs = []
+    for item_id, session in (("db-error", failing_session), ("slow-sibling", sibling_session)):
+        work = _work(suffix=f"batch-{item_id}")
+        jobs.append(
+            MediaWorkItemJob(
+                session=session,
+                work_item_id=item_id,
+                worker_id="media-batch",
+                source=SOURCE,
+                work=work,
+                accepted_section=_accepted_for(work),
+                executor=SimpleNamespace(),
+            )
+        )
+
+    async def execute(job: MediaWorkItemJob) -> MediaRuntimeOutcome:
+        if job.work_item_id == "db-error":
+            started.set()
+            raise RuntimeError("database operation failed")
+        started.set()
+        await release_sibling.wait()
+        sibling_finished.set()
+        return MediaRuntimeOutcome(work_item_id=job.work_item_id)
+
+    monkeypatch.setattr(media_runtime, "execute_figure_media_work_item", execute)
+    batch = asyncio.create_task(execute_figure_media_work_items(jobs, concurrency=2))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=1)
+        assert not batch.done()
+    finally:
+        release_sibling.set()
+
+    with pytest.raises(RuntimeError, match="database operation failed"):
+        await batch
+    assert sibling_finished.is_set()
+    assert failing_session.commits == 0
+    assert sibling_session.commits == 1

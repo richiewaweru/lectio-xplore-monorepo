@@ -46,6 +46,7 @@ from infra.generation_runtime import (
     SourceIdentity,
     WorkItemAdmission,
     WorkItemFailure,
+    WorkItemUnavailable,
     WorkItemReplacement,
     active_work_items,
     add_work_item,
@@ -645,12 +646,22 @@ async def execute_figure_media_work_items(
             )
         async with semaphore:
             try:
-                return await execute_figure_media_work_item(job)
+                outcome = await execute_figure_media_work_item(job)
             except LeaseLostError:
                 return MediaRuntimeOutcome(
                     work_item_id=job.work_item_id,
                     error_code="media_lease_lost",
                     error_summary="Figure worker lease was lost before commit.",
+                )
+            except WorkItemUnavailable:
+                # A competing claimant may have the row lock, or the item may
+                # have changed state after this batch was assembled. Keep this
+                # item pending for the normal next worker pass; this is not a
+                # provider failure and must not consume a semantic retry.
+                return MediaRuntimeOutcome(
+                    work_item_id=job.work_item_id,
+                    error_code="media_claim_unavailable",
+                    error_summary="Figure media work was not available to claim.",
                 )
             except MediaRuntimeError as exc:
                 return MediaRuntimeOutcome(
@@ -658,8 +669,31 @@ async def execute_figure_media_work_items(
                     error_code="media_contract_failure",
                     error_summary=str(exc),
                 )
+            # Each job owns its session. Commit successful output and expected
+            # failure transitions independently so an unrelated sibling
+            # exception cannot roll them back when the batch stack closes.
+            await job.session.commit()
+            return outcome
 
-    return tuple(await asyncio.gather(*(run_one(job) for job in jobs)))
+    # gather's default behavior propagates the first exception immediately,
+    # while sibling jobs may still be using their sessions. Collect exceptions
+    # only after every task has settled, then re-raise the first one so the
+    # caller keeps its normal failure path and READY remains blocked.
+    results = await asyncio.gather(
+        *(run_one(job) for job in jobs),
+        return_exceptions=True,
+    )
+    outcomes: list[MediaRuntimeOutcome] = []
+    first_error: BaseException | None = None
+    for result in results:
+        if isinstance(result, BaseException):
+            if first_error is None:
+                first_error = result
+        else:
+            outcomes.append(result)
+    if first_error is not None:
+        raise first_error
+    return tuple(outcomes)
 
 
 def project_media_readiness(

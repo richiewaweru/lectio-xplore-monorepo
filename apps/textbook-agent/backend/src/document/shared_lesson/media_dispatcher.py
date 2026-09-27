@@ -253,8 +253,6 @@ class SharedMediaDispatcher:
                         jobs,
                         concurrency=self.concurrency,
                     )
-                    for job in jobs:
-                        await job.session.commit()
 
         media_items = list(
             (
