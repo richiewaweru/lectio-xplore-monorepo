@@ -5,6 +5,8 @@ import weakref
 from types import SimpleNamespace
 
 import pytest
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+from sqlalchemy import select
 from test_shared_boundary_dispatcher import _ready_writers
 from test_shared_writer_admission import _seed_ready_composer_run
 
@@ -37,7 +39,7 @@ from document.shared_lesson.runtime import TeachingPlanSource, make_section_writ
 from document.shared_lesson.section_sources import build_section_sources
 from document.shared_lesson.semantic_inputs import load_verified_semantic_inputs
 from document.shared_lesson.work_item_inputs import load_verified_shared_lesson_inputs
-from infra.database.models import GenerationWorkItemModel
+from infra.database.models import GenerationEventModel, GenerationWorkItemModel
 from infra.execution.leases import LeaseLostError
 
 
@@ -573,3 +575,181 @@ async def test_provider_sees_committed_lease_checkpoint_and_stale_result_is_fenc
         assert item.status == "running"
         assert item.lease_token == 2
         assert item.checkpoint_json is not None
+
+
+async def _prepare_boundary_job(db_session):
+    """Seed one ready composer/writer pair and admit its boundary work item."""
+    owner, run_id, source = await _seed_ready_composer_run(db_session)
+    admissions = await _ready_writers(db_session, owner, run_id, source)
+    semantic = await load_verified_semantic_inputs(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+    )
+    section_sources = tuple(
+        source_item
+        for section in source.plan.sections
+        for source_item in build_section_sources(semantic, section)
+    )
+    verified = await load_verified_shared_lesson_inputs(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        tasks=semantic.tasks,
+        sources=section_sources,
+    )
+    sections = {section.id: section for section in verified.sections}
+    writer_requests = {admission.section.slot_id: admission.request for admission in admissions}
+    writer_identities = {
+        admission.section.slot_id: admission.composition_identity for admission in admissions
+    }
+    previous_id, next_id = tuple(section.slot_id for section in source.plan.sections)
+    admitted = await admit_boundary_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        previous_section=sections[previous_id],
+        next_section=sections[next_id],
+        previous_composition_identity=writer_identities[previous_id],
+        next_composition_identity=writer_identities[next_id],
+    )
+    await db_session.commit()
+    writer_item_ids = tuple(
+        await db_session.scalars(
+            select(GenerationWorkItemModel.id).where(
+                GenerationWorkItemModel.run_id == run_id,
+                GenerationWorkItemModel.status == "ready",
+                GenerationWorkItemModel.id != admitted.record.id,
+            )
+        )
+    )
+    return {
+        "run_id": run_id,
+        "source": source,
+        "sections": sections,
+        "previous_id": previous_id,
+        "next_id": next_id,
+        "writer_requests": writer_requests,
+        "admitted": admitted,
+        "writer_item_ids": writer_item_ids,
+    }
+
+
+@pytest.mark.asyncio
+async def test_boundary_classifies_unexpected_model_behavior_as_recoverable_output_failure(
+    db_session, db_session_factory
+) -> None:
+    ctx = await _prepare_boundary_job(db_session)
+    provider_calls = 0
+
+    async def malformed_semantic_output(_request):
+        nonlocal provider_calls
+        provider_calls += 1
+        raise UnexpectedModelBehavior("Exceeded maximum output retries (0)")
+
+    async with db_session_factory() as worker_session:
+        outcome = await boundary_runtime.execute_boundary_work_item(
+            boundary_runtime.BoundaryWorkItemJob(
+                session=worker_session,
+                work_item_id=ctx["admitted"].record.id,
+                worker_id="boundary-model-output-failure",
+                source=ctx["source"],
+                previous_section=ctx["sections"][ctx["previous_id"]],
+                next_section=ctx["sections"][ctx["next_id"]],
+                writer_requests=ctx["writer_requests"],
+                semantic_validator=malformed_semantic_output,
+            )
+        )
+        await worker_session.commit()
+
+    assert provider_calls == 1
+    assert outcome.error_code == "boundary_invalid_output"
+
+    async with db_session_factory() as verify:
+        failed = await verify.get(GenerationWorkItemModel, ctx["admitted"].record.id)
+        assert failed is not None
+        assert failed.status == "failed_recoverable"
+        assert failed.error_code == "boundary_invalid_output"
+        assert failed.error_class == "provider_output"
+        assert failed.recovery_action == "retry"
+        assert failed.attempt < failed.max_attempts
+
+        for writer_item_id in ctx["writer_item_ids"]:
+            sibling = await verify.get(GenerationWorkItemModel, writer_item_id)
+            assert sibling is not None
+            assert sibling.status == "ready"
+            assert sibling.output_json is not None
+
+        events = list(
+            (
+                await verify.scalars(
+                    select(GenerationEventModel).where(
+                        GenerationEventModel.work_item_id == ctx["admitted"].record.id
+                    )
+                )
+            ).all()
+        )
+        diagnostic = next(
+            event for event in events if event.event_type == "boundary_failure_diagnostic"
+        )
+        assert diagnostic.safe_payload_json == {
+            "original_exception_type": "UnexpectedModelBehavior"
+        }
+
+
+@pytest.mark.asyncio
+async def test_boundary_generic_programming_error_remains_terminal(
+    db_session, db_session_factory
+) -> None:
+    ctx = await _prepare_boundary_job(db_session)
+
+    async def broken_semantic_validator(_request):
+        raise ValueError("some unexpected programming defect")
+
+    async with db_session_factory() as worker_session:
+        outcome = await boundary_runtime.execute_boundary_work_item(
+            boundary_runtime.BoundaryWorkItemJob(
+                session=worker_session,
+                work_item_id=ctx["admitted"].record.id,
+                worker_id="boundary-generic-failure",
+                source=ctx["source"],
+                previous_section=ctx["sections"][ctx["previous_id"]],
+                next_section=ctx["sections"][ctx["next_id"]],
+                writer_requests=ctx["writer_requests"],
+                semantic_validator=broken_semantic_validator,
+            )
+        )
+        await worker_session.commit()
+
+    assert outcome.error_code == "boundary_runtime_error"
+
+    async with db_session_factory() as verify:
+        failed = await verify.get(GenerationWorkItemModel, ctx["admitted"].record.id)
+        assert failed is not None
+        assert failed.status == "failed_terminal"
+        assert failed.error_code == "boundary_runtime_error"
+        assert failed.error_class == "internal_programming"
+        assert failed.recovery_action == "none"
+
+        for writer_item_id in ctx["writer_item_ids"]:
+            sibling = await verify.get(GenerationWorkItemModel, writer_item_id)
+            assert sibling is not None
+            assert sibling.status == "ready"
+            assert sibling.output_json is not None
+
+        events = list(
+            (
+                await verify.scalars(
+                    select(GenerationEventModel).where(
+                        GenerationEventModel.work_item_id == ctx["admitted"].record.id
+                    )
+                )
+            ).all()
+        )
+        diagnostic = next(
+            event for event in events if event.event_type == "boundary_failure_diagnostic"
+        )
+        assert diagnostic.safe_payload_json == {"original_exception_type": "ValueError"}

@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from sqlalchemy import select
 
 from curriculum.teaching_plan.models import TeachingPlanSection
@@ -48,6 +49,7 @@ from infra.generation_runtime import (
     WorkItemReplacement,
     active_work_items,
     add_work_item,
+    append_event,
     claim_work_item,
     complete_work_item,
     fail_work_item,
@@ -672,12 +674,58 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
             safe_summary="Boundary checkpoint or source identity failed validation.",
             recovery_action=RecoveryAction.NONE,
         )
+    if isinstance(exc, UnexpectedModelBehavior):
+        # The boundary semantic reviewer and its one bounded targeted-repair
+        # dispatch share the same zero-output-retry structured provider as the
+        # section writer. Exhausting that retry budget on malformed or empty
+        # output is a recoverable provider failure, not a programming error.
+        return WorkItemFailure(
+            error_code="boundary_invalid_output",
+            error_class=ErrorClass.PROVIDER_OUTPUT,
+            safe_summary="Boundary semantic provider returned invalid output.",
+            recovery_action=RecoveryAction.RETRY,
+        )
     return WorkItemFailure(
         error_code="boundary_runtime_error",
         error_class=ErrorClass.INTERNAL_PROGRAMMING,
         safe_summary="Boundary runtime failed unexpectedly.",
         recovery_action=RecoveryAction.NONE,
     )
+
+
+async def _record_boundary_execution_failure(
+    session: Any,
+    *,
+    work_item_id: str,
+    worker_id: str,
+    lease_token: int,
+    error: Exception,
+    now: Any = None,
+) -> WorkItemFailure:
+    """Persist a typed boundary failure and its safe exception-type diagnostic.
+
+    Mirrors ``document.shared_lesson.runtime._record_execution_failure``: the
+    diagnostic event carries only the exception's type name, never its message,
+    prompts, or provider text.
+    """
+    failure = _failure_for_exception(error)
+    failed_item = await fail_work_item(
+        session,
+        work_item_id=work_item_id,
+        worker_id=worker_id,
+        lease_token=lease_token,
+        failure=failure,
+        now=now,
+    )
+    await append_event(
+        session,
+        run_id=failed_item.run_id,
+        work_item_id=failed_item.id,
+        event_type="boundary_failure_diagnostic",
+        error_code=failure.error_code,
+        safe_payload={"original_exception_type": type(error).__name__},
+    )
+    return failure
 
 
 async def execute_boundary_work_item(
@@ -759,17 +807,34 @@ async def execute_boundary_work_item(
     except LeaseLostError:
         raise
     except Exception as exc:  # noqa: BLE001 - persist unknown checkpoint failures as typed failures.
-        failure = _failure_for_exception(exc)
-        await fail_work_item(
+        # A checkpoint read/write failure may leave the session's transaction
+        # aborted (e.g. a SQL error). The claim above is not yet committed, so
+        # rollback clears the failed transaction and the item must be
+        # reclaimed under a fresh fence before the typed failure can persist.
+        rollback = getattr(job.session, "rollback", None)
+        failure_lease_token = item.lease_token or 0
+        transaction_failed = getattr(job.session, "is_active", True) is False
+        if callable(rollback) and transaction_failed:
+            await rollback()
+            item = await claim_work_item(
+                job.session,
+                work_item_id=job.work_item_id,
+                worker_id=job.worker_id,
+                source=identity,
+                lease_seconds=job.lease_seconds,
+                now=now,
+            )
+            failure_lease_token = item.lease_token or 0
+        failure = await _record_boundary_execution_failure(
             job.session,
-            work_item_id=item.id,
+            work_item_id=job.work_item_id,
             worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
+            lease_token=failure_lease_token,
+            error=exc,
             now=now,
         )
         return BoundaryRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=job.work_item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
             preserved_ready_siblings=True,
@@ -809,17 +874,25 @@ async def execute_boundary_work_item(
     except LeaseLostError:
         raise
     except Exception as exc:  # noqa: BLE001 - persist unknown validator failures as typed failures.
-        failure = _failure_for_exception(exc)
-        await fail_work_item(
+        # The claim and checkpoint above are already committed. A semantic
+        # provider or repair-provider error (e.g. UnexpectedModelBehavior)
+        # never touches the database, but clear any aborted transaction state
+        # before the typed failure persists so the fenced write is never
+        # attempted against a poisoned session.
+        rollback = getattr(job.session, "rollback", None)
+        failure_lease_token = item.lease_token or 0
+        if callable(rollback):
+            await rollback()
+        failure = await _record_boundary_execution_failure(
             job.session,
-            work_item_id=item.id,
+            work_item_id=job.work_item_id,
             worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
+            lease_token=failure_lease_token,
+            error=exc,
             now=now,
         )
         return BoundaryRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=job.work_item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
             preserved_ready_siblings=True,
