@@ -184,6 +184,25 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
             },
         }
     if interaction_kind == "short-response":
+        if evaluation_type == "rubric":
+            criteria = evaluation.get("criteria")
+            if (
+                not isinstance(criteria, list)
+                or not criteria
+                or any(not isinstance(item, str) or not item.strip() for item in criteria)
+            ):
+                raise SharedDocumentLearnMappingError(
+                    f"task {task.id!r} rubric evaluation requires non-empty text criteria"
+                )
+            preserved_criteria = list(criteria)
+            guidance = "Review the learner response against these rubric criteria:\n" + "\n".join(
+                f"- {criterion}" for criterion in preserved_criteria
+            )
+            return {
+                "evaluation": "teacher-review",
+                "review_guidance": guidance,
+                "rubric_criteria": preserved_criteria,
+            }
         if evaluation_type == "teacher_review":
             return {
                 "evaluation": "teacher-review",

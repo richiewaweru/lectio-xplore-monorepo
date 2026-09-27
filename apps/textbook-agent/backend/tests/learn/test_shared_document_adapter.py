@@ -22,8 +22,10 @@ from infra.execution.checkpoints import content_hash
 from learn.generation.shared_document_adapter import (
     SharedDocumentIdentity,
     SharedDocumentLearnMappingError,
+    _learn_config,
     realize_shared_document_for_learn,
 )
+from learn.runtime.evaluation import evaluate_interaction
 
 
 def _task(*, task_id: str = "task-1", response_type: str = "single_choice") -> SharedTaskSpec:
@@ -124,6 +126,66 @@ def _stored(*, second_task: SharedTaskSpec | None = None) -> StoredSharedLessonD
     )
 
 
+def _classification_task() -> SharedTaskSpec:
+    return SharedTaskSpec(
+        id="task-3",
+        teaching_plan_id="plan-1",
+        teaching_plan_revision=2,
+        teaching_plan_hash="b" * 64,
+        teaching_block_id="block-3",
+        mode="assessment",
+        action="classify-items",
+        purpose="Classify the examples",
+        prompt="Place each example in its group.",
+        difficulty="guided",
+        expected_evidence="A supported classification",
+        response={
+            "type": "classification",
+            "items": ["a"],
+            "categories": ["group"],
+            "correct_placements": {"a": "group"},
+        },
+        evaluation={"type": "mapping", "correct_placements": {"a": "group"}},
+    )
+
+
+def _stored_with_three_anchors(rubric_task: SharedTaskSpec) -> StoredSharedLessonDocument:
+    classification = _classification_task()
+    stored = _stored(second_task=rubric_task)
+    document = stored.document
+    sections = list(document.sections)
+    sections.append(
+        SharedSection(
+            id="section-3",
+            title="Classify",
+            position=2,
+            nodes=(
+                TaskAnchor(
+                    id="anchor-3",
+                    task_spec_id=classification.id,
+                    teaching_block_id=classification.teaching_block_id,
+                ),
+            ),
+        )
+    )
+    updated = build_shared_lesson_document(
+        {
+            **document.model_dump(mode="json"),
+            "sections": sections,
+            "tasks": [
+                *(task.model_dump(mode="json") for task in document.tasks),
+                classification.model_dump(mode="json"),
+            ],
+        }
+    )
+    return StoredSharedLessonDocument(
+        document=updated,
+        path_lesson_id=stored.path_lesson_id,
+        status="ready",
+        storage_hash=content_hash(updated.model_dump(mode="json")),
+    )
+
+
 def _identity(stored: StoredSharedLessonDocument) -> SharedDocumentIdentity:
     document = stored.document
     return SharedDocumentIdentity(
@@ -207,18 +269,53 @@ def test_adapter_rejects_stale_recomputed_content_hash() -> None:
         )
 
 
-def test_unsupported_task_in_one_section_does_not_mutate_or_rewrite_sibling() -> None:
+def test_rubric_text_task_maps_to_teacher_review_in_three_anchor_document() -> None:
     unsupported_task = _task(task_id="task-2", response_type="text")
-    stored = _stored(second_task=unsupported_task)
+    criteria = ["Uses the relevant evidence", "Explains the reasoning"]
+    rubric_task = unsupported_task.model_copy(
+        update={"evaluation": {"type": "rubric", "criteria": criteria}}
+    )
+    stored = _stored_with_three_anchors(rubric_task)
     before = stored.document.model_dump(mode="json")
 
-    with pytest.raises(SharedDocumentLearnMappingError, match="evaluation is not supported"):
-        realize_shared_document_for_learn(
-            stored,
-            expected_identity=_identity(stored),
-            subject="Science",
-        )
+    result = realize_shared_document_for_learn(
+        stored,
+        expected_identity=_identity(stored),
+        subject="Science",
+    )
 
+    assert len(result.document.sections) == 3
+    assert [node.kind for node in result.document.nodes].count("interaction") == 3
+    rubric_interaction = next(node for node in result.document.nodes if node.id == "anchor-2")
+    assert rubric_interaction.interaction_type == "short-response"
+    assert rubric_interaction.config == {
+        "evaluation": "teacher-review",
+        "review_guidance": (
+            "Review the learner response against these rubric criteria:\n"
+            "- Uses the relevant evidence\n- Explains the reasoning"
+        ),
+        "rubric_criteria": criteria,
+    }
+    evaluation = evaluate_interaction(
+        {
+            "kind": rubric_interaction.interaction_type,
+            "config": rubric_interaction.config,
+            "feedback": rubric_interaction.feedback,
+        },
+        {"text": "The learner's response."},
+    )
+    assert evaluation.outcome == "pending-review"
+    assert evaluation.details["mode"] == "teacher-review"
+    assert all(criterion in evaluation.details["review_guidance"] for criterion in criteria)
     assert stored.document.model_dump(mode="json") == before
-    assert stored.document.sections[0].nodes[0].display.text == "Shared authored prose."
-    assert stored.document.sections[0].nodes[1].task_spec_id == "task-1"
+    ordinary = next(node for node in result.document.nodes if node.id == "paragraph-1")
+    assert ordinary.text == "Shared authored prose."
+
+
+@pytest.mark.parametrize("criteria", [[], ["   "], ["valid", 3]])
+def test_rubric_text_task_rejects_empty_or_invalid_criteria(criteria) -> None:
+    rubric_task = _task(task_id="task-2", response_type="text").model_copy(
+        update={"evaluation": {"type": "rubric", "criteria": criteria}}
+    )
+    with pytest.raises(SharedDocumentLearnMappingError, match="rubric evaluation requires"):
+        _learn_config(rubric_task, "short-response")
