@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import select, text
 from sqlalchemy.exc import OperationalError
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import (
@@ -792,6 +793,104 @@ async def test_writer_rolls_back_poisoned_session_before_failure_record_and_keep
             if event.event_type == "section_writer_failure_diagnostic"
         )
         assert diagnostic.safe_payload_json == {"original_exception_type": "OperationalError"}
+
+
+@pytest.mark.asyncio
+async def test_writer_classifies_unexpected_model_behavior_as_recoverable_output_failure(
+    db_session, db_session_factory
+) -> None:
+    owner_id, lesson_id = await _seed_build(db_session, suffix="writer-model-output-failure")
+    source = _source()
+    _build, (run, _composition_items) = await _admit_run(
+        db_session,
+        owner_id=owner_id,
+        lesson_id=lesson_id,
+        source=source,
+        request_key="writer-model-output-failure-request",
+    )
+    sections = {section.slot_id: section for section in source.plan.sections}
+    ready = await admit_writer_work_item(
+        db_session,
+        run_id=run.id,
+        section=sections["orient"],
+        request=_writer_request(sections["orient"]),
+    )
+    target_request = _writer_request(sections["explain"])
+    target = await admit_writer_work_item(
+        db_session,
+        run_id=run.id,
+        section=sections["explain"],
+        request=target_request,
+    )
+    ready_claim = await claim_work_item(
+        db_session,
+        work_item_id=ready.id,
+        worker_id="writer-ready-model-output-sibling",
+        source=verify_teaching_plan_source(source),
+    )
+    ready_output = {"section_slot_id": "orient", "title": "Ready sibling", "nodes": []}
+    await complete_work_item(
+        db_session,
+        work_item_id=ready.id,
+        worker_id="writer-ready-model-output-sibling",
+        lease_token=ready_claim.lease_token,
+        output_json=ready_output,
+        output_hash=content_hash(ready_output),
+    )
+    await db_session.commit()
+    ready_id = ready.id
+    target_id = target.id
+    provider_calls = 0
+
+    async def malformed_structured_output(_payload):
+        nonlocal provider_calls
+        provider_calls += 1
+        raise UnexpectedModelBehavior("Exceeded maximum output retries (0)")
+
+    with pytest.raises(UnexpectedModelBehavior):
+        await _write_section_work_item(
+            db_session,
+            work_item_id=target_id,
+            worker_id="writer-model-output-failure",
+            source=source,
+            request=target_request,
+            provider=malformed_structured_output,
+            provider_semaphore=asyncio.Semaphore(1),
+        )
+    await db_session.commit()
+
+    async with db_session_factory() as verify:
+        failed = await verify.get(GenerationWorkItemModel, target_id)
+        preserved = await verify.get(GenerationWorkItemModel, ready_id)
+        failed_run = await verify.get(GenerationRunModel, run.id)
+        assert provider_calls == 1
+        assert failed is not None
+        assert failed.status == "failed_recoverable"
+        assert failed.error_code == "invalid_section_output"
+        assert failed.error_class == "provider_output"
+        assert failed.recovery_action == "retry"
+        assert failed.max_attempts == 3
+        assert preserved is not None and preserved.status == "ready"
+        assert preserved.output_json == ready_output
+        assert preserved.output_hash == content_hash(ready_output)
+        assert failed_run is not None and failed_run.status == "queued"
+        events = list(
+            (
+                await verify.scalars(
+                    select(GenerationEventModel).where(
+                        GenerationEventModel.work_item_id == target_id
+                    )
+                )
+            ).all()
+        )
+        diagnostic = next(
+            event
+            for event in events
+            if event.event_type == "section_writer_failure_diagnostic"
+        )
+        assert diagnostic.safe_payload_json == {
+            "original_exception_type": "UnexpectedModelBehavior"
+        }
 
 
 async def _admit_run(

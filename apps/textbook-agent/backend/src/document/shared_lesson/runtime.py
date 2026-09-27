@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
@@ -252,7 +253,13 @@ async def _record_execution_failure(
         code = "provider_transport"
         summary = "Section provider transport failed."
     elif isinstance(
-        error, (CompositionValidationError, SectionWriteValidationError, ValidationError)
+        error,
+        (
+            CompositionValidationError,
+            SectionWriteValidationError,
+            UnexpectedModelBehavior,
+            ValidationError,
+        ),
     ):
         error_class = ErrorClass.PROVIDER_OUTPUT
         recovery = RecoveryAction.RETRY
