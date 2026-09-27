@@ -17,6 +17,92 @@ from .models import (
     TaskEvaluationType,
 )
 
+_FEEDBACK_META_KEYS = frozenset({"correct", "incorrect", "by_option"})
+
+
+def _feedback_text_blank(value: object) -> bool:
+    return not isinstance(value, str) or not value.strip()
+
+
+def _validate_choice_feedback(
+    task: SharedTaskSpec, declared_ids: set[str], correct_ids: list[str]
+) -> list[str]:
+    """Validate the deterministic per-option feedback contract for choice tasks.
+
+    Feedback may be omitted. When present, every option-id key (top-level
+    legacy form or nested under ``by_option``) must be a real, wrong option
+    id, every wrong option must have feedback, and no feedback text may be
+    blank.
+    """
+    feedback = task.feedback
+    if feedback is None:
+        return []
+    errors: list[str] = []
+    by_option = feedback.get("by_option")
+    if "by_option" in feedback and not isinstance(by_option, dict):
+        errors.append(f"task {task.id!r} feedback_unknown_option: by_option must be an object")
+        by_option = {}
+    elif not isinstance(by_option, dict):
+        by_option = {}
+    top_level_option_keys = {
+        key: value for key, value in feedback.items() if key not in _FEEDBACK_META_KEYS
+    }
+    per_option: dict[str, object] = dict(top_level_option_keys)
+    per_option.update(by_option)
+    correct_set = {str(value) for value in correct_ids}
+    if per_option:
+        unknown_options = sorted(set(per_option) - declared_ids)
+        if unknown_options:
+            errors.append(f"task {task.id!r} feedback_unknown_option {unknown_options}")
+        on_correct = sorted(set(per_option) & correct_set)
+        if on_correct:
+            errors.append(f"task {task.id!r} feedback_on_correct_option {on_correct}")
+        wrong_ids = sorted(declared_ids - correct_set)
+        covered = set(per_option) & declared_ids
+        missing = sorted(set(wrong_ids) - covered)
+        if missing:
+            errors.append(f"task {task.id!r} feedback_missing_wrong_option {missing}")
+    for key, value in feedback.items():
+        if key == "by_option":
+            if isinstance(value, dict):
+                for option_key, text in value.items():
+                    if _feedback_text_blank(text):
+                        errors.append(f"task {task.id!r} feedback_blank at by_option.{option_key}")
+            continue
+        if _feedback_text_blank(value):
+            errors.append(f"task {task.id!r} feedback_blank at {key}")
+    return errors
+
+
+def _validate_classification_feedback(task: SharedTaskSpec, items: list[str]) -> list[str]:
+    """Validate the deterministic feedback contract for classification tasks.
+
+    Feedback may be omitted. When present, ``common_errors`` keys must refer
+    to real classified items and no feedback text may be blank.
+    """
+    feedback = task.feedback
+    if feedback is None:
+        return []
+    errors: list[str] = []
+    common_errors = feedback.get("common_errors")
+    if common_errors is not None:
+        if not isinstance(common_errors, dict):
+            errors.append(f"task {task.id!r} feedback_unknown_item: common_errors must be an object")
+        else:
+            item_set = {str(item) for item in items}
+            unknown = sorted(set(common_errors) - item_set)
+            if unknown:
+                errors.append(f"task {task.id!r} feedback_unknown_item {unknown}")
+            for key, text in common_errors.items():
+                if _feedback_text_blank(text):
+                    errors.append(f"task {task.id!r} feedback_blank at common_errors.{key}")
+    for key, value in feedback.items():
+        if key == "common_errors":
+            continue
+        if _feedback_text_blank(value):
+            errors.append(f"task {task.id!r} feedback_blank at {key}")
+    return errors
+
 
 def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
     """Validate canonical response/evaluation meaning for finalized tasks.
@@ -84,13 +170,20 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
             unknown = sorted({str(value) for value in correct_ids} - declared)
             if unknown:
                 errors.append(f"task {task.id!r} evaluation references unknown option ids {unknown}")
+            elif task.feedback is not None:
+                errors.extend(
+                    _validate_choice_feedback(task, declared, [str(value) for value in correct_ids])
+                )
     elif response_type == "classification":
         items = response.get("items")
         categories = response.get("categories")
-        if not isinstance(items, list) or not items or any(
-            not isinstance(item, str) or not item.strip() for item in items
-        ):
+        items_valid = isinstance(items, list) and bool(items) and all(
+            isinstance(item, str) and item.strip() for item in items
+        )
+        if not items_valid:
             errors.append(f"task {task.id!r} classification response requires items")
+        elif task.feedback is not None:
+            errors.extend(_validate_classification_feedback(task, list(items)))
         if not isinstance(categories, list) or not categories or any(
             not isinstance(item, str) or not item.strip() for item in categories
         ):
@@ -158,6 +251,17 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
             for value in values
         ):
             errors.append(f"task {task.id!r} missing-values response requires values")
+
+    if response_type not in {"single_choice", "multiple_choice", "classification"} and isinstance(
+        task.feedback, dict
+    ):
+        for key, value in task.feedback.items():
+            if isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    if _feedback_text_blank(sub_value):
+                        errors.append(f"task {task.id!r} feedback_blank at {key}.{sub_key}")
+            elif _feedback_text_blank(value):
+                errors.append(f"task {task.id!r} feedback_blank at {key}")
 
     evaluation_type = str(task.evaluation.get("type") or "")
     if evaluation_type not in TaskEvaluationType.__args__:
