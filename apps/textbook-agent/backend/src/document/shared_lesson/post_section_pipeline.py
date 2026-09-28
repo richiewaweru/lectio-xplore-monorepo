@@ -194,7 +194,14 @@ async def _load_post_section_inputs(
             tasks=semantic.tasks,
             sources=tuple(sources),
         )
-        return run, source, semantic.tasks, accepted.compositions, accepted.sections
+        return (
+            run,
+            source,
+            semantic.tasks,
+            accepted.compositions,
+            accepted.sections,
+            accepted.section_warnings,
+        )
 
 
 async def run_post_section_pipeline(
@@ -333,7 +340,14 @@ async def run_post_section_pipeline(
             owner_user_id=owner_user_id,
             stage="document_qa",
         )
-        run, source, tasks, compositions_raw, sections_raw = await _load_post_section_inputs(
+        (
+            run,
+            source,
+            tasks,
+            compositions_raw,
+            sections_raw,
+            section_warnings,
+        ) = await _load_post_section_inputs(
             session_factory,
             run_id=run_id,
             owner_user_id=owner_user_id,
@@ -413,6 +427,7 @@ async def run_post_section_pipeline(
                 document_revision=1,
                 created_at=created_at,
                 provenance=draft.document.provenance,
+                writer_warnings=section_warnings,
                 required_media_by_section=required_media,
                 media_results=media_results,
                 semantic_validator=qa_semantic_validator,

@@ -77,6 +77,11 @@ class VerifiedSharedLessonInputs(BaseModel):
     composition_hashes: dict[str, str]
     section_hashes: dict[str, str]
     work_item_ids: dict[str, str]
+    #: Soft-issue (code, sanitized path) warnings the writer accepted on its
+    #: final bounded attempt for each section, keyed by section slot ID. Empty
+    #: for a section whose writer output carried no warnings. Never provider
+    #: output or learner text -- see ``writer.SOFT_SECTION_WRITE_ISSUE_CODES``.
+    section_warnings: dict[str, tuple[tuple[str, str], ...]] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _bind_and_freeze(self) -> VerifiedSharedLessonInputs:
@@ -109,9 +114,12 @@ class VerifiedSharedLessonInputs(BaseModel):
                 raise ValueError(f"{name} must cover every approved section exactly once")
         if set(self.work_item_ids) != expected_keys:
             raise ValueError("work_item_ids must cover the exact compose/write work-item keys")
+        if set(self.section_warnings) - set(section_ids):
+            raise ValueError("section_warnings must only name approved sections")
         object.__setattr__(self, "composition_hashes", _FrozenMap(self.composition_hashes))
         object.__setattr__(self, "section_hashes", _FrozenMap(self.section_hashes))
         object.__setattr__(self, "work_item_ids", _FrozenMap(self.work_item_ids))
+        object.__setattr__(self, "section_warnings", _FrozenMap(self.section_warnings))
         return self
 
 
@@ -205,7 +213,7 @@ def _parse_writer(
     tasks: Sequence[SharedTaskSpec],
     sources: Sequence[SectionSource],
     position: int,
-) -> tuple[SharedSection, str]:
+) -> tuple[SharedSection, str, tuple[tuple[str, str], ...]]:
     raw, output_hash = _parse_output(item, expected_key=f"write:{section.slot_id}")
     # Writer admission hashes the closed composition with the runtime's
     # ensure_ascii=False canonicalizer; this is distinct from the persisted
@@ -224,9 +232,14 @@ def _parse_writer(
         ordinary_nodes = tuple(
             node.model_dump(mode="json") for node in result.nodes if node.kind != "task_anchor"
         )
+        # ``accept_soft_issues=True`` reproduces an already-accepted section
+        # deterministically: a HARD issue still fails this reload, but a SOFT
+        # issue the writer's final attempt already accepted (and recorded as
+        # a warning) must not fail durable reloads of that exact content.
         verified = validate_and_build_section(
             request=request,
             draft=SectionWriterDraft.model_validate({"nodes": ordinary_nodes}),
+            accept_soft_issues=True,
         )
     except (TypeError, ValueError, SectionRuntimeError, SectionWriteValidationError) as exc:
         raise SharedLessonInputError(
@@ -234,7 +247,11 @@ def _parse_writer(
         ) from exc
     if verified != result:
         _fail(f"writer output for section {section.slot_id!r} differs from its verified shape")
-    return result.as_shared_section(section_id=section.slot_id, position=position), output_hash
+    return (
+        result.as_shared_section(section_id=section.slot_id, position=position),
+        output_hash,
+        result.warnings,
+    )
 
 
 def _partition_section_sources(
@@ -360,6 +377,7 @@ async def load_verified_shared_lesson_inputs(
     composition_hashes: dict[str, str] = {}
     section_hashes: dict[str, str] = {}
     work_item_ids: dict[str, str] = {}
+    section_warnings: dict[str, tuple[tuple[str, str], ...]] = {}
     for position, section in enumerate(plan_sections):
         compose_item = active_by_key[f"compose:{section.slot_id}"]
         write_item = active_by_key[f"write:{section.slot_id}"]
@@ -368,7 +386,7 @@ async def load_verified_shared_lesson_inputs(
             section=section,
             tasks=tasks,
         )
-        accepted_section, section_hash = _parse_writer(
+        accepted_section, section_hash, warnings = _parse_writer(
             write_item,
             section=section,
             composition=composition,
@@ -382,6 +400,8 @@ async def load_verified_shared_lesson_inputs(
         section_hashes[section.slot_id] = section_hash
         work_item_ids[f"compose:{section.slot_id}"] = compose_item.id
         work_item_ids[f"write:{section.slot_id}"] = write_item.id
+        if warnings:
+            section_warnings[section.slot_id] = warnings
 
     return VerifiedSharedLessonInputs(
         run_id=run.id,
@@ -395,6 +415,7 @@ async def load_verified_shared_lesson_inputs(
         composition_hashes=composition_hashes,
         section_hashes=section_hashes,
         work_item_ids=work_item_ids,
+        section_warnings=section_warnings,
     )
 
 

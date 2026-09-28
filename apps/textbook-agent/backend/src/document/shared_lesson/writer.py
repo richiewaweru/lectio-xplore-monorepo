@@ -219,6 +219,18 @@ class SectionWriteResult(_ClosedModel):
     section_slot_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
     nodes: tuple[SharedLessonNode, ...] = Field(min_length=1)
+    #: Soft-issue (code, sanitized path) pairs accepted on the writer's final
+    #: bounded attempt rather than failed. Every code here is a member of
+    #: ``SOFT_SECTION_WRITE_ISSUE_CODES``; never provider output or learner
+    #: text. Mirrors the composer's ``warnings`` convention (see composer.py).
+    warnings: tuple[tuple[str, str], ...] = Field(default=(), exclude_if=lambda value: not value)
+
+    @model_validator(mode="after")
+    def _validate_warnings(self) -> SectionWriteResult:
+        for code, _path in self.warnings:
+            if code not in SOFT_SECTION_WRITE_ISSUE_CODES:
+                raise ValueError(f"writer warning code {code!r} is not a soft issue code")
+        return self
 
     def as_shared_section(self, *, section_id: str, position: int) -> SharedSection:
         return SharedSection(
@@ -253,6 +265,14 @@ SECTION_WRITE_ISSUE_CODES = frozenset(
         "task_anchor_ownership_mismatch",
     }
 )
+
+#: SOFT issue codes are still checked on every attempt, but if this is the
+#: writer's final bounded attempt and every remaining issue is one of these
+#: codes, the section is deterministically accepted instead of failing the
+#: whole Run, with a ``warnings`` record of what was accepted. Every other
+#: code in ``SECTION_WRITE_ISSUE_CODES`` always fails closed. Mirrors the
+#: composer's ``SOFT_COMPOSITION_ISSUE_CODES`` convention (see composer.py).
+SOFT_SECTION_WRITE_ISSUE_CODES = frozenset({"task_answer_leaked", "unsupported_number"})
 
 _MAX_WRITER_ISSUE_PATH_LENGTH = 80
 
@@ -464,7 +484,13 @@ def _leaked_task_answer(text: str, request: SectionWriterRequest) -> str | None:
 
 
 def _check_learner_text(
-    node: WrittenNode, request: SectionWriterRequest, item: CompositionItem, *, node_index: int
+    node: WrittenNode,
+    request: SectionWriterRequest,
+    item: CompositionItem,
+    *,
+    node_index: int,
+    accept_soft_issues: bool,
+    warnings: list[tuple[str, str]],
 ) -> None:
     node_path = f"nodes[{node_index}]"
     values = _node_text_values(node)
@@ -522,13 +548,18 @@ def _check_learner_text(
             )
         leaked_answer = _leaked_task_answer(value, request)
         if leaked_answer is not None:
-            raise _composition_error(
-                "learner-facing content states the result of an anchored task "
-                f"({leaked_answer!r}) instead of leaving it for the learner to solve",
-                item,
-                code="task_answer_leaked",
-                path=f"{node_path}.text",
-            )
+            code, path = "task_answer_leaked", f"{node_path}.text"
+            if accept_soft_issues:
+                if (code, path) not in warnings:
+                    warnings.append((code, path))
+            else:
+                raise _composition_error(
+                    "learner-facing content states the result of an anchored task "
+                    f"({leaked_answer!r}) instead of leaving it for the learner to solve",
+                    item,
+                    code=code,
+                    path=path,
+                )
         for identifier in identifiers:
             if re.search(rf"(?<!\w){re.escape(identifier)}(?!\w)", value, flags=re.IGNORECASE):
                 raise _composition_error(
@@ -539,18 +570,36 @@ def _check_learner_text(
                 )
         for number in _NUMBER.finditer(value):
             if number.group(0) not in all_inputs:
-                raise _composition_error(
-                    f"learner-facing content contains unsupported numeric fact {number.group(0)!r}",
-                    item,
-                    code="unsupported_number",
-                    path=f"{node_path}.text",
-                )
+                code, path = "unsupported_number", f"{node_path}.text"
+                if accept_soft_issues:
+                    if (code, path) not in warnings:
+                        warnings.append((code, path))
+                else:
+                    raise _composition_error(
+                        f"learner-facing content contains unsupported numeric fact "
+                        f"{number.group(0)!r}",
+                        item,
+                        code=code,
+                        path=path,
+                    )
 
 
 def validate_and_build_section(
-    *, request: SectionWriterRequest, draft: SectionWriterDraft | Any
+    *,
+    request: SectionWriterRequest,
+    draft: SectionWriterDraft | Any,
+    accept_soft_issues: bool = False,
 ) -> SectionWriteResult:
-    """Validate exact composed shape, then insert immutable TaskAnchors by code."""
+    """Validate exact composed shape, then insert immutable TaskAnchors by code.
+
+    By default (``accept_soft_issues=False``) every issue -- HARD or SOFT --
+    fails closed, exactly as before. ``accept_soft_issues=True`` is used only
+    on the writer's final bounded attempt (see ``write_section``) and by the
+    durable trust-boundary reload that reproduces an already-accepted section
+    (see ``work_item_inputs._parse_writer``): a code in
+    ``SOFT_SECTION_WRITE_ISSUE_CODES`` is recorded as a warning instead of
+    raised. Any HARD issue still fails closed regardless of this flag.
+    """
     try:
         parsed = (
             draft
@@ -571,6 +620,7 @@ def validate_and_build_section(
             issues=(("node_count_mismatch", "nodes"),),
         )
     node_by_id: dict[str, SharedLessonNode] = {}
+    warnings: list[tuple[str, str]] = []
     for node_index, (expected_item, written) in enumerate(zip(expected, parsed.nodes, strict=True)):
         node_path = f"nodes[{node_index}]"
         if written.id != expected_item.id:
@@ -594,7 +644,14 @@ def validate_and_build_section(
                 code="node_block_mismatch",
                 path=f"{node_path}.teaching_block_id",
             )
-        _check_learner_text(written, request, expected_item, node_index=node_index)
+        _check_learner_text(
+            written,
+            request,
+            expected_item,
+            node_index=node_index,
+            accept_soft_issues=accept_soft_issues,
+            warnings=warnings,
+        )
         payload = written.model_dump(mode="json")
         try:
             node_by_id[written.id] = shared_lesson_node_adapter.validate_python(payload)
@@ -636,6 +693,7 @@ def validate_and_build_section(
         section_slot_id=request.section.slot_id,
         title=request.section.display_title or "",
         nodes=tuple(final_nodes),
+        warnings=tuple(warnings),
     )
 
 
@@ -728,7 +786,14 @@ async def _default_provider(payload: dict[str, Any]) -> Any:
 async def write_section(
     *, request: SectionWriterRequest, provider: Provider | None = None
 ) -> SectionWriteResult:
-    """Write one section with one initial, one section, and one targeted call max."""
+    """Write one section with one initial, one section, and one targeted call max.
+
+    On the final ("targeted") internal attempt only, a remaining issue set
+    made up entirely of ``SOFT_SECTION_WRITE_ISSUE_CODES`` is accepted rather
+    than raised, with the accepted codes/paths recorded as ``warnings`` on the
+    result. Any HARD issue on any attempt -- including the final one -- still
+    fails the WorkItem exactly as before.
+    """
     dispatch = provider or _default_provider
     repair_scopes = ("initial", "section", "targeted")
     issues: tuple[str, ...] = ()
@@ -743,13 +808,16 @@ async def write_section(
                 affected_node_ids=affected_node_ids,
             )
         )
+        final_attempt = attempt == len(repair_scopes) - 1
         try:
-            return validate_and_build_section(request=request, draft=raw)
+            return validate_and_build_section(
+                request=request, draft=raw, accept_soft_issues=final_attempt
+            )
         except SectionWriteValidationError as exc:
             last_error = exc
             issues = exc.errors
             affected_node_ids = exc.affected_node_ids
-            if attempt == len(repair_scopes) - 1:
+            if final_attempt:
                 raise
     if last_error is None:
         raise AssertionError("bounded writer loop exhausted unexpectedly")
@@ -758,6 +826,7 @@ async def write_section(
 
 __all__ = [
     "SECTION_WRITE_ISSUE_CODES",
+    "SOFT_SECTION_WRITE_ISSUE_CODES",
     "SectionSource",
     "SectionTaskSummary",
     "SectionWriteResult",

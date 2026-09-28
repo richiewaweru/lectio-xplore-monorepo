@@ -574,6 +574,127 @@ def test_task_answer_leak_yields_task_answer_leaked_code() -> None:
     assert "9" not in path
 
 
+# --- SOFT/HARD writer issue acceptance (mirrors composer's SOFT pattern) --
+
+
+def test_accept_soft_issues_records_task_answer_leaked_as_warning() -> None:
+    request = _numeric_request()
+    draft = _draft(request)
+    draft["nodes"][1]["display"]["text"] = "Divide both sides by 4 to see that x = 9."
+
+    result = validate_and_build_section(request=request, draft=draft, accept_soft_issues=True)
+
+    # "x = 9" both states the anchored task's result and contains an
+    # otherwise-unsupported numeric literal ("9"), so both SOFT codes fire.
+    assert result.warnings == (
+        ("task_answer_leaked", "nodes[1].text"),
+        ("unsupported_number", "nodes[1].text"),
+    )
+    assert result.nodes[1].display.text == "Divide both sides by 4 to see that x = 9."
+
+
+def test_accept_soft_issues_records_unsupported_number_as_warning() -> None:
+    request = _request()
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = "The temperature reaches 900 degrees."
+
+    result = validate_and_build_section(request=request, draft=draft, accept_soft_issues=True)
+
+    assert result.warnings == (("unsupported_number", "nodes[0].text"),)
+    # The leaked numeric value itself must never appear in a recorded warning path.
+    assert "900" not in result.warnings[0][1]
+
+
+def test_accept_soft_issues_still_raises_hard_issues() -> None:
+    """A HARD code (metadata_leaked) fails closed even with accept_soft_issues=True."""
+    request = _request()
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = "The must_establish field says particles move faster."
+
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=draft, accept_soft_issues=True)
+    assert _issue_codes(excinfo.value) == {"metadata_leaked"}
+
+
+def test_no_warnings_recorded_when_no_soft_issues_present() -> None:
+    request = _request()
+    draft = _draft(request)
+
+    result = validate_and_build_section(request=request, draft=draft, accept_soft_issues=True)
+
+    assert result.warnings == ()
+    # An empty warnings tuple must not appear in the serialized output, so
+    # writer outputs saved before this field existed hash identically.
+    assert "warnings" not in result.model_dump(mode="json")
+
+
+@pytest.mark.asyncio
+async def test_write_section_accepts_soft_only_issue_on_final_attempt_with_event() -> None:
+    """A SOFT-only issue (task_answer_leaked) surviving all bounded repairs is
+    accepted on the final attempt instead of killing the whole Run, with the
+    accepted code/path recorded as a warning."""
+    request = _numeric_request()
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        draft = _draft(request)
+        # Every attempt still leaks the task answer; the writer never resolves it.
+        draft["nodes"][1]["display"]["text"] = "Divide both sides by 4 to see that x = 9."
+        return draft
+
+    result = await write_section(request=request, provider=provider)
+
+    assert len(calls) == 3
+    assert result.warnings == (
+        ("task_answer_leaked", "nodes[1].text"),
+        ("unsupported_number", "nodes[1].text"),
+    )
+    assert result.nodes[1].display.text == "Divide both sides by 4 to see that x = 9."
+
+
+@pytest.mark.asyncio
+async def test_write_section_still_fails_when_hard_issue_survives_final_attempt() -> None:
+    """A HARD issue (metadata_leaked) surviving all bounded repairs still fails
+    the WorkItem, even on the final attempt."""
+    request = _request()
+    calls = 0
+
+    async def provider(_payload: dict[str, Any]) -> Any:
+        nonlocal calls
+        calls += 1
+        draft = _draft(request)
+        draft["nodes"][0]["display"]["text"] = "The must_establish field says particles move faster."
+        return draft
+
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        await write_section(request=request, provider=provider)
+    assert calls == 3
+    assert _issue_codes(excinfo.value) == {"metadata_leaked"}
+
+
+def test_soft_section_write_issue_codes_are_a_subset_of_the_closed_vocabulary() -> None:
+    from document.shared_lesson.writer import SOFT_SECTION_WRITE_ISSUE_CODES
+
+    assert SOFT_SECTION_WRITE_ISSUE_CODES == frozenset({"task_answer_leaked", "unsupported_number"})
+    assert SOFT_SECTION_WRITE_ISSUE_CODES <= SECTION_WRITE_ISSUE_CODES
+
+
+def test_section_write_result_rejects_non_soft_warning_code() -> None:
+    from document.shared_lesson.writer import SectionWriteResult
+
+    request = _request()
+    draft = _draft(request)
+    result = validate_and_build_section(request=request, draft=draft)
+    with pytest.raises(ValidationError, match="not a soft issue code"):
+        SectionWriteResult(
+            section_slot_id=result.section_slot_id,
+            title=result.title,
+            nodes=result.nodes,
+            warnings=(("metadata_leaked", "nodes[0].text"),),
+        )
+
+
 def test_node_shape_mismatch_yields_node_shape_mismatch_code(monkeypatch) -> None:
     from pydantic import TypeAdapter
 

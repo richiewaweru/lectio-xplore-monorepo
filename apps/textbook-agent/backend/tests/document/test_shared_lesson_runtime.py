@@ -25,6 +25,7 @@ from document.shared_lesson.runtime import (
     TeachingPlanSource,
     _record_composition_style_warnings,
     _record_execution_failure,
+    _record_writer_style_warnings,
     _write_section_work_item,
     admit_section_run,
     admit_writer_work_item,
@@ -561,6 +562,46 @@ async def test_composition_style_warning_event_skipped_when_no_warnings(monkeypa
 
 
 @pytest.mark.asyncio
+async def test_section_write_warning_event_is_safe_and_bounded(monkeypatch) -> None:
+    sentinel = "PROVIDER_SENTINEL_DO_NOT_PERSIST_9f13"
+    recorded_events = []
+
+    async def fake_append_event(_session, **kwargs):
+        recorded_events.append(kwargs)
+
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", fake_append_event)
+
+    many_warnings = [("unsupported_number", f"nodes[{index}].text") for index in range(25)]
+    await _record_writer_style_warnings(
+        "session", run_id="run-1", work_item_id="item-1", warnings=many_warnings
+    )
+
+    assert len(recorded_events) == 1
+    assert recorded_events[0]["event_type"] == "section_write_warning"
+    payload = recorded_events[0]["safe_payload"]
+    assert payload["warning_codes"] == ["unsupported_number"]
+    assert len(payload["warning_paths"]) == 20
+    serialized = repr(payload)
+    assert sentinel not in serialized
+
+
+@pytest.mark.asyncio
+async def test_section_write_warning_event_skipped_when_no_warnings(monkeypatch) -> None:
+    recorded_events = []
+
+    async def fake_append_event(_session, **kwargs):
+        recorded_events.append(kwargs)
+
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", fake_append_event)
+
+    await _record_writer_style_warnings(
+        "session", run_id="run-1", work_item_id="item-1", warnings=()
+    )
+
+    assert recorded_events == []
+
+
+@pytest.mark.asyncio
 async def test_writer_total_timeout_is_recorded_as_retryable_transport_failure(monkeypatch) -> None:
     from infra.generation_runtime import ErrorClass, RecoveryAction
 
@@ -713,7 +754,7 @@ async def test_detached_writer_retains_shared_provider_cap_across_batches(monkey
     async def fake_claim(*_args, **_kwargs):
         nonlocal lease_tokens
         lease_tokens += 1
-        return SimpleNamespace(lease_token=lease_tokens)
+        return SimpleNamespace(lease_token=lease_tokens, run_id="run-1")
 
     async def fake_no_checkpoint(*_args, **_kwargs):
         return None
@@ -744,7 +785,7 @@ async def test_detached_writer_retains_shared_provider_cap_across_batches(monkey
         if request.tag == "fast":
             fast_writer_started.set()
         await provider({"tag": request.tag})
-        return SimpleNamespace(model_dump=lambda **_kwargs: {"nodes": []})
+        return SimpleNamespace(model_dump=lambda **_kwargs: {"nodes": []}, warnings=())
 
     monkeypatch.setattr(
         "document.shared_lesson.runtime.MAX_CONCURRENT_SECTION_WRITERS", 1
@@ -910,7 +951,7 @@ async def test_public_writer_batch_enforces_four_and_skips_ready_sibling(monkeyp
     async def fake_claim(*_args, **_kwargs):
         nonlocal claim_count
         claim_count += 1
-        return SimpleNamespace(lease_token=claim_count)
+        return SimpleNamespace(lease_token=claim_count, run_id="run-1")
 
     async def fake_no_checkpoint(*_args, **_kwargs):
         return None

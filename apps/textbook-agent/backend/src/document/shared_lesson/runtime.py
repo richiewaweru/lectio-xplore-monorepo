@@ -337,6 +337,38 @@ async def _record_composition_style_warnings(
     )
 
 
+async def _record_writer_style_warnings(
+    session: Any,
+    *,
+    run_id: str,
+    work_item_id: str,
+    warnings: Sequence[tuple[str, str]],
+) -> None:
+    """Persist a safe, bounded event for SOFT writer issues accepted on the final attempt.
+
+    Mirrors ``_record_composition_style_warnings``'s diagnostic shape: only
+    accepted writer issue codes and sanitized structural paths, bounded the
+    same way, never provider output or learner text.
+    """
+    if not warnings:
+        return
+    safe_payload: dict[str, Any] = {
+        "warning_codes": sorted({code for code, _path in warnings})[
+            :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
+        ],
+        "warning_paths": sorted({path for _code, path in warnings if path})[
+            :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
+        ],
+    }
+    await append_event(
+        session,
+        run_id=run_id,
+        work_item_id=work_item_id,
+        event_type="section_write_warning",
+        safe_payload=safe_payload,
+    )
+
+
 async def admit_section_run(
     session: Any,
     *,
@@ -687,6 +719,12 @@ async def _write_section_work_item(
         lease_token=item.lease_token,
         output_json=output,
         output_hash=content_hash(output),
+    )
+    await _record_writer_style_warnings(
+        session,
+        run_id=item.run_id,
+        work_item_id=work_item_id,
+        warnings=result.warnings,
     )
     return result
 

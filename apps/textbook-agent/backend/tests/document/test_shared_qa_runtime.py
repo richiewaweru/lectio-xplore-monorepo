@@ -544,6 +544,67 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session, monkey
 
 
 @pytest.mark.asyncio
+async def test_document_qa_synthetic_writer_issues_route_a_passing_semantic_verdict_to_review(
+    db_session,
+):
+    """An accepted writer SOFT issue (task_answer_leaked/unsupported_number) must
+    still block automatic READY even when the semantic reviewer itself passes.
+    """
+    from document.shared_lesson.continuity import ContinuityIssue
+
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source, suffix="synthetic-writer-issue")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+    qa_work_item_id = admitted.record.id
+
+    synthetic_issue = ContinuityIssue(
+        issue_code="unsupported_claim",
+        affected_section_id=document.sections[0].id,
+        affected_node_ids=(document.sections[0].nodes[0].id,),
+        explanation=(
+            "The section writer accepted this content on a bounded final repair "
+            "attempt; a reviewer must confirm or correct it."
+        ),
+        required_correction="Review and correct the affected section content.",
+    )
+
+    outcome = await execute_document_qa_work_item(
+        DocumentQAWorkItemJob(
+            session=db_session,
+            work_item_id=qa_work_item_id,
+            worker_id="qa-worker",
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document),
+            semantic_validator=_pass,
+            synthetic_issues=(synthetic_issue,),
+        )
+    )
+    # The document must NOT reach READY even though the semantic reviewer
+    # itself passed the text -- the accepted writer warning still routes to
+    # review.
+    assert outcome.qa is None
+    item = await db_session.get(GenerationWorkItemModel, qa_work_item_id)
+    assert item is not None
+    assert item.status == "failed_recoverable"
+
+    review = await get_shared_document_review_draft(
+        run_id,
+        current_user=SimpleNamespace(id=owner),
+        session=db_session,
+    )
+    assert review["issues"] == [synthetic_issue.model_dump(mode="json")]
+
+
+@pytest.mark.asyncio
 async def test_document_qa_deterministic_failure_does_not_persist_review_draft(db_session):
     source, document = _source_and_document()
     owner, run_id = await _seed_run(db_session, source, suffix="deterministic-block")

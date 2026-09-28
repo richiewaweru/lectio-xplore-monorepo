@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from document.shared_lesson.continuity import ContinuityIssue
 from document.shared_lesson.document_semantic import (
     DocumentSemanticInputError,
     DocumentSemanticOutputError,
@@ -137,6 +138,13 @@ class DocumentQAWorkItemJob:
     deterministic_qa: DocumentQAResult
     semantic_validator: DocumentSemanticValidator | None = None
     lease_seconds: int = 300
+    #: Typed issues synthesized from accepted writer warnings (never provider
+    #: output or learner text), merged with the semantic verdict so a document
+    #: with an accepted SOFT writer issue routes to review instead of READY.
+    #: Callers building a fresh revision-1 dispatch supply these; a reviewer
+    #: replacement dispatch never does, since the reviewer's edit -- not the
+    #: original writer warning -- is what semantic QA must judge next.
+    synthetic_issues: tuple[ContinuityIssue, ...] = ()
 
 
 class DocumentQAOutcome(BaseModel):
@@ -570,6 +578,21 @@ async def execute_document_qa_work_item(
             deterministic=job.deterministic_qa,
             semantic_validator=job.semantic_validator,
         )
+        if job.synthetic_issues:
+            # An accepted writer SOFT issue (task_answer_leaked or
+            # unsupported_number) must still block automatic READY promotion
+            # even when the semantic reviewer itself passed the text. Fold the
+            # synthetic issues into the same typed-issue/review path a real
+            # semantic ISSUE already uses below.
+            semantic = DocumentSemanticQAResult(
+                document_id=semantic.document_id,
+                document_revision=semantic.document_revision,
+                document_hash=semantic.document_hash,
+                status="issue",
+                issues=tuple(semantic.issues) + job.synthetic_issues,
+                semantic_calls=semantic.semantic_calls,
+                deterministic_skipped_semantic=semantic.deterministic_skipped_semantic,
+            )
         if not semantic.passed:
             # Only a well-formed semantic ISSUE after the deterministic gate is
             # reviewable. Persist that exact immutable candidate in this same

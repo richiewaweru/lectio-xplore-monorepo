@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import AsyncExitStack
 from datetime import UTC, datetime
@@ -21,7 +22,7 @@ from document.shared_lesson.composer import (
     SectionCompositionPlan,
     validate_composition_plan,
 )
-from document.shared_lesson.continuity import ExpectedNodeShape
+from document.shared_lesson.continuity import ContinuityIssue, ExpectedNodeShape
 from document.shared_lesson.document_semantic import DocumentSemanticValidator
 from document.shared_lesson.media import (
     DeferredFigureMediaBinding,
@@ -131,6 +132,76 @@ def _approved_source_ids(source: TeachingPlanSource) -> tuple[str, ...]:
                     seen.add(source_id)
                     ordered.append(source_id)
     return tuple(ordered)
+
+
+#: Maps a writer SOFT issue code (see writer.SOFT_SECTION_WRITE_ISSUE_CODES)
+#: to the typed continuity issue code a reviewer sees for it.
+_WRITER_WARNING_ISSUE_CODES = {
+    "task_answer_leaked": "answer_leakage",
+    "unsupported_number": "unsupported_claim",
+}
+_WRITER_WARNING_NODE_PATH = re.compile(r"^nodes\[(\d+)\]")
+
+
+def _writer_warning_node_id(
+    path: str, composition: SectionCompositionPlan | None
+) -> str | None:
+    """Resolve a writer warning's sanitized structural path to a real node ID.
+
+    The writer records only a structural path (e.g. ``nodes[2].text``),
+    indexing the section's ordinary (non-task-anchor) composition items in
+    order -- never learner text. This recovers the actual document node ID
+    from that index and the section's own accepted composition, so a
+    synthetic review issue can target the exact node.
+    """
+    if composition is None:
+        return None
+    match = _WRITER_WARNING_NODE_PATH.match(path)
+    if not match:
+        return None
+    index = int(match.group(1))
+    ordinary_ids = [item.id for item in composition.items if item.kind != "task_anchor"]
+    if 0 <= index < len(ordinary_ids):
+        return ordinary_ids[index]
+    return None
+
+
+def _synthetic_writer_issues(
+    writer_warnings: Mapping[str, Sequence[tuple[str, str]]],
+    compositions: Mapping[str, SectionCompositionPlan],
+) -> tuple[ContinuityIssue, ...]:
+    """Build typed, reviewable issues from writer warnings accepted at write time.
+
+    An accepted SOFT writer issue (see ``writer.SOFT_SECTION_WRITE_ISSUE_CODES``)
+    must not let the document reach READY unreviewed; this turns each
+    (code, path) warning into the same typed ``ContinuityIssue`` shape a real
+    semantic QA issue uses, so it can be merged into the existing review path.
+    """
+    issues: list[ContinuityIssue] = []
+    for section_id, warnings in writer_warnings.items():
+        if not warnings:
+            continue
+        composition = compositions.get(section_id)
+        for code, path in warnings:
+            issue_code = _WRITER_WARNING_ISSUE_CODES.get(code)
+            if issue_code is None:
+                raise SharedDocumentQADispatchError(
+                    f"unknown writer warning code {code!r} for section {section_id!r}"
+                )
+            node_id = _writer_warning_node_id(path, composition)
+            issues.append(
+                ContinuityIssue(
+                    issue_code=issue_code,
+                    affected_section_id=section_id,
+                    affected_node_ids=(node_id,) if node_id else (),
+                    explanation=(
+                        "The section writer accepted this content on a bounded final "
+                        "repair attempt; a reviewer must confirm or correct it."
+                    ),
+                    required_correction="Review and correct the affected section content.",
+                )
+            )
+    return tuple(issues)
 
 
 def _required_media(document: SharedLessonDocument) -> dict[str, tuple[str, ...]]:
@@ -296,11 +367,22 @@ async def dispatch_shared_document_qa(
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
     media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
+    writer_warnings: Mapping[str, Sequence[tuple[str, str]]] | None = None,
     semantic_validator: DocumentSemanticValidator | None = None,
     worker_id: str = "shared-document-qa-dispatcher",
     max_attempts: int = 3,
 ) -> SharedDocumentQADispatchResult:
-    """Assemble and execute exactly one semantic QA WorkItem on an existing Run."""
+    """Assemble and execute exactly one semantic QA WorkItem on an existing Run.
+
+    ``writer_warnings`` (section slot ID -> accepted SOFT writer issue
+    (code, path) pairs) is only ever supplied for a fresh revision-1
+    dispatch; it becomes synthetic typed issues merged into the semantic
+    verdict so the document routes to review instead of READY when the
+    writer accepted a bounded content issue. It must never be supplied for a
+    reviewer-edited replacement dispatch (see ``dispatch_reviewed_document_qa``),
+    since the reviewer's edit -- not the original writer warning -- is what
+    semantic QA judges for that revision.
+    """
     if not run_id.strip() or not owner_user_id.strip():
         raise ValueError("run_id and owner_user_id must be non-empty")
     if not worker_id.strip():
@@ -413,6 +495,7 @@ async def dispatch_shared_document_qa(
         )
         await admission_session.commit()
 
+    synthetic_issues = _synthetic_writer_issues(writer_warnings or {}, composition_by_section)
     if _dispatchable(admitted.record):
         async with session_factory() as execution_session:
             outcome: DocumentQAOutcome = await execute_document_qa_work_item(
@@ -425,6 +508,7 @@ async def dispatch_shared_document_qa(
                     document=assembly.document,
                     deterministic_qa=assembly.qa,
                     semantic_validator=semantic_validator,
+                    synthetic_issues=synthetic_issues,
                 )
             )
             await execution_session.commit()

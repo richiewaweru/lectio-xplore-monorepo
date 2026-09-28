@@ -459,7 +459,8 @@ async def test_expired_writer_lease_is_reclaimed_with_new_attempt_and_fence(
                 "section_slot_id": request.section.slot_id,
                 "title": "Written section",
                 "nodes": [],
-            }
+            },
+            warnings=(),
         )
 
     monkeypatch.setattr(shared_runtime, "write_section", write)

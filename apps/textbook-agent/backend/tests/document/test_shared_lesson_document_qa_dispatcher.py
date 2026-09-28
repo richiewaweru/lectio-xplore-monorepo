@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from sqlalchemy import select
 from test_shared_lesson_handoff import _accepted
@@ -9,7 +11,8 @@ from document.shared_lesson.document_qa_dispatcher import (
     SharedDocumentQADispatchError,
     dispatch_shared_document_qa,
 )
-from infra.database.models import GenerationWorkItemModel
+from document.shared_lesson.http import get_shared_document_review_draft
+from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 
 
 @pytest.mark.asyncio
@@ -116,3 +119,82 @@ def test_expired_running_document_qa_leaf_is_dispatchable_after_restart():
     )
     assert not _dispatchable(SimpleNamespace(status="running", lease_expires_at=None))
     assert not _dispatchable(SimpleNamespace(status="ready", lease_expires_at=None))
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_routes_accepted_writer_warning_to_review_despite_semantic_pass(
+    db_session,
+    db_session_factory,
+) -> None:
+    """A fresh revision-1 dispatch with an accepted writer SOFT issue must not
+    reach READY even when the semantic reviewer itself passes the text.
+    """
+    source, composition, section = _accepted()
+    owner, run_id = await _seed_run(db_session, source, suffix="qa-dispatch-writer-warning")
+    await db_session.commit()
+
+    async def semantic_validator(_request):
+        from document.shared_lesson.document_semantic import DocumentSemanticVerdict
+
+        return DocumentSemanticVerdict(status="pass")
+
+    with pytest.raises(SharedDocumentQADispatchError, match="actionable learner-content issue"):
+        await dispatch_shared_document_qa(
+            db_session_factory,
+            run_id=run_id,
+            owner_user_id=owner,
+            source=source,
+            compositions=(composition,),
+            sections=(section,),
+            document_id="qa-dispatch-writer-warning-document",
+            document_revision=1,
+            created_at="2026-09-26T12:00:00Z",
+            semantic_validator=semantic_validator,
+            writer_warnings={"explain": (("unsupported_number", "nodes[0].text"),)},
+        )
+
+    async with db_session_factory() as check_session:
+        run = await check_session.get(GenerationRunModel, run_id)
+        assert run is not None
+        assert run.status == "failed_recoverable"
+        review = await get_shared_document_review_draft(
+            run_id,
+            current_user=SimpleNamespace(id=owner),
+            session=check_session,
+        )
+    assert len(review["issues"]) == 1
+    issue = review["issues"][0]
+    assert issue["issue_code"] == "unsupported_claim"
+    assert issue["affected_section_id"] == "explain"
+    assert issue["affected_node_ids"] == [composition.items[0].id]
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_reaches_ready_when_writer_warnings_are_empty(
+    db_session,
+    db_session_factory,
+) -> None:
+    """An empty (or omitted) writer_warnings mapping behaves exactly as before."""
+    source, composition, section = _accepted()
+    owner, run_id = await _seed_run(db_session, source, suffix="qa-dispatch-no-warning")
+    await db_session.commit()
+
+    async def semantic_validator(_request):
+        from document.shared_lesson.document_semantic import DocumentSemanticVerdict
+
+        return DocumentSemanticVerdict(status="pass")
+
+    result = await dispatch_shared_document_qa(
+        db_session_factory,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        compositions=(composition,),
+        sections=(section,),
+        document_id="qa-dispatch-no-warning-document",
+        document_revision=1,
+        created_at="2026-09-26T12:00:00Z",
+        semantic_validator=semantic_validator,
+        writer_warnings={"explain": ()},
+    )
+    assert result.verified_qa.semantic_qa.passed
