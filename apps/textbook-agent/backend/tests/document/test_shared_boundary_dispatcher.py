@@ -8,7 +8,8 @@ from sqlalchemy import select
 from test_shared_composer_admission import _verifier
 from test_shared_writer_admission import _seed_ready_composer_run
 
-from document.shared_lesson import boundary_dispatcher
+from document.shared_lesson import boundary as boundary_module
+from document.shared_lesson import boundary_dispatcher, writer_repair_runtime
 from document.shared_lesson.boundary import BoundarySemanticVerdict, ContinuityIssue
 from document.shared_lesson.writer import validate_and_build_section
 from document.shared_lesson.writer_admission import admit_writer_work_items
@@ -312,3 +313,242 @@ async def test_boundary_failure_is_pending_repair_and_preserves_ready_writers(
     for admission in admissions:
         writer = await db_session.get(GenerationWorkItemModel, admission.work_item_id)
         assert writer is not None and writer.status == "ready"
+
+
+# ---------------------------------------------------------------------------
+# Boundary-triggered targeted writer repair: admit the linked writer
+# replacement, then the linked boundary replacement, bounded to one repair.
+# ---------------------------------------------------------------------------
+
+
+class _ChangingRepair:
+    """A targeted repair engine that always returns a changed section."""
+
+    def __init__(self):
+        self.calls = 0
+
+    _ATTEMPT_WORDS = ("first", "second", "third", "fourth")
+
+    async def repair_section(self, request):
+        self.calls += 1
+        attempt_word = self._ATTEMPT_WORDS[self.calls - 1]
+        items = [
+            item
+            for item in request.writer_request.composition_plan.items
+            if item.kind == "paragraph"
+        ]
+        draft = {
+            "nodes": [
+                {
+                    "id": item.id,
+                    "kind": item.kind,
+                    "teaching_block_id": item.teaching_block_id,
+                    "accessibility": {"description": "A clearer explanation."},
+                    "display": {
+                        "text": (
+                            f"This is the {attempt_word} repaired connection. A magnifier "
+                            "bridges the compass discussion to microscopic detail."
+                        )
+                    },
+                }
+                for item in items
+            ]
+        }
+        return validate_and_build_section(request=request.writer_request, draft=draft)
+
+
+def _once_issue_then_pass():
+    state = {"calls": 0}
+
+    async def validator(request):
+        state["calls"] += 1
+        if state["calls"] == 1:
+            return BoundarySemanticVerdict(
+                status="issue",
+                issue=ContinuityIssue(
+                    issue_code="boundary_test_issue",
+                    affected_section_id=request.next_plan.slot_id,
+                    explanation="The example needs a clearer connection.",
+                    required_correction="Clarify the connection in the next section.",
+                ),
+            )
+        return BoundarySemanticVerdict(status="pass")
+
+    return validator
+
+
+def _bypass_deterministic_continuity_checks(monkeypatch):
+    """The deterministic continuity/boundary checks are exercised in
+    ``test_shared_boundary_runtime.py`` and ``continuity.py``'s own tests.
+    Bypassing them here (as the writer-repair unit tests already do) keeps
+    this dispatcher-level test focused on the admission/execution/replacement
+    plumbing rather than on crafting text that satisfies every deterministic
+    continuity heuristic."""
+    for module in (boundary_module, writer_repair_runtime):
+        monkeypatch.setattr(module, "validate_section_boundary", lambda **_kwargs: ())
+        monkeypatch.setattr(module, "validate_section_continuity", lambda **_kwargs: ())
+
+
+@pytest.mark.asyncio
+async def test_dispatch_admits_writer_repair_and_replacement_boundary_then_passes(
+    db_session, db_session_factory, monkeypatch
+):
+    owner, run_id, source = await _seed_ready_composer_run(db_session)
+    await _set_preparation_generation(db_session)
+    admissions = await _ready_writers(db_session, owner, run_id, source)
+    _patch_approved_source(monkeypatch, source)
+    _bypass_deterministic_continuity_checks(monkeypatch)
+
+    explain_admission = next(a for a in admissions if a.section.slot_id == "explain")
+    original_writer_id = explain_admission.work_item_id
+
+    repair = _ChangingRepair()
+    semantic = _once_issue_then_pass()
+
+    first = await boundary_dispatcher.dispatch_shared_document_boundaries(
+        db_session_factory,
+        run_id=run_id,
+        owner_user_id=owner,
+        semantic_validator=semantic,
+        repair_engine=repair,
+    )
+    assert first.state == "pending_repair", first
+    assert repair.calls == 1
+
+    # The dispatcher committed through its own session_factory sessions; this
+    # test's own session must reload rather than trust its identity-map cache.
+    original_writer = await db_session.scalar(
+        select(GenerationWorkItemModel)
+        .where(GenerationWorkItemModel.id == original_writer_id)
+        .execution_options(populate_existing=True)
+    )
+    assert original_writer is not None and original_writer.status == "ready"
+    replacement_writer = await db_session.scalar(
+        select(GenerationWorkItemModel)
+        .where(GenerationWorkItemModel.replaces_work_item_id == original_writer_id)
+        .execution_options(populate_existing=True)
+    )
+    assert replacement_writer is not None and replacement_writer.status == "ready"
+    assert replacement_writer.output_json != original_writer.output_json
+
+    boundary_rows = list(
+        (
+            await db_session.scalars(
+                select(GenerationWorkItemModel)
+                .where(
+                    GenerationWorkItemModel.run_id == run_id,
+                    GenerationWorkItemModel.stage == "continuity_validation",
+                )
+                .execution_options(populate_existing=True)
+            )
+        ).all()
+    )
+    original_boundary = next(row for row in boundary_rows if row.replaces_work_item_id is None)
+    assert original_boundary.status == "failed_recoverable"
+    assert original_boundary.error_code == "boundary_repair_pending_writer_replacement"
+    replacement_boundary = next(
+        row for row in boundary_rows if row.replaces_work_item_id == original_boundary.id
+    )
+    assert replacement_boundary.status == "queued"
+
+    second = await boundary_dispatcher.dispatch_shared_document_boundaries(
+        db_session_factory,
+        run_id=run_id,
+        owner_user_id=owner,
+        semantic_validator=_pass,
+    )
+    assert second.state == "passed", second
+    # The one bounded provider repair call is never repeated.
+    assert repair.calls == 1
+
+    refreshed_replacement_boundary = await db_session.scalar(
+        select(GenerationWorkItemModel)
+        .where(GenerationWorkItemModel.id == replacement_boundary.id)
+        .execution_options(populate_existing=True)
+    )
+    assert refreshed_replacement_boundary is not None
+    assert refreshed_replacement_boundary.status == "ready"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_fails_boundary_terminally_when_replacement_needs_second_repair(
+    db_session, db_session_factory, monkeypatch
+):
+    owner, run_id, source = await _seed_ready_composer_run(db_session)
+    await _set_preparation_generation(db_session)
+    await _ready_writers(db_session, owner, run_id, source)
+    _patch_approved_source(monkeypatch, source)
+    _bypass_deterministic_continuity_checks(monkeypatch)
+
+    # The same repair engine instance is reused across both dispatch calls so
+    # its second repair produces text that actually differs from the first
+    # repair's already-accepted output (otherwise the second attempt would be
+    # a no-op change and never exercise the exhaustion path at all).
+    repair = _ChangingRepair()
+    first = await boundary_dispatcher.dispatch_shared_document_boundaries(
+        db_session_factory,
+        run_id=run_id,
+        owner_user_id=owner,
+        semantic_validator=_once_issue_then_pass(),
+        repair_engine=repair,
+    )
+    assert first.state == "pending_repair", first
+    assert repair.calls == 1
+
+    # The replacement boundary now needs a second changed repair; the bounded
+    # writer-repair budget is exhausted and must fail terminally rather than
+    # admit a second writer replacement.
+    second = await boundary_dispatcher.dispatch_shared_document_boundaries(
+        db_session_factory,
+        run_id=run_id,
+        owner_user_id=owner,
+        semantic_validator=_once_issue_then_pass(),
+        repair_engine=repair,
+    )
+    assert second.state == "pending_repair", second
+    assert repair.calls == 2
+
+    boundary_rows = list(
+        (
+            await db_session.scalars(
+                select(GenerationWorkItemModel)
+                .where(
+                    GenerationWorkItemModel.run_id == run_id,
+                    GenerationWorkItemModel.stage == "continuity_validation",
+                )
+                .execution_options(populate_existing=True)
+            )
+        ).all()
+    )
+    terminal = [row for row in boundary_rows if row.status == "failed_terminal"]
+    assert len(terminal) == 1
+    assert terminal[0].error_code == "boundary_repair_exhausted"
+    assert terminal[0].replaces_work_item_id is not None
+
+    writer_rows = list(
+        (
+            await db_session.scalars(
+                select(GenerationWorkItemModel)
+                .where(
+                    GenerationWorkItemModel.run_id == run_id,
+                    GenerationWorkItemModel.stage == "section_writing",
+                )
+                .execution_options(populate_existing=True)
+            )
+        ).all()
+    )
+    explain_chain = [row for row in writer_rows if row.item_key.startswith("write:explain")]
+    # Exactly one writer repair -- never a second -- was admitted.
+    assert len(explain_chain) == 2
+
+    run = await db_session.scalar(
+        select(GenerationRunModel)
+        .where(GenerationRunModel.id == run_id)
+        .execution_options(populate_existing=True)
+    )
+    assert run is not None and run.status == "failed_terminal"
+
+    third = await boundary_dispatcher.dispatch_shared_document_boundaries(
+        db_session_factory, run_id=run_id, owner_user_id=owner, semantic_validator=_pass
+    )
+    assert third.state == "blocked", third

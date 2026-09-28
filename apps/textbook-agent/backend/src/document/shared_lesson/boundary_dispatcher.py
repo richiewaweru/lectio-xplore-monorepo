@@ -18,17 +18,22 @@ from document.shared_lesson.approved_source import (
     load_current_approved_teaching_plan_source,
     make_approved_source_verifier,
 )
-from document.shared_lesson.boundary import BoundaryRepairEngine, BoundarySemanticValidator
+from document.shared_lesson.boundary import (
+    BoundaryRepairEngine,
+    BoundarySemanticValidator,
+    BoundaryValidationResult,
+)
 from document.shared_lesson.boundary_runtime import (
     BOUNDARY_STAGE,
     BoundaryRuntimeOutcome,
     BoundarySourceConflict,
     BoundaryWorkItemJob,
+    admit_boundary_replacement_work_item,
     admit_boundary_work_item,
     execute_boundary_work_items,
 )
 from document.shared_lesson.models import SharedSection
-from document.shared_lesson.runtime import TeachingPlanSource
+from document.shared_lesson.runtime import TeachingPlanSource, _stable_hash
 from document.shared_lesson.section_sources import SectionSourceError, build_section_sources
 from document.shared_lesson.semantic_inputs import SemanticInputError, load_verified_semantic_inputs
 from document.shared_lesson.work_item_inputs import (
@@ -40,15 +45,40 @@ from document.shared_lesson.writer_admission import (
     WriterAdmissionError,
     admit_writer_work_items,
 )
+from document.shared_lesson.writer_repair_runtime import (
+    WRITER_REPAIR_DEFINITION,
+    WriterRepairRuntimeError,
+    WriterRepairSourceConflict,
+    WriterRepairWorkItemJob,
+    admit_writer_repair_work_item,
+    execute_writer_repair_work_item,
+)
 from infra.database.models import (
     GenerationBuildModel,
     GenerationRunModel,
     GenerationWorkItemModel,
 )
-from infra.generation_runtime import WorkItemConflict, active_work_items, get_run_status
+from infra.generation_runtime import (
+    InvalidRunTransition,
+    InvalidWorkItemTransition,
+    LeaseLostError,
+    RuntimeCheckpoint,
+    WorkItemConflict,
+    WorkItemNotFound,
+    WorkItemUnavailable,
+    active_work_items,
+    get_run_status,
+)
 from infra.generation_runtime.repository import RunNotFound
 
 MAX_BOUNDARY_DISPATCH_CONCURRENCY = 4
+
+# A writer leaf that is a boundary-triggered targeted-repair replacement is
+# *expected* to carry a different input_hash than the plan-derived admission
+# recomputed on every dispatch call -- that input_hash durably encodes the
+# specific repair identity (see ``writer_repair_runtime.WriterRepairWorkOrder``).
+# Its composition identity never changes, so that is still verified below.
+_WRITER_REPAIR_DEFINITION_HASH = _stable_hash(WRITER_REPAIR_DEFINITION)
 
 
 class BoundaryDispatchError(ValueError):
@@ -207,6 +237,16 @@ async def _verified_run_inputs(
     for section_id, item in leaves.items():
         admission = by_section[section_id.removeprefix("write:")]
         if (
+            item.replaces_work_item_id is not None
+            and item.definition_hash == _WRITER_REPAIR_DEFINITION_HASH
+        ):
+            # A boundary-triggered targeted-repair replacement durably binds a
+            # different, repair-specific input_hash and definition_hash by
+            # design; only its composition identity must still match the plan.
+            if item.composition_identity != admission.composition_identity:
+                raise BoundaryDispatchError("current writer leaf identity is stale")
+            continue
+        if (
             item.input_hash != admission.input_hash
             or item.definition_hash != admission.definition_hash
             or item.composition_identity != admission.composition_identity
@@ -261,6 +301,192 @@ async def _load_boundary_leaves(
     return _current_boundary_leaves(rows)
 
 
+async def _load_writer_leaves(
+    session: Any,
+    *,
+    run_id: str,
+) -> dict[str, GenerationWorkItemModel]:
+    """Reload the current active ``write:*`` leaves straight from the database.
+
+    Used only by the writer-repair path below, after the Run's initial
+    ``_verified_run_inputs`` snapshot may already be stale (a prior repair in
+    this same dispatch call can have replaced a writer leaf).
+    """
+    rows = tuple(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel).where(
+                    GenerationWorkItemModel.run_id == run_id,
+                    GenerationWorkItemModel.stage == "section_writing",
+                )
+            )
+        ).all()
+    )
+    by_id = {item.id: item for item in rows}
+    leaves: dict[str, GenerationWorkItemModel] = {}
+    for item in active_work_items(rows):
+        key = _root_key(item, by_id)
+        if not key.startswith("write:"):
+            continue
+        leaves[key] = item
+    return leaves
+
+
+async def _repair_pending_boundary_writers(
+    session_factory: Callable[[], Any],
+    *,
+    owner_user_id: str,
+    worker_id: str,
+    source: TeachingPlanSource,
+    accepted_sections: Mapping[str, SharedSection],
+    writer_requests: Mapping[str, SectionWriterRequest],
+    writer_identities: Mapping[str, str],
+    section_order: tuple[str, ...],
+    boundary_leaves: Mapping[str, GenerationWorkItemModel],
+) -> None:
+    """Turn each stalled ``boundary_repair_pending_writer_replacement`` leaf
+    into an admitted, executed writer replacement plus its linked boundary
+    replacement -- so the next normal dispatch round validates the repair.
+
+    Bounded to at most one writer repair per boundary identity: a boundary
+    leaf that is *itself* already a repair-replacement (``replaces_work_item_id
+    is not None``) can only have reached ``boundary_repair_pending_writer_replacement``
+    again through ``execute_boundary_work_item``'s own exhaustion check, which
+    instead fails such a leaf terminally as ``boundary_repair_exhausted``.  So
+    this loop only ever sees a first-time pending repair here and never
+    attempts a second one for the same boundary identity.
+
+    Every step is best-effort per boundary pair: a stale or conflicting repair
+    is left exactly as ``pending_repair`` for the next dispatch call (or human
+    review) rather than raised out of this scan, matching the transactional
+    discipline the rest of this module already uses.
+    """
+    for previous_id, next_id in pairwise(section_order):
+        key = f"boundary:{previous_id}->{next_id}"
+        leaf = boundary_leaves.get(key)
+        if (
+            leaf is None
+            or leaf.status != "failed_recoverable"
+            or leaf.error_code != "boundary_repair_pending_writer_replacement"
+            or leaf.checkpoint_json is None
+        ):
+            continue
+        try:
+            checkpoint = RuntimeCheckpoint.model_validate(leaf.checkpoint_json)
+            payload = checkpoint.payload
+            if not isinstance(payload, Mapping) or (
+                payload.get("kind") != "shared_lesson_boundary_repair_result"
+            ):
+                continue
+            boundary_result = BoundaryValidationResult.model_validate(payload["result"])
+        except (TypeError, ValueError):
+            continue
+        if len(boundary_result.initial_issues) != 1:
+            continue
+        issue = boundary_result.initial_issues[0]
+        affected_section_id = issue.affected_section_id
+        if affected_section_id not in (previous_id, next_id):
+            continue
+        accepted_section = accepted_sections.get(affected_section_id)
+        writer_request = writer_requests.get(affected_section_id)
+        if accepted_section is None or writer_request is None:
+            continue
+
+        admission = None
+        async with session_factory() as session:
+            writer_leaves = await _load_writer_leaves(session, run_id=leaf.run_id)
+            predecessor = writer_leaves.get(f"write:{affected_section_id}")
+            if predecessor is None:
+                continue
+            try:
+                admission = await admit_writer_repair_work_item(
+                    session,
+                    owner_user_id=owner_user_id,
+                    source=source,
+                    predecessor_work_item_id=predecessor.id,
+                    accepted_section=accepted_section,
+                    writer_request=writer_request,
+                    boundary_result=boundary_result,
+                    boundary_work_item_id=leaf.id,
+                    issue=issue,
+                    previous_section=accepted_sections[previous_id],
+                    next_section=accepted_sections[next_id],
+                )
+                await session.commit()
+            except (
+                WriterRepairRuntimeError,
+                WriterRepairSourceConflict,
+                WorkItemConflict,
+                RunNotFound,
+                InvalidRunTransition,
+                InvalidWorkItemTransition,
+                WorkItemNotFound,
+                WorkItemUnavailable,
+            ):
+                await session.rollback()
+                continue
+        if admission is None:
+            continue
+
+        outcome = None
+        async with session_factory() as session:
+            try:
+                outcome = await execute_writer_repair_work_item(
+                    WriterRepairWorkItemJob(
+                        session=session,
+                        work_item_id=admission.item.id,
+                        worker_id=worker_id,
+                        source=source,
+                        work=admission.work,
+                        writer_request=writer_request,
+                    )
+                )
+            except LeaseLostError:
+                await session.rollback()
+                continue
+            await session.commit()
+        if outcome is None or outcome.result is None:
+            # The repair failed its own closed-contract or source
+            # revalidation; the writer replacement is now failed_recoverable
+            # (or terminal) in its own right and the boundary stays
+            # pending_repair for the next dispatch call or human review.
+            continue
+
+        repaired_section = outcome.result.as_shared_section(
+            section_id=affected_section_id,
+            position=accepted_section.position,
+        )
+        if affected_section_id == previous_id:
+            new_previous, new_next = repaired_section, accepted_sections[next_id]
+        else:
+            new_previous, new_next = accepted_sections[previous_id], repaired_section
+
+        async with session_factory() as session:
+            try:
+                await admit_boundary_replacement_work_item(
+                    session,
+                    predecessor_work_item_id=leaf.id,
+                    owner_user_id=owner_user_id,
+                    source=source,
+                    previous_section=new_previous,
+                    next_section=new_next,
+                    previous_composition_identity=writer_identities[previous_id],
+                    next_composition_identity=writer_identities[next_id],
+                )
+                await session.commit()
+            except (
+                BoundarySourceConflict,
+                WorkItemConflict,
+                RunNotFound,
+                InvalidRunTransition,
+                InvalidWorkItemTransition,
+                WorkItemNotFound,
+                WorkItemUnavailable,
+            ):
+                await session.rollback()
+                continue
+
+
 async def dispatch_shared_document_boundaries(
     session_factory: Callable[[], Any],
     *,
@@ -300,16 +526,25 @@ async def dispatch_shared_document_boundaries(
 
             admitted_ids: list[str] = []
             for previous_id, next_id in pairwise(section_order):
-                admitted = await admit_boundary_work_item(
-                    session,
-                    run_id=run.id,
-                    owner_user_id=owner_user_id,
-                    source=source,
-                    previous_section=accepted_sections[previous_id],
-                    next_section=accepted_sections[next_id],
-                    previous_composition_identity=writer_identities[previous_id],
-                    next_composition_identity=writer_identities[next_id],
-                )
+                try:
+                    admitted = await admit_boundary_work_item(
+                        session,
+                        run_id=run.id,
+                        owner_user_id=owner_user_id,
+                        source=source,
+                        previous_section=accepted_sections[previous_id],
+                        next_section=accepted_sections[next_id],
+                        previous_composition_identity=writer_identities[previous_id],
+                        next_composition_identity=writer_identities[next_id],
+                    )
+                except WorkItemConflict:
+                    # A prior writer repair already replaced this pair's root
+                    # boundary identity (its accepted writer output changed).
+                    # The active replacement leaf is loaded and validated
+                    # below; re-admitting under the original stable key would
+                    # only re-raise this same conflict against the historical
+                    # failed row it is now bound to.
+                    continue
                 admitted_ids.append(admitted.record.id)
             await session.commit()
     except _WriterReplacementPending as exc:
@@ -398,6 +633,21 @@ async def dispatch_shared_document_boundaries(
                     )
                 )
             outcomes = await execute_boundary_work_items(jobs, concurrency=concurrency)
+
+    async with session_factory() as session:
+        boundary_leaves = await _load_boundary_leaves(session, run_id=run_id)
+
+    await _repair_pending_boundary_writers(
+        session_factory,
+        owner_user_id=owner_user_id,
+        worker_id=selected_worker_id,
+        source=source,
+        accepted_sections=accepted_sections,
+        writer_requests=writer_requests,
+        writer_identities=writer_identities,
+        section_order=section_order,
+        boundary_leaves=boundary_leaves,
+    )
 
     async with session_factory() as session:
         boundary_leaves = await _load_boundary_leaves(session, run_id=run_id)

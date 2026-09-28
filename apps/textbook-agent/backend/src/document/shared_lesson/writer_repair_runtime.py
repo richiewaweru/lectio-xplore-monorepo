@@ -119,6 +119,21 @@ class WriterRepairWorkItemJob:
 
 
 @dataclass(frozen=True)
+class WriterRepairAdmission:
+    """The admitted successor work item alongside its immutable work order.
+
+    A caller that also needs to execute the admission (rather than leaving it
+    for the normal worker loop to pick up as ``queued``) needs the exact
+    ``WriterRepairWorkOrder`` this admission bound -- ``execute_writer_repair_work_item``
+    treats it as the closed, already-validated source of truth and never
+    reconstructs it from the database.
+    """
+
+    item: Any
+    work: WriterRepairWorkOrder
+
+
+@dataclass(frozen=True)
 class WriterRepairOutcome:
     work_item_id: str
     result: SectionWriteResult | None = None
@@ -326,7 +341,7 @@ async def admit_writer_repair_work_item(
     previous_section: SharedSection,
     next_section: SharedSection,
     max_attempts: int = 3,
-) -> Any:
+) -> WriterRepairAdmission:
     """Admit a validated changed boundary repair as one linked writer successor.
 
     The boundary validator has already spent its one targeted provider call.
@@ -440,7 +455,8 @@ async def admit_writer_repair_work_item(
             max_attempts=max_attempts,
         ),
     )
-    return await replace_work_item(session, request)
+    item = await replace_work_item(session, request)
+    return WriterRepairAdmission(item=item, work=work)
 
 
 def _checkpoint_compatibility(
@@ -683,6 +699,7 @@ async def execute_writer_repair_work_item(
 __all__ = [
     "WRITER_REPAIR_DEFINITION",
     "WRITER_REPAIR_STAGE",
+    "WriterRepairAdmission",
     "WriterRepairCheckpointError",
     "WriterRepairOutcome",
     "WriterRepairRuntimeError",

@@ -1090,6 +1090,7 @@ async def _failed_recoverable_leaf(
     request_key: str,
     owner_user_id: str = "source-owner",
     error_class: str = "provider_output",
+    error_code: str = "test_error_code",
     recovery_action: str = "retry",
     attempt: int = 1,
     max_attempts: int = 3,
@@ -1110,7 +1111,7 @@ async def _failed_recoverable_leaf(
     failed_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=failed_seconds_ago)
     item.status = "failed_recoverable"
     item.error_class = error_class
-    item.error_code = "test_error_code"
+    item.error_code = error_code
     item.error_summary = "unsafe provider text should never reach an event payload"
     item.recovery_action = recovery_action
     item.attempt = attempt
@@ -1276,6 +1277,44 @@ async def test_attempt_at_max_is_never_auto_retried(db_session, monkeypatch):
     assert refreshed_item is not None
     assert refreshed_item.status == "failed_recoverable"
     assert refreshed_item.attempt == 3
+
+
+@pytest.mark.asyncio
+async def test_boundary_repair_pending_writer_replacement_is_never_auto_retried(
+    db_session, monkeypatch
+):
+    """A leaf durably proving a targeted repair must be retried by admitting
+    its linked writer replacement, never by blindly re-running the leaf."""
+    generation, lesson, _prov, source = await _prepared(
+        db_session, user_id="auto-retry-pending-writer-replacement"
+    )
+    admission, run, item = await _failed_recoverable_leaf(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="auto-retry-pending-writer-replacement",
+        owner_user_id="auto-retry-pending-writer-replacement",
+        error_class="provider_output",
+        error_code="boundary_repair_pending_writer_replacement",
+        recovery_action="retry",
+        failed_seconds_ago=100.0,
+    )
+    _bind_source_context(monkeypatch, source)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id="worker-auto-retry-pending-writer-replacement",
+        auto_retry_enabled=True,
+        auto_retry_delay_seconds=20,
+    )
+
+    assert await instance.run_one(db_session) is False
+
+    refreshed_run = await db_session.get(GenerationRunModel, run.id)
+    refreshed_item = await db_session.get(GenerationWorkItemModel, item.id)
+    assert refreshed_run is not None and refreshed_run.status == "failed_recoverable"
+    assert refreshed_item is not None and refreshed_item.status == "failed_recoverable"
+    assert refreshed_item.attempt == 1
 
 
 @pytest.mark.asyncio

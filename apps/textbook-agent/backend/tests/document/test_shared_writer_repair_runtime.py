@@ -232,7 +232,8 @@ async def test_admission_binds_exact_issue_plan_composition_and_prior_output(mon
         next_section=original,
     )
 
-    assert result == "replacement-row"
+    assert result.item == "replacement-row"
+    assert isinstance(result.work, runtime.WriterRepairWorkOrder)
     admission = captured[0].replacement
     assert admission.item_key.startswith("write:s2:boundary-repair:")
     assert admission.composition_identity == _stable_hash(

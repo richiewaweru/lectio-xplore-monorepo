@@ -560,7 +560,12 @@ async def admit_boundary_replacement_work_item(
     }
     if len(changed) != 1:
         raise BoundarySourceConflict("boundary repair proof must identify one changed section")
-    current_previous, current_next = await _verify_active_writer_outputs(
+    # ``_verify_active_writer_outputs`` already raises ``BoundarySourceConflict``
+    # unless the current active writer leaf for each side hashes to exactly
+    # ``previous_section``/``next_section`` -- those are therefore already the
+    # verified current output and are hashed directly by their own (slot) id,
+    # not by re-deriving a section from the returned WorkItem rows.
+    await _verify_active_writer_outputs(
         session,
         run_id=predecessor.run_id,
         previous_section=previous_section,
@@ -570,8 +575,8 @@ async def admit_boundary_replacement_work_item(
         lock=True,
     )
     current_hashes = {
-        current_previous.id: accepted_section_output_hash(current_previous),
-        current_next.id: accepted_section_output_hash(current_next),
+        previous_section.id: accepted_section_output_hash(previous_section),
+        next_section.id: accepted_section_output_hash(next_section),
     }
     for section_id, original_hash in original_hashes.items():
         observed_hash = current_hashes.get(section_id)
@@ -966,20 +971,35 @@ async def execute_boundary_work_item(
         )
         return BoundaryRuntimeOutcome(work_item_id=item.id, result=result)
 
-    pending = changed_sections
+    # A boundary work item whose own predecessor was already replaced once
+    # (``item.replaces_work_item_id is not None``) can only reach this branch
+    # through ``admit_boundary_replacement_work_item`` -- the one linked
+    # successor this module ever admits after a targeted writer repair. If
+    # *that* replacement boundary still needs another changed repair, the
+    # single bounded writer-replacement budget is exhausted: fail terminally
+    # instead of reporting another recoverable "pending writer replacement",
+    # so the dispatcher never attempts a second writer repair for this
+    # boundary identity.
+    repair_exhausted = bool(changed_sections) and item.replaces_work_item_id is not None
+    pending = () if repair_exhausted else changed_sections
     failure = WorkItemFailure(
         error_code=(
-            "boundary_repair_pending_writer_replacement"
+            "boundary_repair_exhausted"
+            if repair_exhausted
+            else "boundary_repair_pending_writer_replacement"
             if changed_sections
             else (result.failure_code or "boundary_validation_failed")
         ),
-        error_class=ErrorClass.PROVIDER_OUTPUT,
+        error_class=(ErrorClass.VALIDATION if repair_exhausted else ErrorClass.PROVIDER_OUTPUT),
         safe_summary=(
-            "Boundary repair produced a changed section; admit a linked writer replacement before retrying."
+            "Boundary repair required a second targeted writer replacement; "
+            "the bounded repair budget is exhausted and needs manual review."
+            if repair_exhausted
+            else "Boundary repair produced a changed section; admit a linked writer replacement before retrying."
             if changed_sections
             else "Boundary validation failed; retry the affected boundary after correcting its writer output."
         ),
-        recovery_action=RecoveryAction.RETRY,
+        recovery_action=(RecoveryAction.NONE if repair_exhausted else RecoveryAction.RETRY),
     )
     if changed_sections:
         # A changed targeted repair remains a recoverable boundary failure, but

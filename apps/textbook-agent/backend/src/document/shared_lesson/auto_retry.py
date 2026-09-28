@@ -15,6 +15,15 @@ recovery requires human review (``recovery_action == review``) or that
 carries a non-provider error class (validation, internal programming,
 unsupported contract, auth, config), and never raises a concurrency race
 out of the scan loop.
+
+A boundary leaf that failed with ``boundary_repair_pending_writer_replacement``
+is also never auto-retried even though its error class is
+``provider_output``: it durably proves a validated targeted repair that is
+waiting on a linked writer replacement, and re-running the boundary leaf as-is
+only fails it again with ``boundary_checkpoint_integrity`` (a fresh claim's
+checkpoint compatibility no longer matches the stale binding). Admitting that
+writer replacement is the boundary dispatcher's job
+(``document.shared_lesson.boundary_dispatcher``), not this scan's.
 """
 
 from __future__ import annotations
@@ -50,6 +59,15 @@ _AUTO_RETRY_ERROR_CLASSES = frozenset(
     {str(ErrorClass.PROVIDER_OUTPUT), str(ErrorClass.PROVIDER_TRANSPORT)}
 )
 
+# A boundary leaf carrying this code has a durably checkpointed targeted
+# repair waiting on a linked writer replacement (see
+# ``document.shared_lesson.boundary_dispatcher``); it is retried by admitting
+# that replacement, never by blindly re-running the boundary leaf. Auto-retry
+# must treat it as ineligible so it never races the dispatcher's own repair
+# admission and never re-executes a boundary whose checkpoint no longer
+# matches a fresh claim (which fails as ``boundary_checkpoint_integrity``).
+_INELIGIBLE_ERROR_CODES = frozenset({"boundary_repair_pending_writer_replacement"})
+
 
 def _as_naive_utc(value: datetime) -> datetime:
     if value.tzinfo is not None:
@@ -83,6 +101,8 @@ def _eligible_failed_leaves(
         if item.recovery_action != RecoveryAction.RETRY.value:
             return None
         if item.error_class not in _AUTO_RETRY_ERROR_CLASSES:
+            return None
+        if item.error_code in _INELIGIBLE_ERROR_CODES:
             return None
         if item.attempt >= item.max_attempts:
             return None
