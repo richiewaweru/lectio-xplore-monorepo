@@ -392,6 +392,7 @@ class ArtifactWorkspaceDTO(StrictModel):
         "queued",
         "running",
         "ready",
+        "needs_review",
         "failed_recoverable",
         "failed_terminal",
     ]

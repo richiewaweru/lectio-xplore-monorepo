@@ -512,3 +512,19 @@ async def test_path_lesson_status_reads_approval_from_nested_page_document_state
     assert response["workspace"]["preparation"]["approved_revision"] == 1
     assert response["worker_debug"]["debug_only"] is True
     assert response["worker_debug"]["workflow_stage"] == "failed_recoverable"
+
+
+def test_needs_shared_review_projects_to_a_valid_needs_review_artifact():
+    from curriculum.workspace_projection import _artifact_projection
+
+    dto = _artifact_projection(
+        {
+            "status": "needs_shared_review",
+            "realization_id": "real-1",
+            "shared_document_state": "needs_review",
+            "shared_document_run_id": "run-1",
+        },
+        legacy_ambiguous=False,
+    )
+    assert dto.state == "needs_review"
+    assert dto.shared_document_state == "needs_review"
