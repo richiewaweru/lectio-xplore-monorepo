@@ -75,6 +75,43 @@ async def _seed_native_generation(
     return gid
 
 
+async def _seed_cutover_ready_generation(db_session_factory, *, user_id: str) -> str:
+    """Admit a real Unit Print realization and drive it to ``ready``.
+
+    P11B retired standalone Print (no Unit lesson), so ``claim_next_native_job``
+    now only ever claims a detached Print realization admitted through
+    ``ensure_shared_document_run``. Race/reclaim tests need a genuinely
+    claimable row rather than the old bare ``_seed_native_generation`` shape.
+    """
+    from application.unit_lesson.realize_print_handoff import (
+        realize_print_from_preparation,
+    )
+    from tests.application.test_p03_realization_gates import (
+        _approved_native_preparation,
+    )
+    from tests.application.test_p04_learn_worker import _drive_shared_document_ready
+
+    async with db_session_factory() as session:
+        lesson, _plan, _source, _document = await _approved_native_preparation(
+            session, user_id=user_id
+        )
+        admitted = await realize_print_from_preparation(
+            session,
+            preparation_generation_id=str(lesson.pack_id),
+            user_id=user_id,
+            path_lesson_id=lesson.id,
+        )
+        await session.commit()
+        await _drive_shared_document_ready(
+            session,
+            db_session_factory,
+            owner_user_id=user_id,
+            path_lesson_id=lesson.id,
+            preparation_generation_id=str(lesson.pack_id),
+        )
+    return str(admitted["output_id"])
+
+
 @pytest.mark.parametrize(
     ("current", "target"),
     [
@@ -152,8 +189,11 @@ async def test_approve_queues_without_executing(db_session_factory) -> None:
 
 @pytest.mark.asyncio
 async def test_two_workers_cannot_both_claim_queued(db_session_factory) -> None:
-    async with db_session_factory() as session:
-        gid = await _seed_native_generation(session, status="queued")
+    # P11B: ``claim_next_native_job`` never claims a bare, detached-realization
+    # generation any more (standalone Print is retired). Seed a genuine
+    # SharedLessonDocument-admitted, ready-for-claim Print realization instead
+    # of the old bare ``_seed_native_generation`` row.
+    gid = await _seed_cutover_ready_generation(db_session_factory, user_id="p02-queue-lease-a")
 
     async def _claim(worker_id: str) -> ExecutionLease | None:
         async with db_session_factory() as session:
@@ -248,9 +288,15 @@ async def test_failed_recoverable_is_parked_across_concurrent_worker_polls(
 
 @pytest.mark.asyncio
 async def test_stale_active_contention_one_winner(db_session_factory) -> None:
+    # P11B: same rationale as ``test_two_workers_cannot_both_claim_queued`` —
+    # a bare, detached-realization row is never claimed any more, so this
+    # simulates a stale in-flight worker on a genuine cutover-admitted row.
+    gid = await _seed_cutover_ready_generation(db_session_factory, user_id="p02-queue-lease-b")
     async with db_session_factory() as session:
-        gid = await _seed_native_generation(session, status="writing_blocks")
         repo = PageDocumentRepository(session, gid)
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        generation.status = "writing_blocks"
 
         def _stale(_gen, state):
             state["execution"] = {
@@ -262,10 +308,9 @@ async def test_stale_active_contention_one_winner(db_session_factory) -> None:
                 "lease_seconds": 90,
                 "last_error": None,
             }
-            state["lesson_packet"] = {"lesson": {"objective": "Learn X"}}
-            state["teaching_plan"] = {"arc": "test", "sections": []}
 
         await repo.mutate_state(mutation=_stale)
+        await session.commit()
 
     async def _claim(worker_id: str) -> ExecutionLease | None:
         async with db_session_factory() as session:
@@ -280,8 +325,14 @@ async def test_stale_active_contention_one_winner(db_session_factory) -> None:
 
 @pytest.mark.asyncio
 async def test_fresh_heartbeat_prevents_reclaim(db_session_factory) -> None:
+    # P11B: same rationale as the other ``claim_next_native_job`` race tests —
+    # use a genuine cutover-admitted row so a fresh heartbeat is actually what
+    # blocks the reclaim, not the (now-unconditional) bare-row rejection.
+    gid = await _seed_cutover_ready_generation(db_session_factory, user_id="p02-queue-lease-c")
     async with db_session_factory() as session:
-        gid = await _seed_native_generation(session, status="writing_blocks")
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        generation.status = "writing_blocks"
         repo = PageDocumentRepository(session, gid)
 
         def _fresh(_gen, state):
@@ -294,10 +345,9 @@ async def test_fresh_heartbeat_prevents_reclaim(db_session_factory) -> None:
                 "lease_seconds": 90,
                 "last_error": None,
             }
-            state["lesson_packet"] = {"lesson": {"objective": "Learn X"}}
-            state["teaching_plan"] = {"arc": "test", "sections": []}
 
         await repo.mutate_state(mutation=_fresh)
+        await session.commit()
         claimed = await claim_next_native_job(session, worker_id="intruder", lease_seconds=90)
         assert claimed is None
 

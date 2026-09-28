@@ -2517,30 +2517,13 @@ async def claim_next_native_job(
             if lease is not None:
                 return lease
             continue
-        repo = PageDocumentRepository(session, gid)
-        state = await repo.load_page_generation_state()
-        if not state.get("teaching_plan") or not state.get("lesson_packet"):
-            continue
-        # Refuse pre-teaching / unapproved checkpoints — worker must not steal them.
-        review = state.get("teaching_review") if isinstance(state.get("teaching_review"), dict) else {}
-        review_status = str((review or {}).get("status") or "")
-        generation = await session.get(GenerationModel, gid)
-        if generation is None:
-            continue
-        generation_status = str(generation.status or "")
-        if (
-            generation_status in CLAIMABLE_STATUSES | ACTIVE_STATUSES
-            and review_status
-            and review_status not in {"approved", "queued"}
-            and review_status in {"pending", "rejected"}
-        ):
-            # Legacy paths may omit review; require approved when present.
-            continue
-            if generation_status == "awaiting_teaching_approval":
-                continue
-        lease = await repo.claim_execution(worker_id=worker_id, lease_seconds=lease_seconds)
-        if lease is not None:
-            return lease
+        # P11B: standalone Print generation is retired and its ordinary
+        # whole-lesson planning/writing executor is deleted. A row with no
+        # ``NativeRealizationModel`` cutover link can only be a stale
+        # pre-P11B standalone artifact; it has no ordinary authoring path
+        # left to execute, so it is never claimed. Its persisted
+        # ``document_json`` (if any) remains readable.
+        continue
     return None
 
 

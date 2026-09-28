@@ -507,7 +507,10 @@ async def test_r02_teaching_retry_does_not_rerun_items() -> None:
         ready_card=True,
     )
     item_exec = AsyncMock(side_effect=AssertionError("items must not run"))
-    form_planner = AsyncMock(side_effect=AssertionError("form planner must not run"))
+    # P11B: the ordinary whole-lesson form planner
+    # (``print.generation.whole_lesson.executor``) is retired, so there is no
+    # module left to patch as a "must not run" guard here — its absence is
+    # now a structural guarantee rather than something to assert at runtime.
 
     with (
         patch(
@@ -518,10 +521,6 @@ async def test_r02_teaching_retry_does_not_rerun_items() -> None:
             "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_teaching_ok,
         ),
-        patch(
-            "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
-            new=form_planner,
-        ),
     ):
         accepted, result = await _accept_and_run(gid)
 
@@ -530,7 +529,6 @@ async def test_r02_teaching_retry_does_not_rerun_items() -> None:
     assert result["status"] == "awaiting_teaching_approval"
     assert result["retry_target"] == "planning_teaching"
     item_exec.assert_not_called()
-    form_planner.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -742,10 +740,9 @@ async def test_r06_visual_failure_not_owned_by_retry_native() -> None:
                     "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
                     new=AsyncMock(side_effect=AssertionError("teaching")),
                 ),
-                patch(
-                    "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
-                    new=AsyncMock(side_effect=AssertionError("forms")),
-                ),
+                # P11B: the ordinary whole-lesson form planner
+                # (``print.generation.whole_lesson.executor``) is retired, so
+                # there is no module left to patch as a "must not run" guard.
             ):
                 ok = await client.post(f"/api/v1/v3/generations/{gid}/visuals/retry")
             assert ok.status_code == 200, ok.text
@@ -785,112 +782,6 @@ async def test_r07_error_aliases_clear_after_teaching_recovery() -> None:
         page = dict((generation.chunked_state_json or {}).get("page_document_v2") or {})
         assert (page.get("execution") or {}).get("last_error") is None
 
-
-@pytest.mark.asyncio
-async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
-    from tests.planning.contract_fixtures import teaching_and_form
-
-    from print.generation.whole_lesson.executor import execute_after_teaching_approval
-    from print.generation.whole_lesson.failure_injection import (
-        configure_failure_injection,
-        reset_failure_injection,
-    )
-    from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
-    from print.generation.whole_lesson.packet import (
-        AnchorRecord,
-        ImmutableLessonPacket,
-        LessonIdentity,
-        LessonLimits,
-        ScopeContract,
-        SlotRecord,
-    )
-    from print.generation.whole_lesson.worker import NativeExecutionWorker
-
-    packet = ImmutableLessonPacket(
-        lesson=LessonIdentity(
-            path_lesson_id="lesson-form-timeout",
-            subject="Science",
-            grade_level="Grade 4",
-            objective="Explain why plants need light.",
-            knowledge_type="conceptual",
-            lesson_mode="first_exposure",
-        ),
-        scope=ScopeContract(terminology=["light"]),
-        anchor=AnchorRecord(id="a1", description="Two plants."),
-        slots=[SlotRecord(slot_id="orient", typical_intents=["orient"])],
-        limits=LessonLimits(),
-    )
-    teaching, _form = teaching_and_form(
-        sections=[("orient", [("orient-b1", "orient", "prose")])]
-    )
-    gid, _ = await _seed_generation(
-        status="planning_forms",
-        last_error=None,
-        skip_items=True,
-        ready_card=True,
-    )
-    async with async_session_factory() as session:
-        repo = PageDocumentRepository(session, gid)
-
-        def _prep(_generation, state):
-            state["lesson_packet"] = packet.model_dump(mode="json")
-            state["lesson_legality"] = build_lesson_legality_snapshot(packet).model_dump(
-                mode="json"
-            )
-            state["teaching_plan"] = teaching.model_dump(mode="json")
-            state["teaching_raw"] = "unchanged-teaching"
-            state["form_plan"] = None
-
-        await repo.mutate_state(mutation=_prep)
-
-    configure_failure_injection(
-        enabled=True, generation_id=gid, node="planning_forms", fail_once=True
-    )
-    form_calls = {"n": 0}
-
-    async def _form_boom(*_a, **_k):
-        form_calls["n"] += 1
-        raise AssertionError("form provider must not run")
-
-    try:
-        async with async_session_factory() as session:
-            lease = await PageDocumentRepository(session, gid).claim_execution(
-                worker_id="form-retry-worker"
-            )
-            assert lease is not None
-        with (
-            patch(
-                "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
-                new=_form_boom,
-            ),
-            patch(
-                "print.generation.whole_lesson.executor.run_shared_task_writer",
-                return_value=[],
-            ),
-        ):
-            async with async_session_factory() as session:
-                with pytest.raises(TimeoutError):
-                    await execute_after_teaching_approval(
-                        session=session, generation_id=gid, lease=lease
-                    )
-        await NativeExecutionWorker(worker_id="form-retry-worker")._persist_failure(
-            lease, TimeoutError("injected form planner timeout")
-        )
-        accepted = await accept_native_retry(gid, user_id=TEST_USER.id)
-        assert accepted["status"] == "queued"
-        async with async_session_factory() as session:
-            repo = PageDocumentRepository(session, gid)
-            claimed = await repo.claim_execution(worker_id="form-retry-worker-2")
-            assert claimed is not None
-            assert claimed.stage == "planning_forms"
-            assert await repo.claim_execution(worker_id="form-retry-other") is None
-            state = await repo.load_page_generation_state()
-            assert state.get("teaching_raw") == "unchanged-teaching"
-            assert state.get("teaching_plan") is not None
-            assert state.get("form_plan") is None
-    finally:
-        reset_failure_injection()
-    assert form_calls["n"] == 0
 
 @pytest.mark.asyncio
 async def test_repeated_failure_persist_keeps_first_failure() -> None:
