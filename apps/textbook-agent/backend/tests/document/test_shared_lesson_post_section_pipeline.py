@@ -219,7 +219,7 @@ def _source(source):
 
 
 async def _inputs(run, source, composition, section):
-    return run, source, (), (composition,), (section,)
+    return run, source, (), (composition,), (section,), {}
 
 
 def _ready_finalization() -> SharedLessonFinalizationDispatchOutcome:

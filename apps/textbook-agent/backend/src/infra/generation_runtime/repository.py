@@ -937,11 +937,14 @@ async def retry_work_items(
         session,
         run_id=run_id,
         allow_failed_recoverable=True,
+        allow_failed_terminal=True,
     )
     if run.owner_user_id != owner_user_id:
         raise RunNotFound("generation run is unavailable to this owner")
     if run.status not in {"queued", "running", "failed_recoverable"}:
-        raise InvalidWorkItemTransition("parent generation Run cannot be retried")
+        raise InvalidWorkItemTransition(
+            "parent generation Run must be queued, running or failed_recoverable to retry"
+        )
 
     if run.status == "failed_recoverable":
         failed_ids = set(

@@ -493,7 +493,8 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
         for section in structural_plan.sections
     )
     assert all(len(section.title) <= 80 for section in structural_plan.sections)
-    assert len(structural_plan.anchor.example) <= 100
+    # Source anchors are preserved whole (67c10889), not truncated to 100.
+    assert structural_plan.anchor.example
     assert response.objective_hash == hash_path_objective(lesson.objective)
     provenance = await db_session.get(LessonProvenanceModel, response.generation_id)
     assert provenance is not None
