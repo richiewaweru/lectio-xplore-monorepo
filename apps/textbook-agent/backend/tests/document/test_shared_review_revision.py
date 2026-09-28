@@ -15,6 +15,7 @@ from document.shared_lesson.models import (
     HeadingNode,
     ListDisplay,
     ListNode,
+    NodeAccessibility,
     ParagraphDisplay,
     ParagraphNode,
     SharedLessonDocument,
@@ -77,6 +78,7 @@ def _origin() -> SharedLessonDocument:
                             id="paragraph-1",
                             teaching_block_id="block-1",
                             display=ParagraphDisplay(text="Original paragraph."),
+                            accessibility=NodeAccessibility(description="Original description"),
                         ),
                         HeadingNode(
                             id="heading-1",
@@ -143,12 +145,16 @@ def _revise(origin: SharedLessonDocument, mutate) -> SharedLessonDocument:
 def _allowed_edits(payload: dict) -> None:
     nodes = payload["sections"][0]["nodes"]
     nodes[0]["display"]["text"] = "Corrected paragraph."
+    nodes[0]["accessibility"]["description"] = "Corrected description"
     nodes[1]["display"]["text"] = "Corrected heading"
     nodes[2]["display"].update(title="Corrected title", body="Corrected body")
+    nodes[2]["accessibility"]["description"] = "Corrected callout description"
     nodes[3]["display"]["caption"] = "Corrected caption"
     nodes[3]["accessibility"]["alt_text"] = "Corrected alt text"
     nodes[4]["display"]["items"][0] = "Corrected item"
+    nodes[4]["accessibility"]["description"] = "Corrected list description"
     nodes[5]["display"]["rows"][0][0] = "Corrected cell"
+    nodes[5]["accessibility"]["description"] = "Corrected table description"
 
 
 def test_review_revision_allows_only_review_api_text_edits_and_reports_revalidation_targets() -> None:
@@ -212,6 +218,16 @@ def test_review_revision_allows_only_review_api_text_edits_and_reports_revalidat
             lambda payload: payload["sections"][0]["nodes"][5]["display"]["rows"][0].append("extra"),
             "table shape",
         ),
+        (
+            "heading level forged alongside an allowed accessibility edit",
+            lambda payload: (
+                payload["sections"][0]["nodes"][1]["display"].update(level=3),
+                payload["sections"][0]["nodes"][1].setdefault("accessibility", {}).update(
+                    description="Sneaked-in description"
+                ),
+            ),
+            "node identity, shape, or protected fields",
+        ),
     ],
 )
 def test_review_revision_rejects_forged_or_structural_changes(label, mutate, message) -> None:
@@ -220,6 +236,18 @@ def test_review_revision_rejects_forged_or_structural_changes(label, mutate, mes
 
     with pytest.raises(ReviewRevisionValidationError, match=message):
         prove_review_draft_revision(origin, revised)
+
+
+def test_figure_accessibility_has_no_reviewer_editable_description_field() -> None:
+    """FigureAccessibility only carries alt_text; a forged description is a schema error."""
+    origin = _origin()
+    payload = origin.model_dump(mode="json")
+    payload["sections"][0]["nodes"][3]["accessibility"]["description"] = "Forged"
+    payload["revision"] = origin.revision + 1
+    payload.pop("content_hash", None)
+
+    with pytest.raises(Exception, match="Extra inputs are not permitted|extra"):
+        build_shared_lesson_document(payload)
 
 
 def test_review_revision_rejects_nonsequential_and_unchanged_revisions() -> None:

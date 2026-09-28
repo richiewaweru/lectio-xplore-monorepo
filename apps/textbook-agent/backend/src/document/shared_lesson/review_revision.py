@@ -61,9 +61,13 @@ def _same_except(left: dict, right: dict, allowed_paths: tuple[tuple[str | int, 
 def _node_edit_paths(origin: dict, revised: dict) -> tuple[tuple[str | int, ...], ...]:
     kind = origin.get("kind")
     if kind in {"paragraph", "heading"}:
-        return (("display", "text"),)
+        return (("display", "text"), ("accessibility", "description"))
     if kind == "callout":
-        return (("display", "title"), ("display", "body"))
+        return (
+            ("display", "title"),
+            ("display", "body"),
+            ("accessibility", "description"),
+        )
     if kind == "figure":
         return (("display", "caption"), ("accessibility", "alt_text"))
     if kind == "list":
@@ -71,7 +75,10 @@ def _node_edit_paths(origin: dict, revised: dict) -> tuple[tuple[str | int, ...]
         revised_items = revised["display"]["items"]
         if len(original_items) != len(revised_items):
             raise ReviewRevisionValidationError("review revision changed list shape")
-        return tuple(("display", "items", index) for index in range(len(original_items)))
+        return (
+            *(("display", "items", index) for index in range(len(original_items))),
+            ("accessibility", "description"),
+        )
     if kind == "table":
         original_rows = origin["display"]["rows"]
         revised_rows = revised["display"]["rows"]
@@ -79,10 +86,13 @@ def _node_edit_paths(origin: dict, revised: dict) -> tuple[tuple[str | int, ...]
             len(left) != len(right) for left, right in zip(original_rows, revised_rows, strict=True)
         ):
             raise ReviewRevisionValidationError("review revision changed table shape")
-        return tuple(
-            ("display", "rows", row_index, column_index)
-            for row_index, row in enumerate(original_rows)
-            for column_index, _cell in enumerate(row)
+        return (
+            *(
+                ("display", "rows", row_index, column_index)
+                for row_index, row in enumerate(original_rows)
+                for column_index, _cell in enumerate(row)
+            ),
+            ("accessibility", "description"),
         )
     return ()
 

@@ -73,6 +73,7 @@ class ReviewDraftTextEdit(BaseModel):
         "figure_alt_text",
         "list_item_text",
         "table_cell_text",
+        "accessibility_description",
     ]
     value: str = Field(min_length=1)
     item_index: int | None = Field(default=None, ge=0)
@@ -314,6 +315,14 @@ async def post_shared_document_review_draft_revision(
             node["display"]["caption"] = edit.value
         elif field_name == "figure_alt_text" and node["kind"] == "figure":
             node["accessibility"]["alt_text"] = edit.value
+        elif field_name == "accessibility_description" and node["kind"] in {
+            "paragraph",
+            "heading",
+            "list",
+            "table",
+            "callout",
+        }:
+            node["accessibility"]["description"] = edit.value
         elif field_name == "list_item_text" and node["kind"] == "list":
             items = node["display"]["items"]
             if edit.item_index is None or edit.item_index >= len(items):

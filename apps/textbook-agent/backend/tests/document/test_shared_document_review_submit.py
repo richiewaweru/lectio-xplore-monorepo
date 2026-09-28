@@ -844,3 +844,156 @@ async def test_review_submit_issue_again_keeps_edited_revision_as_latest_draft(
         )
     assert latest["draft"]["revision"] == edited["draft"]["revision"]
     assert latest["draft"]["hash"] == edited["draft"]["hash"]
+
+
+@pytest.mark.asyncio
+async def test_review_submit_accepts_accessibility_description_edit_on_ordinary_node(
+    db_session, db_session_factory, monkeypatch
+):
+    """A reviewer can correct an ordinary node's accessibility.description.
+
+    Regression for the live gap where a reviewer rewrote a paragraph's
+    display.text but the node's accessibility.description still described
+    the removed example, and document QA flagged unsupported_claim -- the
+    review allowlist only let reviewers edit accessibility on figures.
+    """
+    generation, lesson, _provenance, _source = await _prepared(db_session)
+    admission = await _admit(db_session, generation=generation, lesson=lesson)
+    await _advance_semantic_worker(
+        db_session, db_session_factory, generation=generation, lesson=lesson, monkeypatch=monkeypatch
+    )
+
+    async def issue_once(_request):
+        return DocumentSemanticVerdict(
+            status="issue",
+            issues=(
+                {
+                    "issue_code": "unsupported_claim",
+                    "affected_section_id": "orient",
+                    "explanation": (
+                        "The paragraph's accessibility description still references "
+                        "a removed example."
+                    ),
+                    "required_correction": "Correct the accessibility description.",
+                },
+            ),
+        )
+
+    outcome = await run_post_section_pipeline(
+        db_session_factory,
+        run_id=admission.run.id,
+        owner_user_id="source-owner",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=generation.id,
+        qa_semantic_validator=issue_once,
+        worker_id="review-submit-accessibility",
+    )
+    assert outcome.state == "blocked"
+
+    async with db_session_factory() as session:
+        run = await session.get(GenerationRunModel, admission.run.id)
+        assert run is not None
+        assert run.status == "failed_recoverable"
+        draft = await get_shared_document_review_draft(
+            run.id, current_user=SimpleNamespace(id="source-owner"), session=session
+        )
+    section = draft["document"]["sections"][0]
+    node = section["nodes"][0]
+    assert node["kind"] == "paragraph"
+
+    async with db_session_factory() as session:
+        edited = await post_shared_document_review_draft_revision(
+            run.id,
+            ReviewDraftRevisionRequest(
+                expected_revision=draft["draft"]["revision"],
+                expected_hash=draft["draft"]["hash"],
+                edits=(
+                    ReviewDraftTextEdit(
+                        section_id=section["id"],
+                        node_id=node["id"],
+                        field="accessibility_description",
+                        value="Describes the current, corrected paragraph content.",
+                    ),
+                ),
+            ),
+            current_user=SimpleNamespace(id="source-owner"),
+            session=session,
+        )
+        await session.commit()
+    assert edited["draft"]["revision"] == draft["draft"]["revision"] + 1
+    edited_section = edited["document"]["sections"][0]
+    edited_node = edited_section["nodes"][0]
+    assert (
+        edited_node["accessibility"]["description"]
+        == "Describes the current, corrected paragraph content."
+    )
+    # The node's own display text and identity are untouched by this edit.
+    assert edited_node["display"]["text"] == node["display"]["text"]
+    assert edited_node["id"] == node["id"]
+
+
+@pytest.mark.asyncio
+async def test_review_submit_rejects_accessibility_description_on_figure_node(
+    db_session, db_session_factory
+):
+    """accessibility_description is not allowlisted for a figure (only figure_alt_text is)."""
+    generation, lesson, _provenance, _source = await _prepared_with_figure(db_session)
+    admission = await _admit(db_session, generation=generation, lesson=lesson)
+    await _advance_figure_semantic_worker(
+        db_session, db_session_factory, generation=generation, lesson=lesson
+    )
+
+    async def issue_once(_request):
+        return DocumentSemanticVerdict(
+            status="issue",
+            issues=(
+                {
+                    "issue_code": "unsupported_assumption",
+                    "affected_section_id": "orient",
+                    "explanation": "The callout assumes an unapproved fact.",
+                    "required_correction": "Repair the callout text.",
+                },
+            ),
+        )
+
+    outcome = await run_post_section_pipeline(
+        db_session_factory,
+        run_id=admission.run.id,
+        owner_user_id="source-owner",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=generation.id,
+        media_executor=_FakeFigureExecutor(),
+        qa_semantic_validator=issue_once,
+        worker_id="figure-review-accessibility-reject",
+    )
+    assert outcome.state == "blocked", outcome.error
+
+    async with db_session_factory() as session:
+        run = await session.get(GenerationRunModel, admission.run.id)
+        assert run is not None
+        draft = await get_shared_document_review_draft(
+            run.id, current_user=SimpleNamespace(id="source-owner"), session=session
+        )
+    section = draft["document"]["sections"][0]
+    figure_node = next(node for node in section["nodes"] if node["kind"] == "figure")
+
+    async with db_session_factory() as session:
+        with pytest.raises(HTTPException) as excinfo:
+            await post_shared_document_review_draft_revision(
+                run.id,
+                ReviewDraftRevisionRequest(
+                    expected_revision=draft["draft"]["revision"],
+                    expected_hash=draft["draft"]["hash"],
+                    edits=(
+                        ReviewDraftTextEdit(
+                            section_id=section["id"],
+                            node_id=figure_node["id"],
+                            field="accessibility_description",
+                            value="Forged description on a figure",
+                        ),
+                    ),
+                ),
+                current_user=SimpleNamespace(id="source-owner"),
+                session=session,
+            )
+    assert excinfo.value.status_code == 422
