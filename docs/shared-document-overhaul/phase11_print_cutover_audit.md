@@ -254,15 +254,202 @@ evidence.
 None. `NativeRealizationModel`/`GenerationModel` already carry the required
 lineage columns from migration `20260928_0047_learn_shared_document_lineage.py`.
 
+## P11B deletion (2026-09-29)
+
+Standalone Print generation is retired (Sol's decision above): a request that
+resolves no `path_lesson_id` now fails closed at admission with a typed
+`PRINT_STANDALONE_RETIRED` 409 (`realize_print_from_preparation`), instead of
+falling back to the old detached-`GenerationModel`-only creation path. The
+`allow_standalone` parameter and both `native_http.py` call sites that passed
+`allow_standalone=True` are removed.
+
+### Deleted (zero production caller once standalone was removed)
+
+- `print/generation/composition_bridge.py`
+- `print/generation/document_realizer.py`
+- `print/generation/shared_writer_bridge.py`
+- `print/generation/authoring_adapter.py`
+- `print/generation/work_orders.py`
+- `print/generation/selection_snapshot.py`
+- `print/generation/source_resolver.py`
+- `print/generation/model_tiers.py`
+- `print/generation/whole_lesson/form_agent.py`
+- `print/generation/whole_lesson/form_plan.py`
+- `print/generation/whole_lesson/executor.py`
+- `print/generation/whole_lesson/resolved_block_plan.py`
+- `print/generation/whole_lesson/failure_injection.py`
+- `application/unit_lesson/dual_native.py`
+- `print/generation/native_production.py`'s ordinary composition/selection body
+  (kept as a thin `teaching_plan_content_hash` compat shim, mirroring Learn's
+  P10E `learn/generation/native_production.py` shim — `realize_print_handoff.py`
+  still imports that one function).
+- `curriculum.prompts.form_planner_prompt` (and its packaged resource file
+  `resources/form-planner-v1.txt`) — its only caller,
+  `prompt_render.render_form_prompt`, is deleted below.
+- Six historical Phase-9 operator scripts that imported already-deleted
+  modules (`scripts/live_closeout_bcd.py`, `live_closeout_bc_plans.py`,
+  `run_p09_live_campaign.py`, `run_p09_salvage_attempts_a.py`,
+  `run_p09_salvage_case_a.py`, `run_p09_v05_failure_recovery.py`), plus three
+  more found by the same zero-caller sweep
+  (`scripts/live_print_composition_proof.py`, `live_print_pdf_proof.py`,
+  `live_sibling_path_proof.py`, all importing `composition_bridge`).
+
+### Trimmed dead code in files that stay (they have a live caller elsewhere)
+
+- `print/generation/whole_lesson/validation.py` — removed `validate_form_plan`/
+  `advisory_form_qc`/the `FormPlan` import; kept `validate_teaching_plan`/
+  `advisory_teaching_qc`/`allowed_teaching_evidence_refs`/`anchor_terms`
+  (live via `teaching_agent.run_lesson_approach_planner`).
+- `print/generation/whole_lesson/prompt_render.py` — removed
+  `render_form_prompt`/`build_form_planner_payload`/the `form_planner_prompt`
+  import; kept `render_teaching_prompt` (same live caller).
+- `print/generation/whole_lesson/__init__.py` — dropped the `FormPlan`/
+  `FormDecision`/`FormPlanBlock`/`FormPlanSection`/`coerce_form_plan`/
+  `ResolvedBlockPlan`/`ResolvedLessonPlan`/`ResolvedSectionPlan`/
+  `resolve_block_plans` re-exports (their source modules are deleted).
+- `print/rendering/page_objects/registry.py` — deleted the LLM writer path
+  (`dispatch_writer_async`, `_write_validated_llm`, `_work_order_for_context`,
+  `_LegacyWriterAuthoringProvider`, `_document_writer_kind`,
+  `_print_payload_to_document_primitive`, `_authoring_provider`,
+  `_content_validation_from_authoring_error`, `_figure_result_from_content`)
+  and its now-unused imports (`infra.authoring.*`, `document_form_map`,
+  `work_orders`, `FORM_OUTPUTS`/`WRITER_PROVIDER_OUTPUTS`/
+  `ContentValidationError`/`UnsupportedObject`). Kept the deterministic
+  `dispatch_writer`/stub-writer dispatch, which is the live path
+  `print/rendering/page_objects/document_assembly.py` calls from
+  `shared_document_adapter.py`/`shared_document_execution.py`.
+- `print/rendering/page_objects/__init__.py` / `models.py` — dropped the
+  `dispatch_writer_async` export and the stale `PrintWorkOrder` type hook on
+  `WriterContext.print_work_order` (now `Any | None`; nothing sets it any
+  more since `executor.py` is gone).
+- `print/generation/whole_lesson/worker.py` — removed the
+  `execute_after_teaching_approval` import/call; a claimed job that is
+  neither a pre-worker retry nor a detached cutover realization now raises
+  a typed `RuntimeError` (persisted as a failure) instead of running ordinary
+  authoring — it can only be a stale pre-P11B standalone row.
+- `print/generation/whole_lesson/repository.py` — `claim_next_native_job`'s
+  ordinary-claim branch (rows with no `NativeRealizationModel` link) now
+  always `continue`s instead of calling `claim_execution`; such a row can
+  only be a stale pre-P11B standalone artifact and is never claimed again
+  (its persisted `document_json`, if any, stays readable).
+
+### KEPT-WITH-LIVE-CALLER (verified, not touched)
+
+- `print/generation/whole_lesson/teaching_agent.py` —
+  `run_lesson_approach_planner` called from
+  `print/generation/whole_lesson/service.py:29`, itself called from
+  `application/unit_lesson/native_pipeline.py` and
+  `print/generation/whole_lesson/native_retry.py` (the shared Teaching Plan
+  preparation pipeline, upstream of both Learn and Print).
+- `print/generation/whole_lesson/native_status.py` — `project_native_status`
+  called from `application/unit_lesson/native_pipeline.py:138`;
+  `visual_quality_summary` called from `print/http/v3_studio/router.py:1819,1975`.
+- `print/generation/whole_lesson/visual_dispatch.py` (and its
+  `visual_topology*.py` dependents) — `dispatch_and_patch_from_repo` called
+  from `application/unit_lesson/native_http.py:469` (`/visuals/retry` route).
+- `print/generation/catalogue_projections.py` — imported by
+  `print/generation/whole_lesson/legality.py` and `teaching_agent.py` (both
+  live).
+- `print/generation/task_treatments.py` — `print_treatment_for_learner_action`
+  called from `print/generation/shared_document_adapter.py:26` (the P11
+  cutover adapter itself) and `print/resources/selection.py`.
+- `print/generation/whole_lesson/failure_policy.py` /
+  `print/generation/whole_lesson/teaching_errors.py` — `classify_failure`
+  called from `repository.py`/`worker.py` for generic native-job failure
+  classification, not ordinary-authoring-specific.
+- `print/generation/whole_lesson/{packet,packet_builder,service,legality,
+  teaching_plan,events,states,figure_ids,native_routing}.py` — the shared
+  Teaching Plan preparation/native-routing/status plumbing used by both
+  Learn and Print, untouched by this package.
+
+### Zero-caller sweep evidence (representative)
+
+```
+rg "print\.generation\.(composition_bridge|document_realizer|shared_writer_bridge|authoring_adapter|work_orders|selection_snapshot|source_resolver|model_tiers)" src
+rg "whole_lesson\.(form_agent|form_plan|executor|resolved_block_plan|failure_injection)" src
+rg "unit_lesson\.dual_native" src
+# (no matches outside the deleted modules themselves after this package)
+```
+
+### Tests
+
+Deleted tests that only exercised the retired ordinary pipeline:
+`tests/print_learn/{test_composition_bridge,test_document_realizers,
+test_p04_native_selection_gates,test_p05_print_production_gates,
+test_print_document_align,test_shared_writer_bridge}.py`;
+`tests/planning/{test_contract_hardening,test_contract_ownership,
+test_parallel_section_execution,test_phase02_delivery_proof,
+test_phase02_document_fencing,test_phase02_resume_and_assembly,
+test_phase02_worker_failure_policy,test_section_resume,
+test_streaming_monotonic,test_d6a_unit_print_integration,
+contract_fixtures}.py`;
+`tests/authoring_correction/{test_a00_print_table_fallback,
+test_a01_authoring_definitions,test_a02_shared_authoring_engine,
+test_a03_print_authoring_migration,test_a05_selection}.py`;
+`tests/generation/{test_native_all_forms_e2e,
+test_writer_registry_all_forms,test_writer_repair}.py`;
+`tests/remaining_fixes/test_r03_print_selection.py`.
+
+Extracted still-needed fixtures (`packet`/`make_snapshot`/
+`five_item_check_packet`/`check_plan`) into new
+`tests/planning/legality_fixtures.py` before deleting their old home
+(`test_contract_hardening.py`), since `test_teaching_plan_semantic_review.py`
+and `test_pre_worker_failure_sync.py` still need them for still-live
+Teaching Plan review coverage.
+
+Surgically removed only the now-invalid assertions inside otherwise-live
+test files rather than deleting the whole file:
+`test_pre_worker_failure_sync.py` (dropped its two
+`failure_injection`/`execute_after_teaching_approval`-only tests, kept the
+pre-worker teaching-failure-sync tests), `test_native_retry_pre_worker.py`
+(dropped one whole `failure_injection`-only test and two
+"must-not-run"-guard `patch()` calls that targeted the deleted executor
+module inside otherwise-live tests).
+
+Adapted `tests/planning/test_phase02_queue_and_lease.py`'s three
+`claim_next_native_job` race/reclaim tests (`test_two_workers_cannot_both_claim_queued`,
+`test_stale_active_contention_one_winner`, `test_fresh_heartbeat_prevents_reclaim`)
+to seed a genuine SharedLessonDocument-admitted, ready-for-claim Print
+realization instead of the old bare `_seed_native_generation` row (which
+`claim_next_native_job` never claims any more) — otherwise these tests would
+either fail outright or silently degrade to a vacuous pass.
+
+New guard: `tests/architecture/test_p11b_print_ordinary_authoring_guard.py`
+(retired-module `ModuleNotFoundError`, an AST scan forbidding
+`document.composer`/`document.writer` imports anywhere under `print/` or
+`application/unit_lesson/` with **no exception** — unlike Learn's P10E guard,
+Print's last caller of those modules, `composition_bridge.py`, is deleted —
+a deleted-symbol reference scan, a signature check that `allow_standalone`
+is gone, and a fail-closed proof for a standalone admission request).
+
 ## RISKS / QUESTIONS
 
-- Standalone Studio Print (no Unit lesson) is out of scope and unchanged;
-  Sol should decide its fate (retire vs. give it its own identity) before
-  the deletion package, since some zero-caller candidates above are still
-  reachable from it.
+- `document/composer.py::compose_document_plan` and
+  `document/writer.py::write_document_primitive` appear to have **zero
+  production callers left at all** now that `composition_bridge.py` (their
+  last caller) is deleted — confirmed by `rg "document\.composer\b|document\.writer\b" src`
+  outside `document/__init__.py`'s own re-export. `learn/generation/work_orders.py`
+  still reads `document.writer._PRIMITIVE_SCHEMAS` for its closed
+  LessonDocument-v1 `compile_learn_work_orders` path, which the P10E guard
+  already documented as test-only (zero production callers). Deleting this
+  whole chain (`document/composer.py`, `document/writer.py`,
+  `document/writer_prompts.py`, `compile_learn_work_orders`, and the P10E
+  guard's `learn/generation/work_orders.py` exception) is optional bonus
+  scope that spans `tests/authoring_correction`, `tests/policy_cleanup`, and
+  `tests/remaining_fixes` files unrelated to Print — left for Sol to
+  schedule as its own follow-up rather than folded into this Print-focused
+  package.
+- `infra/authoring/model_policy/models.py::V2_FORM_PLANNER` is now a
+  zero-caller model-tier slot (its only real caller, `form_agent.py`, is
+  deleted), but `tests/v3_execution/test_v3_config_models.py` parametrizes
+  over it generically; left in place rather than touching that unrelated
+  test file for a one-constant cleanup.
 - No Print content-edit route currently exists to add a lineage/ordinary-
   node-edit guard to; if one is added later it must reuse the lineage
   verification pattern from this package.
 - The in-flight-job deployment note above is a rollout concern, not a code
   gate; flag to ops before deploying this branch if any Unit Print job is
-  mid-flight in production.
+  mid-flight in production. Deploying P11B additionally means any stale
+  pre-P11B standalone `GenerationModel` row still queued/active will never
+  be claimed again (it fails closed by omission, not by an explicit error);
+  its already-persisted `document_json`, if any, remains readable.

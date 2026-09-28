@@ -3,7 +3,8 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
-from tests.planning.test_contract_hardening import _make_snapshot, _packet
+from tests.planning.legality_fixtures import make_snapshot as _make_snapshot
+from tests.planning.legality_fixtures import packet as _packet
 
 from core.llm import ModelSlot
 from core.prompts.loader import closeout_prompt_hashes, get_manifest_entry
