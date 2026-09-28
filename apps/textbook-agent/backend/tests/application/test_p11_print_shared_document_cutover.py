@@ -19,7 +19,6 @@ from tests.application.test_p03_realization_gates import _approved_native_prepar
 from tests.application.test_p04_learn_worker import _drive_shared_document_ready
 from tests.print_learn._p10c_fixtures import build_rich_shared_document
 
-import print.generation.whole_lesson.executor as print_executor_module
 from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
 from core.database.models import GenerationModel, NativeRealizationModel
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
@@ -39,13 +38,6 @@ from print.generation.whole_lesson.repository import (
 from print.generation.whole_lesson.states import ExecutionLease
 from print.generation.whole_lesson.worker import NativeExecutionWorker
 from print.rendering.page_objects.document_assembly import reload_document
-
-
-def _forbid(name: str):
-    def _raise(*_args, **_kwargs):
-        raise AssertionError(f"{name} must not be called on the SharedLessonDocument Print path")
-
-    return _raise
 
 
 @pytest.mark.asyncio
@@ -240,7 +232,7 @@ async def test_worker_gate_reports_stale_after_new_approved_revision(
 
 
 @pytest.mark.asyncio
-async def test_ready_path_never_calls_ordinary_authoring(monkeypatch) -> None:
+async def test_ready_path_never_calls_ordinary_authoring() -> None:
     # ``NativeExecutionWorker``/``execute_print_realization_from_shared_document``
     # verify through ``core.database.session.async_session_factory`` (the
     # production DB conftest wires up), not the isolated per-test
@@ -248,13 +240,15 @@ async def test_ready_path_never_calls_ordinary_authoring(monkeypatch) -> None:
     # engine) — so this test drives the whole thing on that same production
     # session factory, exactly like the other real-worker tests in
     # ``tests/planning/test_native_retry_durability.py``.
+    #
+    # P11B deleted the ordinary whole-lesson executor
+    # (``print.generation.whole_lesson.executor``) and its
+    # ``execute_after_teaching_approval`` entrypoint entirely, so there is no
+    # function left to monkeypatch-forbid here — the guard is now structural
+    # (see ``tests/architecture/test_p11b_print_ordinary_authoring_guard.py``).
+    # This test still proves the ready path completes end to end through the
+    # pure SharedLessonDocument adapter.
     from core.database.session import async_session_factory as prod_sessions
-
-    monkeypatch.setattr(
-        print_executor_module,
-        "execute_after_teaching_approval",
-        _forbid("execute_after_teaching_approval"),
-    )
 
     async with prod_sessions() as session:
         lesson, _plan, _source, _document = await _approved_native_preparation(

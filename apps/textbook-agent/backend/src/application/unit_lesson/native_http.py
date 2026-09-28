@@ -159,7 +159,6 @@ async def post_lesson_approach_approve(
                 session,
                 preparation_generation_id=generation_id,
                 user_id=current_user.id,
-                allow_standalone=True,
             )
             await session.commit()
         except HTTPException:
@@ -246,7 +245,6 @@ async def post_realize_print(
                 preparation_generation_id=generation_id,
                 user_id=current_user.id,
                 admission_request_key=idempotency_key,
-                allow_standalone=True,
             )
             await session.commit()
         except HTTPException:

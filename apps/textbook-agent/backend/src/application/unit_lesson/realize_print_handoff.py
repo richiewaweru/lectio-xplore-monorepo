@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from typing import Any
-from uuid import NAMESPACE_URL, uuid4, uuid5
+from uuid import uuid4
 
 from fastapi import HTTPException
 from sqlalchemy import select, update
@@ -50,9 +50,15 @@ async def realize_print_from_preparation(
     user_id: str,
     path_lesson_id: str | None = None,
     admission_request_key: str | None = None,
-    allow_standalone: bool = False,
 ) -> dict[str, Any]:
-    """Queue native Print from approved teaching. Does not re-approve the plan."""
+    """Queue native Print from approved teaching. Does not re-approve the plan.
+
+    P11B: standalone Print (no Unit lesson to key a SharedLessonDocument
+    identity on) is retired. Every admission must resolve a ``path_lesson_id``
+    and pin a ``SharedLessonDocument`` run; a request that cannot resolve one
+    fails closed with a typed 409 rather than falling back to the old
+    detached-GenerationModel-only creation path.
+    """
     generation = await session.scalar(
         select(GenerationModel)
         .where(GenerationModel.id == preparation_generation_id)
@@ -96,10 +102,6 @@ async def realize_print_from_preparation(
         )
         or (isinstance(packet_lesson, dict) and packet_lesson.get("path_lesson_id"))
     )
-    is_explicit_studio_generation = bool(
-        source_chunked.get("native_whole_lesson")
-        or (isinstance(source_context, dict) and source_context.get("native_whole_lesson"))
-    )
     if standalone and is_shared_path_preparation:
         raise HTTPException(
             status_code=409,
@@ -109,17 +111,18 @@ async def realize_print_from_preparation(
                 "recovery_action": "reload_lesson",
             },
         )
-    if standalone and not allow_standalone:
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot resolve path lesson for this preparation",
-        )
-    if standalone and not is_explicit_studio_generation:
+    if standalone:
+        # P11B: standalone Print generation (no Unit lesson to key a
+        # SharedLessonDocument identity on) is retired. There is no ordinary
+        # authoring fallback left to route this through — fail closed.
         raise HTTPException(
             status_code=409,
             detail={
-                "code": "PRINT_STUDIO_ORIGIN_UNVERIFIED",
-                "message": "This preparation has no verified Unit or Studio origin. Reload the lesson before creating Print.",
+                "code": "PRINT_STANDALONE_RETIRED",
+                "message": (
+                    "Standalone Print generation is retired. Create Print from a "
+                    "Unit lesson's approved Teaching Plan."
+                ),
                 "recovery_action": "reload_lesson",
             },
         )
@@ -179,64 +182,6 @@ async def realize_print_from_preparation(
         ) from exc
 
     plan_hash = teaching_plan_content_hash(teaching_plan)
-
-    if standalone:
-        output_id = str(
-            uuid5(
-                NAMESPACE_URL,
-                "lectio-print:{}:{}:{}:{}".format(
-                    preparation_generation_id,
-                    str(teaching_plan.teaching_plan_id or ""),
-                    int(teaching_plan.revision or 1),
-                    plan_hash,
-                ),
-            )
-        )
-        existing_output = await session.get(GenerationModel, output_id)
-        if existing_output is None:
-            await _create_print_output_generation(
-                session,
-                source=generation,
-                source_state=state,
-                realization=None,
-                teaching_plan=teaching_plan.model_dump(mode="json"),
-                teaching_plan_hash=plan_hash,
-                output_id=output_id,
-            )
-            result_status = "queued"
-            created = True
-        else:
-            metadata = (existing_output.chunked_state_json or {}).get("print_realization") or {}
-            if (
-                existing_output.user_id != user_id
-                or metadata.get("realization_id") is not None
-                or metadata.get("preparation_generation_id") != preparation_generation_id
-                or metadata.get("teaching_plan_id") != str(teaching_plan.teaching_plan_id or "")
-                or int(metadata.get("teaching_plan_revision") or 0)
-                != int(teaching_plan.revision or 1)
-                or metadata.get("teaching_plan_hash") != plan_hash
-            ):
-                raise HTTPException(
-                    status_code=409,
-                    detail={
-                        "code": "PRINT_OUTPUT_IDENTITY_CONFLICT",
-                        "message": "An existing Studio output has a different pinned identity.",
-                    },
-                )
-            result_status = str(existing_output.status or "queued")
-            created = False
-        return {
-            "status": result_status,
-            "path": "print",
-            "preparation_generation_id": preparation_generation_id,
-            "output_id": output_id,
-            "realization_id": None,
-            "realization_created": created,
-            "teaching_plan_hash": plan_hash,
-            "teaching_plan_revision": int(teaching_plan.revision or 1),
-            "teaching_plan_id": str(teaching_plan.teaching_plan_id or ""),
-            "open_href": f"/studio/print/{output_id}",
-        }
 
     try:
         row, created = await admit_realization(

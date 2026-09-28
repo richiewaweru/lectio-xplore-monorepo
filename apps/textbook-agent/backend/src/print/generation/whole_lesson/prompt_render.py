@@ -7,7 +7,7 @@ from typing import Any
 
 from print.contracts.lectio_page import PAGE_OBJECT_IDS
 from print.generation.catalogue_projections import TeachingGuidanceProjection
-from print.generation.prompts import form_planner_prompt, lesson_approach_planner_prompt
+from print.generation.prompts import lesson_approach_planner_prompt
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
 from print.generation.whole_lesson.teaching_plan import TeachingPlan
 from resource_specs.loader import get_spec
@@ -71,78 +71,3 @@ def render_teaching_prompt(
     assert_no_page_object_ids(rendered, where="lesson-approach prompt")
     return rendered
 
-
-def build_form_planner_payload(
-    packet: ImmutableLessonPacket,
-    teaching_plan: TeachingPlan,
-    form_guidance: dict[str, Any],
-    *,
-    candidate_map: dict[str, tuple[str, ...]],
-) -> dict[str, Any]:
-    """Rich form-planner input envelope (narrow owned output elsewhere).
-
-    Compact learner-action briefs preserve whole-lesson rhythm without native
-    inventory beyond the closed per-block candidate set.
-    """
-    candidates = candidate_map
-    return {
-        "arc": teaching_plan.arc,
-        "required_visual_slots": list(packet.required_visual_slots()),
-        "sections": [
-            {
-                "slot_id": section.slot_id,
-                "blocks": [
-                    {
-                        "id": block.id,
-                        "position": block.position,
-                        "intent": block.intent,
-                        "brief": block.brief,
-                        "evidence": block.evidence,
-                        "learner_action": (
-                            {
-                                "action": block.learner_action.action,
-                                "target": block.learner_action.target,
-                                "purpose": block.learner_action.purpose,
-                                "expected_evidence": block.learner_action.expected_evidence,
-                                "difficulty": block.learner_action.difficulty,
-                            }
-                            if block.learner_action is not None
-                            else None
-                        ),
-                        "legal_object_candidates": list(
-                            candidates.get(block.id, ())
-                        ),
-                    }
-                    for block in section.blocks
-                ],
-            }
-            for section in teaching_plan.sections
-        ],
-        "available_objects": form_guidance,
-        "lesson": {
-            "objective": packet.lesson.objective,
-            "grade_level": packet.lesson.grade_level,
-            "subject": packet.lesson.subject,
-        },
-    }
-
-
-def render_form_prompt(
-    packet: ImmutableLessonPacket,
-    teaching_plan: TeachingPlan,
-    form_guidance: dict[str, Any],
-    *,
-    resource_id: str = "lesson",
-    candidate_map: dict[str, tuple[str, ...]],
-) -> str:
-    spec = get_spec(resource_id)
-    identity = render_resource_identity(spec)
-    system = form_planner_prompt().replace("{resource_identity}", identity)
-    payload = build_form_planner_payload(
-        packet,
-        teaching_plan,
-        form_guidance,
-        candidate_map=candidate_map,
-    )
-    user = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
-    return f"{system}\n\n## USER INPUT\n\n{user}"

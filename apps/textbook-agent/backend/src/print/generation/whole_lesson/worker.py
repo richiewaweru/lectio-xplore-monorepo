@@ -136,7 +136,6 @@ class NativeExecutionWorker:
         from print.generation.shared_document_execution import (
             execute_print_realization_from_shared_document,
         )
-        from print.generation.whole_lesson.executor import execute_after_teaching_approval
         from print.generation.whole_lesson.native_retry import run_pre_worker_retry
         from print.generation.whole_lesson.repository import empty_execution_meta
         from sqlalchemy import select
@@ -237,13 +236,17 @@ class NativeExecutionWorker:
                     )
                 return
 
-            async with async_session_factory() as session:
-                await execute_after_teaching_approval(
-                    session=session,
-                    generation_id=lease.generation_id,
-                    worker_id=lease.worker_id,
-                    lease=lease,
-                )
+            # P11B: standalone Print generation is retired, and the ordinary
+            # whole-lesson planning/writing executor it used is deleted. A
+            # claimed job that is neither a pre-worker retry nor a detached
+            # cutover realization can only be a stale pre-P11B standalone
+            # row; it has no ordinary authoring path left to run through, so
+            # fail it closed rather than silently dropping the lease.
+            raise RuntimeError(
+                "Print job has no SharedLessonDocument realization and standalone "
+                "Print generation is retired; cannot execute ordinary authoring "
+                f"for generation_id={lease.generation_id!r}"
+            )
         except LeaseLostError:
             raise
         except Exception as exc:

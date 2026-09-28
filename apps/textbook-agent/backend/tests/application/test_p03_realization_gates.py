@@ -957,10 +957,17 @@ async def test_p03_concurrent_print_retry_accepts_one_new_output(
 
 
 @pytest.mark.asyncio
-async def test_p03_standalone_studio_print_approval_creates_distinct_output(
+async def test_p03_standalone_studio_print_approval_is_retired(
     db_session_factory, monkeypatch
 ) -> None:
-    import json
+    """P11B: standalone Print (no Unit lesson) generation is retired.
+
+    Historically this route created a detached Studio output with no
+    ``NativeRealizationModel`` row (see the deleted
+    ``test_p03_standalone_studio_print_approval_creates_distinct_output``).
+    That ordinary-authoring fallback no longer exists; the same request must
+    now fail closed with a typed 409.
+    """
     from unittest.mock import AsyncMock
 
     import application.unit_lesson.native_http as native_http
@@ -1026,37 +1033,34 @@ async def test_p03_standalone_studio_print_approval_creates_distinct_output(
         created_at="2026-09-23T00:00:00Z",
         updated_at="2026-09-23T00:00:00Z",
     )
-    response = await native_http.post_lesson_approach_approve(
-        source.id,
-        native_http.LessonApproachApproveRequest(
-            expected_revision=1,
-            expected_content_hash=teaching_plan_content_hash(plan),
-            teacher_note="Approved",
-        ),
-        teacher,
-        path="print",
-    )
-    payload = json.loads(response.body)
-    assert response.status_code == 202
-    assert payload["output_id"] != source.id
-    assert payload["generation_id"] == payload["output_id"]
+    with pytest.raises(HTTPException) as error:
+        await native_http.post_lesson_approach_approve(
+            source.id,
+            native_http.LessonApproachApproveRequest(
+                expected_revision=1,
+                expected_content_hash=teaching_plan_content_hash(plan),
+                teacher_note="Approved",
+            ),
+            teacher,
+            path="print",
+        )
+    assert error.value.status_code == 409
+    assert error.value.detail["code"] == "PRINT_STANDALONE_RETIRED"
+
     async with db_session_factory() as verify:
         prepared = await verify.get(GenerationModel, source.id)
-        output = await verify.get(GenerationModel, payload["output_id"])
-        assert prepared is not None and output is not None
-        assert prepared.status == "awaiting_teaching_approval"
-        assert output.status == "queued"
+        assert prepared is not None
         assert await verify.scalar(
             select(func.count()).select_from(NativeRealizationModel)
         ) == 0
-        replay = await realize_print_from_preparation(
-            verify,
-            preparation_generation_id=source.id,
-            user_id=user_id,
-            allow_standalone=True,
-        )
-        assert replay["output_id"] == payload["output_id"]
-        assert replay["realization_id"] is None
+        with pytest.raises(HTTPException) as replay_error:
+            await realize_print_from_preparation(
+                verify,
+                preparation_generation_id=source.id,
+                user_id=user_id,
+            )
+        assert replay_error.value.status_code == 409
+        assert replay_error.value.detail["code"] == "PRINT_STANDALONE_RETIRED"
 
 
 @pytest.mark.asyncio
@@ -1083,7 +1087,6 @@ async def test_p03_missing_unit_path_provenance_cannot_fall_back_to_studio(
             db_session,
             preparation_generation_id=preparation_id,
             user_id=user_id,
-            allow_standalone=True,
         )
 
     assert error.value.status_code == 409

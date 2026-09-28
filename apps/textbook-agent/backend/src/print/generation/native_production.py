@@ -1,42 +1,29 @@
-"""Native Print production adapter: approved teaching → closed forms → work orders.
+"""Print native production compatibility shim.
 
-Bridges P04 closed selection into the whole-lesson executor path without
-substituting prepared teaching/form plans. Provider fakes remain allowed only
-at LLM call sites; this module is code-owned selection and persistence.
+P11B retires ordinary Print composition/writing (the closed-catalogue
+form/work-order pipeline and the whole-lesson planning/writing executor):
+the SharedLessonDocument Print adapter
+(``print.generation.shared_document_adapter`` /
+``print.generation.shared_document_execution``) now realizes Print
+deterministically from the verified shared source. Nothing in the
+production Print path authors ordinary content or selects a form via an LLM
+any more, and standalone (non-Unit) Print generation is retired.
+
+This module keeps only ``teaching_plan_content_hash``, which
+``application.unit_lesson.realize_print_handoff`` still imports as the
+canonical pedagogical digest adapter (mirroring
+``learn.generation.native_production``'s P10E shim).
 """
 
 from __future__ import annotations
 
-import hashlib
-import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import Any
 
-from curriculum.lesson_review.service import build_coherence_report
-from curriculum.lesson_sourcebook.models import LessonSourcebook
-from curriculum.shared_tasks import SharedTaskSpec, build_shared_task_registry
 from curriculum.teaching_plan.content_hash import (
     teaching_plan_content_hash as _canonical_teaching_plan_content_hash,
 )
 from curriculum.teaching_plan.models import TeachingPlan
-from infra.authoring.capability_selector import ChooseFn
-from print.generation.catalogue_projections import build_form_candidate_map
-from print.generation.document_realizer import produce_print_document_plan_from_teaching
-from print.generation.selection_snapshot import (
-    PrintSelectionSnapshot,
-    build_print_selection_snapshot_async,
-    form_plan_from_decisions,
-    snapshot_from_form_plan,
-)
-from print.generation.whole_lesson.form_plan import FormPlan
-from print.generation.whole_lesson.legality import LessonLegalitySnapshot
-from print.generation.whole_lesson.packet import ImmutableLessonPacket
-from print.generation.work_orders import PrintWorkOrder, compile_print_work_orders
-from print.resources.native_policy import (
-    default_print_policy,
-    policy_version_and_hash,
-)
-from print.resources.selection import load_form_selection_view
 
 
 def teaching_plan_content_hash(plan: TeachingPlan | Mapping[str, Any]) -> str:
@@ -44,228 +31,4 @@ def teaching_plan_content_hash(plan: TeachingPlan | Mapping[str, Any]) -> str:
     return _canonical_teaching_plan_content_hash(plan)
 
 
-def package_contract_hash() -> str:
-    view = load_form_selection_view()
-    raw = json.dumps(view, sort_keys=True, separators=(",", ":"), default=str)
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-
-def build_print_coherence_report(
-    *,
-    teaching_plan: TeachingPlan,
-    output: Mapping[str, Any],
-    shared_tasks: Sequence[SharedTaskSpec] | None = None,
-    lesson_sourcebook: LessonSourcebook | None = None,
-):
-    """Review an assembled Print payload against the shared semantic contract."""
-    tasks = list(shared_tasks) if shared_tasks is not None else build_shared_task_registry(teaching_plan)
-    return build_coherence_report(
-        path="print",
-        plan=teaching_plan,
-        tasks=tasks,
-        sourcebook=lesson_sourcebook,
-        output=output,
-    )
-
-
-async def build_closed_print_production_plan_async(
-    *,
-    teaching_plan: TeachingPlan,
-    packet: ImmutableLessonPacket,
-    legality: LessonLegalitySnapshot,
-    available_asset_ids: Sequence[str] | None = None,
-    policy: Mapping[str, Any] | None = None,
-    choose: ChooseFn | None = None,
-    sealed_form_plan: FormPlan | None = None,
-    provider: Any | None = None,
-    engine: Any | None = None,
-    use_document_composition: bool = True,
-    budget_ledger: Any | None = None,
-    checkpoint_store: Any | None = None,
-    progress_store: Any | None = None,
-    progress_run_id: str | None = None,
-    shared_tasks: Sequence[SharedTaskSpec] | None = None,
-    lesson_sourcebook: LessonSourcebook | None = None,
-) -> tuple[FormPlan, PrintSelectionSnapshot, list[PrintWorkOrder]]:
-    """Build Print FormPlan from shared document composition (canonical).
-
-    When ``use_document_composition`` is True (default), ordinary content
-    selection uses ``document.composer`` + Print task treatments — not the
-    closed catalogue LLM form selector. FormPlan remains the Print layout
-    carrier for writers/assembly.
-    """
-    body = dict(policy) if policy is not None else default_print_policy()
-    _, policy_hash = policy_version_and_hash(body)
-    assets = [str(item) for item in (available_asset_ids or ()) if item]
-    if packet.required_visual_slots() and not assets:
-        assets = [f"deferred-visual:{packet.lesson.path_lesson_id}"]
-    has_visual_intent = any(
-        block.intent in {"illustrate", "show-structure", "show-process"}
-        for section in teaching_plan.sections
-        for block in section.blocks
-    )
-    if has_visual_intent and not assets:
-        assets = [f"deferred-visual:{packet.lesson.path_lesson_id}"]
-    candidate_map = build_form_candidate_map(
-        teaching_plan,
-        compatible_objects_by_intent=legality.compatible_objects_by_intent,
-        approved_items=packet.approved_items,
-        available_asset_ids=assets,
-        policy=body,
-    )
-    plan_hash = teaching_plan_content_hash(teaching_plan)
-    if sealed_form_plan is not None:
-        snapshot = snapshot_from_form_plan(
-            teaching_plan=teaching_plan,
-            form_plan=sealed_form_plan,
-            candidate_map=candidate_map,
-            teaching_plan_hash=plan_hash,
-            native_policy_hash=policy_hash,
-            package_contract_hash=package_contract_hash(),
-        )
-        form_plan = sealed_form_plan
-    elif use_document_composition:
-        from print.generation.composition_bridge import (
-            build_print_production_from_composition,
-        )
-
-        form_plan, snapshot, _composition = await build_print_production_from_composition(
-            teaching_plan=teaching_plan,
-            provider=provider,
-            engine=engine,
-            policy=body,
-            allow_heuristic_fallback=True,
-            # The production Print executor currently has no LLM composer
-            # dependency; make its deterministic degraded mode explicit.
-            heuristic_only=provider is None and engine is None,
-            candidate_map=candidate_map,
-            required_visual_slots=list(packet.required_visual_slots()),
-            budget_ledger=budget_ledger,
-            checkpoint_store=checkpoint_store,
-            progress_store=progress_store,
-            progress_run_id=progress_run_id,
-        )
-        _ = choose  # catalogue choose unused when composition owns ordinary selection
-    else:
-        # Legacy closed catalogue selection — kept for salvage/tests only.
-        lesson = packet.lesson
-        lesson_title = getattr(lesson, "objective", None) or getattr(lesson, "title", None) or ""
-        teaching_context = {
-            "arc": teaching_plan.arc,
-            "lesson_title": lesson_title,
-            "subject": getattr(lesson, "subject", None) or "",
-        }
-        snapshot = await build_print_selection_snapshot_async(
-            teaching_plan,
-            candidate_map=candidate_map,
-            teaching_plan_hash=plan_hash,
-            native_policy_hash=policy_hash,
-            package_contract_hash=package_contract_hash(),
-            choose=choose,
-            teaching_context=teaching_context,
-            required_visual_slots=set(packet.required_visual_slots()),
-        )
-        form_plan = form_plan_from_decisions(teaching_plan, snapshot.decisions)
-    approved_index = {
-        str(getattr(item, "id", None) or (item.get("id") if isinstance(item, Mapping) else "")): item
-        for item in packet.approved_items
-    }
-    task_registry = list(shared_tasks) if shared_tasks is not None else build_shared_task_registry(
-        teaching_plan,
-        approved_items=approved_index,
-    )
-    tasks_by_block = {task.teaching_block_id: task for task in task_registry}
-    sourcebook_index = lesson_sourcebook.by_id() if lesson_sourcebook is not None else {}
-    orders = compile_print_work_orders(
-        teaching_plan=teaching_plan,
-        snapshot=snapshot,
-        shared_tasks=tasks_by_block,
-        sourcebook_entries=sourcebook_index,
-    )
-    return form_plan, snapshot, orders
-
-
-def build_closed_print_production_plan(
-    *,
-    teaching_plan: TeachingPlan,
-    packet: ImmutableLessonPacket,
-    legality: LessonLegalitySnapshot,
-    available_asset_ids: Sequence[str] | None = None,
-    policy: Mapping[str, Any] | None = None,
-    sealed_form_plan: FormPlan | None = None,
-    shared_tasks: Sequence[SharedTaskSpec] | None = None,
-    lesson_sourcebook: LessonSourcebook | None = None,
-) -> tuple[FormPlan, PrintSelectionSnapshot, list[PrintWorkOrder]]:
-    """Sync wrapper; executor should call the async variant."""
-    import asyncio
-
-    return asyncio.run(
-        build_closed_print_production_plan_async(
-            teaching_plan=teaching_plan,
-            packet=packet,
-            legality=legality,
-            available_asset_ids=available_asset_ids,
-            policy=policy,
-            sealed_form_plan=sealed_form_plan,
-            shared_tasks=shared_tasks,
-            lesson_sourcebook=lesson_sourcebook,
-        )
-    )
-
-
-def compile_print_work_orders_for_form_plan(
-    *,
-    teaching_plan: TeachingPlan,
-    form_plan: FormPlan,
-    policy: Mapping[str, Any] | None = None,
-    shared_tasks: Sequence[SharedTaskSpec] | None = None,
-    lesson_sourcebook: LessonSourcebook | None = None,
-) -> list[PrintWorkOrder]:
-    """Reconstruct selected work orders for a validated/reused Print form plan."""
-    body = dict(policy) if policy is not None else default_print_policy()
-    _, policy_hash = policy_version_and_hash(body)
-    candidate_map = {
-        decision.block_id: [decision.object]
-        for section in form_plan.sections
-        for decision in section.forms
-    }
-    snapshot = snapshot_from_form_plan(
-        teaching_plan=teaching_plan,
-        form_plan=form_plan,
-        candidate_map=candidate_map,
-        teaching_plan_hash=teaching_plan_content_hash(teaching_plan),
-        native_policy_hash=policy_hash,
-        package_contract_hash=package_contract_hash(),
-    )
-    tasks = list(shared_tasks) if shared_tasks is not None else build_shared_task_registry(teaching_plan)
-    task_map = {task.teaching_block_id: task for task in tasks}
-    sourcebook_index = lesson_sourcebook.by_id() if lesson_sourcebook is not None else {}
-    return compile_print_work_orders(
-        teaching_plan=teaching_plan,
-        snapshot=snapshot,
-        shared_tasks=task_map,
-        sourcebook_entries=sourcebook_index,
-    )
-
-
-def selection_trace_payload(
-    snapshot: PrintSelectionSnapshot,
-    orders: Sequence[PrintWorkOrder],
-) -> dict[str, Any]:
-    return {
-        "selection_snapshot": snapshot.model_dump(mode="json"),
-        "work_orders": [order.model_dump(mode="json") for order in orders],
-        "work_order_ids": [order.work_order_id for order in orders],
-    }
-
-
-__all__ = [
-    "build_closed_print_production_plan",
-    "build_closed_print_production_plan_async",
-    "build_print_coherence_report",
-    "compile_print_work_orders_for_form_plan",
-    "package_contract_hash",
-    "produce_print_document_plan_from_teaching",
-    "selection_trace_payload",
-    "teaching_plan_content_hash",
-]
+__all__ = ["teaching_plan_content_hash"]
