@@ -68,7 +68,10 @@ def _validate_choice_feedback(
         wrong_ids = sorted(declared_ids - correct_set)
         covered = set(per_option) & declared_ids
         missing = sorted(set(wrong_ids) - covered)
-        if missing:
+        has_general_incorrect = isinstance(feedback.get("incorrect"), str) and bool(
+            feedback["incorrect"].strip()
+        )
+        if missing and not has_general_incorrect:
             errors.append(f"task {task.id!r} feedback_missing_wrong_option {missing}")
     for key, value in feedback.items():
         if key == "by_option":

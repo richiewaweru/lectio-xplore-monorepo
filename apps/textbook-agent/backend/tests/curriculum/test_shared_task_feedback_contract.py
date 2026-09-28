@@ -119,7 +119,7 @@ def test_missing_wrong_option_is_rejected() -> None:
     assert any("feedback_missing_wrong_option" in error and "'d'" in error for error in errors)
 
 
-def test_unknown_option_is_rejected() -> None:
+def test_unknown_option_is_dropped_by_normalization() -> None:
     task = _choice_task(
         correct_keys=["a"],
         feedback={
@@ -135,10 +135,11 @@ def test_unknown_option_is_rejected() -> None:
 
     errors = validate_final_task_response_contract(task)
 
-    assert any("feedback_unknown_option" in error and "'z'" in error for error in errors)
+    assert "z" not in task.feedback["by_option"]
+    assert errors == []
 
 
-def test_blank_feedback_text_is_rejected() -> None:
+def test_blank_feedback_text_is_dropped_by_normalization() -> None:
     task = _choice_task(
         correct_keys=["a"],
         feedback={
@@ -153,7 +154,34 @@ def test_blank_feedback_text_is_rejected() -> None:
 
     errors = validate_final_task_response_contract(task)
 
-    assert any("feedback_blank" in error and "correct" in error for error in errors)
+    assert "correct" not in task.feedback
+    assert errors == []
+
+
+def test_missing_wrong_option_allowed_when_general_incorrect_exists() -> None:
+    task = _choice_task(
+        correct_keys=["a"],
+        feedback={
+            "correct": "Glucose and oxygen are used up.",
+            "incorrect": "Check which substances are used up and which are produced.",
+            "by_option": {"b": "Carbon dioxide is a product."},
+        },
+    )
+
+    assert validate_final_task_response_contract(task) == []
+
+
+def test_case_mismatched_option_keys_map_to_declared_ids() -> None:
+    task = _choice_task(
+        correct_keys=["a"],
+        feedback={
+            "correct": "Glucose and oxygen are used up.",
+            "by_option": {"B": "CO2 is a product.", "C": "ATP is a product.", "D": "Water is a product."},
+        },
+    )
+
+    assert set(task.feedback["by_option"]) == {"b", "c", "d"}
+    assert validate_final_task_response_contract(task) == []
 
 
 def test_classification_common_errors_must_reference_real_items() -> None:

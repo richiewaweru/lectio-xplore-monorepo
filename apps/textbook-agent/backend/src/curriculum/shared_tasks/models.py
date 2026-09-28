@@ -79,49 +79,71 @@ _FEEDBACK_META_KEYS = frozenset({"correct", "incorrect", "partial", "by_option"}
 def normalize_choice_feedback(
     response: dict[str, Any], evaluation: dict[str, Any], feedback: dict[str, Any] | None
 ) -> dict[str, Any] | None:
-    """Deterministically move per-option feedback keyed to a correct option.
+    """Deterministically tidy per-option feedback for choice tasks.
 
-    Providers repeatedly attach explanation text to the correct option's key.
-    Per-option feedback is reserved for wrong options, so that text belongs in
-    ``correct`` (kept if ``correct`` is absent, otherwise dropped). Feedback on
-    unknown or wrong options is left untouched for validation to judge.
+    Feedback is presentation text, so shape slips must not cost a whole task
+    attempt: blank entries are dropped, option keys are matched to declared
+    option ids case-insensitively, keys naming no declared option are dropped,
+    and text keyed to a correct option moves into ``correct`` (or is dropped
+    when ``correct`` already exists, since per-option text is reserved for
+    wrong options). The evaluation key itself is never altered.
     """
     if not isinstance(feedback, dict) or response.get("type") not in {
         "single_choice",
         "multiple_choice",
     }:
         return feedback
+    declared = [
+        str(option.get("id"))
+        for option in response.get("options") or ()
+        if isinstance(option, dict) and option.get("id") is not None
+    ]
+    by_lower = {option_id.lower(): option_id for option_id in declared}
     correct: set[str] = set()
     if evaluation.get("correct_option_id") is not None:
         correct.add(str(evaluation["correct_option_id"]))
     for key in evaluation.get("correct_keys") or ():
         correct.add(str(key))
-    if not correct:
-        return feedback
-    if not any(key in feedback for key in correct) and not (
-        isinstance(feedback.get("by_option"), dict)
-        and any(key in feedback["by_option"] for key in correct)
-    ):
-        return feedback
-    normalized = dict(feedback)
-    moved: list[str] = []
-    for key in sorted(correct):
-        if key in normalized and key not in _FEEDBACK_META_KEYS:
-            value = normalized.pop(key)
-            if isinstance(value, str) and value.strip():
+
+    def _clean_options(entries: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+        kept: dict[str, Any] = {}
+        moved: list[str] = []
+        for key, value in entries.items():
+            if not isinstance(value, str) or not value.strip():
+                continue
+            option_id = by_lower.get(str(key).strip().lower())
+            if option_id is None:
+                continue
+            if option_id in correct:
                 moved.append(value)
-    by_option = normalized.get("by_option")
-    if isinstance(by_option, dict):
-        by_option = dict(by_option)
-        for key in sorted(correct):
-            if key in by_option:
-                value = by_option.pop(key)
-                if isinstance(value, str) and value.strip():
-                    moved.append(value)
-        normalized["by_option"] = by_option
-    if moved and not (isinstance(normalized.get("correct"), str) and normalized["correct"].strip()):
+                continue
+            kept[option_id] = value
+        return kept, moved
+
+    normalized: dict[str, Any] = {}
+    top_level_options: dict[str, Any] = {}
+    for key, value in feedback.items():
+        if key in _FEEDBACK_META_KEYS:
+            if key == "by_option":
+                normalized[key] = value
+            elif isinstance(value, str) and value.strip():
+                normalized[key] = value
+        else:
+            top_level_options[key] = value
+    kept_top, moved = _clean_options(top_level_options)
+    normalized.update(kept_top)
+    if isinstance(normalized.get("by_option"), dict):
+        kept_by_option, moved_by_option = _clean_options(normalized["by_option"])
+        moved.extend(moved_by_option)
+        if kept_by_option:
+            normalized["by_option"] = kept_by_option
+        else:
+            normalized.pop("by_option")
+    if moved and not normalized.get("correct"):
         normalized["correct"] = moved[0]
-    return normalized
+    if normalized == feedback:
+        return feedback
+    return normalized or None
 
 
 class SharedTaskSpec(BaseModel):
