@@ -37,6 +37,14 @@ class NativeRetryTarget(str, Enum):
     NOT_RETRYABLE = "not_retryable"
 
 
+# A failed_recoverable row's last_error.stage names where the failure was
+# raised. writing_sections/writing_blocks are kept here only for backward
+# compatibility with a legacy last_error persisted before P11B deleted the
+# ordinary form-planning/writing executor that used to run those stages —
+# no code writes those stage names into a *new* last_error any more, and
+# LEGAL_TRANSITIONS has no transition into either status. This set only
+# routes an old failed_recoverable row back to POST_APPROVAL_WORKER retry;
+# it does not resurrect the retired stages themselves.
 _POST_APPROVAL_ERROR_STAGES = frozenset(
     {
         "planning_forms",

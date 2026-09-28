@@ -40,7 +40,12 @@ def _native_state(*, stage: str, block_execution: dict | None = None) -> dict:
     }
 
 
-def test_native_status_writing_projection() -> None:
+def test_native_status_legacy_writing_stage_projects_stalled() -> None:
+    """P12B: writing_sections/writing_blocks are no longer live — nothing sets
+    or reclaims them any more (states.ACTIVE_STATUSES dropped both). A row
+    still parked there (a pre-P11B DB row) must project truthfully as a
+    stalled, non-retryable state rather than the old "wait" (which implied
+    a worker was still advancing it)."""
     key1 = execution_key("section-1", "s1-b1")
     key2 = execution_key("section-2", "s2-b1")
     state = _native_state(
@@ -64,8 +69,11 @@ def test_native_status_writing_projection() -> None:
     assert projected["blocks_total"] == 4
     assert projected["blocks_ready"] == 2
     assert projected["blocks_failed"] == 0
-    assert projected["next_action"] == "wait"
-    assert projected["error"] is None
+    assert projected["next_action"] == "inspect_error"
+    assert projected["execution_started"] is False
+    assert projected["error"] is not None
+    assert projected["error_detail"]["code"] == "LEGACY_STAGE_RETIRED"
+    assert projected["error_detail"]["retryable"] is False
 
 
 def test_native_status_awaiting_visuals_is_not_active_execution() -> None:

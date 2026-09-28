@@ -1218,6 +1218,10 @@ class PageDocumentRepository:
         allow_retry_from_failure: bool = False,
         commit: bool = True,
     ) -> dict[str, Any]:
+        # writing_sections/writing_blocks are unreachable for a new row (P12B
+        # removed the only transitions into them); kept here purely so a
+        # re-approval request against a legacy row already parked there is
+        # still recognized as "already past approval" instead of raising.
         post_approval = {
             "queued",
             "planning_forms",
@@ -1715,8 +1719,13 @@ class PageDocumentRepository:
             )
             state["events"] = events[-500:]
 
+        # P12B: writing_sections/writing_blocks dropped. Only the deleted
+        # ordinary writer ever produced a candidate_document_sha256 from
+        # those stages, so no row -- new or legacy -- can reach this call with
+        # current in {writing_sections, writing_blocks}; "assembling" (the
+        # SharedLessonDocument cutover path) is the only live source status.
         return await self.mutate_state(
-            expected_statuses={"assembling", "writing_sections", "writing_blocks"},
+            expected_statuses={"assembling"},
             worker_id=worker_id,
             lease_token=lease_token,
             mutation=_mut,

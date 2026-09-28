@@ -8,6 +8,15 @@ from typing import Any
 from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
 from print.generation.whole_lesson.states import DEFAULT_VARIANT_ID, NATIVE_STATUSES, execution_key
 
+# P12B: statuses that may still exist on old DB rows written by the ordinary
+# whole-lesson form-planning/writing executor deleted in P11B. states.py no
+# longer has any transition into these (LEGAL_TRANSITIONS has no entry for
+# them and ACTIVE_STATUSES no longer claims them), so a row parked here can
+# never advance again. Project it as a truthful, non-retryable stall instead
+# of "wait" (which would make a client poll forever). Remove this mapping
+# once Phase 14 migrates or deletes the remaining old rows.
+LEGACY_STATUSES = frozenset({"writing_sections", "writing_blocks"})
+
 
 def _page_state(state: Mapping[str, Any]) -> dict[str, Any]:
     raw = state.get("page_document_v2")
@@ -26,13 +35,15 @@ def _native_next_action(
         next_action_for_retry_target,
     )
 
+    if stage in LEGACY_STATUSES:
+        # No worker will ever claim or advance this row again; a bare "wait"
+        # would make a client poll forever for progress that cannot happen.
+        return "inspect_error"
     if stage == "awaiting_teaching_approval":
         return "approve_teaching"
     if stage in {
         "queued",
         "planning_forms",
-        "writing_sections",
-        "writing_blocks",
         "assembling",
         "item_generation",
         "planning_teaching",
@@ -165,6 +176,17 @@ def _structured_error(
                         last_error = err
                         break
     if not isinstance(last_error, Mapping):
+        if stage in LEGACY_STATUSES:
+            return {
+                "scope": "generation",
+                "code": "LEGACY_STAGE_RETIRED",
+                "message": (
+                    "This generation is parked at a pre-P11B execution stage "
+                    "that no longer runs (standalone Print form-planning/"
+                    "writing was retired). It cannot resume automatically."
+                ),
+                "retryable": False,
+            }
         if stage in {"failed_recoverable", "failed_terminal"}:
             return {
                 "scope": "generation",
@@ -326,13 +348,14 @@ def project_native_status(
         ),
         # Awaiting visuals is a persisted handoff to the visual-review/retry
         # surface, not an active worker phase. Reporting it as started makes
-        # clients poll forever when no visual worker is running.
-        "execution_started": stage
+        # clients poll forever when no visual worker is running. The same
+        # reasoning applies to a LEGACY_STATUSES row: no worker will ever
+        # resume it, so it is not "started" execution either.
+        "execution_started": stage not in LEGACY_STATUSES
+        and stage
         in {
             "queued",
             "planning_forms",
-            "writing_sections",
-            "writing_blocks",
             "assembling",
             "ready",
             "failed_recoverable",

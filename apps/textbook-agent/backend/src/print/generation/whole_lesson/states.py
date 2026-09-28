@@ -9,12 +9,6 @@ from infra.execution.leases import (  # noqa: F401 — re-exported for Print cal
     ResumeDecision,
 )
 
-# writing_sections is the preferred writing stage; writing_blocks remains a
-# compatibility alias for in-flight leases and resume.
-_WRITING_TARGETS = frozenset(
-    {"assembling", "failed_recoverable", "failed_terminal", "cancelled"}
-)
-
 _PRE_WORKER_FAIL_TARGETS = frozenset(
     {"failed_recoverable", "failed_terminal", "cancelled"}
 )
@@ -49,18 +43,19 @@ LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
     "queued": frozenset({"planning_forms", "cancelled", "failed_terminal", "failed_recoverable"}),
     "planning_forms": frozenset(
         {
-            "writing_sections",
-            "writing_blocks",  # compatibility
             # P11: a verified SharedLessonDocument skips ordinary form
             # planning/writing entirely and lowers straight into assembling.
+            # P12B: the ordinary form-planning/writing executor that used to
+            # target writing_sections/writing_blocks is deleted (P11B); no
+            # code transitions into those statuses any more. A legacy row
+            # still parked there is read-only tolerated by native_status.py's
+            # LEGACY_STATUSES mapping pending Phase 14 DB cleanup.
             "assembling",
             "failed_recoverable",
             "failed_terminal",
             "cancelled",
         }
     ),
-    "writing_sections": _WRITING_TARGETS,
-    "writing_blocks": _WRITING_TARGETS,
     "assembling": frozenset(
         {
             "awaiting_visuals",
@@ -91,12 +86,9 @@ LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
 # status with a matching work_kind).  Polling workers must never claim it
 # directly or a provider failure becomes an unbounded automatic retry loop.
 CLAIMABLE_STATUSES = frozenset({"queued"})
-ACTIVE_STATUSES = frozenset(
-    {"planning_forms", "writing_sections", "writing_blocks", "assembling"}
-)
+ACTIVE_STATUSES = frozenset({"planning_forms", "assembling"})
 # Pre-worker retry checkpoints are leased separately; never forced through planning_forms.
 PRE_WORKER_RETRY_STATUSES = frozenset({"item_generation", "planning_teaching"})
-WRITING_STATUSES = frozenset({"writing_sections", "writing_blocks"})
 TERMINAL_STATUSES = frozenset(
     {"ready", "completed", "failed_terminal", "cancelled", "rejected_by_teacher"}
 )
@@ -107,6 +99,12 @@ NATIVE_STATUSES = frozenset(
         "awaiting_teaching_approval",
         "queued",
         "planning_forms",
+        # writing_sections/writing_blocks: no longer reachable (P12B removed
+        # the only transitions into them, ACTIVE_STATUSES no longer includes
+        # them). Kept here only so a pre-P11B DB row still parked in one of
+        # these is still recognized as native and routed to
+        # native_status.LEGACY_STATUSES for a truthful read-only projection,
+        # instead of falling through to legacy v1 handling.
         "writing_sections",
         "writing_blocks",
         "assembling",
