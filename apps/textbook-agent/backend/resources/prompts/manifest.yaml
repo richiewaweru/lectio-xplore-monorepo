@@ -86,12 +86,6 @@ prompts:
     editable: false
     version: 1
 
-  - id: interaction-selection
-    file: interaction-selection.md
-    stage_label: Chooses Learn interaction form
-    editable: false
-    version: 1
-
   - id: interaction-writer
     file: interaction-writer.md
     stage_label: Writes learner interactions

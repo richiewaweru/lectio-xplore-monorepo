@@ -1,4 +1,11 @@
-"""Unit tests for Print/Learn document realizers (Phase E / correction Wave 1)."""
+"""Unit tests for the Print document realizer (Phase E / correction Wave 1).
+
+Learn no longer realizes ordinary document form from a Teaching Plan
+heuristic: ``learn.generation.document_realizer`` was retired in P10E
+because the SharedLessonDocument Learn adapter copies ordinary content and
+maps TaskAnchors deterministically. Print's realizer is unaffected and still
+covered here.
+"""
 
 from __future__ import annotations
 
@@ -9,17 +16,9 @@ from curriculum.teaching_plan.models import (
     TeachingPlanSection,
 )
 from document.models import DOCUMENT_PRIMITIVE_KINDS
-from learn.generation.document_realizer import realize_learn_document
-from learn.interactions.registry import (
-    RETAINED_INTERACTIONS,
-    RETIRED_ORDINARY_CONTENT_IDS,
-)
-from print.generation.document_form_map import PRINT_ONLY_LAYOUT_OBJECTS
+from learn.interactions.registry import RETAINED_INTERACTIONS, RETIRED_ORDINARY_CONTENT_IDS
 from print.generation.document_realizer import realize_print_document
 from print.generation.task_treatments import PRINT_TASK_TREATMENTS
-
-# Mirror of Learn-side forbid set used in assertions (no Learn→Print import in prod).
-_LEARN_FORBIDDEN_PRINT = PRINT_ONLY_LAYOUT_OBJECTS | PRINT_TASK_TREATMENTS
 
 
 def _action(
@@ -74,39 +73,11 @@ def test_prose_only_blocks_emit_document_primitives() -> None:
         ),
     )
     print_plan = realize_print_document(plan)
-    learn_plan = realize_learn_document(plan)
 
     assert print_plan.path == "print"
-    assert learn_plan.path == "learn"
     assert {d.lane for d in print_plan.decisions} == {"document"}
-    assert {d.lane for d in learn_plan.decisions} == {"document"}
     assert all(d.kind in DOCUMENT_PRIMITIVE_KINDS for d in print_plan.decisions)
-    assert all(d.kind in DOCUMENT_PRIMITIVE_KINDS for d in learn_plan.decisions)
     assert all(d.kind == "paragraph" for d in print_plan.decisions)
-    assert all(d.kind == "paragraph" for d in learn_plan.decisions)
-
-
-def test_order_items_maps_to_learn_sequence_interaction() -> None:
-    plan = _plan(
-        TeachingPlanBlock(
-            id="s1-b1",
-            position=0,
-            intent="practice",
-            brief="Put the water cycle stages in order.",
-            evidence="Correct sequence.",
-            evidence_refs=[],
-            learner_action=_action("order-items", target="water-cycle stages"),
-        )
-    )
-    learn_plan = realize_learn_document(plan)
-    kinds = [d.kind for d in learn_plan.decisions]
-    lanes = [d.lane for d in learn_plan.decisions]
-    assert "sequence" in kinds
-    assert "learn_interaction" in lanes
-    interaction = next(d for d in learn_plan.decisions if d.lane == "learn_interaction")
-    assert interaction.kind == "sequence"
-    assert interaction.teaching_block_id == "s1-b1"
-    assert interaction.kind in RETAINED_INTERACTIONS
 
 
 def test_compare_intent_maps_to_table() -> None:
@@ -121,7 +92,6 @@ def test_compare_intent_maps_to_table() -> None:
         )
     )
     assert realize_print_document(plan).decisions[0].kind == "table"
-    assert realize_learn_document(plan).decisions[0].kind == "table"
 
 
 def test_print_path_never_emits_learn_interaction_ids() -> None:
@@ -153,32 +123,3 @@ def test_print_path_never_emits_learn_interaction_ids() -> None:
     assert "choices" in emitted
     assert "questions" in emitted
     assert emitted <= (DOCUMENT_PRIMITIVE_KINDS | PRINT_TASK_TREATMENTS)
-
-
-def test_learn_path_never_emits_print_only_objects() -> None:
-    plan = _plan(
-        TeachingPlanBlock(
-            id="s1-b1",
-            position=0,
-            intent="explain",
-            brief="Explain the idea.",
-            evidence="Restatement.",
-            evidence_refs=[],
-        ),
-        TeachingPlanBlock(
-            id="s1-b2",
-            position=1,
-            intent="check",
-            brief="Select all that apply.",
-            evidence="Correct set.",
-            evidence_refs=[],
-            learner_action=_action("select-many"),
-        ),
-    )
-    learn_plan = realize_learn_document(plan)
-    emitted = {d.kind for d in learn_plan.decisions}
-    assert emitted.isdisjoint(_LEARN_FORBIDDEN_PRINT)
-    assert "ruled_lines" not in emitted
-    assert "multi-select" in emitted
-    assert all(d.kind != "ExplanationBlock" for d in learn_plan.decisions)
-    assert all(d.kind not in RETIRED_ORDINARY_CONTENT_IDS for d in learn_plan.decisions)

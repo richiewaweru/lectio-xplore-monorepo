@@ -16,7 +16,6 @@ from infra.execution.checkpoints import (
     IncompatibleCheckpointError,
     content_hash,
 )
-from learn.generation.native_production import _assert_unique_node_ids
 
 
 class CountingProvider:
@@ -141,27 +140,6 @@ async def test_c01_ready_payload_rejects_incompatible_inputs() -> None:
             allowed_facts=["plants need light"],
         )
     assert provider.dispatches == 0
-
-
-def test_c03_unique_node_ids_reject_collisions() -> None:
-    with pytest.raises(ValueError, match="duplicate learn node id"):
-        _assert_unique_node_ids(
-            [
-                {"id": "block:paragraph", "kind": "paragraph"},
-                {"id": "block:figure", "kind": "figure"},
-                {"id": "block:paragraph", "kind": "paragraph"},
-            ]
-        )
-
-
-def test_c03_indexed_ids_are_unique_for_repeated_kinds() -> None:
-    ids = [
-        f"learn-node:b1:paragraph:{i}" if kind == "paragraph" else f"learn-node:b1:{kind}:{i}"
-        for i, kind in enumerate(["paragraph", "figure", "paragraph", "callout"])
-    ]
-    nodes = [{"id": nid, "kind": nid.split(":")[2]} for nid in ids]
-    _assert_unique_node_ids(nodes)
-    assert len(set(ids)) == 4
 
 
 @pytest.mark.asyncio
@@ -987,24 +965,6 @@ async def test_t08_incompatible_ready_reuse_does_not_reset_budget() -> None:
     # No silent budget reset when reuse is rejected.
     after = ledger.get_or_create(work_id, max_calls=3)
     assert after.consumed == consumed_before == 1
-
-
-def test_t09_indexed_node_ids_unique_and_collision_raises() -> None:
-    """T09: Paragraph→Figure→Paragraph→Callout indexed ids unique; collision still raises."""
-    kinds = ["paragraph", "figure", "paragraph", "callout"]
-    ids = [f"learn-node:b1:{kind}:{i}" for i, kind in enumerate(kinds)]
-    nodes = [{"id": nid, "kind": kinds[i]} for i, nid in enumerate(ids)]
-    _assert_unique_node_ids(nodes)
-    assert len(set(ids)) == 4
-
-    with pytest.raises(ValueError, match="duplicate learn node id"):
-        _assert_unique_node_ids(
-            [
-                {"id": "learn-node:b1:paragraph:0", "kind": "paragraph"},
-                {"id": "learn-node:b1:figure:1", "kind": "figure"},
-                {"id": "learn-node:b1:paragraph:0", "kind": "paragraph"},
-            ]
-        )
 
 
 @pytest.mark.asyncio

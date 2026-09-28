@@ -8,7 +8,6 @@ from fastapi import HTTPException, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tests.application.test_p03_realization_gates import _approved_native_preparation
-from tests.print_learn.test_p08_integration_gates import P08LearnMockProvider
 
 from application.unit_lesson.realizations import request_outputs
 from application.unit_lesson.realize_learn_handoff import (
@@ -327,7 +326,7 @@ async def test_p04_worker_completes_only_learn_output_and_links_editable_documen
         preparation_generation_id=str(lesson.pack_id),
     )
 
-    worker = LearnRealizationWorker(worker_id="p04-test-worker", provider=P08LearnMockProvider())
+    worker = LearnRealizationWorker(worker_id="p04-test-worker")
     # Match the lifespan worker: each claim runs in a disposable session. A
     # fresh session below proves success was committed before that session
     # closed rather than merely visible in its identity map.
@@ -397,9 +396,7 @@ async def test_p04_worker_parks_escaped_post_production_failure(
         "validate_publishable_lesson_document",
         fail_publication_validation,
     )
-    worker = LearnRealizationWorker(
-        worker_id="p04-finalize-worker", provider=P08LearnMockProvider()
-    )
+    worker = LearnRealizationWorker(worker_id="p04-finalize-worker")
     async with db_session_factory() as worker_session:
         assert await worker.run_one(worker_session) is True
 
