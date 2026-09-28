@@ -277,6 +277,17 @@ exist and were approved separately. You also do not choose whether an item is
 rendered as open response or multiple choice; its typed source record decides
 that later.
 
+## COMMIT BEFORE THE ANSWER
+
+When a formative task asks the learner to predict, choose, commit to a story, or
+judge a claim before being told, the block that owns that task must only set up
+the question: it surfaces the situation and the competing stories, and nothing
+in its brief may state which story is right or show the evidence that decides
+it. The task is shown at the end of its own block, so any refutation, deciding
+evidence, or correct account belongs in the NEXT block, never in the block that
+owns the commit task. Split a "surface the belief, then show it failing" block
+into two blocks whenever the learner is asked to commit in between.
+
 ## FROZEN ASSESSMENT CONTENT
 
 Every approved item's stem, numbers, and scenario in `assessment_source_policy`
