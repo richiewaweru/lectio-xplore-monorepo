@@ -178,12 +178,6 @@ class V3ChunkedApproveRequest(BaseModel):
     display_title: str | None = Field(default=None, max_length=120)
 
 
-class V3ChunkedRetrySectionRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    section_id: str
-
-
 class V3ChunkedPlanStateDTO(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -458,7 +452,6 @@ __all__ = [
     "V3ChunkedPlanStartRequest",
     "V3ChunkedPlanStateDTO",
     "V3ChunkedRegenerateRequest",
-    "V3ChunkedRetrySectionRequest",
     "V3ChunkedStatusDTO",
     "V3ComponentPlanDTO",
     "V3GenerateStartRequest",

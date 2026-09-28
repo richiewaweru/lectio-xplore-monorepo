@@ -268,15 +268,17 @@ class NativeExecutionWorker:
                 repo = PageDocumentRepository(session, lease.generation_id)
                 generation = await session.get(GenerationModel, lease.generation_id)
                 current = str(generation.status if generation else "")
+                # P12B: writing_sections/writing_blocks removed. claim_execution
+                # no longer reclaims a row parked in either (ACTIVE_STATUSES is now
+                # just {planning_forms, assembling}), so this method can never see
+                # current in that state.
                 if current in {
                     "planning_forms",
-                    "writing_sections",
-                    "writing_blocks",
                     "assembling",
                 }:
                     await repo.persist_native_failure(
                         exc=exc,
-                        stage=str(lease.stage or current or "writing_sections"),
+                        stage=str(lease.stage or current or "assembling"),
                         event="worker_failure",
                         attempt=1,
                         worker_id=lease.worker_id,

@@ -38,7 +38,6 @@ from print.http.v3_studio.dtos import (
     V3ChunkedPlanStartRequest,
     V3ChunkedPlanStateDTO,
     V3ChunkedRegenerateRequest,
-    V3ChunkedRetrySectionRequest,
     V3ChunkedStatusDTO,
     V3ConceptCardDTO,
     V3ConceptCardPatchRequest,
@@ -1714,59 +1713,15 @@ async def post_chunked_plan_regenerate(
         detail="Plan regeneration is retired; generation records are read-only",
     )
 
-@v3_studio_router.post("/chunked/{generation_id}/retry-section", response_model=V3ChunkedPlanStateDTO)
-async def post_chunked_retry_section(
-    generation_id: str,
-    body: V3ChunkedRetrySectionRequest,
-    current_user: User = Depends(get_current_user),
-) -> V3ChunkedPlanStateDTO:
-    model = await _load_owned_generation(generation_id, current_user.id)
-    state = await load_chunked_state(generation_id)
-
-    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
-
-    if generation_is_native_whole_lesson(state, model):
-        from print.generation.whole_lesson.native_retry import (
-            NativeRetryConflict,
-            accept_native_retry,
-        )
-
-        status = str(model.status or state.get("stage") or "")
-        try:
-            result = await accept_native_retry(
-                generation_id, user_id=current_user.id
-            )
-        except NativeRetryConflict as exc:
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "error_type": exc.code,
-                    "message": str(exc),
-                    "stage": exc.status or status,
-                    "retry_target": exc.target.value if exc.target else None,
-                    "generation_id": generation_id,
-                    **(exc.detail or {}),
-                },
-            ) from exc
-        latest = await load_chunked_state(generation_id)
-        return _normalize_chunked_state(
-            generation_id,
-            {
-                **latest,
-                "stage": result.get("status") or latest.get("stage"),
-                "next_action": result.get("next_action") or "wait",
-            },
-        )
-
-    # Historical v1 retry-section is likewise read-only.  Keep the native branch
-    # above because it maps to the checkpointed native retry contract.
-    raise HTTPException(
-        status_code=409,
-        detail="Legacy section retry is retired; generation records are read-only",
-    )
-
-
-
+# P12B: /chunked/{generation_id}/retry-section is deleted outright (not
+# stubbed to 409 like /regenerate above). Its native branch only duplicated
+# the real native-retry contract already exposed at
+# application/unit_lesson/native_http.py's POST
+# /generations/{generation_id}/retry-native, which is what the frontend
+# actually calls (frontend/src/lib/api/realizations.ts). Its historical-v1
+# branch was already permanently read-only. No caller (frontend or backend)
+# referenced this path — see tests/architecture/
+# test_p12b_whole_lesson_lifecycle_guard.py for the 404 proof.
 
 
 

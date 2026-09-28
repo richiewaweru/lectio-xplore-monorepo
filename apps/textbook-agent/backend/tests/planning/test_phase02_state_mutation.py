@@ -39,8 +39,8 @@ async def _seed(db_session_factory) -> tuple[str, str, int]:
         assert lease is not None
         await repo.transition(
             expected={"planning_forms"},
-            target="writing_blocks",
-            event="writing_blocks_started",
+            target="assembling",
+            event="assembling_started",
             worker_id=lease.worker_id,
             lease_token=lease.lease_token,
         )

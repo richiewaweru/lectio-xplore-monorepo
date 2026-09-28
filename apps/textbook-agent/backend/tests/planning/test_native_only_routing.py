@@ -4,12 +4,7 @@ from __future__ import annotations
 
 import inspect
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-from fastapi import HTTPException
-
-from print.generation.whole_lesson.native_retry import NativeRetryConflict, NativeRetryTarget
 from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
 from print.http.v3_studio import router as studio_router
 
@@ -50,127 +45,12 @@ def test_legacy_stage2_pipeline_blocks_without_calling_resume() -> None:
     assert "return await resume_stage2" not in source
 
 
-@pytest.mark.asyncio
-async def test_native_retry_section_does_not_call_legacy_retry() -> None:
-    generation = SimpleNamespace(
-        id="gen-native-1",
-        status="writing_sections",
-        chunked_state_json={
-            "native_whole_lesson": True,
-            "page_document_v2": {"schema_version": 1},
-            "stage": "writing_sections",
-        },
-        planning_spec_json='{"document_contract_version": 2}',
-        document_json=None,
-    )
-    state = {
-        "native_whole_lesson": True,
-        "page_document_v2": {"schema_version": 1},
-        "stage": "writing_sections",
-        "structural_plan": {"sections": []},
-        "failed_sections": ["orient"],
-    }
-    body = SimpleNamespace(section_id="orient")
-    user = SimpleNamespace(id="user-1")
-
-    with (
-        patch.object(
-            studio_router,
-            "_load_owned_generation",
-            new=AsyncMock(return_value=generation),
-        ),
-        patch.object(
-            studio_router,
-            "load_chunked_state",
-            new=AsyncMock(return_value=state),
-        ),
-        patch(
-            "print.generation.whole_lesson.native_retry.accept_native_retry",
-            new=AsyncMock(
-                side_effect=NativeRetryConflict(
-                    "retry-native requires failed_recoverable",
-                    code="INVALID_STATUS",
-                    status="writing_sections",
-                    target=NativeRetryTarget.NOT_RETRYABLE,
-                )
-            ),
-        ) as execute_retry,
-    ):
-        with pytest.raises(HTTPException) as exc_info:
-            await studio_router.post_chunked_retry_section(
-                "gen-native-1",
-                body,  # type: ignore[arg-type]
-                user,  # type: ignore[arg-type]
-            )
-        assert exc_info.value.status_code == 409
-        detail = exc_info.value.detail
-        assert isinstance(detail, dict)
-        assert detail["error_type"] == "INVALID_STATUS"
-        execute_retry.assert_awaited_once_with("gen-native-1", user_id="user-1")
-
-
-@pytest.mark.asyncio
-async def test_native_retry_section_requeues_failed_recoverable() -> None:
-    generation = SimpleNamespace(
-        id="gen-native-2",
-        status="failed_recoverable",
-        chunked_state_json={
-            "native_whole_lesson": True,
-            "page_document_v2": {
-                "schema_version": 1,
-                "execution": {"last_error": {"stage": "planning_forms", "retryable": True}},
-            },
-            "stage": "failed_recoverable",
-        },
-        planning_spec_json='{"document_contract_version": 2}',
-        document_json=None,
-    )
-    state = {
-        "native_whole_lesson": True,
-        "page_document_v2": {
-            "schema_version": 1,
-            "execution": {"last_error": {"stage": "planning_forms", "retryable": True}},
-        },
-        "stage": "failed_recoverable",
-    }
-    body = SimpleNamespace(section_id="orient")
-    user = SimpleNamespace(id="user-1")
-    queued_state = {**state, "stage": "queued"}
-
-    with (
-        patch.object(
-            studio_router,
-            "_load_owned_generation",
-            new=AsyncMock(return_value=generation),
-        ),
-        patch.object(
-            studio_router,
-            "load_chunked_state",
-            new=AsyncMock(side_effect=[state, queued_state]),
-        ),
-        patch(
-            "print.generation.whole_lesson.native_retry.accept_native_retry",
-            new=AsyncMock(
-                return_value={
-                    "generation_id": "gen-native-2",
-                    "status": "queued",
-                    "retry_target": "post_approval_worker",
-                    "next_action": "wait",
-                    "accepted": True,
-                }
-            ),
-        ) as execute_retry,
-        patch.object(
-            studio_router,
-            "_normalize_chunked_state",
-            return_value=MagicMock(stage="queued", next_action="wait"),
-        ) as normalize,
-    ):
-        result = await studio_router.post_chunked_retry_section(
-            "gen-native-2",
-            body,  # type: ignore[arg-type]
-            user,  # type: ignore[arg-type]
-        )
-        assert result.stage == "queued"
-        execute_retry.assert_awaited_once()
-        normalize.assert_called()
+# P12B: /chunked/{generation_id}/retry-section (and its handler
+# post_chunked_retry_section) is deleted outright — its native branch only
+# duplicated the real native-retry contract already covered end-to-end via
+# accept_native_retry/POST .../retry-native (see
+# tests/planning/test_native_retry_pre_worker.py and
+# tests/planning/test_native_retry_durability.py), and its historical-v1
+# branch was already permanently read-only. See
+# tests/architecture/test_p12b_whole_lesson_lifecycle_guard.py for the
+# route-is-gone proof.

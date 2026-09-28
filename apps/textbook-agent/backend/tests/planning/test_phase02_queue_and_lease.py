@@ -296,7 +296,7 @@ async def test_stale_active_contention_one_winner(db_session_factory) -> None:
         repo = PageDocumentRepository(session, gid)
         generation = await session.get(GenerationModel, gid)
         assert generation is not None
-        generation.status = "writing_blocks"
+        generation.status = "assembling"
 
         def _stale(_gen, state):
             state["execution"] = {
@@ -320,7 +320,7 @@ async def test_stale_active_contention_one_winner(db_session_factory) -> None:
     winners = [item for item in (first, second) if item is not None]
     assert len(winners) == 1
     assert winners[0].lease_token == 4
-    assert winners[0].stage == "writing_blocks"
+    assert winners[0].stage == "assembling"
 
 
 @pytest.mark.asyncio
@@ -332,7 +332,7 @@ async def test_fresh_heartbeat_prevents_reclaim(db_session_factory) -> None:
     async with db_session_factory() as session:
         generation = await session.get(GenerationModel, gid)
         assert generation is not None
-        generation.status = "writing_blocks"
+        generation.status = "assembling"
         repo = PageDocumentRepository(session, gid)
 
         def _fresh(_gen, state):
