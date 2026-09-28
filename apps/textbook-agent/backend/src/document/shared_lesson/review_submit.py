@@ -10,7 +10,8 @@ existing generic runtime and the post-section pipeline can execute it.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -23,7 +24,14 @@ from document.shared_lesson.approved_source import (
 from document.shared_lesson.composer import SectionCompositionPlan
 from document.shared_lesson.continuity import ContinuityIssue, ExpectedNodeShape
 from document.shared_lesson.hashing import shared_lesson_content_hash
-from document.shared_lesson.models import FigureNode, SharedLessonDocument
+from document.shared_lesson.media import SharedFigureMediaError, build_figure_work_order
+from document.shared_lesson.media_runtime import (
+    MEDIA_STAGE,
+    MediaRuntimeError,
+    admit_repaired_figure_media_work_item,
+    find_active_figure_media_work_item,
+)
+from document.shared_lesson.models import FigureNode, SharedLessonDocument, SharedSection
 from document.shared_lesson.qa import qa_shared_lesson_document
 from document.shared_lesson.qa_runtime import (
     DOCUMENT_QA_STAGE,
@@ -38,6 +46,7 @@ from document.shared_lesson.review_revision import (
     ReviewRevisionValidationError,
     prove_review_draft_chain,
 )
+from document.shared_lesson.runtime import TeachingPlanSource
 from document.shared_lesson.section_sources import build_section_sources
 from document.shared_lesson.semantic_inputs import SemanticInputError, load_verified_semantic_inputs
 from document.shared_lesson.work_item_inputs import (
@@ -79,6 +88,122 @@ def _required_media(document: SharedLessonDocument) -> dict[str, tuple[str, ...]
         for section in document.sections
         if any(isinstance(node, FigureNode) for node in section.nodes)
     }
+
+
+def _figure_source_facts(
+    sourcebook: object, plan_section: object
+) -> tuple[dict[str, str], tuple[str, ...]]:
+    """Reproduce the media pipeline's exact approved-fact projection for one section.
+
+    Mirrors ``media_dispatcher._source_facts`` so a regenerated figure work
+    order freezes the identical approved source facts the original pipeline
+    admission used, never an ad-hoc reviewer-time projection.
+    """
+    entry_by_id = {entry.id: entry for entry in sourcebook.entries}
+    refs: list[str] = []
+    for block in plan_section.blocks:
+        for ref in block.sourcebook_refs:
+            if ref not in refs:
+                refs.append(ref)
+    if any(ref not in entry_by_id for ref in refs):
+        missing = sorted(ref for ref in refs if ref not in entry_by_id)
+        raise ReviewSubmitConflict(
+            f"edited figure section references missing sourcebook facts: {missing!r}"
+        )
+    facts = {
+        ref: json.dumps(
+            entry_by_id[ref].content, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        for ref in refs
+    }
+    return facts, tuple(refs)
+
+
+async def _regenerate_figure_media_for_review_edit(
+    session: AsyncSession,
+    *,
+    owner_user_id: str,
+    run_id: str,
+    source: TeachingPlanSource,
+    semantic: object,
+    latest: SharedLessonDocument,
+    figure_section_ids: Sequence[str],
+    expected_shapes: Mapping[str, tuple[ExpectedNodeShape, ...]],
+) -> None:
+    """Regenerate every figure's media in each reviewer-edited figure section.
+
+    A section-level edit changes the section's frozen output hash even when
+    only a sibling node (for example a callout) was corrected, so every
+    figure bound to that section becomes stale regardless of whether the
+    figure node itself changed. Each stale figure is rebuilt from the exact
+    edited section using the same work-order builder the ordinary media
+    pipeline uses, then admitted as a linked replacement of the current READY
+    media leaf for that figure -- never a fresh admission, and never a reuse
+    of the stale output.
+    """
+    if not figure_section_ids:
+        return
+    media_items = list(
+        (
+            await session.scalars(
+                select(GenerationWorkItemModel).where(
+                    GenerationWorkItemModel.run_id == run_id,
+                    GenerationWorkItemModel.stage == MEDIA_STAGE,
+                )
+            )
+        ).all()
+    )
+    edited_sections = {section.id: section for section in latest.sections}
+    plan_sections = {section.slot_id: section for section in source.plan.sections}
+    for section_id in figure_section_ids:
+        edited_section: SharedSection | None = edited_sections.get(section_id)
+        if edited_section is None:
+            raise ReviewSubmitConflict("edited figure section is missing from the review draft")
+        figure_nodes = tuple(node for node in edited_section.nodes if isinstance(node, FigureNode))
+        if not figure_nodes:
+            continue
+        plan_section = plan_sections.get(section_id)
+        if plan_section is None:
+            raise ReviewSubmitConflict(
+                "edited figure section is not in the approved Teaching Plan"
+            )
+        facts, approved_ids = _figure_source_facts(semantic.sourcebook, plan_section)
+        expected_shape = expected_shapes.get(section_id, ())
+        for node in figure_nodes:
+            try:
+                work = build_figure_work_order(
+                    source,
+                    edited_section,
+                    figure_node_id=node.id,
+                    expected_shape=expected_shape,
+                    approved_source_facts=facts,
+                    approved_source_ids=approved_ids,
+                    required=True,
+                )
+            except SharedFigureMediaError as exc:
+                raise ReviewSubmitConflict(
+                    f"figure {node.id!r} media could not be rebuilt for the edited section: {exc}"
+                ) from exc
+            predecessor = find_active_figure_media_work_item(
+                media_items, section_id=section_id, figure_node_id=node.id
+            )
+            if predecessor is None or predecessor.status != "ready":
+                raise ReviewSubmitConflict(
+                    f"figure {node.id!r} has no ready media to regenerate against"
+                )
+            try:
+                await admit_repaired_figure_media_work_item(
+                    session,
+                    predecessor_work_item_id=predecessor.id,
+                    owner_user_id=owner_user_id,
+                    source=source,
+                    work=work,
+                    accepted_section=edited_section,
+                )
+            except MediaRuntimeError as exc:
+                raise ReviewSubmitConflict(
+                    f"figure {node.id!r} media replacement could not be admitted: {exc}"
+                ) from exc
 
 
 class ReviewSubmitError(ValueError):
@@ -308,8 +433,6 @@ async def submit_review_draft_for_requalification(
         proof = prove_review_draft_chain(chain)
     except ReviewRevisionValidationError as exc:
         raise ReviewSubmitInvalid(f"review draft revision is invalid: {exc}") from exc
-    if proof.figure_section_ids:
-        raise ReviewSubmitConflict("review_edit_invalidates_media")
 
     try:
         source = await load_current_approved_teaching_plan_source(
@@ -375,6 +498,17 @@ async def submit_review_draft_for_requalification(
             "deterministic document QA failed for the reviewed revision: "
             + ", ".join(issue.issue_code for issue in deterministic_qa.issues)
         )
+
+    await _regenerate_figure_media_for_review_edit(
+        session,
+        owner_user_id=owner_user_id,
+        run_id=context.run.id,
+        source=source,
+        semantic=semantic,
+        latest=latest,
+        figure_section_ids=proof.figure_section_ids,
+        expected_shapes=expected_shapes,
+    )
 
     try:
         replacement = await admit_repaired_document_qa_work_item(

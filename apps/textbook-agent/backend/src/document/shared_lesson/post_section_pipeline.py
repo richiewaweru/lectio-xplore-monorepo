@@ -28,6 +28,7 @@ from document.shared_lesson.document_qa_dispatcher import (
     SharedDocumentQADispatchError,
     SharedDocumentQADispatchResult,
     dispatch_reviewed_document_qa,
+    dispatch_reviewed_figure_media,
     dispatch_shared_document_qa,
 )
 from document.shared_lesson.figure_executor_adapter import SharedFigureExecutorAdapter
@@ -49,7 +50,7 @@ from document.shared_lesson.media_dispatcher import (
     SharedMediaDispatcher,
     SharedMediaDispatcherError,
 )
-from document.shared_lesson.media_runtime import MEDIA_STAGE, MediaReadiness
+from document.shared_lesson.media_runtime import MEDIA_STAGE, MediaReadiness, MediaRuntimeError
 from document.shared_lesson.runtime import TeachingPlanSource
 from document.shared_lesson.semantic_inputs import SemanticInputError, load_verified_semantic_inputs
 from document.shared_lesson.work_item_inputs import (
@@ -108,6 +109,23 @@ def _expected_shapes(
         )
         for section_id, composition in compositions.items()
     }
+
+
+def _find_review_leaf(active_items: Any) -> Any:
+    """Return the active document QA review replacement leaf, if any.
+
+    A reviewer-submitted correction is admitted as a linked replacement of the
+    document QA leaf that originally failed with a semantic issue; both the
+    media stage and the document QA stage must agree on the same leaf.
+    """
+    return next(
+        (
+            item
+            for item in active_items
+            if item.stage == DOCUMENT_QA_STAGE and item.replaces_work_item_id is not None
+        ),
+        None,
+    )
 
 
 def _created_at(run: GenerationRunModel):
@@ -227,6 +245,8 @@ async def run_post_section_pipeline(
             run_id=run_id, state="blocked", stage="boundaries", error=boundaries.blocked_reason
         )
 
+    review_document: Any = None
+    readiness: MediaReadiness
     try:
         await _set_run_stage(
             session_factory,
@@ -234,14 +254,12 @@ async def run_post_section_pipeline(
             owner_user_id=owner_user_id,
             stage=MEDIA_STAGE,
         )
+        async with session_factory() as probe_session:
+            _all_items0, active_items0 = await _active_run_items(probe_session, run_id=run_id)
+        review_leaf0 = _find_review_leaf(active_items0)
         async with session_factory() as session:
             source = await load_current_approved_teaching_plan_source(
                 session=session,
-                owner_user_id=owner_user_id,
-                path_lesson_id=path_lesson_id,
-                preparation_generation_id=preparation_generation_id,
-            )
-            verifier = make_approved_source_verifier(
                 owner_user_id=owner_user_id,
                 path_lesson_id=path_lesson_id,
                 preparation_generation_id=preparation_generation_id,
@@ -251,18 +269,43 @@ async def run_post_section_pipeline(
                 if media_executor is not None
                 else SharedFigureExecutorAdapter(run_id=run_id)
             )
-            media = SharedMediaDispatcher(
-                session_factory,
-                worker_id=f"{worker_id}:media",
-                executor=selected_media_executor,
-            )
-            media_outcome = await media.run_one(
-                session=session,
-                run_id=run_id,
-                owner_user_id=owner_user_id,
-                source=source,
-                source_verifier=verifier,
-            )
+            if review_leaf0 is not None:
+                # A reviewer already saved and submitted a text-only correction
+                # that touched at least one figure-containing section.
+                # ``review-draft/submit`` already regenerated that section's
+                # figures as linked replacement media WorkItems bound to the
+                # edited revision; never re-derive figure work orders from the
+                # durable writer/composer outputs at revision 1 here, which
+                # would try to re-admit against the now-stale original section.
+                review_document, readiness = await dispatch_reviewed_figure_media(
+                    session_factory,
+                    run_id=run_id,
+                    owner_user_id=owner_user_id,
+                    path_lesson_id=path_lesson_id,
+                    source=source,
+                    leaf=review_leaf0,
+                    media_executor=selected_media_executor,
+                    worker_id=f"{worker_id}:media",
+                )
+            else:
+                verifier = make_approved_source_verifier(
+                    owner_user_id=owner_user_id,
+                    path_lesson_id=path_lesson_id,
+                    preparation_generation_id=preparation_generation_id,
+                )
+                media = SharedMediaDispatcher(
+                    session_factory,
+                    worker_id=f"{worker_id}:media",
+                    executor=selected_media_executor,
+                )
+                media_outcome = await media.run_one(
+                    session=session,
+                    run_id=run_id,
+                    owner_user_id=owner_user_id,
+                    source=source,
+                    source_verifier=verifier,
+                )
+                readiness = media_outcome.readiness
             await session.commit()
     except (
         ApprovedSourceVerificationError,
@@ -270,12 +313,13 @@ async def run_post_section_pipeline(
         SharedLessonInputError,
         SharedMediaDispatcherError,
         SharedFigureMediaError,
+        SharedDocumentQADispatchError,
+        MediaRuntimeError,
         PostSectionPipelineError,
     ) as exc:
         return PostSectionPipelineOutcome(
             run_id=run_id, state="blocked", stage="media", error=str(exc)
         )
-    readiness: MediaReadiness = media_outcome.readiness
     if not readiness.ready:
         state = "blocked" if readiness.failed_required_work_item_ids else "pending"
         return PostSectionPipelineOutcome(
@@ -323,17 +367,10 @@ async def run_post_section_pipeline(
 
         async with session_factory() as session:
             _all_items, active_items = await _active_run_items(session, run_id=run_id)
+        review_leaf = _find_review_leaf(active_items)
         media_results, required_media = _durable_media_results(
-            document=draft.document,
+            document=review_document if review_leaf is not None else draft.document,
             active_items=active_items,
-        )
-        review_leaf = next(
-            (
-                item
-                for item in active_items
-                if item.stage == DOCUMENT_QA_STAGE and item.replaces_work_item_id is not None
-            ),
-            None,
         )
         if review_leaf is not None:
             # A reviewer already saved and submitted a text-only correction for

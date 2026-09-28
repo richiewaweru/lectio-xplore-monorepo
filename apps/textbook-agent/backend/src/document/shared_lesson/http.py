@@ -381,12 +381,14 @@ async def post_shared_document_review_draft_submit(
     """Revalidate the latest saved draft and admit it for requalification.
 
     This never calls the semantic QA provider inline. It proves the saved
-    edits are allowlisted text-only corrections, rejects any edit that
-    touched a figure-containing section (the figure's media binding is keyed
-    to the original section output hash and would go stale), recomputes
-    deterministic QA, and admits a linked document QA replacement in the same
-    transaction. The existing post-section pipeline then executes semantic QA
-    against this exact edited revision and finalizes it on PASS.
+    edits are allowlisted text-only corrections, recomputes deterministic QA,
+    and admits a linked document QA replacement in the same transaction. An
+    edit that touched a figure-containing section also regenerates that
+    section's figure media as linked replacement WorkItems in the same
+    transaction, since the figure's media binding is keyed to the section's
+    output hash and would otherwise go stale. The existing post-section
+    pipeline then waits for that regenerated media, executes semantic QA
+    against this exact edited revision, and finalizes it on PASS.
     """
     try:
         async with session.begin():

@@ -321,6 +321,63 @@ def _verify_accepted_section(work: SharedFigureWorkOrder, section: SharedSection
         raise MediaSourceConflict("figure work order contains an unsupported or forged spec")
 
 
+def find_active_figure_media_work_item(
+    items: Sequence[GenerationWorkItemModel],
+    *,
+    section_id: str,
+    figure_node_id: str,
+) -> GenerationWorkItemModel | None:
+    """Return the one active media WorkItem currently bound to a figure identity.
+
+    ``items`` need not be pre-filtered to the media stage or to active leaves;
+    both admission and repair callers use this to find the current leaf for
+    one ``(section_id, figure_node_id)`` pair without trusting positional
+    order or an in-memory section writer.
+    """
+    matches: list[GenerationWorkItemModel] = []
+    for item in active_work_items(tuple(item for item in items if item.stage == MEDIA_STAGE)):
+        if item.composition_identity is None:
+            continue
+        try:
+            persisted_identity = json.loads(item.composition_identity)
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise MediaRuntimeError("active media work item has invalid frozen identity") from exc
+        if (
+            persisted_identity.get("section_id") == section_id
+            and persisted_identity.get("figure_node_id") == figure_node_id
+        ):
+            matches.append(item)
+    if len(matches) > 1:
+        raise MediaRuntimeError(
+            f"multiple active media work items are bound to figure {figure_node_id!r}"
+        )
+    return matches[0] if matches else None
+
+
+def work_order_from_composition_identity(composition_identity: str | None) -> SharedFigureWorkOrder:
+    """Reconstruct a durable figure work order from its frozen WorkItem identity.
+
+    ``admit_figure_media_work_item``/``admit_repaired_figure_media_work_item``
+    both persist the exact frozen ``SharedFigureWorkOrder`` as the WorkItem's
+    own ``composition_identity`` (see ``_composition_identity``). A caller
+    that must re-verify or re-execute an already-admitted media WorkItem --
+    without trusting an in-memory section writer -- reconstructs the work
+    order from this single durable source instead of recomputing it.
+    """
+    if not isinstance(composition_identity, str) or not composition_identity.strip():
+        raise MediaRuntimeError("media work item has no frozen composition identity")
+    try:
+        payload = json.loads(composition_identity)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise MediaRuntimeError("media work item composition identity is not valid JSON") from exc
+    try:
+        return SharedFigureWorkOrder.model_validate(payload)
+    except (TypeError, ValueError) as exc:
+        raise MediaRuntimeError(
+            "media work item composition identity is not a valid frozen work order"
+        ) from exc
+
+
 async def admit_figure_media_work_item(
     session: Any,
     *,
@@ -351,21 +408,13 @@ async def admit_figure_media_work_item(
         ).all()
     )
     requested_identity = _composition_identity(work)
-    for active_item in active_work_items(media_items):
-        if active_item.composition_identity is None:
-            continue
-        try:
-            persisted_identity = json.loads(active_item.composition_identity)
-        except (TypeError, ValueError, json.JSONDecodeError) as exc:
-            raise MediaRuntimeError("active media work item has invalid frozen identity") from exc
-        if (
-            persisted_identity.get("section_id") == work.section_id
-            and persisted_identity.get("figure_node_id") == work.figure_node_id
-            and active_item.composition_identity != requested_identity
-        ):
-            raise MediaRuntimeError(
-                "a changed section figure requires admit_repaired_figure_media_work_item"
-            )
+    existing = find_active_figure_media_work_item(
+        media_items, section_id=work.section_id, figure_node_id=work.figure_node_id
+    )
+    if existing is not None and existing.composition_identity != requested_identity:
+        raise MediaRuntimeError(
+            "a changed section figure requires admit_repaired_figure_media_work_item"
+        )
     return await add_work_item(session, _item_request(run_id, work, max_attempts=max_attempts))
 
 
@@ -890,6 +939,8 @@ __all__ = [
     "admit_repaired_figure_media_work_item",
     "execute_figure_media_work_item",
     "execute_figure_media_work_items",
+    "find_active_figure_media_work_item",
     "frozen_figure_semantic_hash",
     "project_media_readiness",
+    "work_order_from_composition_identity",
 ]

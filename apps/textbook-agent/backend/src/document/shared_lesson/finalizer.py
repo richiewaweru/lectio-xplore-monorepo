@@ -44,6 +44,8 @@ from document.shared_lesson.media import (
     DeferredFigureMediaResult,
     FigureMediaResult,
     ReadyFigureMediaResult,
+    SharedFigureMediaError,
+    verify_bound_durable_media,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
 from document.shared_lesson.qa_runtime import (
@@ -266,17 +268,25 @@ async def resolve_review_structural_document(
     *,
     path_lesson_id: str,
     document: SharedLessonDocument,
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
 ) -> SharedLessonDocument:
     """Return the writer-composed structural document backing ``document``.
 
     For the unedited revision-1 path this is ``document`` itself.  For a
     reviewer-edited revision this walks and revalidates the immutable
     save-time proof chain back to revision 1 -- reproving every adjacent pair
-    exactly as ``review-draft/revisions`` did when it was saved -- and
-    requires that no figure-containing section was ever touched anywhere in
-    the chain.  Only a proven pure-text correction may reach READY; the
-    returned revision-1 document is the one durable writer/boundary evidence
-    must still match.
+    exactly as ``review-draft/revisions`` did when it was saved.  Only a
+    proven pure-text correction may reach READY; the returned revision-1
+    document is the one durable writer/boundary evidence must still match.
+
+    A figure-containing section may be touched, but only when every figure in
+    that section has an active READY (or, with the local-only
+    ``shared_document_media_optional`` switch enabled, deferred) media result
+    in ``media_results`` bound to ``document`` -- the edited revision -- at
+    its exact section output hash and figure semantic hash.  Editing a
+    figure-containing section without a matching regenerated media result
+    fails closed exactly like any other invalid media evidence; stale media
+    frozen against a prior revision is never accepted here.
     """
     if document.revision == 1:
         return document
@@ -305,9 +315,34 @@ async def resolve_review_structural_document(
             f"review revision chain failed proof: {exc}"
         ) from exc
     if proof.figure_section_ids:
-        raise SharedLessonFinalizationError(
-            "review revision edited a figure-containing section and cannot be finalized"
+        touched_figures = {
+            (section.id, node.id)
+            for section in document.sections
+            if section.id in proof.figure_section_ids
+            for node in section.nodes
+            if isinstance(node, FigureNode)
+        }
+        media_by_identity = {
+            (result.section_id, result.figure_node_id): result for result in media_results
+        }
+        missing = sorted(
+            f"{section_id}:{figure_node_id}"
+            for section_id, figure_node_id in touched_figures
+            if (section_id, figure_node_id) not in media_by_identity
         )
+        if missing:
+            raise SharedLessonFinalizationError(
+                "review revision edited a figure-containing section without regenerated "
+                f"media for: {missing!r}"
+            )
+        for identity in touched_figures:
+            result = media_by_identity[identity]
+            try:
+                verify_bound_durable_media(result, document)
+            except SharedFigureMediaError as exc:
+                raise SharedLessonFinalizationError(
+                    f"review revision figure media for {identity[1]!r} failed verification: {exc}"
+                ) from exc
     return chain[0]
 
 
@@ -937,6 +972,7 @@ async def finalize_shared_lesson_document(
             session,
             path_lesson_id=request.path_lesson_id,
             document=request.handoff.document,
+            media_results=request.media_results,
         )
         _verify_durable_inputs_match_handoff(
             document=structural_document,

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Mapping, Sequence
-from datetime import datetime
+from contextlib import AsyncExitStack
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
@@ -26,6 +27,7 @@ from document.shared_lesson.media import (
     DeferredFigureMediaBinding,
     FigureMediaResult,
     SharedFigureMediaError,
+    SharedFigureWorkOrder,
     bind_durable_media_output,
     verify_bound_durable_media,
 )
@@ -45,6 +47,16 @@ from document.shared_lesson.repository import (
     load_shared_lesson_document,
 )
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from document.shared_lesson.media_runtime import (
+    MAX_CONCURRENT_MEDIA,
+    MEDIA_STAGE,
+    MediaReadiness,
+    MediaRuntimeError,
+    MediaWorkItemJob,
+    execute_figure_media_work_items,
+    project_media_readiness,
+    work_order_from_composition_identity,
+)
 from infra.database.models import GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import active_work_items
@@ -422,33 +434,21 @@ async def dispatch_shared_document_qa(
     )
 
 
-async def dispatch_reviewed_document_qa(
+async def load_review_replacement_document(
     session_factory: Callable[[], Any],
     *,
-    run_id: str,
-    owner_user_id: str,
     path_lesson_id: str,
     source: TeachingPlanSource,
     leaf: GenerationWorkItemModel,
-    compositions: Mapping[str, SectionCompositionPlan] | Sequence[SectionCompositionPlan],
-    required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
-    semantic_validator: DocumentSemanticValidator | None = None,
-    worker_id: str = "shared-document-qa-dispatcher",
-) -> SharedDocumentQADispatchResult:
-    """Execute (or load) an already-admitted reviewer-repair QA replacement.
+) -> SharedLessonDocument:
+    """Load and revalidate the exact reviewer-edited draft revision bound to ``leaf``.
 
-    Unlike :func:`dispatch_shared_document_qa`, this never re-assembles the
-    document from durable writer/composer outputs.  ``leaf`` must be the
-    active document QA WorkItem admitted by
+    ``leaf`` must be the active document QA WorkItem admitted by
     ``admit_repaired_document_qa_work_item`` for one reviewer-edited draft
-    revision; this loads and revalidates that exact stored revision by the
-    identity bound in the leaf's own composition identity, recomputes
-    deterministic QA against it, and only then executes (or reloads) the
-    already-admitted semantic QA leaf.
+    revision. This is the single durable source both the review QA dispatch
+    and the review media dispatch use to resolve that exact revision, so
+    neither ever trusts an in-memory or caller-supplied document.
     """
-    if not run_id.strip() or not owner_user_id.strip() or not path_lesson_id.strip():
-        raise ValueError("run_id, owner_user_id, and path_lesson_id must be non-empty")
     try:
         identity = verify_teaching_plan_source(source)
     except ValueError as exc:
@@ -495,6 +495,164 @@ async def dispatch_reviewed_document_qa(
         raise SharedDocumentQADispatchError(
             "review replacement draft lineage differs from the approved Teaching Plan"
         )
+    return document
+
+
+def _media_lease_eligible(item: GenerationWorkItemModel, now: datetime) -> bool:
+    if item.status == "queued":
+        return True
+    if item.status != "running":
+        return False
+    expiry = item.lease_expires_at
+    if expiry is None:
+        return False
+    if expiry.tzinfo is not None:
+        expiry = expiry.astimezone(UTC).replace(tzinfo=None)
+    return expiry <= now
+
+
+async def dispatch_reviewed_figure_media(
+    session_factory: Callable[[], Any],
+    *,
+    run_id: str,
+    owner_user_id: str,
+    path_lesson_id: str,
+    source: TeachingPlanSource,
+    leaf: GenerationWorkItemModel,
+    media_executor: Any,
+    worker_id: str = "shared-document-review-media",
+    lease_seconds: int = 300,
+    concurrency: int = MAX_CONCURRENT_MEDIA,
+) -> tuple[SharedLessonDocument, MediaReadiness]:
+    """Execute (or reload) durable figure media replacements for a reviewed draft.
+
+    Unlike the ordinary media dispatcher, this never re-derives figure work
+    orders from the durable writer/composer outputs at revision 1 -- a
+    reviewer edit may have changed a figure-containing section's exact text,
+    and ``review-draft/submit`` already regenerated that section's figures as
+    linked replacement media WorkItems bound to the edited revision. This
+    loads the exact edited revision bound to ``leaf``, reconstructs every
+    active media WorkItem's frozen work order from its own durable
+    composition identity (never from a caller-supplied section), executes
+    any that are still queued or hold an expired lease against that
+    revision's sections, and projects readiness exactly like the ordinary
+    dispatcher.
+    """
+    if not run_id.strip() or not owner_user_id.strip() or not path_lesson_id.strip():
+        raise ValueError("run_id, owner_user_id, and path_lesson_id must be non-empty")
+    document = await load_review_replacement_document(
+        session_factory, path_lesson_id=path_lesson_id, source=source, leaf=leaf
+    )
+
+    async with session_factory() as probe_session:
+        rows = tuple(
+            (
+                await probe_session.scalars(
+                    select(GenerationWorkItemModel).where(
+                        GenerationWorkItemModel.run_id == run_id,
+                        GenerationWorkItemModel.stage == MEDIA_STAGE,
+                    )
+                )
+            ).all()
+        )
+    leaves = active_work_items(rows)
+    works: dict[str, SharedFigureWorkOrder] = {}
+    for item in leaves:
+        try:
+            works[item.id] = work_order_from_composition_identity(item.composition_identity)
+        except MediaRuntimeError as exc:
+            raise SharedDocumentQADispatchError(
+                f"media WorkItem {item.id!r} has an invalid frozen work order"
+            ) from exc
+
+    section_by_id = {section.id: section for section in document.sections}
+    current = datetime.now(UTC).replace(tzinfo=None)
+    async with AsyncExitStack() as stack:
+        jobs: list[MediaWorkItemJob] = []
+        for item in leaves:
+            if not _media_lease_eligible(item, current):
+                continue
+            work = works[item.id]
+            section = section_by_id.get(work.section_id)
+            if section is None:
+                raise SharedDocumentQADispatchError(
+                    f"media WorkItem {item.id!r} references a section absent from the "
+                    "reviewed document"
+                )
+            stage_session = await stack.enter_async_context(session_factory())
+            jobs.append(
+                MediaWorkItemJob(
+                    session=stage_session,
+                    work_item_id=item.id,
+                    worker_id=worker_id,
+                    source=source,
+                    work=work,
+                    accepted_section=section,
+                    executor=media_executor,
+                    status="queued",
+                    lease_seconds=lease_seconds,
+                )
+            )
+        if jobs:
+            await execute_figure_media_work_items(jobs, concurrency=concurrency)
+
+    async with session_factory() as reload_session:
+        fresh_rows = tuple(
+            (
+                await reload_session.scalars(
+                    select(GenerationWorkItemModel).where(
+                        GenerationWorkItemModel.run_id == run_id,
+                        GenerationWorkItemModel.stage == MEDIA_STAGE,
+                    )
+                )
+            ).all()
+        )
+    fresh_leaves = active_work_items(fresh_rows)
+    expected_figures = tuple(
+        (section.id, node.id)
+        for section in document.sections
+        for node in section.nodes
+        if isinstance(node, FigureNode)
+    )
+    readiness = project_media_readiness(
+        fresh_rows,
+        works,
+        expected_required_work_item_ids=tuple(item.id for item in fresh_leaves),
+        expected_figure_identities=expected_figures,
+    )
+    return document, readiness
+
+
+async def dispatch_reviewed_document_qa(
+    session_factory: Callable[[], Any],
+    *,
+    run_id: str,
+    owner_user_id: str,
+    path_lesson_id: str,
+    source: TeachingPlanSource,
+    leaf: GenerationWorkItemModel,
+    compositions: Mapping[str, SectionCompositionPlan] | Sequence[SectionCompositionPlan],
+    required_media_by_section: Mapping[str, Sequence[str]] | None = None,
+    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
+    semantic_validator: DocumentSemanticValidator | None = None,
+    worker_id: str = "shared-document-qa-dispatcher",
+) -> SharedDocumentQADispatchResult:
+    """Execute (or load) an already-admitted reviewer-repair QA replacement.
+
+    Unlike :func:`dispatch_shared_document_qa`, this never re-assembles the
+    document from durable writer/composer outputs.  ``leaf`` must be the
+    active document QA WorkItem admitted by
+    ``admit_repaired_document_qa_work_item`` for one reviewer-edited draft
+    revision; this loads and revalidates that exact stored revision by the
+    identity bound in the leaf's own composition identity, recomputes
+    deterministic QA against it, and only then executes (or reloads) the
+    already-admitted semantic QA leaf.
+    """
+    if not run_id.strip() or not owner_user_id.strip() or not path_lesson_id.strip():
+        raise ValueError("run_id, owner_user_id, and path_lesson_id must be non-empty")
+    document = await load_review_replacement_document(
+        session_factory, path_lesson_id=path_lesson_id, source=source, leaf=leaf
+    )
 
     composition_by_section = (
         dict(compositions)
@@ -561,5 +719,7 @@ __all__ = [
     "SharedDocumentQADispatchError",
     "SharedDocumentQADispatchResult",
     "dispatch_reviewed_document_qa",
+    "dispatch_reviewed_figure_media",
     "dispatch_shared_document_qa",
+    "load_review_replacement_document",
 ]

@@ -223,10 +223,16 @@ async def finalize_shared_lesson_document_for_run(
             tasks=semantic.tasks,
             sources=sources,
         )
+        all_items, active_items = await _active_run_items(session, run_id=run_id)
+        media_results, required_media = _durable_media_results(
+            document=handoff.document,
+            active_items=active_items,
+        )
         structural_document = await resolve_review_structural_document(
             session,
             path_lesson_id=path_lesson_id,
             document=handoff.document,
+            media_results=media_results,
         )
         _verify_durable_inputs_match_handoff(
             document=structural_document,
@@ -235,7 +241,6 @@ async def finalize_shared_lesson_document_for_run(
             handoff_expected_shapes=handoff.expected_shapes,
         )
 
-        all_items, active_items = await _active_run_items(session, run_id=run_id)
         _verify_boundary_coverage(
             source=source,
             document=structural_document,
@@ -261,10 +266,6 @@ async def finalize_shared_lesson_document_for_run(
             active_items=active_items,
         )
 
-        media_results, required_media = _durable_media_results(
-            document=handoff.document,
-            active_items=active_items,
-        )
         request = SharedLessonFinalizationRequest(
             run_id=run_id,
             owner_user_id=owner_user_id,

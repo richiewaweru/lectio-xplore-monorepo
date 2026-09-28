@@ -21,8 +21,10 @@ from document.shared_lesson.media_runtime import (
     admit_repaired_figure_media_work_item,
     execute_figure_media_work_item,
     execute_figure_media_work_items,
+    find_active_figure_media_work_item,
     frozen_figure_semantic_hash,
     project_media_readiness,
+    work_order_from_composition_identity,
 )
 from document.shared_lesson import media_runtime
 from document.shared_lesson.models import SharedSection
@@ -1370,3 +1372,152 @@ async def test_media_optional_on_never_defers_programming_or_config_failures(db_
     row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
     assert row is not None
     assert row.status == "failed_terminal"
+
+
+@pytest.mark.asyncio
+async def test_find_active_figure_media_work_item_locates_current_leaf(db_session) -> None:
+    owner, run_id = await _seed_run(db_session, suffix="find-active")
+    work = _work(suffix="find-active")
+    admitted = await admit_figure_media_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=SOURCE,
+        work=work,
+        accepted_section=_accepted_for(work),
+    )
+    rows = list(
+        (
+            await db_session.scalars(
+                select(GenerationWorkItemModel).where(GenerationWorkItemModel.run_id == run_id)
+            )
+        ).all()
+    )
+    found = find_active_figure_media_work_item(
+        rows, section_id=work.section_id, figure_node_id=work.figure_node_id
+    )
+    assert found is not None
+    assert found.id == admitted.record.id
+
+    missing = find_active_figure_media_work_item(
+        rows, section_id=work.section_id, figure_node_id="figure-unknown"
+    )
+    assert missing is None
+
+
+@pytest.mark.asyncio
+async def test_find_active_figure_media_work_item_follows_replacement(db_session) -> None:
+    owner, run_id = await _seed_run(db_session, suffix="find-active-repair")
+    original = _work(suffix="find-active-repair")
+    admitted = await admit_figure_media_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=SOURCE,
+        work=original,
+        accepted_section=_accepted_for(original),
+    )
+    await execute_figure_media_work_item(
+        MediaWorkItemJob(
+            session=db_session,
+            work_item_id=admitted.record.id,
+            worker_id="find-active-repair-worker",
+            source=SOURCE,
+            work=original,
+            accepted_section=_accepted_for(original),
+            executor=_Executor(original),
+        )
+    )
+    repaired_section = _accepted_section(
+        "find-active-repair", caption="A repaired diagram", alt_text="The repaired relationship"
+    )
+    repaired_draft = original.model_copy(
+        update={
+            "section_output_hash": accepted_section_output_hash(repaired_section),
+            "figure_semantic_hash": "0" * 64,
+            "work_order": original.work_order.model_copy(
+                update={
+                    "work_order_id": "placeholder",
+                    "visual": original.work_order.visual.model_copy(
+                        update={
+                            "id": "placeholder",
+                            "purpose": "A repaired diagram",
+                            "must_show": ["The repaired relationship"],
+                        }
+                    ),
+                }
+            ),
+        }
+    )
+    repaired_hash = frozen_figure_semantic_hash(repaired_draft, repaired_section)
+    repaired = repaired_draft.model_copy(
+        update={
+            "figure_semantic_hash": repaired_hash,
+            "work_order": repaired_draft.work_order.model_copy(
+                update={
+                    "work_order_id": f"shared-media-{repaired_hash}",
+                    "visual": repaired_draft.work_order.visual.model_copy(
+                        update={"id": f"shared-figure-{repaired_hash[:24]}"}
+                    ),
+                }
+            ),
+        }
+    )
+    replacement = await admit_repaired_figure_media_work_item(
+        db_session,
+        predecessor_work_item_id=admitted.record.id,
+        owner_user_id=owner,
+        source=SOURCE,
+        work=repaired,
+        accepted_section=repaired_section,
+    )
+    rows = list(
+        (
+            await db_session.scalars(
+                select(GenerationWorkItemModel).where(GenerationWorkItemModel.run_id == run_id)
+            )
+        ).all()
+    )
+    found = find_active_figure_media_work_item(
+        rows, section_id=original.section_id, figure_node_id=original.figure_node_id
+    )
+    assert found is not None
+    assert found.id == replacement.id
+    assert found.id != admitted.record.id
+
+
+@pytest.mark.asyncio
+async def test_work_order_from_composition_identity_reconstructs_frozen_order(
+    db_session,
+) -> None:
+    owner, run_id = await _seed_run(db_session, suffix="reconstruct")
+    work = _work(suffix="reconstruct")
+    admitted = await admit_figure_media_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=SOURCE,
+        work=work,
+        accepted_section=_accepted_for(work),
+    )
+    row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
+    assert row is not None
+    reconstructed = work_order_from_composition_identity(row.composition_identity)
+    assert reconstructed == work
+
+
+def test_work_order_from_composition_identity_rejects_missing_identity() -> None:
+    with pytest.raises(MediaRuntimeError):
+        work_order_from_composition_identity(None)
+    with pytest.raises(MediaRuntimeError):
+        work_order_from_composition_identity("")
+
+
+def test_work_order_from_composition_identity_rejects_invalid_json() -> None:
+    with pytest.raises(MediaRuntimeError):
+        work_order_from_composition_identity("not-json")
+
+
+def test_work_order_from_composition_identity_rejects_wrong_shape() -> None:
+    with pytest.raises(MediaRuntimeError):
+        work_order_from_composition_identity('{"unexpected": "shape"}')
