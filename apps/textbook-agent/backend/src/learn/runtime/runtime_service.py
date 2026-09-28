@@ -19,9 +19,11 @@ from learn.runtime.evaluation import (
     InteractionResponseError,
     UnknownInteractionError,
     concept_bindings_from_contract,
+    contract_from_v2_node,
     evaluate_interaction,
     find_interaction_in_document,
     is_complete,
+    iter_v2_interaction_nodes,
     score_aggregation_of,
 )
 from learn.runtime_models import (
@@ -320,11 +322,55 @@ def extract_v1_requirements(document: dict[str, Any]) -> tuple[set[str], set[str
     return required_sections, required_interactions
 
 
+def extract_v2_requirements(document: dict[str, Any]) -> tuple[set[str], set[str]]:
+    """Required section ids + graded interaction ids for a LearnDocument v2 release.
+
+    Mirrors ``extract_v1_requirements`` for ordered ``sections``/``nodes``.
+    """
+    required_sections: set[str] = set()
+    required_interactions: set[str] = set()
+    sections = document.get("sections") if isinstance(document, dict) else None
+    nodes = document.get("nodes") if isinstance(document, dict) else None
+    if not isinstance(sections, list) or not isinstance(nodes, list):
+        return required_sections, required_interactions
+
+    nodes_by_id = {
+        str(node.get("id")): node
+        for node in nodes
+        if isinstance(node, dict) and node.get("id") is not None
+    }
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        sid = section.get("id")
+        if not sid:
+            continue
+        if section.get("required", True):
+            required_sections.add(str(sid))
+        for node_id in section.get("node_ids") or []:
+            node = nodes_by_id.get(str(node_id))
+            if not isinstance(node, dict) or str(node.get("kind") or "") != "interaction":
+                continue
+            contract = contract_from_v2_node(node)
+            if contract.get("assessment_mode") == "graded":
+                required_interactions.add(str(contract.get("id") or node_id))
+    return required_sections, required_interactions
+
+
+def extract_release_requirements(document: dict[str, Any]) -> tuple[set[str], set[str]]:
+    """Dispatch required-section/interaction extraction by LearnDocument version."""
+    if isinstance(document, dict) and document.get("version") == 2:
+        return extract_v2_requirements(document)
+    return extract_v1_requirements(document)
+
+
 def _contracts_index(document: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    """Interaction-id -> contract, across legacy v1 blocks and v2 ordered nodes."""
     if not isinstance(document, dict):
         return {}
-    blocks = document.get("blocks") if isinstance(document.get("blocks"), dict) else {}
     index: dict[str, dict[str, Any]] = {}
+
+    blocks = document.get("blocks") if isinstance(document.get("blocks"), dict) else {}
     for block_id, block in blocks.items():
         if not isinstance(block, dict):
             continue
@@ -335,6 +381,15 @@ def _contracts_index(document: dict[str, Any] | None) -> dict[str, dict[str, Any
             index[str(block_id)] = contract
             if block.get("id"):
                 index[str(block["id"])] = contract
+
+    for node in iter_v2_interaction_nodes(document):
+        contract = contract_from_v2_node(node)
+        cid = str(contract.get("id") or node.get("id") or "")
+        if cid:
+            index[cid] = contract
+        node_id = node.get("id")
+        if node_id:
+            index[str(node_id)] = contract
     return index
 
 
@@ -748,7 +803,7 @@ async def complete_instance(
             if release is not None and isinstance(release.document_json, dict)
             else {}
         )
-        required_sections, required_interactions = extract_v1_requirements(document)
+        required_sections, required_interactions = extract_release_requirements(document)
         progress = await rebuild_progress(session, learning_instance_id)
         done_sections = set(progress.completed_section_ids or [])
         done_interactions = set(progress.completed_interaction_ids or [])

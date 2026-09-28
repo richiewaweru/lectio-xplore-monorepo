@@ -459,6 +459,41 @@ def score_aggregation_of(contract: Mapping[str, Any] | None) -> str:
     return "latest"
 
 
+def contract_from_v2_node(node: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a runtime interaction contract from one LearnDocument v2 node.
+
+    Shared by direct evaluation lookup and progress/score aggregation so both
+    paths derive identical contract shape from ordered ``nodes``.
+    """
+    contract = node.get("contract") if isinstance(node.get("contract"), dict) else None
+    if contract is None:
+        contract = {
+            "id": node.get("id"),
+            "kind": node.get("interaction_type"),
+            "prompt": node.get("prompt") or "",
+            "config": dict(node.get("config") or {}),
+            "feedback": node.get("feedback"),
+            "attempt_policy": node.get("attempt_policy"),
+            "assessment_mode": node.get("assessment_mode"),
+            "completion": node.get("completion"),
+        }
+    else:
+        contract = dict(contract)
+        contract.setdefault("id", node.get("id"))
+        contract.setdefault("kind", node.get("interaction_type"))
+    return contract
+
+
+def iter_v2_interaction_nodes(document: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    """Ordered LearnDocument v2 interaction nodes, or [] for a non-v2 document."""
+    if not isinstance(document, Mapping):
+        return []
+    nodes = document.get("nodes")
+    if not isinstance(nodes, list):
+        return []
+    return [node for node in nodes if isinstance(node, dict) and node.get("kind") == "interaction"]
+
+
 def find_interaction_in_document(
     document: Mapping[str, Any] | None, interaction_id: str
 ) -> tuple[dict[str, Any], str | None]:
@@ -471,32 +506,11 @@ def find_interaction_in_document(
         raise UnknownInteractionError(interaction_id)
 
     # LearnDocument v2: ordered interaction nodes.
-    nodes = document.get("nodes")
-    if isinstance(nodes, list):
-        for node in nodes:
-            if not isinstance(node, dict):
-                continue
-            if str(node.get("kind") or "") != "interaction":
-                continue
-            contract = node.get("contract") if isinstance(node.get("contract"), dict) else None
-            if contract is None:
-                contract = {
-                    "id": node.get("id"),
-                    "kind": node.get("interaction_type"),
-                    "prompt": node.get("prompt") or "",
-                    "config": dict(node.get("config") or {}),
-                    "feedback": node.get("feedback"),
-                    "attempt_policy": node.get("attempt_policy"),
-                    "assessment_mode": node.get("assessment_mode"),
-                    "completion": node.get("completion"),
-                }
-            else:
-                contract = dict(contract)
-                contract.setdefault("id", node.get("id"))
-                contract.setdefault("kind", node.get("interaction_type"))
-            cid = str(contract.get("id") or node.get("id") or "")
-            if cid == interaction_id or str(node.get("id")) == interaction_id:
-                return contract, str(node.get("teaching_block_id") or "") or None
+    for node in iter_v2_interaction_nodes(document):
+        contract = contract_from_v2_node(node)
+        cid = str(contract.get("id") or node.get("id") or "")
+        if cid == interaction_id or str(node.get("id")) == interaction_id:
+            return contract, str(node.get("teaching_block_id") or "") or None
 
     blocks = document.get("blocks") if isinstance(document.get("blocks"), dict) else {}
     sections = document.get("sections") if isinstance(document.get("sections"), list) else []

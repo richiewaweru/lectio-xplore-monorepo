@@ -228,6 +228,20 @@ async def _verify_shared_document_lineage(
         )
 
 
+def ordinary_nodes_by_id(nodes: list[Any]) -> dict[Any, Any]:
+    """Map LearnDocument v2 node id -> node for every non-interaction node.
+
+    Shared identity used to compare "ordinary" (shared-authored) content
+    across a Builder save and a publish/adapter realization, so a forked
+    ordinary edit can be detected the same way in both places.
+    """
+    return {
+        node.get("id"): node
+        for node in nodes
+        if isinstance(node, Mapping) and node.get("kind") != "interaction"
+    }
+
+
 def guard_shared_document_builder_edit(
     model: EditableLessonModel, new_document: Mapping[str, Any]
 ) -> None:
@@ -247,14 +261,7 @@ def guard_shared_document_builder_edit(
     if not isinstance(stored_nodes, list) or not isinstance(new_nodes, list):
         return
 
-    def _ordinary(nodes: list[Any]) -> dict[Any, Any]:
-        return {
-            node.get("id"): node
-            for node in nodes
-            if isinstance(node, Mapping) and node.get("kind") != "interaction"
-        }
-
-    if _ordinary(stored_nodes) != _ordinary(new_nodes):
+    if ordinary_nodes_by_id(stored_nodes) != ordinary_nodes_by_id(new_nodes):
         raise SharedDocumentOrdinaryEditBlockedError(
             "Ordinary content on this lesson is authored once from a shared document "
             "and cannot be edited in Builder."
@@ -338,5 +345,6 @@ __all__ = [
     "get_or_create_component_lectio_builder_lesson",
     "get_or_create_native_learn_builder_lesson",
     "guard_shared_document_builder_edit",
+    "ordinary_nodes_by_id",
     "validate_builder_document",
 ]
