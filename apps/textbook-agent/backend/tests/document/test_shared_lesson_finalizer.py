@@ -333,6 +333,110 @@ def test_forged_handoff_shapes_are_rejected_against_durable_compositions() -> No
         )
 
 
+def _edited_revision(document, *, text: str) -> object:
+    payload = document.model_dump(mode="json")
+    payload["revision"] = document.revision + 1
+    payload["sections"][0]["nodes"][0]["display"]["text"] = text
+    payload.pop("content_hash", None)
+    return build_shared_lesson_document(payload)
+
+
+@pytest.mark.asyncio
+async def test_review_structural_document_accepts_figure_section_edit_with_regenerated_media(
+    monkeypatch,
+) -> None:
+    from document.shared_lesson import finalizer
+
+    source, origin = _approved_source_and_document(include_figure=True)
+    edited = _edited_revision(origin, text="Plants use light to make food, roots and all.")
+
+    async def fake_load(_session, *, document_id, revision, path_lesson_id):
+        assert document_id == origin.id
+        assert path_lesson_id == "path-lesson-1"
+        return SimpleNamespace(document=origin if revision == 1 else edited)
+
+    monkeypatch.setattr(finalizer, "load_shared_lesson_document", fake_load)
+    regenerated_media = _bound_media(source, edited)
+
+    resolved = await finalizer.resolve_review_structural_document(
+        object(),
+        path_lesson_id="path-lesson-1",
+        document=edited,
+        media_results=(regenerated_media,),
+    )
+    assert resolved == origin
+
+
+@pytest.mark.asyncio
+async def test_review_structural_document_rejects_figure_section_edit_without_regenerated_media(
+    monkeypatch,
+) -> None:
+    from document.shared_lesson import finalizer
+
+    _source, origin = _approved_source_and_document(include_figure=True)
+    edited = _edited_revision(origin, text="Plants use light to make food, roots and all.")
+
+    async def fake_load(_session, *, document_id, revision, path_lesson_id):
+        return SimpleNamespace(document=origin if revision == 1 else edited)
+
+    monkeypatch.setattr(finalizer, "load_shared_lesson_document", fake_load)
+
+    with pytest.raises(SharedLessonFinalizationError, match="without regenerated"):
+        await finalizer.resolve_review_structural_document(
+            object(),
+            path_lesson_id="path-lesson-1",
+            document=edited,
+            media_results=(),
+        )
+
+
+@pytest.mark.asyncio
+async def test_review_structural_document_rejects_stale_media_bound_to_prior_revision(
+    monkeypatch,
+) -> None:
+    from document.shared_lesson import finalizer
+
+    source, origin = _approved_source_and_document(include_figure=True)
+    edited = _edited_revision(origin, text="Plants use light to make food, roots and all.")
+
+    async def fake_load(_session, *, document_id, revision, path_lesson_id):
+        return SimpleNamespace(document=origin if revision == 1 else edited)
+
+    monkeypatch.setattr(finalizer, "load_shared_lesson_document", fake_load)
+    # Media frozen against the ORIGIN's section output hash, never regenerated
+    # against the edited revision, must never be accepted as evidence.
+    stale_media = _bound_media(source, origin)
+
+    with pytest.raises(SharedLessonFinalizationError, match="figure media"):
+        await finalizer.resolve_review_structural_document(
+            object(),
+            path_lesson_id="path-lesson-1",
+            document=edited,
+            media_results=(stale_media,),
+        )
+
+
+@pytest.mark.asyncio
+async def test_review_structural_document_unchanged_for_non_figure_edit(monkeypatch) -> None:
+    from document.shared_lesson import finalizer
+
+    _source, origin = _approved_source_and_document()
+    edited = _edited_revision(origin, text="A different but still allowlisted paragraph edit.")
+
+    async def fake_load(_session, *, document_id, revision, path_lesson_id):
+        return SimpleNamespace(document=origin if revision == 1 else edited)
+
+    monkeypatch.setattr(finalizer, "load_shared_lesson_document", fake_load)
+
+    resolved = await finalizer.resolve_review_structural_document(
+        object(),
+        path_lesson_id="path-lesson-1",
+        document=edited,
+        media_results=(),
+    )
+    assert resolved == origin
+
+
 def test_media_evidence_must_match_ready_media_work_item() -> None:
     source, document = _approved_source_and_document(include_figure=True)
     media = _bound_media(source, document)

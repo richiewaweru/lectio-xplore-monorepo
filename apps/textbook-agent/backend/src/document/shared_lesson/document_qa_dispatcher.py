@@ -31,6 +31,16 @@ from document.shared_lesson.media import (
     bind_durable_media_output,
     verify_bound_durable_media,
 )
+from document.shared_lesson.media_runtime import (
+    MAX_CONCURRENT_MEDIA,
+    MEDIA_STAGE,
+    MediaReadiness,
+    MediaRuntimeError,
+    MediaWorkItemJob,
+    execute_figure_media_work_items,
+    project_media_readiness,
+    work_order_from_composition_identity,
+)
 from document.shared_lesson.models import FigureNode, SharedLessonDocument, SharedSection
 from document.shared_lesson.qa import DocumentQAResult, qa_shared_lesson_document
 from document.shared_lesson.qa_runtime import (
@@ -47,16 +57,6 @@ from document.shared_lesson.repository import (
     load_shared_lesson_document,
 )
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
-from document.shared_lesson.media_runtime import (
-    MAX_CONCURRENT_MEDIA,
-    MEDIA_STAGE,
-    MediaReadiness,
-    MediaRuntimeError,
-    MediaWorkItemJob,
-    execute_figure_media_work_items,
-    project_media_readiness,
-    work_order_from_composition_identity,
-)
 from infra.database.models import GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import active_work_items
