@@ -45,7 +45,11 @@ def _collect_v2_publish_errors(document: Mapping[str, Any]) -> list[str]:
             continue
         order = [str(x) for x in (config.get("order") or [])]
         items = config.get("items") if isinstance(config.get("items"), list) else []
-        item_ids = {str(i.get("id")) for i in items if isinstance(i, dict)}
+        # Builder-authored items are {"id": ..., "label": ...}; the
+        # SharedLessonDocument adapter emits plain item-id strings for
+        # ordered_items tasks (Learn's sequence config only evaluates
+        # ``order``, so both shapes are legitimate presentational data).
+        item_ids = {str(i.get("id")) if isinstance(i, dict) else str(i) for i in items}
         for oid in order:
             if items and oid not in item_ids:
                 errors.append(

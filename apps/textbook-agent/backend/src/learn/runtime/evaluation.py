@@ -494,6 +494,25 @@ def iter_v2_interaction_nodes(document: Mapping[str, Any] | None) -> list[dict[s
     return [node for node in nodes if isinstance(node, dict) and node.get("kind") == "interaction"]
 
 
+def v2_node_section_index(document: Mapping[str, Any] | None) -> dict[str, str]:
+    """Map LearnDocument v2 node id -> owning section id from ``sections[].node_ids``."""
+    if not isinstance(document, Mapping):
+        return {}
+    sections = document.get("sections")
+    if not isinstance(sections, list):
+        return {}
+    index: dict[str, str] = {}
+    for section in sections:
+        if not isinstance(section, Mapping):
+            continue
+        sid = str(section.get("id") or "")
+        if not sid:
+            continue
+        for node_id in section.get("node_ids") or []:
+            index[str(node_id)] = sid
+    return index
+
+
 def find_interaction_in_document(
     document: Mapping[str, Any] | None, interaction_id: str
 ) -> tuple[dict[str, Any], str | None]:
@@ -505,12 +524,15 @@ def find_interaction_in_document(
     if not isinstance(document, dict):
         raise UnknownInteractionError(interaction_id)
 
-    # LearnDocument v2: ordered interaction nodes.
+    # LearnDocument v2: ordered interaction nodes. Section membership comes
+    # from `sections[].node_ids`, not `teaching_block_id` (an authoring
+    # provenance field, not a runtime section id).
+    node_sections = v2_node_section_index(document)
     for node in iter_v2_interaction_nodes(document):
         contract = contract_from_v2_node(node)
         cid = str(contract.get("id") or node.get("id") or "")
         if cid == interaction_id or str(node.get("id")) == interaction_id:
-            return contract, str(node.get("teaching_block_id") or "") or None
+            return contract, node_sections.get(str(node.get("id")))
 
     blocks = document.get("blocks") if isinstance(document.get("blocks"), dict) else {}
     sections = document.get("sections") if isinstance(document.get("sections"), list) else []
