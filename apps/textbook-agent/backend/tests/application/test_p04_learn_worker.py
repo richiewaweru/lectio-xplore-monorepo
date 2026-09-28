@@ -28,7 +28,7 @@ from document.shared_lesson.document_semantic import DocumentSemanticVerdict
 from document.shared_lesson.post_section_pipeline import run_post_section_pipeline
 from document.shared_lesson.realization_source import ensure_shared_document_run
 from document.shared_lesson.worker import SharedDocumentWorker
-from learn.generation import native_execution, shared_document_execution
+from learn.generation import shared_document_execution
 from learn.generation.fencing import (
     LEARN_EXECUTION_KEY,
     empty_learn_execution_meta,
@@ -98,7 +98,13 @@ async def _drive_shared_document_ready(
         composer_provider=_shared_document_composer,
         writer_provider=_shared_document_writer,
     )
-    for _ in range(6):
+    # Bounded to the semantic/composition steps only (sourcebook, composer,
+    # writer): stop before the worker's own post-section candidate would be
+    # picked up with no ``qa_semantic_validator`` configured on this worker.
+    # The explicit ``run_post_section_pipeline`` call below drives that stage
+    # with a real QA validator, exactly like
+    # ``tests/document/test_shared_document_full_run.py``.
+    for _ in range(4):
         async with db_session_factory() as session:
             progressed = await worker.run_one(session)
             await session.commit()
@@ -375,11 +381,19 @@ async def test_p04_worker_parks_escaped_post_production_failure(
 
     monkeypatch.setattr(reliability_persist, "async_session_factory", db_session_factory)
 
+    await _drive_shared_document_ready(
+        db_session,
+        db_session_factory,
+        owner_user_id="p04-finalize-failure",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=str(lesson.pack_id),
+    )
+
     def fail_publication_validation(_document):
         raise ValueError("injected post-production validation failure")
 
     monkeypatch.setattr(
-        native_execution,
+        shared_document_execution,
         "validate_publishable_lesson_document",
         fail_publication_validation,
     )
@@ -418,7 +432,7 @@ async def test_p04_worker_parks_escaped_post_production_failure(
     ["foreign_owner", "wrong_path", "wrong_preparation", "wrong_revision", "wrong_hash"],
 )
 async def test_p04_worker_parks_corrupt_foreign_output_without_mutating_it(
-    db_session: AsyncSession, corruption: str
+    db_session: AsyncSession, db_session_factory, corruption: str
 ) -> None:
     lesson, _plan, _source, _document = await _approved_native_preparation(
         db_session, user_id="p04-foreign-output"
@@ -428,6 +442,14 @@ async def test_p04_worker_parks_corrupt_foreign_output_without_mutating_it(
         preparation_generation_id=str(lesson.pack_id),
         user_id="p04-foreign-output",
         path_lesson_id=lesson.id,
+    )
+    await db_session.commit()
+    await _drive_shared_document_ready(
+        db_session,
+        db_session_factory,
+        owner_user_id="p04-foreign-output",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=str(lesson.pack_id),
     )
     row = await db_session.get(NativeRealizationModel, result["realization_id"])
     assert row is not None

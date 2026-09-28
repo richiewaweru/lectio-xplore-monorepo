@@ -153,6 +153,15 @@ async def execute_learn_realization_from_shared_document(
 
     realization.status = "running"
     await session.flush()
+    # Durable persist / heartbeat cannot see uncommitted rows, and a crash (or
+    # a later exception in this same session) must not roll "running" back to
+    # "queued" — that would misclassify an execution failure as a preflight
+    # one. Commit admission identity + lease before any further work.
+    await session.commit()
+    realization = await session.get(type(realization), realization.id)
+    assert realization is not None
+    output = await session.get(GenerationModel, output_id)
+    assert output is not None
 
     document = ready.document
     expected_identity = SharedDocumentIdentity(
