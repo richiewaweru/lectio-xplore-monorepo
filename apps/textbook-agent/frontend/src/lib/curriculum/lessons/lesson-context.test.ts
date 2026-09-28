@@ -121,6 +121,78 @@ describe('canonical Unit lesson workspace mapping', () => {
 		});
 	});
 
+	it('maps needs_review authoritatively from the backend state, never from output_id', () => {
+		const status = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: {
+					state: 'needs_review',
+					realization_id: 'learn-r',
+					output_id: 'learn-o',
+					shared_document_state: 'needs_review',
+					shared_document_run_id: 'run-1'
+				},
+				print: { state: 'not_created' }
+			}
+		});
+		const learn = lessonArtifactUi(status, 'learn');
+		expect(learn).toMatchObject({
+			state: 'needs_review',
+			retryable: false,
+			recoveryAction: null,
+			sharedDocumentState: 'needs_review'
+		});
+	});
+
+	it('never infers needs_review from output_id/hash alone when the backend state is something else', () => {
+		const status = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: {
+					state: 'ready',
+					realization_id: 'learn-r',
+					output_id: 'learn-o',
+					shared_document_hash: 'hash-1'
+				},
+				print: { state: 'not_created' }
+			}
+		});
+		expect(lessonArtifactUi(status, 'learn').state).toBe('ready');
+	});
+
+	it('surfaces shared_document_state alongside an otherwise-normal preparing/ready state', () => {
+		const pending = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: { state: 'running', realization_id: 'learn-r', shared_document_state: 'pending' },
+				print: { state: 'not_created' }
+			}
+		});
+		expect(lessonArtifactUi(pending, 'learn')).toMatchObject({ state: 'preparing', sharedDocumentState: 'pending' });
+
+		const stale = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: { state: 'ready', realization_id: 'learn-r', output_id: 'learn-o', shared_document_state: 'stale' },
+				print: { state: 'not_created' }
+			}
+		});
+		expect(lessonArtifactUi(stale, 'learn')).toMatchObject({ state: 'ready', sharedDocumentState: 'stale' });
+	});
+
+	it('defaults sharedDocumentState to null for pre-P10B rows and missing workspace', () => {
+		const status = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: { state: 'ready', realization_id: 'learn-r', output_id: 'learn-o' },
+				print: { state: 'not_created' }
+			}
+		});
+		expect(lessonArtifactUi(status, 'learn').sharedDocumentState).toBeNull();
+		const missing = base({ workspace: undefined });
+		expect(lessonArtifactUi(missing, 'learn').sharedDocumentState).toBeNull();
+	});
+
 	it('does not turn ready into retryable when preview fetch fails', () => {
 		const status = base({
 			workspace: {

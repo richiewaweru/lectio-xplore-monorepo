@@ -92,19 +92,24 @@ export function lessonArtifactUi(
 			path, exists: false, state: status ? 'needs_attention' : 'not_created',
 			realizationId: null, outputId: null, openHref: null,
 			errorSummary: loadError ?? (status ? 'Path status is ambiguous. Refresh the lesson workspace.' : null),
-			retryable: false, recoveryAction: status ? 'reload_lesson' : null, legacyAmbiguous: Boolean(status)
+			retryable: false, recoveryAction: status ? 'reload_lesson' : null, legacyAmbiguous: Boolean(status),
+			sharedDocumentState: null
 		};
 	}
 	const canonicalState = workspace.state;
-	const state: ArtifactUiState = canonicalState === 'queued' || canonicalState === 'running'
-		? 'preparing'
-		: canonicalState === 'ready'
-			? 'ready'
-			: canonicalState === 'failed_recoverable'
-				? 'failed'
-				: canonicalState === 'failed_terminal'
-					? 'needs_attention'
-					: 'not_created';
+	// `needs_review` is authoritative from the backend: a pinned SharedLessonDocument
+	// awaiting a human review decision. Never infer this from output_id/hash alone.
+	const state: ArtifactUiState = canonicalState === 'needs_review'
+		? 'needs_review'
+		: canonicalState === 'queued' || canonicalState === 'running'
+			? 'preparing'
+			: canonicalState === 'ready'
+				? 'ready'
+				: canonicalState === 'failed_recoverable'
+					? 'failed'
+					: canonicalState === 'failed_terminal'
+						? 'needs_attention'
+						: 'not_created';
 	return {
 		path,
 		exists: canonicalState !== 'not_created',
@@ -115,9 +120,12 @@ export function lessonArtifactUi(
 		// Preview-fetch failures are displayed separately and cannot turn a ready
 		// realization into a failed/retryable run.
 		errorSummary: workspace.error?.message ?? loadError ?? null,
-		retryable: canonicalState === 'failed_recoverable' && workspace.error?.retryable === true && !workspace.stale && !workspace.legacy_ambiguous,
-		recoveryAction: workspace.error?.recovery_action ?? null,
-		legacyAmbiguous: Boolean(workspace.legacy_ambiguous)
+		// needs_review never advertises a retry action: the backend has no retry
+		// endpoint for a pending human review, and offering one would be retry spam.
+		retryable: state !== 'needs_review' && canonicalState === 'failed_recoverable' && workspace.error?.retryable === true && !workspace.stale && !workspace.legacy_ambiguous,
+		recoveryAction: state === 'needs_review' ? null : (workspace.error?.recovery_action ?? null),
+		legacyAmbiguous: Boolean(workspace.legacy_ambiguous),
+		sharedDocumentState: workspace.shared_document_state ?? null
 	};
 }
 

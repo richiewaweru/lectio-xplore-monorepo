@@ -254,18 +254,33 @@ export interface WorkspaceStateError {
 	recovery_action?: string | null;
 }
 
+/**
+ * P10B/P10D: the pinned SharedLessonDocument's own lifecycle, distinct from
+ * the Learn realization's execution status. `needs_review` also appears as
+ * the top-level `state` (see below) because Learn authoring cannot proceed
+ * at all until a human reviews the pinned document; the other values are
+ * additive context alongside an otherwise-normal realization state (e.g. a
+ * `ready` Learn artifact whose source document has since gone `stale`).
+ */
+export type SharedDocumentState = 'pending' | 'needs_review' | 'ready' | 'stale' | 'failed';
+
 export interface ArtifactWorkspaceStatus {
-	state: 'not_created' | 'queued' | 'running' | 'ready' | 'failed_recoverable' | 'failed_terminal';
+	state: 'not_created' | 'queued' | 'running' | 'ready' | 'failed_recoverable' | 'failed_terminal' | 'needs_review';
 	realization_id?: string | null;
 	output_id?: string | null;
 	open_href?: string | null;
 	stale?: boolean;
 	legacy_ambiguous?: boolean;
 	error?: WorkspaceStateError | null;
+	shared_document_state?: SharedDocumentState | null;
+	shared_document_run_id?: string | null;
+	shared_document_id?: string | null;
+	shared_document_revision?: number | null;
+	shared_document_hash?: string | null;
 }
 
 export type ArtifactPath = 'learn' | 'print';
-export type ArtifactUiState = 'not_created' | 'preparing' | 'ready' | 'needs_attention' | 'failed';
+export type ArtifactUiState = 'not_created' | 'preparing' | 'ready' | 'needs_attention' | 'failed' | 'needs_review';
 
 export interface LessonArtifactUi {
 	path: ArtifactPath;
@@ -278,6 +293,8 @@ export interface LessonArtifactUi {
 	retryable: boolean;
 	recoveryAction: string | null;
 	legacyAmbiguous: boolean;
+	/** Null when the backend carries no SharedLessonDocument identity yet (pre-P10B rows). */
+	sharedDocumentState: SharedDocumentState | null;
 }
 
 export type LessonIssueSeverity = 'info' | 'warning' | 'error';

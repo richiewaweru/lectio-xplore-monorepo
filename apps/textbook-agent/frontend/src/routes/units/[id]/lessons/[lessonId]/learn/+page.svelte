@@ -69,6 +69,13 @@
 				await loadIssues();
 				return;
 			}
+			if (currentArtifact.state === 'needs_review') {
+				document = null;
+				builderLessonId = null;
+				loadError = null;
+				await loadIssues();
+				return;
+			}
 			if (currentArtifact.state === 'failed' || currentArtifact.state === 'needs_attention') {
 				document = null;
 				builderLessonId = null;
@@ -137,8 +144,11 @@
 		if (
 			currentArtifact.state === 'failed' ||
 			currentArtifact.state === 'needs_attention' ||
-			currentArtifact.state === 'not_created'
+			currentArtifact.state === 'not_created' ||
+			currentArtifact.state === 'needs_review'
 		) {
+			// needs_review requires a human review decision, not a retry; stop
+			// polling so this never becomes an unbounded poll.
 			loadError = currentArtifact.errorSummary;
 			return false;
 		}
@@ -258,11 +268,23 @@
 			{#snippet actions()}<Button disabled={!ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)} busy={busy === 'create'} onclick={() => void createLearn()}>{busy === 'create' ? 'Creating…' : 'Create Learn'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
 	{:else if artifact.state === 'preparing'}
-		<EmptyState title="Learn is being created" description="This page will update when the Learn lesson is ready.">
+		<EmptyState
+			title={artifact.sharedDocumentState === 'pending' ? 'Preparing the lesson document' : 'Learn is being created'}
+			description="This page will update when the Learn lesson is ready."
+		>
+			{#snippet actions()}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
+		</EmptyState>
+	{:else if artifact.state === 'needs_review'}
+		<EmptyState title="This lesson needs a teacher review before Learn can be built" description="A teacher must review the prepared lesson document before Learn can continue.">
 			{#snippet actions()}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
 	{:else if activeTab === 'preview'}
-		{#if document}<StudentLessonShell {document} preview />{:else}<EmptyState title="Learn needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Learn output is stale. Reprepare and review the lesson before creating another output.' : loadError || 'The Learn preview is unavailable.'}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry Learn</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
+		{#if document}
+			{#if artifact.sharedDocumentState === 'stale'}
+				<InlineError message="The lesson document has changed since this Learn lesson was built. Regenerate Learn from the current plan to pick up the latest content." hint="This preview still shows the last built version." />
+			{/if}
+			<StudentLessonShell {document} preview />
+		{:else}<EmptyState title="Learn needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Learn output is stale. Reprepare and review the lesson before creating another output.' : loadError || 'The Learn preview is unavailable.'}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry Learn</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
 	{/if}
 </div>
 
