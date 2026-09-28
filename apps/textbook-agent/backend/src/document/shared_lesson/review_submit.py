@@ -499,17 +499,6 @@ async def submit_review_draft_for_requalification(
             + ", ".join(issue.issue_code for issue in deterministic_qa.issues)
         )
 
-    await _regenerate_figure_media_for_review_edit(
-        session,
-        owner_user_id=owner_user_id,
-        run_id=context.run.id,
-        source=source,
-        semantic=semantic,
-        latest=latest,
-        figure_section_ids=proof.figure_section_ids,
-        expected_shapes=expected_shapes,
-    )
-
     try:
         replacement = await admit_repaired_document_qa_work_item(
             session,
@@ -521,6 +510,19 @@ async def submit_review_draft_for_requalification(
         )
     except DocumentQARuntimeError as exc:
         raise ReviewSubmitConflict(f"document QA replacement could not be admitted: {exc}") from exc
+
+    # Figure replacements must follow the document-QA replacement: the Run may
+    # only reopen once its failed QA leaf has a linked successor (0046 guard).
+    await _regenerate_figure_media_for_review_edit(
+        session,
+        owner_user_id=owner_user_id,
+        run_id=context.run.id,
+        source=source,
+        semantic=semantic,
+        latest=latest,
+        figure_section_ids=proof.figure_section_ids,
+        expected_shapes=expected_shapes,
+    )
 
     return ReviewSubmitOutcome(
         run_id=context.run.id,
