@@ -195,6 +195,26 @@ def _verify_media_inputs(
     return tuple(sorted(result.figure_node_id for result in supplied.values()))
 
 
+
+def _dispatchable(record: Any) -> bool:
+    """Queued, or running under an expired lease (worker died mid-QA).
+
+    ``claim_work_item`` already fences an expired lease takeover, so a
+    restart during semantic QA must not strand the leaf in ``running``.
+    """
+    status = getattr(record, "status", None)
+    if status == "queued":
+        return True
+    if status != "running":
+        return False
+    expires = getattr(record, "lease_expires_at", None)
+    if expires is None:
+        return False
+    now = datetime.now(UTC).replace(tzinfo=None)
+    if getattr(expires, "tzinfo", None) is not None:
+        expires = expires.astimezone(UTC).replace(tzinfo=None)
+    return expires <= now
+
 async def _load_durable_media_results(
     session_factory: Callable[[], Any],
     *,
@@ -393,7 +413,7 @@ async def dispatch_shared_document_qa(
         )
         await admission_session.commit()
 
-    if admitted.record.status == "queued":
+    if _dispatchable(admitted.record):
         async with session_factory() as execution_session:
             outcome: DocumentQAOutcome = await execute_document_qa_work_item(
                 DocumentQAWorkItemJob(
@@ -674,7 +694,7 @@ async def dispatch_reviewed_document_qa(
             + ", ".join(issue.issue_code for issue in deterministic_qa.issues)
         )
 
-    if leaf.status == "queued":
+    if _dispatchable(leaf):
         async with session_factory() as execution_session:
             outcome: DocumentQAOutcome = await execute_document_qa_work_item(
                 DocumentQAWorkItemJob(

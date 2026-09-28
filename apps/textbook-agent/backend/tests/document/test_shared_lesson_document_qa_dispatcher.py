@@ -98,3 +98,21 @@ async def test_dispatcher_blocks_before_qa_admission_on_deterministic_or_media_f
             ).all()
         )
         assert items == []
+
+
+def test_expired_running_document_qa_leaf_is_dispatchable_after_restart():
+    from datetime import UTC, datetime, timedelta
+    from types import SimpleNamespace
+
+    from document.shared_lesson.document_qa_dispatcher import _dispatchable
+
+    now = datetime.now(UTC).replace(tzinfo=None)
+    assert _dispatchable(SimpleNamespace(status="queued", lease_expires_at=None))
+    assert _dispatchable(
+        SimpleNamespace(status="running", lease_expires_at=now - timedelta(minutes=1))
+    )
+    assert not _dispatchable(
+        SimpleNamespace(status="running", lease_expires_at=now + timedelta(minutes=5))
+    )
+    assert not _dispatchable(SimpleNamespace(status="running", lease_expires_at=None))
+    assert not _dispatchable(SimpleNamespace(status="ready", lease_expires_at=None))
