@@ -4,7 +4,10 @@ Covers the closed ``load_realization_source`` state machine end to end from
 the Learn admission/worker seam (pending/needs_review/stale/ready), duplicate
 admission pinning, lineage stamping, Builder lineage verification on open,
 and a monkeypatch proof that the ready path never calls ordinary
-composer/writer/sourcebook authoring or the retired producer.
+composer/writer authoring. The retired ordinary Learn producer
+(``learn.generation.native_execution``) no longer exists; an architecture
+guard (``tests/architecture/test_p10e_learn_ordinary_authoring_guard.py``)
+now proves it stays absent and unreachable from Learn generation.
 """
 
 from __future__ import annotations
@@ -19,8 +22,6 @@ from tests.application.test_p04_learn_worker import _drive_shared_document_ready
 
 import document.composer as composer_module
 import document.writer as writer_module
-import learn.generation.native_execution as native_execution_module
-import learn.generation.native_production as native_production_module
 from application.unit_lesson.realize_learn_handoff import (
     execute_learn_realization,
     realize_learn_from_preparation,
@@ -261,17 +262,6 @@ async def test_ready_path_never_calls_ordinary_authoring_or_retired_producer(
     )
     monkeypatch.setattr(
         writer_module, "write_document_primitive", _forbid("write_document_primitive")
-    )
-    monkeypatch.setattr(
-        native_production_module, "compose_document_plan", _forbid("compose_document_plan")
-    )
-    monkeypatch.setattr(
-        native_production_module, "write_document_primitive", _forbid("write_document_primitive")
-    )
-    monkeypatch.setattr(
-        native_execution_module,
-        "produce_learn_from_approved_teaching",
-        _forbid("produce_learn_from_approved_teaching"),
     )
 
     lesson, _plan, _source, _document = await _approved_native_preparation(

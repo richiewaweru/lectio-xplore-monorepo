@@ -9,7 +9,6 @@ CLOSEOUT_IDS = (
     "learner-action-policy",
     "document-composer",
     "document-writer",
-    "interaction-selection",
     "interaction-writer",
     "figure-authoring",
     "print-realization",
