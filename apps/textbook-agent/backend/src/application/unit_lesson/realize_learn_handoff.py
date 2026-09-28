@@ -30,10 +30,19 @@ from curriculum.teaching_plan.consumers import (
     TeachingRevisionUnavailableError,
     accept_approved_teaching_revision,
 )
+from document.shared_lesson.realization_source import (
+    RealizationAttemptsExhausted,
+    RealizationSourceNotFound,
+    ensure_shared_document_run,
+    load_realization_source,
+)
 from infra.authoring import AuthoringProvider
 from learn.generation.fencing import LEARN_EXECUTION_KEY, empty_learn_execution_meta
-from learn.generation.native_execution import produce_learn_from_approved_teaching
 from learn.generation.native_production import teaching_plan_content_hash
+from learn.generation.shared_document_execution import (
+    apply_non_ready_shared_document_state,
+    execute_learn_realization_from_shared_document,
+)
 from print.generation.whole_lesson.repository import PageDocumentRepository
 from curriculum.planning.persistence import load_chunked_state
 
@@ -335,6 +344,39 @@ async def realize_learn_from_preparation(
                 "recovery_action": "reprepare",
             },
         )
+    try:
+        shared_run = await ensure_shared_document_run(
+            session, owner_user_id=user_id, path_lesson_id=lesson.id
+        )
+    except RealizationSourceNotFound as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_SOURCE_UNAVAILABLE",
+                "message": str(exc),
+                "recovery_action": "reprepare",
+            },
+        ) from exc
+    except RealizationAttemptsExhausted as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_ATTEMPTS_EXHAUSTED",
+                "message": str(exc),
+                "recovery_action": "reprepare",
+            },
+        ) from exc
+    if realization.shared_document_run_id and realization.shared_document_run_id != shared_run.id:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_RUN_CONFLICT",
+                "message": "This Learn realization is already pinned to a different "
+                "SharedLessonDocument run.",
+            },
+        )
+    realization.shared_document_run_id = shared_run.id
+    await session.flush()
     output = await _ensure_queued_output(
         session,
         realization=realization,
@@ -380,7 +422,14 @@ async def execute_learn_realization(
     worker_id: str,
     provider: AuthoringProvider | None = None,
 ) -> dict[str, Any]:
-    """Run one already-admitted queued Learn realization under its output lease."""
+    """Run one already-admitted queued Learn realization under its output lease.
+
+    P10B: Learn authoring is replaced by a verified, read-only copy of the
+    pinned SharedLessonDocument. ``provider`` is accepted only for call-site
+    compatibility with the worker/tests and is unused — the adapter never
+    calls a provider.
+    """
+    _ = provider
     generation_id = str(realization.preparation_generation_id or "")
     source_before_lock = await session.get(GenerationModel, generation_id)
     if source_before_lock is None:
@@ -393,12 +442,21 @@ async def execute_learn_realization(
         preparation_generation_id=generation_id,
         user_id=str(source_before_lock.user_id),
     )
-    await _resolve_path_lesson(
+    lesson = await _resolve_path_lesson(
         session,
         preparation_generation_id=generation_id,
         user_id=str(source.user_id),
         path_lesson_id=realization.path_lesson_id,
     )
+
+    shared_result = await load_realization_source(
+        session, owner_user_id=str(source.user_id), path_lesson_id=str(lesson.id)
+    )
+    if shared_result.state != "ready":
+        return await apply_non_ready_shared_document_state(
+            session, realization=realization, result=shared_result
+        )
+
     claim_result = await session.execute(
         update(NativeRealizationModel)
         .where(
@@ -421,12 +479,13 @@ async def execute_learn_realization(
     realization = realization_result.scalar_one_or_none()
     if realization is None:
         raise HTTPException(status_code=404, detail="Learn realization not found")
-    source_state = await _load_page_state(session, source)
-    plan = _verified_plan(source_state, revision=int(realization.teaching_plan_revision))
-    plan_hash = teaching_plan_content_hash(plan)
+
+    ready = shared_result.ready
+    assert ready is not None
     if (
-        plan_hash != realization.teaching_plan_hash
-        or str(plan.teaching_plan_id or "") != realization.teaching_plan_id
+        ready.plan_id != realization.teaching_plan_id
+        or int(ready.plan_revision) != int(realization.teaching_plan_revision)
+        or ready.plan_hash != realization.teaching_plan_hash
     ):
         raise HTTPException(
             status_code=409,
@@ -449,18 +508,13 @@ async def execute_learn_realization(
             status_code=409,
             detail={"code": "LEARN_OUTPUT_IDENTITY_MISMATCH", "recovery_action": "reprepare"},
         )
-    return await produce_learn_from_approved_teaching(
+    return await execute_learn_realization_from_shared_document(
         session,
-        teaching_plan=plan,
-        user_id=str(source.user_id),
-        path_lesson_id=realization.path_lesson_id,
-        preparation_generation_id=generation_id,
-        pack_id=None,
-        title=str(plan.arc or "Learn lesson"),
+        realization=realization,
+        ready=ready,
+        owner_user_id=str(source.user_id),
         subject=str(source.subject or "science"),
         worker_id=worker_id,
-        provider=provider,
-        admitted_realization=realization,
     )
 
 

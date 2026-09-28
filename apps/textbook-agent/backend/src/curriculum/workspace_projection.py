@@ -23,6 +23,10 @@ ArtifactState = Literal[
     "ready",
     "failed_recoverable",
     "failed_terminal",
+    # P10B: the pinned SharedLessonDocument Run needs a human reviewer
+    # decision before Learn authoring can proceed. Distinct from a running
+    # poll and from an execution failure.
+    "needs_review",
 ]
 
 _ACTIVE_PREPARATION_STAGES = {
@@ -397,6 +401,24 @@ def _artifact_projection(
     realization_id = realization.get("realization_id")
     href = realization.get("open_href")
     stale = status == "stale"
+    shared_document_fields = {
+        "shared_document_state": realization.get("shared_document_state"),
+        "shared_document_run_id": realization.get("shared_document_run_id"),
+        "shared_document_id": realization.get("shared_document_id"),
+        "shared_document_revision": realization.get("shared_document_revision"),
+        "shared_document_hash": realization.get("shared_document_hash"),
+    }
+    if status == "needs_shared_review":
+        return ArtifactWorkspaceDTO(
+            state="needs_review",
+            realization_id=str(realization_id) if realization_id else None,
+            output_id=str(output_id) if output_id else None,
+            open_href=str(href) if href else None,
+            stale=False,
+            legacy_ambiguous=legacy_ambiguous,
+            error=None,
+            **shared_document_fields,
+        )
     if status in {"failed", "failed_recoverable"}:
         state: ArtifactState = "failed_recoverable"
     elif status == "failed_terminal":
@@ -476,6 +498,7 @@ def _artifact_projection(
         stale=stale,
         legacy_ambiguous=legacy_ambiguous,
         error=error,
+        **shared_document_fields,
     )
 
 

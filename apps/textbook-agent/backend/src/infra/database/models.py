@@ -153,6 +153,12 @@ class GenerationModel(Base):
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     completed_at = Column(DateTime, nullable=True)
     last_heartbeat = Column(DateTime, nullable=True, index=True)
+    # SharedLessonDocument lineage (P10B). Stamped once a Learn output is
+    # realized from a verified shared source; NULL for every other output.
+    shared_document_run_id = Column(String, nullable=True)
+    shared_document_id = Column(String, nullable=True)
+    shared_document_revision = Column(Integer, nullable=True)
+    shared_document_hash = Column(String, nullable=True)
 
     user = relationship("UserModel", back_populates="generations")
     pack = relationship("LearningPackModel", back_populates="generations")
@@ -705,6 +711,12 @@ class EditableLessonModel(Base):
     document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    # SharedLessonDocument lineage (P10B). Stamped when this Builder workspace
+    # was materialized from a verified shared source; NULL otherwise.
+    shared_document_run_id = Column(String, nullable=True)
+    shared_document_id = Column(String, nullable=True)
+    shared_document_revision = Column(Integer, nullable=True)
+    shared_document_hash = Column(String, nullable=True)
 
     user = relationship("UserModel", back_populates="editable_lessons")
 
@@ -739,6 +751,12 @@ class LearnReleaseModel(Base):
     status = Column(String, nullable=False, default="published", server_default="published")
     published_at = Column(DateTime, default=_utcnow, nullable=False)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
+    # SharedLessonDocument lineage (P10B). Populated for releases cut from a
+    # verified shared source; publish validation gains it in a later package.
+    shared_document_run_id = Column(String, nullable=True)
+    shared_document_id = Column(String, nullable=True)
+    shared_document_revision = Column(Integer, nullable=True)
+    shared_document_hash = Column(String, nullable=True)
 
     editable_lesson = relationship("EditableLessonModel")
     owner = relationship("UserModel")
@@ -1079,6 +1097,15 @@ class NativeRealizationModel(Base):
     # Caller-scoped admission key (P02 G07). NULL for legacy rows.
     admission_request_key = Column(String, nullable=True)
     admission_payload_hash = Column(String, nullable=True)
+    # SharedLessonDocument lineage (P10B). NULL until the Learn cutover pins a
+    # verified shared source. ``shared_document_state`` mirrors the closed
+    # ``RealizationState`` classification (pending/needs_review/stale/failed/
+    # ready) so status projection does not need to re-derive it.
+    shared_document_run_id = Column(String, nullable=True)
+    shared_document_id = Column(String, nullable=True)
+    shared_document_revision = Column(Integer, nullable=True)
+    shared_document_hash = Column(String, nullable=True)
+    shared_document_state = Column(String, nullable=True)
 
 
 class CallerEffectKeyModel(Base):

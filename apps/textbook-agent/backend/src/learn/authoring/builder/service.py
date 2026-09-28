@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 
@@ -13,6 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from contracts.lesson_document import LessonDocumentValidationError, assert_valid_lesson_document
 from core.database.models import EditableLessonModel, GenerationModel
+from document.shared_lesson.repository import (
+    SharedLessonDocumentRepositoryError,
+    load_shared_lesson_document,
+)
 from learn.contracts.lesson_document import (
     LearnDocumentValidationError,
     assert_valid_learn_document,
@@ -39,6 +44,24 @@ class ComponentLectioBuilderNotReadyError(ComponentLectioBuilderError):
 
 class ComponentLectioBuilderDocumentError(ComponentLectioBuilderError):
     """Retired: Component Lectio LessonDocument open is no longer supported."""
+
+
+class SharedDocumentLineageError(ValueError):
+    """Base class for SharedLessonDocument lineage verification failures."""
+
+    code = "SHARED_DOCUMENT_LINEAGE_ERROR"
+
+
+class SharedDocumentLineageMismatchError(SharedDocumentLineageError):
+    """Stamped lineage no longer verifies against the stored shared document."""
+
+    code = "SHARED_DOCUMENT_LINEAGE_MISMATCH"
+
+
+class SharedDocumentOrdinaryEditBlockedError(SharedDocumentLineageError):
+    """A Builder save tried to change ordinary content owned by a shared source."""
+
+    code = "SHARED_DOCUMENT_ORDINARY_EDIT_BLOCKED"
 
 
 class BuilderDocumentValidationError(ValueError):
@@ -170,6 +193,74 @@ def _validate_document_generation(generation: GenerationModel, *, user_id: str) 
     return document
 
 
+async def _verify_shared_document_lineage(
+    session: AsyncSession, *, generation: GenerationModel
+) -> None:
+    """Recompute the pinned SharedLessonDocument identity before Builder open.
+
+    Only generations stamped by the P10B Learn cutover carry
+    ``shared_document_id``; every other generation skips this check. A
+    mismatch is a typed error, never a silent reuse of stale content.
+    """
+    document_id = generation.shared_document_id
+    if not document_id:
+        return
+    revision = generation.shared_document_revision
+    if revision is None:
+        raise SharedDocumentLineageMismatchError(
+            "Generation is stamped with a SharedLessonDocument id but no revision"
+        )
+    try:
+        stored = await load_shared_lesson_document(
+            session, document_id=document_id, revision=int(revision)
+        )
+    except SharedLessonDocumentRepositoryError as exc:
+        raise SharedDocumentLineageMismatchError(
+            f"SharedLessonDocument lineage no longer verifies: {exc}"
+        ) from exc
+    if stored.status != "ready":
+        raise SharedDocumentLineageMismatchError(
+            "SharedLessonDocument backing this Learn output is no longer READY"
+        )
+    if stored.document.content_hash != generation.shared_document_hash:
+        raise SharedDocumentLineageMismatchError(
+            "SharedLessonDocument content hash no longer matches the stamped lineage"
+        )
+
+
+def guard_shared_document_builder_edit(
+    model: EditableLessonModel, new_document: Mapping[str, Any]
+) -> None:
+    """Block a Builder save that would change shared-authored ordinary content.
+
+    Conservative cutover behavior (P10B): a lesson stamped with a
+    SharedLessonDocument lineage may still save Learn-only fields (title,
+    class label, interaction/task runtime edits), but any change to an
+    ordinary (non-``interaction``) node is rejected rather than silently
+    forking shared content.
+    """
+    if not getattr(model, "shared_document_id", None):
+        return
+    stored = model.document_json if isinstance(model.document_json, dict) else {}
+    stored_nodes = stored.get("nodes")
+    new_nodes = new_document.get("nodes") if isinstance(new_document, Mapping) else None
+    if not isinstance(stored_nodes, list) or not isinstance(new_nodes, list):
+        return
+
+    def _ordinary(nodes: list[Any]) -> dict[Any, Any]:
+        return {
+            node.get("id"): node
+            for node in nodes
+            if isinstance(node, Mapping) and node.get("kind") != "interaction"
+        }
+
+    if _ordinary(stored_nodes) != _ordinary(new_nodes):
+        raise SharedDocumentOrdinaryEditBlockedError(
+            "Ordinary content on this lesson is authored once from a shared document "
+            "and cannot be edited in Builder."
+        )
+
+
 async def get_or_create_native_learn_builder_lesson(
     session: AsyncSession,
     *,
@@ -178,6 +269,7 @@ async def get_or_create_native_learn_builder_lesson(
 ) -> EditableLessonModel:
     """Open a completed native Learn / LearnDocument generation in Builder."""
     document = _validate_document_generation(generation, user_id=user_id)
+    await _verify_shared_document_lineage(session, generation=generation)
     source_type = "learn_document" if document.get("version") == 2 else "native_learn"
     existing = await _find_document_lesson(
         session,
@@ -199,6 +291,10 @@ async def get_or_create_native_learn_builder_lesson(
         document_json=_builder_document(document, lesson_id=lesson_id),
         created_at=datetime.now(UTC).replace(tzinfo=None),
         updated_at=datetime.now(UTC).replace(tzinfo=None),
+        shared_document_run_id=generation.shared_document_run_id,
+        shared_document_id=generation.shared_document_id,
+        shared_document_revision=generation.shared_document_revision,
+        shared_document_hash=generation.shared_document_hash,
     )
     try:
         async with session.begin_nested():
@@ -235,8 +331,12 @@ __all__ = [
     "ComponentLectioBuilderDocumentError",
     "ComponentLectioBuilderError",
     "ComponentLectioBuilderNotReadyError",
+    "SharedDocumentLineageError",
+    "SharedDocumentLineageMismatchError",
+    "SharedDocumentOrdinaryEditBlockedError",
     "assert_valid_builder_document",
     "get_or_create_component_lectio_builder_lesson",
     "get_or_create_native_learn_builder_lesson",
+    "guard_shared_document_builder_edit",
     "validate_builder_document",
 ]

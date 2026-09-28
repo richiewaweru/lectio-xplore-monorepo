@@ -28,6 +28,10 @@ RealizationStatus = Literal[
     "read_only",
     "failed_recoverable",
     "failed_terminal",
+    # P10B: the pinned SharedLessonDocument Run has an active document-QA leaf
+    # blocked on a human reviewer decision. Not a Learn execution failure —
+    # Learn authoring has not started and must not be retried as one.
+    "needs_shared_review",
 ]
 
 DEFAULT_VARIANT_ID = "everyone"
@@ -97,6 +101,13 @@ class RealizationIdentity(BaseModel):
     pack_id: str | None = None
     preparation_generation_id: str | None = None
     open_href: str | None = None
+    # P10B: SharedLessonDocument lineage pinned by the Learn cutover. NULL for
+    # every realization admitted before the cutover or for Print rows.
+    shared_document_run_id: str | None = None
+    shared_document_id: str | None = None
+    shared_document_revision: int | None = None
+    shared_document_hash: str | None = None
+    shared_document_state: str | None = None
 
 
 class RequestOutputsBody(BaseModel):

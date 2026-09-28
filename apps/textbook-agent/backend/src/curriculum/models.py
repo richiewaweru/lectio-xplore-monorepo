@@ -347,6 +347,11 @@ class RealizationStatusDTO(StrictModel):
     error_summary: str | None = None
     pack_id: str | None = None
     open_href: str | None = None
+    shared_document_run_id: str | None = None
+    shared_document_id: str | None = None
+    shared_document_revision: int | None = None
+    shared_document_hash: str | None = None
+    shared_document_state: str | None = None
 
 
 class WorkspaceErrorDTO(StrictModel):
@@ -396,6 +401,11 @@ class ArtifactWorkspaceDTO(StrictModel):
     stale: bool = False
     legacy_ambiguous: bool = False
     error: WorkspaceErrorDTO | None = None
+    shared_document_state: str | None = None
+    shared_document_run_id: str | None = None
+    shared_document_id: str | None = None
+    shared_document_revision: int | None = None
+    shared_document_hash: str | None = None
 
 
 class LessonWorkspaceStateDTO(StrictModel):

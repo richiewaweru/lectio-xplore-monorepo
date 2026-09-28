@@ -73,6 +73,11 @@ def to_identity(row: NativeRealizationModel) -> RealizationIdentity:
         pack_id=row.pack_id,
         preparation_generation_id=row.preparation_generation_id,
         open_href=open_href_for(path, output_id=row.output_id, status=str(row.status)),
+        shared_document_run_id=row.shared_document_run_id,
+        shared_document_id=row.shared_document_id,
+        shared_document_revision=row.shared_document_revision,
+        shared_document_hash=row.shared_document_hash,
+        shared_document_state=row.shared_document_state,
     )
 
 

@@ -106,6 +106,15 @@ async def _prepared_lesson(db_session: AsyncSession, *, user_id: str) -> PathLes
         )
     )
     lesson.pack_id = prep_id
+    db_session.add(
+        LessonProvenanceModel(
+            pack_id=prep_id,
+            path_version_id=lesson.path_version_id,
+            path_lesson_id=lesson.id,
+            objective_hash=lesson.objective_hash,
+            path_lesson_revision=lesson.revision,
+        )
+    )
     await db_session.flush()
     return lesson
 
@@ -118,11 +127,21 @@ async def _approved_native_preparation(
         teaching_plan_id=f"tp-{user_id}",
         revision=1,
         preparation_hash=f"input-{user_id}",
+        contract_version=2,
+        learner_title="How water moves through a plant",
+        starting_state=["Learner has observed a covered leaf."],
+        target_state=["Learner can trace water movement through a plant."],
         arc="Trace how water moves through a plant.",
         sections=[
             {
                 "slot_id": "orient",
                 "specific_purpose": "Connect an observation to the investigation.",
+                "display_title": "Orient",
+                "entry_state": ["Learner has observed a covered leaf."],
+                "must_establish": ["Water moves through a plant."],
+                "avoid_repeating": [],
+                "bridge_from_previous": None,
+                "exit_state": ["Learner can trace water movement through a plant."],
                 "blocks": [
                     {
                         "id": "orient-b1",

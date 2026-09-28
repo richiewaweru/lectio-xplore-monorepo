@@ -24,7 +24,11 @@ from core.database.models import (
 from core.entities.user import User
 from curriculum.models import PathLessonMutationRequest
 from curriculum.workspace_projection import project_lesson_workspace
-from learn.generation import native_execution
+from document.shared_lesson.document_semantic import DocumentSemanticVerdict
+from document.shared_lesson.post_section_pipeline import run_post_section_pipeline
+from document.shared_lesson.realization_source import ensure_shared_document_run
+from document.shared_lesson.worker import SharedDocumentWorker
+from learn.generation import native_execution, shared_document_execution
 from learn.generation.fencing import (
     LEARN_EXECUTION_KEY,
     empty_learn_execution_meta,
@@ -32,6 +36,90 @@ from learn.generation.fencing import (
 )
 from learn.generation.units_routes import generate_learn_realization
 from learn.generation.worker import LearnRealizationWorker
+
+
+class _SharedDocumentSourcebookProvider:
+    """Deterministic structured provider: no source-bound blocks in this fixture."""
+
+    async def invoke(self, _call):
+        return {"entries": []}
+
+
+async def _shared_document_composer(payload: dict) -> dict:
+    block = payload["section"]["blocks"][0]
+    return {
+        "items": [
+            {
+                "teaching_block_id": block["id"],
+                "kind": "paragraph",
+                "semantic_role": "explanation",
+            }
+        ]
+    }
+
+
+async def _shared_document_writer(payload: dict) -> dict:
+    item = payload["composition_plan"][0]
+    return {
+        "nodes": [
+            {
+                "id": item["id"],
+                "kind": "paragraph",
+                "teaching_block_id": item["teaching_block_id"],
+                "display": {"text": "Water moves from the roots to the leaves."},
+            }
+        ]
+    }
+
+
+async def _drive_shared_document_ready(
+    db_session: AsyncSession,
+    db_session_factory,
+    *,
+    owner_user_id: str,
+    path_lesson_id: str,
+    preparation_generation_id: str,
+) -> str:
+    """Admit and complete the SharedLessonDocument Run backing a Learn realization.
+
+    Mirrors ``tests/document/test_shared_document_full_run.py`` without a
+    cross-directory bare import (this file may be collected on its own).
+    """
+    run = await ensure_shared_document_run(
+        db_session, owner_user_id=owner_user_id, path_lesson_id=path_lesson_id
+    )
+    run_id = run.id
+    await db_session.commit()
+
+    worker = SharedDocumentWorker(
+        db_session_factory,
+        worker_id="p04-shared-document-worker",
+        provider=_SharedDocumentSourcebookProvider(),
+        composer_provider=_shared_document_composer,
+        writer_provider=_shared_document_writer,
+    )
+    for _ in range(6):
+        async with db_session_factory() as session:
+            progressed = await worker.run_one(session)
+            await session.commit()
+        if not progressed:
+            break
+
+    async def _qa_pass(_request):
+        return DocumentSemanticVerdict(status="pass")
+
+    outcome = await run_post_section_pipeline(
+        db_session_factory,
+        run_id=run_id,
+        owner_user_id=owner_user_id,
+        path_lesson_id=path_lesson_id,
+        preparation_generation_id=preparation_generation_id,
+        qa_semantic_validator=_qa_pass,
+        worker_id="p04-shared-document-post-section",
+    )
+    assert outcome.state == "ready", outcome.error
+    await db_session.commit()
+    return run_id
 
 
 @pytest.mark.asyncio
@@ -224,6 +312,14 @@ async def test_p04_worker_completes_only_learn_output_and_links_editable_documen
     from learn.generation import reliability_persist
 
     monkeypatch.setattr(reliability_persist, "async_session_factory", db_session_factory)
+
+    await _drive_shared_document_ready(
+        db_session,
+        db_session_factory,
+        owner_user_id="p04-worker-ready",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=str(lesson.pack_id),
+    )
 
     worker = LearnRealizationWorker(worker_id="p04-test-worker", provider=P08LearnMockProvider())
     # Match the lifespan worker: each claim runs in a disposable session. A
