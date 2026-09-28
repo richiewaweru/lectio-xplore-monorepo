@@ -28,6 +28,11 @@ from curriculum.teaching_plan.consumers import (
     TeachingRevisionUnavailableError,
     accept_approved_teaching_revision,
 )
+from document.shared_lesson.realization_source import (
+    RealizationAttemptsExhausted,
+    RealizationSourceNotFound,
+    ensure_shared_document_run,
+)
 from print.generation.native_production import teaching_plan_content_hash
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.repository import (
@@ -263,6 +268,40 @@ async def realize_print_from_preparation(
                 "recovery_action": "reprepare",
             },
         )
+    try:
+        shared_run = await ensure_shared_document_run(
+            session, owner_user_id=user_id, path_lesson_id=lesson_id
+        )
+    except RealizationSourceNotFound as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_SOURCE_UNAVAILABLE",
+                "message": str(exc),
+                "recovery_action": "reprepare",
+            },
+        ) from exc
+    except RealizationAttemptsExhausted as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_ATTEMPTS_EXHAUSTED",
+                "message": str(exc),
+                "recovery_action": "reprepare",
+            },
+        ) from exc
+    if row.shared_document_run_id and row.shared_document_run_id != shared_run.id:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_RUN_CONFLICT",
+                "message": "This Print realization is already pinned to a different "
+                "SharedLessonDocument run.",
+            },
+        )
+    row.shared_document_run_id = shared_run.id
+    await session.flush()
+
     if output_id:
         existing_output = await session.get(GenerationModel, output_id)
         if existing_output is None:

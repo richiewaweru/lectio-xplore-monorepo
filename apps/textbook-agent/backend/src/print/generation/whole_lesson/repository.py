@@ -14,6 +14,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, NativeRealizationModel
+from document.shared_lesson.realization_source import (
+    RealizationSourceResult,
+    load_realization_source,
+)
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.states import (
     ACTIVE_STATUSES,
@@ -804,6 +808,100 @@ class PageDocumentRepository:
             await self.session.rollback()
             return None
         return lease_box[0] if lease_box else None
+
+    async def enter_assembling_for_shared_document(
+        self,
+        *,
+        worker_id: str,
+        lease_token: int,
+    ) -> dict[str, Any]:
+        """P11: skip ordinary form planning/writing for a verified shared source.
+
+        Moves a freshly claimed (``planning_forms``) Print generation directly
+        to ``assembling`` without ever touching form-plan/writer checkpoints.
+        Only a SharedLessonDocument-sourced realization may call this; the
+        caller has already verified a READY ``RealizationSourceResult``.
+        """
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            current = str(generation.status or "")
+            assert_legal_transition(current, "assembling")
+            generation.status = "assembling"
+            execution = dict(state.get("execution") or empty_execution_meta())
+            execution["heartbeat_at"] = _now()
+            execution["work_kind"] = WORK_KIND_POST_APPROVAL
+            state["execution"] = execution
+            events = list(state.get("events") or [])
+            events.append(
+                {
+                    **make_event(
+                        "shared_document_assembling",
+                        generation_id=self.generation_id,
+                        status="assembling",
+                        worker_id=worker_id,
+                        lease_token=lease_token,
+                    ),
+                    "at": _now(),
+                }
+            )
+            state["events"] = events[-500:]
+
+        return await self.mutate_state(
+            expected_statuses={"planning_forms"},
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
+
+    async def fail_shared_document_mapping(
+        self,
+        *,
+        message: str,
+        worker_id: str,
+        lease_token: int,
+    ) -> dict[str, Any]:
+        """P11: a verified SharedLessonDocument cannot be represented in Print.
+
+        This is a data-truthfulness failure, not a provider/transport error,
+        so it always lands on ``failed_recoverable`` (never a silent partial
+        document) and never runs ``classify_failure``'s retry heuristics.
+        Retrying only makes sense after the source SharedLessonDocument is
+        revised; the realization row records ``shared_document_state`` so
+        that is visible without re-deriving it from this event.
+        """
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            current = str(generation.status or "")
+            assert_legal_transition(current, "failed_recoverable")
+            generation.status = "failed_recoverable"
+            execution = dict(state.get("execution") or empty_execution_meta())
+            execution["last_error"] = {
+                "code": "SHARED_DOCUMENT_UNMAPPABLE",
+                "message": message[:2000],
+            }
+            execution["heartbeat_at"] = _now()
+            state["execution"] = execution
+            events = list(state.get("events") or [])
+            events.append(
+                {
+                    **make_event(
+                        "shared_document_unmappable",
+                        generation_id=self.generation_id,
+                        status="failed_recoverable",
+                        worker_id=worker_id,
+                        lease_token=lease_token,
+                    ),
+                    "at": _now(),
+                }
+            )
+            state["events"] = events[-500:]
+
+        return await self.mutate_state(
+            expected_statuses={"assembling"},
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
 
     async def claim_pre_worker_retry(
         self,
@@ -2272,6 +2370,52 @@ class PageDocumentRepository:
         )
 
 
+async def _apply_non_ready_print_shared_document_state(
+    session: AsyncSession,
+    *,
+    realization: NativeRealizationModel,
+    result: RealizationSourceResult,
+) -> None:
+    """P11: persist a non-``ready`` shared-source classification onto a Print row.
+
+    Mirrors the Learn P10B worker gate
+    (``learn.generation.shared_document_execution.apply_non_ready_shared_document_state``).
+    Never claims the output lease. ``pending`` never consumes a bounded
+    attempt — it leaves the row queued so the next poll re-observes it.
+    """
+    if result.state == "pending":
+        pending = result.pending
+        realization.shared_document_run_id = pending.run_id if pending else None
+        realization.shared_document_state = "pending"
+    elif result.state == "needs_review":
+        needs_review = result.needs_review
+        assert needs_review is not None
+        realization.status = "needs_shared_review"
+        realization.shared_document_run_id = needs_review.run_id
+        realization.shared_document_state = "needs_review"
+        realization.error_summary = None
+    elif result.state == "stale":
+        stale = result.stale
+        assert stale is not None
+        realization.status = "failed_recoverable"
+        realization.shared_document_run_id = stale.run_id
+        realization.shared_document_state = "stale"
+        realization.error_summary = f"SHARED_DOCUMENT_STALE: {stale.reason}"[:500]
+    elif result.state == "failed":
+        failed = result.failed
+        assert failed is not None
+        realization.status = "failed_recoverable"
+        if failed.run_id:
+            realization.shared_document_run_id = failed.run_id
+        realization.shared_document_state = "failed"
+        code = failed.error_code or "SHARED_DOCUMENT_FAILED"
+        summary = failed.error_summary or "SharedLessonDocument run failed."
+        realization.error_summary = f"{code}: {summary}"[:500]
+    else:
+        raise AssertionError(f"unexpected realization-source state {result.state!r}")
+    await session.commit()
+
+
 async def claim_next_native_job(
     session: AsyncSession,
     *,
@@ -2329,6 +2473,45 @@ async def claim_next_native_job(
             )
         )
         if legacy_prep_link is not None:
+            continue
+        generation = await session.get(GenerationModel, gid)
+        if generation is None:
+            continue
+        cutover_realization = await session.scalar(
+            select(NativeRealizationModel).where(
+                NativeRealizationModel.path == "print",
+                NativeRealizationModel.output_id == gid,
+            )
+        )
+        if cutover_realization is not None:
+            # P11: every detached (non-legacy) Print realization is admitted
+            # through ``ensure_shared_document_run``. Its output must never
+            # enter ordinary form planning/writing, at any status, so this
+            # branch owns every claim/reclaim decision for it instead of
+            # falling through to the ordinary teaching-plan/lesson-packet path.
+            result = await load_realization_source(
+                session,
+                owner_user_id=str(generation.user_id),
+                path_lesson_id=str(cutover_realization.path_lesson_id),
+            )
+            if result.state != "ready":
+                if str(generation.status or "") == "queued":
+                    # Never consume a bounded attempt on a still-pending (or
+                    # otherwise non-ready) shared source.
+                    await _apply_non_ready_print_shared_document_state(
+                        session, realization=cutover_realization, result=result
+                    )
+                else:
+                    # A source that regressed to non-ready mid-flight (a
+                    # concurrent reprepare) is left untouched; it is retried
+                    # on the next poll once its lease goes stale rather than
+                    # forcing a false document through the ordinary path.
+                    await session.rollback()
+                continue
+            repo = PageDocumentRepository(session, gid)
+            lease = await repo.claim_execution(worker_id=worker_id, lease_seconds=lease_seconds)
+            if lease is not None:
+                return lease
             continue
         repo = PageDocumentRepository(session, gid)
         state = await repo.load_page_generation_state()

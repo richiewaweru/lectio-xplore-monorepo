@@ -131,9 +131,15 @@ class NativeExecutionWorker:
                 )
 
     async def _run_job(self, lease: ExecutionLease) -> None:
+        from core.database.models import NativeRealizationModel
+        from document.shared_lesson.realization_source import load_realization_source
+        from print.generation.shared_document_execution import (
+            execute_print_realization_from_shared_document,
+        )
         from print.generation.whole_lesson.executor import execute_after_teaching_approval
         from print.generation.whole_lesson.native_retry import run_pre_worker_retry
         from print.generation.whole_lesson.repository import empty_execution_meta
+        from sqlalchemy import select
 
         heartbeat = asyncio.create_task(
             self._heartbeat_loop(lease),
@@ -145,6 +151,14 @@ class NativeExecutionWorker:
                 state = await repo.load_page_generation_state()
                 work_kind = (state.get("execution") or empty_execution_meta()).get(
                     "work_kind"
+                )
+                cutover_realization = await session.scalar(
+                    select(NativeRealizationModel).where(
+                        NativeRealizationModel.path == "print",
+                        NativeRealizationModel.output_id == lease.generation_id,
+                        NativeRealizationModel.preparation_generation_id
+                        != lease.generation_id,
+                    )
                 )
 
             if work_kind in PRE_WORKER_WORK_KINDS:
@@ -158,6 +172,48 @@ class NativeExecutionWorker:
                         "pre-worker retry failed generation_id=%s worker_id=%s",
                         lease.generation_id,
                         self.worker_id,
+                    )
+                return
+
+            if cutover_realization is not None:
+                # P11: every detached Print realization is admitted through
+                # ensure_shared_document_run. It must never reach ordinary
+                # form planning/writing — re-verify readiness under the lease
+                # and lower the verified shared document with the pure
+                # adapter instead of calling execute_after_teaching_approval.
+                async with async_session_factory() as session:
+                    generation = await session.get(GenerationModel, lease.generation_id)
+                    realization = await session.get(
+                        NativeRealizationModel, cutover_realization.id
+                    )
+                    assert generation is not None and realization is not None
+                    result = await load_realization_source(
+                        session,
+                        owner_user_id=str(generation.user_id),
+                        path_lesson_id=str(realization.path_lesson_id),
+                    )
+                    if result.state != "ready":
+                        # A concurrent mutation (reprepare, plan edit) made
+                        # this shared source non-ready after the lease was
+                        # claimed. Release the lease without persisting a
+                        # false document rather than force through stale
+                        # content.
+                        logger.warning(
+                            "shared document no longer ready after claim "
+                            "generation_id=%s state=%s",
+                            lease.generation_id,
+                            result.state,
+                        )
+                        await repo.release_execution(
+                            worker_id=lease.worker_id, lease_token=lease.lease_token
+                        )
+                        return
+                    assert result.ready is not None
+                    await execute_print_realization_from_shared_document(
+                        session,
+                        realization=realization,
+                        ready=result.ready,
+                        lease=lease,
                     )
                 return
 

@@ -358,7 +358,7 @@ async def test_p03_r02b_print_retry_without_override_keeps_preparation_output(
 
 @pytest.mark.asyncio
 async def test_p03_detached_print_output_is_idempotent_and_failure_retry_isolated(
-    db_session: AsyncSession,
+    db_session: AsyncSession, db_session_factory
 ) -> None:
     lesson, plan, source_chunked, _source_document = await _approved_native_preparation(
         db_session, user_id="p03-detached-print"
@@ -460,6 +460,20 @@ async def test_p03_detached_print_output_is_idempotent_and_failure_retry_isolate
         learn_row.teaching_plan_hash,
     )
 
+    # P11: a detached Print realization is admitted through
+    # ensure_shared_document_run and never claims a lease until that source
+    # is READY.
+    from tests.application.test_p04_learn_worker import _drive_shared_document_ready
+
+    await db_session.commit()
+    await _drive_shared_document_ready(
+        db_session,
+        db_session_factory,
+        owner_user_id="p03-detached-print",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=preparation_id,
+    )
+
     lease = await claim_next_native_job(
         db_session, worker_id="detached-print-worker"
     )
@@ -533,7 +547,7 @@ async def test_p03_detached_print_output_is_idempotent_and_failure_retry_isolate
 
 @pytest.mark.asyncio
 async def test_p07_detached_print_export_failure_preserves_approval_and_ready_learn(
-    db_session: AsyncSession,
+    db_session: AsyncSession, db_session_factory
 ) -> None:
     lesson, plan, source_state, _source_document = await _approved_native_preparation(
         db_session, user_id="p07-print-export-failure"
@@ -570,6 +584,17 @@ async def test_p07_detached_print_export_failure_preserves_approval_and_ready_le
         learn_row.output_id,
         learn_row.realization_revision,
         learn_row.teaching_plan_hash,
+    )
+
+    from tests.application.test_p04_learn_worker import _drive_shared_document_ready
+
+    await db_session.commit()
+    await _drive_shared_document_ready(
+        db_session,
+        db_session_factory,
+        owner_user_id="p07-print-export-failure",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=preparation_id,
     )
 
     lease = await claim_next_native_job(db_session, worker_id="p07-print-renderer")

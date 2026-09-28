@@ -51,6 +51,9 @@ LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
         {
             "writing_sections",
             "writing_blocks",  # compatibility
+            # P11: a verified SharedLessonDocument skips ordinary form
+            # planning/writing entirely and lowers straight into assembling.
+            "assembling",
             "failed_recoverable",
             "failed_terminal",
             "cancelled",
