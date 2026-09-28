@@ -891,3 +891,29 @@ async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
     finally:
         reset_failure_injection()
     assert form_calls["n"] == 0
+
+@pytest.mark.asyncio
+async def test_repeated_failure_persist_keeps_first_failure() -> None:
+    gid, _card_id = await _seed_generation(
+        status="pending",
+        last_error=None,
+        skip_items=False,
+        ready_card=False,
+    )
+    await persist_native_failure_for_generation(
+        gid,
+        exc=TimeoutError("teaching provider timed out"),
+        stage="planning_teaching",
+        event="pre_worker_failure",
+    )
+    # An outer handler persisting the same failure again must not raise
+    # IllegalTransitionError (failed_recoverable -> failed_*).
+    await persist_native_failure_for_generation(
+        gid,
+        exc=ValueError("outer handler saw the same failure"),
+        stage="planning_teaching",
+    )
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "failed_recoverable"

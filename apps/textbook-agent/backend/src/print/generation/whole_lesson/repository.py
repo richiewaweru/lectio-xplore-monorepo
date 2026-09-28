@@ -702,6 +702,10 @@ class PageDocumentRepository:
             if current not in LEGAL_TRANSITIONS:
                 current = "pending"
                 generation.status = current
+            if current in {"failed_recoverable", "failed_terminal"}:
+                # An inner layer already settled this failure; keep the first
+                # durable failure rather than raising on a repeated persist.
+                return
 
             assert_legal_transition(current, target)
             generation.status = target
