@@ -386,8 +386,9 @@ def test_pending_source_and_invalid_shape_or_facts_fail_before_media_order() -> 
                 ),
             ),
         )
-    with pytest.raises(SharedFigureMediaError, match="unsupported_required_fact"):
-        build_figure_work_order(
+    # unsupported_required_fact is deferred to document QA at media admission:
+    # analytical must_establish statements never occur verbatim in sources.
+    build_figure_work_order(
             source,
             section,
             figure_node_id="figure-a",
@@ -449,8 +450,9 @@ def test_media_admission_keeps_hard_contract_but_leaves_bridge_to_boundary_qa() 
             approved_source_facts={"fact-energy": "Energy moves through the leaf."},
         )
 
-    with pytest.raises(SharedFigureMediaError, match="unsupported_required_fact"):
-        build_figure_work_order(
+    # unsupported_required_fact is deferred to document QA at media admission:
+    # analytical must_establish statements never occur verbatim in sources.
+    build_figure_work_order(
             source,
             section,
             figure_node_id="figure-b",

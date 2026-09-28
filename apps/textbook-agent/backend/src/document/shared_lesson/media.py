@@ -49,6 +49,11 @@ _MEDIA_NARRATIVE_SECTION_ISSUES = frozenset(
         "avoid_repeating_violated",
         "bridge_unrealized",
         "exit_state_unrealized",
+        # Token-overlaps each must_establish statement against literal source
+        # facts; analytical/pedagogical conclusions about a source never occur
+        # verbatim in it, so it blocked a faithful literature lesson. Source
+        # fidelity stays with the writer's source rules and document QA.
+        "unsupported_required_fact",
     }
 )
 
