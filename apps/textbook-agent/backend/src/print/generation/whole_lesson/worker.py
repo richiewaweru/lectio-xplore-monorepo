@@ -209,10 +209,30 @@ class NativeExecutionWorker:
                         )
                         return
                     assert result.ready is not None
+                    ready = result.ready
+                    if (
+                        ready.plan_id != realization.teaching_plan_id
+                        or int(ready.plan_revision) != int(realization.teaching_plan_revision)
+                        or ready.plan_hash != realization.teaching_plan_hash
+                    ):
+                        # The realization was pinned against an older approved
+                        # Teaching Plan revision than the one this shared
+                        # document now verifies against. Never lower content
+                        # under a stale pinned identity — release the lease
+                        # untouched; reprepare/re-admission resolves this.
+                        logger.warning(
+                            "shared document plan identity no longer matches "
+                            "pinned realization generation_id=%s",
+                            lease.generation_id,
+                        )
+                        await repo.release_execution(
+                            worker_id=lease.worker_id, lease_token=lease.lease_token
+                        )
+                        return
                     await execute_print_realization_from_shared_document(
                         session,
                         realization=realization,
-                        ready=result.ready,
+                        ready=ready,
                         lease=lease,
                     )
                 return
