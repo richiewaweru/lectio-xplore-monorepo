@@ -10,7 +10,6 @@ from infra.authoring.model_policy.models import (
     SECTION_COMPOSER,
     SHARED_SECTION_WRITER,
     TEACHING_PLAN_SEMANTIC_REVIEWER,
-    V2_FORM_PLANNER,
     V2_LESSON_APPROACH_PLANNER,
     V2_PATH_CHAT_EDITOR,
     V2_PATH_PLANNER,
@@ -125,13 +124,12 @@ def test_get_v3_model_settings_adds_deepseek_reasoning_for_standard_nodes(
 
 
 def test_constrained_planner_nodes_disable_provider_reasoning() -> None:
-    """The structural and form planners must not run with DeepSeek thinking on.
+    """The structural planner must not run with DeepSeek thinking on.
 
     Thinking mode returns reasoning-only assistant messages with empty content.
     Replaying one is what produced the observed HTTP 400 "Invalid assistant
     message: content or tool_calls must be set" at planning_forms.
     """
-    assert V3_NODE_REASONING[V2_FORM_PLANNER] is False
     assert V3_NODE_REASONING[V2_PATH_STRUCTURAL_PLANNER] is False
 
 
@@ -184,11 +182,11 @@ def test_constrained_planner_nodes_send_no_thinking_payload(
     monkeypatch.setenv("V3_FAST_MODEL_NAME", "deepseek-flash")
     monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-flash")
 
-    for node in (V2_FORM_PLANNER, V2_PATH_STRUCTURAL_PLANNER):
+    for node in (V2_PATH_STRUCTURAL_PLANNER,):
         settings = get_v3_model_settings(node)
         assert settings == {
             "extra_body": {"thinking": {"type": "disabled"}},
-            "max_tokens": 8000 if node == V2_FORM_PLANNER else 16000,
+            "max_tokens": 16000,
         }, node
         assert "openai_reasoning_effort" not in settings
         assert settings["extra_body"] == {"thinking": {"type": "disabled"}}
@@ -298,7 +296,6 @@ def test_thinking_unchanged_capabilities_stay_disabled() -> None:
         V2_PATH_PLANNER,
         V2_PATH_STRUCTURAL_PLANNER,
         V2_PATH_CHAT_EDITOR,
-        V2_FORM_PLANNER,
     ):
         assert V3_NODE_REASONING[node] is False, node
 

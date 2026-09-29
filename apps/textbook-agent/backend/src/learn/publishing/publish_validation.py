@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from learn.contracts.lesson_document import validate_learn_document
-from learn.generation.interaction_writer import validate_interaction_contract
+from learn.interactions.contract_validation import validate_interaction_contract
 
 INTERACTION_COMPONENT_PREFIX = "learn-interaction:"
 

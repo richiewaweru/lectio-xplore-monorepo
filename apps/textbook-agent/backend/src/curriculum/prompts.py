@@ -25,7 +25,6 @@ _PROMPT_NAMES = {
     "path-structural-planner-page-v1.txt",
     LESSON_APPROACH_PROMPT_V1,
     LESSON_APPROACH_PROMPT_V2,
-    "native-capability-selector-v1.txt",
     "page-writer-common-v1.txt",
     "prose-writer-v1.txt",
     "list-writer-v1.txt",
@@ -40,7 +39,6 @@ _PROMPT_NAMES = {
 _PACKAGED_PROMPT_NAMES = {
     "path-planner.md",
     "merge-critic.md",
-    "document-writer-v1.txt",
 }
 
 
@@ -105,18 +103,8 @@ def lesson_approach_planner_v1_prompt() -> str:
 
 
 
-def capability_selector_prompt() -> str:
-    return prompt_text("native-capability-selector-v1.txt")
-
-
 def page_writer_common_prompt() -> str:
     return prompt_text("page-writer-common-v1.txt")
-
-
-def document_writer_prompt() -> str:
-    from core.prompts import effective_prompt_text
-
-    return effective_prompt_text("document-writer")
 
 
 def lesson_sourcebook_writer_prompt() -> str:

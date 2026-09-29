@@ -38,7 +38,7 @@ from learn.authoring.builder.service import (
     guard_shared_document_builder_edit,
     validate_builder_document,
 )
-from learn.generation.interaction_writer import validate_interaction_contract
+from learn.interactions.contract_validation import validate_interaction_contract
 from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
 
 router = APIRouter(prefix="/api/v1/builder", tags=["builder"])

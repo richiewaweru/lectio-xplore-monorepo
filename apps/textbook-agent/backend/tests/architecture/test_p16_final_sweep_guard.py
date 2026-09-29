@@ -42,6 +42,24 @@ RETIRED_MODULES = (
     "infra.telemetry.v3_trace.payloads",
     "v3_blueprint.shadow",
     "v3_blueprint.validators",
+    # Item 2: the old Learn LLM-authoring engine (Learn is realized deterministically
+    # from the verified SharedLessonDocument; validate_interaction_contract now lives in
+    # learn.interactions.contract_validation)
+    "learn.generation.interaction_writer",
+    "learn.generation.authoring_adapter",
+    "learn.generation.work_orders",
+    "learn.generation.activity_authoring",
+    "learn.generation.native_selection",
+    "learn.generation.source_resolver",
+    "learn.generation.preparation_context",
+    "learn.generation.reliability_persist",
+    "learn.interactions.action_map",
+    "learn.resources.selection",
+    "document.writer",
+    "document.writer_prompts",
+    "document.heuristics",
+    "infra.authoring.capability_selector",
+    "v3_execution.llm_helpers",
     # compatibility shims (callers import the canonical module)
     "core.errors",
     "core.logging",
@@ -69,3 +87,11 @@ def test_retired_document_composer_prompt_is_not_in_manifest() -> None:
 
     assert "document-composer" not in {entry.id for entry in loader.load_manifest()}
     assert "document-composer" not in loader.CLOSEOUT_PROMPT_IDS
+
+
+def test_retired_learn_and_document_writer_prompts_are_not_in_manifest() -> None:
+    from core.prompts import loader
+
+    retired = {"interaction-writer", "document-writer"}
+    assert retired.isdisjoint({entry.id for entry in loader.load_manifest()})
+    assert retired.isdisjoint(loader.CLOSEOUT_PROMPT_IDS)
