@@ -1058,6 +1058,7 @@ class NativeRealizationModel(Base):
         Index("ix_native_realizations_output_id", "output_id"),
         Index("ix_native_realizations_status", "status"),
         Index("ix_native_realizations_teaching_plan_id", "teaching_plan_id"),
+        Index("ix_native_realizations_generation_run_id", "generation_run_id"),
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -1094,6 +1095,10 @@ class NativeRealizationModel(Base):
     shared_document_revision = Column(Integer, nullable=True)
     shared_document_hash = Column(String, nullable=True)
     shared_document_state = Column(String, nullable=True)
+    # Option D (4A): the learn/print generation Run executing this realization.
+    generation_run_id = Column(
+        String, ForeignKey("generation_runs.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class CallerEffectKeyModel(Base):

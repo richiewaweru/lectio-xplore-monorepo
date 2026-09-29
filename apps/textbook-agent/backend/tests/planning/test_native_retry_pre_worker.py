@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from tests.planning._lease_helper import claim_test_execution
 import uuid
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -615,12 +616,12 @@ async def test_r05_post_approval_queues() -> None:
         assert generation is not None
         assert generation.status == "queued"
         repo = PageDocumentRepository(session, gid)
-        lease = await repo.claim_execution(worker_id="r05-worker")
+        lease = await claim_test_execution(repo, worker_id="r05-worker")
         assert lease is not None
         assert lease.stage == "planning_forms"
         assert lease.lease_token == 1
         # The accepted retry is claimable exactly once while its lease is fresh.
-        assert await repo.claim_execution(worker_id="r05-other-worker") is None
+        assert await claim_test_execution(repo, worker_id="r05-other-worker") is None
 
 
 @pytest.mark.asyncio

@@ -79,6 +79,10 @@ class RealizationSourceNotFound(RealizationSourceError):
     """The path lesson, its preparation, or its owner cannot be resolved."""
 
 
+class RealizationOutputError(RealizationSourceError):
+    """A realization output row is missing, foreign, or does not match its pinned identity."""
+
+
 class RealizationAttemptsExhausted(RealizationSourceError):
     """Every bounded SharedDocument attempt for this plan identity is terminal."""
 
@@ -519,6 +523,7 @@ __all__ = [
     "PendingRealizationSource",
     "ReadyRealizationSource",
     "RealizationAttemptsExhausted",
+    "RealizationOutputError",
     "RealizationSourceError",
     "RealizationSourceNotFound",
     "RealizationSourceResult",

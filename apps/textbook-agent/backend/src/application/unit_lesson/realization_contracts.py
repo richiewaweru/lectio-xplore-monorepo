@@ -108,6 +108,10 @@ class RealizationIdentity(BaseModel):
     shared_document_revision: int | None = None
     shared_document_hash: str | None = None
     shared_document_state: str | None = None
+    # Option D (4A): the learn/print generation Run and the closed recovery
+    # vocabulary (retry / review / regenerate) projected for the UI.
+    run_id: str | None = None
+    recovery_action: str | None = None
 
 
 class RequestOutputsBody(BaseModel):

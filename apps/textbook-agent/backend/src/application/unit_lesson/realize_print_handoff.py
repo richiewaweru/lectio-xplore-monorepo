@@ -28,6 +28,11 @@ from curriculum.teaching_plan.consumers import (
     TeachingRevisionUnavailableError,
     accept_approved_teaching_revision,
 )
+from application.unit_lesson.realization_projection import is_legacy_realization
+from application.unit_lesson.realization_retry import (
+    retry_allowed,
+    retry_failed_run_in_place,
+)
 from document.shared_lesson.realization_source import (
     RealizationAttemptsExhausted,
     RealizationSourceNotFound,
@@ -306,6 +311,21 @@ async def realize_print_from_preparation(
     }
 
 
+def _print_retry_result(row: NativeRealizationModel, *, preparation_id: str) -> dict[str, Any]:
+    output_id = str(row.output_id or "")
+    return {
+        "status": str(row.status or "queued"),
+        "path": "print",
+        "preparation_generation_id": preparation_id,
+        "output_id": output_id,
+        "realization_id": row.id,
+        "realization_revision": int(row.realization_revision),
+        "teaching_plan_revision": int(row.teaching_plan_revision),
+        "teaching_plan_hash": row.teaching_plan_hash,
+        "open_href": f"/studio/print/{output_id}",
+    }
+
+
 def _print_result(
     row: NativeRealizationModel, *, output_id: str, plan_hash: str
 ) -> dict[str, Any]:
@@ -507,7 +527,9 @@ async def retry_print_realization(
         or str(row.preparation_generation_id or "") != preparation_id
     ):
         raise HTTPException(status_code=404, detail="Print realization not found")
-    if str(row.status) not in {"failed_recoverable", "failed_terminal", "failed"}:
+    if str(row.status) in {"queued", "running"} and not is_legacy_realization(row):
+        return _print_retry_result(row, preparation_id=preparation_id)
+    if not retry_allowed(row):
         raise HTTPException(
             status_code=409,
             detail={
@@ -515,6 +537,12 @@ async def retry_print_realization(
                 "message": "Only a failed Print realization can be retried.",
             },
         )
+    # A failed_recoverable Run is retried in place (bounded by the runtime
+    # attempt budget). Anything else (terminal/cancelled Run, no Run, document
+    # failure, legacy row) falls through to a new revision + new Run.
+    if await retry_failed_run_in_place(session, row=row, owner_user_id=user_id):
+        return _print_retry_result(row, preparation_id=preparation_id)
+    prior_status = str(row.status)
     state = await PageDocumentRepository(session, preparation_id).load_page_generation_state()
     try:
         plan = accept_approved_teaching_revision(
@@ -559,9 +587,7 @@ async def retry_print_realization(
                 NativeRealizationModel.id == realization_id,
                 NativeRealizationModel.path == "print",
                 NativeRealizationModel.preparation_generation_id == preparation_id,
-                NativeRealizationModel.status.in_(
-                    {"failed_recoverable", "failed_terminal", "failed"}
-                ),
+                NativeRealizationModel.status == prior_status,
                 NativeRealizationModel.teaching_plan_id == row.teaching_plan_id,
                 NativeRealizationModel.teaching_plan_revision == row.teaching_plan_revision,
                 NativeRealizationModel.teaching_plan_hash == row.teaching_plan_hash,
@@ -571,6 +597,7 @@ async def retry_print_realization(
                 output_id=new_output_id,
                 status="queued",
                 error_summary=None,
+                generation_run_id=None,
             )
         )
     except OperationalError as exc:

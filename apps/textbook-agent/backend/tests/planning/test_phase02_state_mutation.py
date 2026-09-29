@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from tests.planning._lease_helper import claim_test_execution
 import asyncio
 import uuid
 
@@ -35,7 +36,7 @@ async def _seed(db_session_factory) -> tuple[str, str, int]:
         )
         await session.commit()
         repo = PageDocumentRepository(session, gid)
-        lease = await repo.claim_execution(worker_id="mut-worker")
+        lease = await claim_test_execution(repo, worker_id="mut-worker")
         assert lease is not None
         await repo.transition(
             expected={"planning_forms"},

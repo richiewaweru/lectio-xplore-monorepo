@@ -14,14 +14,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, NativeRealizationModel
-from document.shared_lesson.realization_source import (
-    RealizationSourceResult,
-    load_realization_source,
-)
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.states import (
     ACTIVE_STATUSES,
-    CLAIMABLE_STATUSES,
     DEFAULT_LEASE_SECONDS,
     LEGAL_TRANSITIONS,
     PRE_WORKER_RETRY_STATUSES,
@@ -103,46 +98,6 @@ def _project_native_report_status(generation: GenerationModel) -> None:
     elif native_stage in _NATIVE_RUNNING_STAGES:
         report["process_status"] = "running"
     generation.report_json = report
-
-
-async def _sync_print_realization_status(
-    session: Any, generation: GenerationModel, state: Mapping[str, Any]
-) -> None:
-    """Mirror output-generation lifecycle onto its detached Print identity."""
-    generation_id = str(generation.id or "")
-    if not generation_id:
-        return
-    rows = await session.scalars(
-        select(NativeRealizationModel).where(
-            NativeRealizationModel.path == "print",
-            NativeRealizationModel.output_id == generation_id,
-            NativeRealizationModel.preparation_generation_id != generation_id,
-            NativeRealizationModel.status.notin_({"read_only", "stale"}),
-        )
-    )
-    status = str(generation.status or "").strip()
-    if status in {"ready", "completed", "published"}:
-        realization_status = "ready"
-    elif status == "queued":
-        realization_status = "queued"
-    elif status in {"failed_recoverable", "failed"}:
-        realization_status = "failed_recoverable"
-    elif status == "failed_terminal":
-        realization_status = "failed_terminal"
-    elif status in {"stale", "read_only"}:
-        realization_status = status
-    else:
-        realization_status = "running"
-    execution = state.get("execution") if isinstance(state, Mapping) else None
-    last_error = execution.get("last_error") if isinstance(execution, Mapping) else None
-    error_summary = (
-        str(last_error.get("message") or "")[:2000]
-        if isinstance(last_error, Mapping)
-        else None
-    )
-    for row in rows:
-        row.status = realization_status
-        row.error_summary = error_summary if realization_status.startswith("failed") else None
 
 
 def empty_execution_meta() -> dict[str, Any]:
@@ -411,7 +366,6 @@ class PageDocumentRepository:
             mutation(generation, state)
             stage = str(generation.status or "") or None
             saved = self._write_page_state(generation, state, stage=stage)
-            await _sync_print_realization_status(self.session, generation, saved)
             if commit:
                 await self.session.commit()
             else:
@@ -749,165 +703,48 @@ class PageDocumentRepository:
             mutation=_mut,
         )
 
-    async def claim_execution(
+    async def write_shared_document_output(
         self,
+        document: dict[str, Any],
         *,
-        worker_id: str,
-        lease_seconds: int = DEFAULT_LEASE_SECONDS,
-    ) -> ExecutionLease | None:
-        lease_box: list[ExecutionLease] = []
-
-        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
-            status = str(generation.status or "")
-            execution = dict(state.get("execution") or empty_execution_meta())
-            now = datetime.now(UTC)
-            heartbeat = _parse_iso(execution.get("heartbeat_at"))
-            lease = int(execution.get("lease_seconds") or lease_seconds)
-            stale = heartbeat is None or heartbeat + timedelta(seconds=lease) < now
-
-            if status in CLAIMABLE_STATUSES:
-                assert_legal_transition(status, "planning_forms")
-                generation.status = "planning_forms"
-                target_stage = "planning_forms"
-                event_name = "execution_claimed"
-            elif status in ACTIVE_STATUSES and stale:
-                target_stage = status
-                event_name = "execution_reclaimed"
-            else:
-                raise _ClaimAbort()
-
-            new_token = int(execution.get("lease_token") or 0) + 1
-            execution["worker_id"] = worker_id
-            execution["lease_token"] = new_token
-            execution["claimed_at"] = _now()
-            execution["heartbeat_at"] = _now()
-            execution["lease_seconds"] = lease_seconds
-            execution["attempt"] = int(execution.get("attempt") or 0) + 1
-            execution["work_kind"] = WORK_KIND_POST_APPROVAL
-            state["execution"] = execution
-            events = list(state.get("events") or [])
-            events.append(
-                {
-                    **make_event(
-                        event_name,
-                        generation_id=self.generation_id,
-                        status=target_stage,
-                        worker_id=worker_id,
-                        lease_token=new_token,
-                    ),
-                    "at": _now(),
-                }
-            )
-            state["events"] = events[-500:]
-            lease_box.append(
-                ExecutionLease(
-                    generation_id=self.generation_id,
-                    worker_id=worker_id,
-                    lease_token=new_token,
-                    stage=target_stage,
-                )
-            )
-
-        try:
-            await self.mutate_state(mutation=_mut)
-        except _ClaimAbort:
-            await self.session.rollback()
-            return None
-        return lease_box[0] if lease_box else None
-
-    async def enter_assembling_for_shared_document(
-        self,
-        *,
-        worker_id: str,
-        lease_token: int,
+        document_sha256: str,
     ) -> dict[str, Any]:
-        """P11: skip ordinary form planning/writing for a verified shared source.
+        """Option D (4A): lease-free, idempotent write of the realized Print document.
 
-        Moves a freshly claimed (``planning_forms``) Print generation directly
-        to ``assembling`` without ever touching form-plan/writer checkpoints.
-        Only a SharedLessonDocument-sourced realization may call this; the
-        caller has already verified a READY ``RealizationSourceResult``.
+        The RealizationWorker holds the shared-runtime work-item lease; this
+        only persists the deterministic SharedLessonDocument lowering and
+        marks the output generation ``ready`` with its hash proof.  It flushes
+        (``commit=False``): the worker commits together with the work-item and
+        Run completion so the output and its Run can never disagree.
         """
+        from print.rendering.page_objects.document_assembly import persist_document_json
 
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
-            current = str(generation.status or "")
-            assert_legal_transition(current, "assembling")
-            generation.status = "assembling"
+            generation.document_json = persist_document_json(generation.document_json, document)
+            generation.status = "ready"
             execution = dict(state.get("execution") or empty_execution_meta())
+            execution["candidate_document_sha256"] = document_sha256
+            execution["candidate_written_at"] = _now()
+            execution["document_sha256"] = document_sha256
+            execution["reloaded_sha256"] = document_sha256
+            execution["reload_verified"] = True
             execution["heartbeat_at"] = _now()
-            execution["work_kind"] = WORK_KIND_POST_APPROVAL
             state["execution"] = execution
+            state["document_revision"] = int(state.get("document_revision") or 0) + 1
             events = list(state.get("events") or [])
             events.append(
                 {
                     **make_event(
-                        "shared_document_assembling",
+                        "document_ready",
                         generation_id=self.generation_id,
-                        status="assembling",
-                        worker_id=worker_id,
-                        lease_token=lease_token,
+                        status="ready",
                     ),
                     "at": _now(),
                 }
             )
             state["events"] = events[-500:]
 
-        return await self.mutate_state(
-            expected_statuses={"planning_forms"},
-            worker_id=worker_id,
-            lease_token=lease_token,
-            mutation=_mut,
-        )
-
-    async def fail_shared_document_mapping(
-        self,
-        *,
-        message: str,
-        worker_id: str,
-        lease_token: int,
-    ) -> dict[str, Any]:
-        """P11: a verified SharedLessonDocument cannot be represented in Print.
-
-        This is a data-truthfulness failure, not a provider/transport error,
-        so it always lands on ``failed_recoverable`` (never a silent partial
-        document) and never runs ``classify_failure``'s retry heuristics.
-        Retrying only makes sense after the source SharedLessonDocument is
-        revised; the realization row records ``shared_document_state`` so
-        that is visible without re-deriving it from this event.
-        """
-
-        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
-            current = str(generation.status or "")
-            assert_legal_transition(current, "failed_recoverable")
-            generation.status = "failed_recoverable"
-            execution = dict(state.get("execution") or empty_execution_meta())
-            execution["last_error"] = {
-                "code": "SHARED_DOCUMENT_UNMAPPABLE",
-                "message": message[:2000],
-            }
-            execution["heartbeat_at"] = _now()
-            state["execution"] = execution
-            events = list(state.get("events") or [])
-            events.append(
-                {
-                    **make_event(
-                        "shared_document_unmappable",
-                        generation_id=self.generation_id,
-                        status="failed_recoverable",
-                        worker_id=worker_id,
-                        lease_token=lease_token,
-                    ),
-                    "at": _now(),
-                }
-            )
-            state["events"] = events[-500:]
-
-        return await self.mutate_state(
-            expected_statuses={"assembling"},
-            worker_id=worker_id,
-            lease_token=lease_token,
-            mutation=_mut,
-        )
+        return await self.mutate_state(commit=False, mutation=_mut)
 
     async def claim_pre_worker_retry(
         self,
@@ -1492,34 +1329,6 @@ class PageDocumentRepository:
             mutation=_mut,
         )
 
-    async def persist_document_candidate(
-        self,
-        document: dict[str, Any],
-        *,
-        document_sha256: str,
-        worker_id: str,
-        lease_token: int,
-    ) -> dict[str, Any]:
-        """Lease-fenced write of document_json as a non-terminal candidate."""
-        from print.rendering.page_objects.document_assembly import persist_document_json
-
-        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
-            generation.document_json = persist_document_json(
-                generation.document_json, document
-            )
-            execution = dict(state.get("execution") or empty_execution_meta())
-            execution["candidate_document_sha256"] = document_sha256
-            execution["candidate_lease_token"] = int(lease_token)
-            execution["candidate_written_at"] = _now()
-            execution["heartbeat_at"] = _now()
-            state["execution"] = execution
-
-        return await self.mutate_state(
-            worker_id=worker_id,
-            lease_token=lease_token,
-            mutation=_mut,
-        )
-
     async def persist_streaming_snapshot(
         self,
         document: dict[str, Any],
@@ -1645,93 +1454,6 @@ class PageDocumentRepository:
             mutation=_mut,
         )
         return box[0] if box else None
-
-    async def finalize_verified_document(
-        self,
-        *,
-        expected_document_sha256: str,
-        reloaded_sha256: str,
-        pending_visuals: bool,
-        worker_id: str,
-        lease_token: int,
-    ) -> dict[str, Any]:
-        """Atomic lease-fenced finalization after fresh-session hash verification."""
-        from print.rendering.page_objects.document_assembly import (
-            canonical_document_sha256,
-            reload_document,
-        )
-
-        target = "awaiting_visuals" if pending_visuals else "ready"
-        event_name = "document_awaiting_visuals" if pending_visuals else "document_ready"
-
-        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
-            execution = dict(state.get("execution") or empty_execution_meta())
-            candidate_sha = execution.get("candidate_document_sha256")
-            candidate_token = execution.get("candidate_lease_token")
-            if candidate_sha != expected_document_sha256:
-                raise DocumentFenceError(
-                    f"candidate sha mismatch: have {candidate_sha!r}, "
-                    f"want {expected_document_sha256!r}"
-                )
-            if candidate_token is None or int(candidate_token) != int(lease_token):
-                raise DocumentFenceError(
-                    f"candidate lease token mismatch: have {candidate_token!r}, "
-                    f"want {lease_token!r}"
-                )
-            if reloaded_sha256 != expected_document_sha256:
-                raise DocumentFenceError(
-                    f"reloaded sha mismatch: have {reloaded_sha256!r}, "
-                    f"want {expected_document_sha256!r}"
-                )
-            try:
-                persisted = reload_document(generation.document_json or {})
-            except Exception as exc:
-                raise DocumentFenceError(f"cannot reload persisted document: {exc}") from exc
-            locked_sha = canonical_document_sha256(persisted)
-            if locked_sha != expected_document_sha256:
-                raise DocumentFenceError(
-                    f"locked document tamper: have {locked_sha!r}, "
-                    f"want {expected_document_sha256!r}"
-                )
-            current = str(generation.status or "")
-            assert_legal_transition(current, target)
-            generation.status = target
-            if pending_visuals:
-                # The candidate still contains unresolved visual assets. Keep it
-                # non-terminal and require a fresh post-patch verification before
-                # exposing final hash proof or transitioning to ready.
-                _invalidate_reload_proof(execution)
-            else:
-                execution["document_sha256"] = expected_document_sha256
-                execution["reloaded_sha256"] = reloaded_sha256
-                execution["reload_verified"] = True
-            execution["heartbeat_at"] = _now()
-            state["execution"] = execution
-            state["document_revision"] = int(state.get("document_revision") or 0) + 1
-            events = list(state.get("events") or [])
-            events.append(
-                {
-                    **make_event(
-                        event_name,
-                        generation_id=self.generation_id,
-                        status=target,
-                    ),
-                    "at": _now(),
-                }
-            )
-            state["events"] = events[-500:]
-
-        # P12B: writing_sections/writing_blocks dropped. Only the deleted
-        # ordinary writer ever produced a candidate_document_sha256 from
-        # those stages, so no row -- new or legacy -- can reach this call with
-        # current in {writing_sections, writing_blocks}; "assembling" (the
-        # SharedLessonDocument cutover path) is the only live source status.
-        return await self.mutate_state(
-            expected_statuses={"assembling"},
-            worker_id=worker_id,
-            lease_token=lease_token,
-            mutation=_mut,
-        )
 
     async def finalize_visual_reload_proof(
         self,
@@ -2385,59 +2107,18 @@ class PageDocumentRepository:
         )
 
 
-async def _apply_non_ready_print_shared_document_state(
-    session: AsyncSession,
-    *,
-    realization: NativeRealizationModel,
-    result: RealizationSourceResult,
-) -> None:
-    """P11: persist a non-``ready`` shared-source classification onto a Print row.
-
-    Mirrors the Learn P10B worker gate
-    (``learn.generation.shared_document_execution.apply_non_ready_shared_document_state``).
-    Never claims the output lease. ``pending`` never consumes a bounded
-    attempt — it leaves the row queued so the next poll re-observes it.
-    """
-    if result.state == "pending":
-        pending = result.pending
-        realization.shared_document_run_id = pending.run_id if pending else None
-        realization.shared_document_state = "pending"
-    elif result.state == "needs_review":
-        needs_review = result.needs_review
-        assert needs_review is not None
-        realization.status = "needs_shared_review"
-        realization.shared_document_run_id = needs_review.run_id
-        realization.shared_document_state = "needs_review"
-        realization.error_summary = None
-    elif result.state == "stale":
-        stale = result.stale
-        assert stale is not None
-        realization.status = "failed_recoverable"
-        realization.shared_document_run_id = stale.run_id
-        realization.shared_document_state = "stale"
-        realization.error_summary = f"SHARED_DOCUMENT_STALE: {stale.reason}"[:500]
-    elif result.state == "failed":
-        failed = result.failed
-        assert failed is not None
-        realization.status = "failed_recoverable"
-        if failed.run_id:
-            realization.shared_document_run_id = failed.run_id
-        realization.shared_document_state = "failed"
-        code = failed.error_code or "SHARED_DOCUMENT_FAILED"
-        summary = failed.error_summary or "SharedLessonDocument run failed."
-        realization.error_summary = f"{code}: {summary}"[:500]
-    else:
-        raise AssertionError(f"unexpected realization-source state {result.state!r}")
-    await session.commit()
-
-
 async def claim_next_native_job(
     session: AsyncSession,
     *,
     worker_id: str,
     lease_seconds: int = DEFAULT_LEASE_SECONDS,
 ) -> ExecutionLease | None:
-    """Claim oldest pre-worker retry or post-approval native job."""
+    """Claim the oldest pre-worker (preparation) retry.
+
+    Option D (4A): Print output execution moved to the shared-runtime
+    RealizationWorker; this only serves the preparation pre-worker retry path
+    until preparation moves onto Runs (package 3A).
+    """
     pre_result = await session.execute(
         select(GenerationModel.id)
         .where(GenerationModel.status.in_(sorted(PRE_WORKER_RETRY_STATUSES)))
@@ -2467,74 +2148,6 @@ async def claim_next_native_job(
         )
         if lease is not None:
             return lease
-
-    result = await session.execute(
-        select(GenerationModel.id)
-        .where(
-            GenerationModel.status.in_(
-                sorted(CLAIMABLE_STATUSES | ACTIVE_STATUSES)
-            )
-        )
-        .order_by(GenerationModel.created_at.asc())
-        .limit(20)
-    )
-    for generation_id in list(result.scalars().all()):
-        gid = str(generation_id)
-        legacy_prep_link = await session.scalar(
-            select(NativeRealizationModel.id).where(
-                NativeRealizationModel.path == "print",
-                NativeRealizationModel.output_id == gid,
-                NativeRealizationModel.preparation_generation_id == gid,
-            )
-        )
-        if legacy_prep_link is not None:
-            continue
-        generation = await session.get(GenerationModel, gid)
-        if generation is None:
-            continue
-        cutover_realization = await session.scalar(
-            select(NativeRealizationModel).where(
-                NativeRealizationModel.path == "print",
-                NativeRealizationModel.output_id == gid,
-            )
-        )
-        if cutover_realization is not None:
-            # P11: every detached (non-legacy) Print realization is admitted
-            # through ``ensure_shared_document_run``. Its output must never
-            # enter ordinary form planning/writing, at any status, so this
-            # branch owns every claim/reclaim decision for it instead of
-            # falling through to the ordinary teaching-plan/lesson-packet path.
-            result = await load_realization_source(
-                session,
-                owner_user_id=str(generation.user_id),
-                path_lesson_id=str(cutover_realization.path_lesson_id),
-            )
-            if result.state != "ready":
-                if str(generation.status or "") == "queued":
-                    # Never consume a bounded attempt on a still-pending (or
-                    # otherwise non-ready) shared source.
-                    await _apply_non_ready_print_shared_document_state(
-                        session, realization=cutover_realization, result=result
-                    )
-                else:
-                    # A source that regressed to non-ready mid-flight (a
-                    # concurrent reprepare) is left untouched; it is retried
-                    # on the next poll once its lease goes stale rather than
-                    # forcing a false document through the ordinary path.
-                    await session.rollback()
-                continue
-            repo = PageDocumentRepository(session, gid)
-            lease = await repo.claim_execution(worker_id=worker_id, lease_seconds=lease_seconds)
-            if lease is not None:
-                return lease
-            continue
-        # P11B: standalone Print generation is retired and its ordinary
-        # whole-lesson planning/writing executor is deleted. A row with no
-        # ``NativeRealizationModel`` cutover link can only be a stale
-        # pre-P11B standalone artifact; it has no ordinary authoring path
-        # left to execute, so it is never claimed. Its persisted
-        # ``document_json`` (if any) remains readable.
-        continue
     return None
 
 

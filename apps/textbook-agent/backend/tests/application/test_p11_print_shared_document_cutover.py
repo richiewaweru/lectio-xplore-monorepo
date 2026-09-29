@@ -19,6 +19,7 @@ from tests.application.test_p03_realization_gates import _approved_native_prepar
 from tests.application.test_p04_learn_worker import _drive_shared_document_ready
 from tests.print_learn._p10c_fixtures import build_rich_shared_document
 
+from application.unit_lesson.realization_worker import RealizationWorker
 from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
 from core.database.models import GenerationModel, NativeRealizationModel
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
@@ -29,14 +30,8 @@ from document.shared_lesson.realization_source import ReadyRealizationSource
 from document.shared_lesson.post_section_pipeline import run_post_section_pipeline
 from document.shared_lesson.worker import SharedDocumentWorker
 from print.generation.shared_document_execution import (
-    execute_print_realization_from_shared_document,
+    materialize_print_output_from_shared_document,
 )
-from print.generation.whole_lesson.repository import (
-    PageDocumentRepository,
-    claim_next_native_job,
-)
-from print.generation.whole_lesson.states import ExecutionLease
-from print.generation.whole_lesson.worker import NativeExecutionWorker
 from print.rendering.page_objects.document_assembly import reload_document
 
 
@@ -82,7 +77,7 @@ async def test_duplicate_admission_reuses_same_shared_document_run_pin(
 
 @pytest.mark.asyncio
 async def test_worker_gate_reports_pending_without_consuming_an_attempt(
-    db_session: AsyncSession,
+    db_session: AsyncSession, db_session_factory
 ) -> None:
     lesson, _plan, _source, _document = await _approved_native_preparation(
         db_session, user_id="p11-pending"
@@ -98,11 +93,13 @@ async def test_worker_gate_reports_pending_without_consuming_an_attempt(
     assert row is not None
     assert row.status == "queued"
 
-    lease = await claim_next_native_job(db_session, worker_id="p11-pending-worker")
+    worker = RealizationWorker(db_session_factory, worker_id="p11-pending-worker")
+    async with db_session_factory() as worker_session:
+        await worker.run_one(worker_session)
 
-    assert lease is None
     await db_session.refresh(row)
-    assert row.status == "queued"  # never claimed; no attempt consumed
+    assert row.status == "queued"  # no Run, no lease, no attempt consumed
+    assert row.generation_run_id is None
     assert row.shared_document_state == "pending"
 
 
@@ -171,9 +168,10 @@ async def test_worker_gate_reports_needs_shared_review(
     )
     assert outcome.state == "blocked"
 
+    review_worker = RealizationWorker(db_session_factory, worker_id="p11-needs-review-claim")
+    async with db_session_factory() as tick_session:
+        await review_worker.run_one(tick_session)
     async with db_session_factory() as verify:
-        lease = await claim_next_native_job(verify, worker_id="p11-needs-review-claim")
-        assert lease is None
         row = await verify.get(NativeRealizationModel, admitted["realization_id"])
         assert row is not None
         assert row.status == "needs_shared_review"
@@ -220,9 +218,10 @@ async def test_worker_gate_reports_stale_after_new_approved_revision(
         generation.chunked_state_json = state
         await writer.commit()
 
+    stale_worker = RealizationWorker(db_session_factory, worker_id="p11-stale-claim")
+    async with db_session_factory() as tick_session:
+        await stale_worker.run_one(tick_session)
     async with db_session_factory() as verify:
-        lease = await claim_next_native_job(verify, worker_id="p11-stale-claim")
-        assert lease is None
         row = await verify.get(NativeRealizationModel, admitted["realization_id"])
         assert row is not None
         assert row.status == "failed_recoverable"
@@ -269,12 +268,9 @@ async def test_ready_path_never_calls_ordinary_authoring() -> None:
             preparation_generation_id=str(lesson.pack_id),
         )
 
-    worker = NativeExecutionWorker(worker_id="p11-ready-guard-worker")
+    worker = RealizationWorker(prod_sessions, worker_id="p11-ready-guard-worker")
     async with prod_sessions() as worker_session:
-        lease = await claim_next_native_job(worker_session, worker_id=worker.worker_id)
-    assert lease is not None
-    assert lease.generation_id == admitted["output_id"]
-    await worker._run_job(lease)
+        assert await worker.run_one(worker_session) is True
 
     async with prod_sessions() as verify:
         row = await verify.get(NativeRealizationModel, admitted["realization_id"])
@@ -348,27 +344,16 @@ async def test_answer_key_matches_shared_document_task_evaluations() -> None:
             media_results=(),
         )
 
-        lease = await PageDocumentRepository(session, str(row.output_id)).claim_execution(
-            worker_id="p11-answer-key-worker", lease_seconds=120
-        )
-        assert lease is not None
         await session.commit()
 
     async with prod_sessions() as session:
         realization = await session.get(NativeRealizationModel, row.id)
         assert realization is not None
-        result = await execute_print_realization_from_shared_document(
-            session,
-            realization=realization,
-            ready=ready,
-            lease=ExecutionLease(
-                generation_id=lease.generation_id,
-                worker_id=lease.worker_id,
-                lease_token=lease.lease_token,
-                stage=lease.stage,
-            ),
+        result = await materialize_print_output_from_shared_document(
+            session, realization=realization, ready=ready
         )
-    assert result["status"] == "ready"
+        await session.commit()
+    assert result["output_id"] == str(row.output_id)
 
     async with prod_sessions() as verify:
         output = await verify.get(GenerationModel, str(row.output_id))

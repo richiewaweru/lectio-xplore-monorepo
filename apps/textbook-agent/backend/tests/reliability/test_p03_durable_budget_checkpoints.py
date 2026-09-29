@@ -6,9 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database.models import GenerationModel, UserModel
 from infra.authoring import (
     AuthoringDefinition,
     AuthoringEngine,
@@ -30,16 +28,6 @@ from infra.execution.checkpoints import (
 from infra.execution.error_policy import classify_provider_error, honor_retry_after
 from infra.execution.leases import ResumeDecision
 from infra.execution.resource_limits import ResourceLimitError, ResourceLimits
-from learn.generation.fencing import (
-    LearnCancelledError,
-    LearnFenceError,
-    assert_learn_commit_allowed,
-    cancel_learn_execution,
-    claim_learn_execution,
-    commit_learn_checkpoint,
-    empty_learn_execution_meta,
-    write_learn_execution,
-)
 
 
 class FakeProvider:
@@ -316,83 +304,3 @@ async def test_g15_incompatible_checkpoint_is_rejected() -> None:
             "composition:x",
             compatibility=CheckpointCompatibility(1, "in", "def", schema_version=2),
         )
-
-
-@pytest.mark.asyncio
-async def test_g13_learn_fencing_expired_and_cancel(db_session: AsyncSession) -> None:
-    user = UserModel(id="u-p03", email="u-p03@example.invalid", name="p03")
-    db_session.add(user)
-    gid = "learn-fence-1"
-    generation = GenerationModel(
-        id=gid,
-        user_id=user.id,
-        subject="science",
-        context="fence",
-        status="queued",
-        requested_template_id="lesson",
-        requested_preset_id="standard",
-        created_at=datetime.now(UTC).replace(tzinfo=None),
-        chunked_state_json={"learn_execution": empty_learn_execution_meta()},
-    )
-    db_session.add(generation)
-    await db_session.flush()
-
-    lease = await claim_learn_execution(db_session, generation_id=gid, worker_id="w1")
-    assert lease is not None
-
-    # Competing worker cannot claim while lease is fresh.
-    assert await claim_learn_execution(db_session, generation_id=gid, worker_id="w2") is None
-
-    # Expire heartbeat → reclaim.
-    generation = await db_session.get(GenerationModel, gid)
-    assert generation is not None
-    execution = empty_learn_execution_meta()
-    execution.update(
-        {
-            "worker_id": "w1",
-            "lease_token": lease.lease_token,
-            "heartbeat_at": (datetime.now(UTC) - timedelta(seconds=500)).isoformat().replace(
-                "+00:00", "Z"
-            ),
-            "lease_seconds": 90,
-            "status": "running",
-        }
-    )
-    write_learn_execution(generation, execution)
-    await db_session.flush()
-
-    with pytest.raises(LearnFenceError):
-        assert_learn_commit_allowed(
-            execution, worker_id="w1", lease_token=lease.lease_token
-        )
-
-    lease2 = await claim_learn_execution(db_session, generation_id=gid, worker_id="w2")
-    assert lease2 is not None and lease2.worker_id == "w2"
-
-    await commit_learn_checkpoint(
-        db_session,
-        generation_id=gid,
-        worker_id="w2",
-        lease_token=lease2.lease_token,
-        checkpoint_key="composition",
-        checkpoint_payload={"content_hash": "abc", "payload": {"ok": True}},
-    )
-    # Stale w1 cannot commit after reclaim.
-    with pytest.raises(LearnFenceError):
-        await commit_learn_checkpoint(
-            db_session,
-            generation_id=gid,
-            worker_id="w1",
-            lease_token=lease.lease_token,
-            checkpoint_key="composition",
-            checkpoint_payload={"content_hash": "evil", "payload": {"ok": False}},
-        )
-
-    await cancel_learn_execution(db_session, generation_id=gid)
-    with pytest.raises(LearnCancelledError):
-        assert_learn_commit_allowed(
-            empty_learn_execution_meta() | {"cancelled": True, "status": "cancelled"},
-            worker_id="w2",
-            lease_token=lease2.lease_token,
-        )
-    assert await claim_learn_execution(db_session, generation_id=gid, worker_id="w3") is None

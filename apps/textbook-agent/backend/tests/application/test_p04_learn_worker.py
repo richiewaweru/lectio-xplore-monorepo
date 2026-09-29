@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import HTTPException, Response
@@ -9,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tests.application.test_p03_realization_gates import _approved_native_preparation
 
+from application.unit_lesson.realization_worker import RealizationWorker
 from application.unit_lesson.realizations import request_outputs
 from application.unit_lesson.realize_learn_handoff import (
     realize_learn_from_preparation,
@@ -28,13 +28,7 @@ from document.shared_lesson.post_section_pipeline import run_post_section_pipeli
 from document.shared_lesson.realization_source import ensure_shared_document_run
 from document.shared_lesson.worker import SharedDocumentWorker
 from learn.generation import shared_document_execution
-from learn.generation.fencing import (
-    LEARN_EXECUTION_KEY,
-    empty_learn_execution_meta,
-    fail_stale_learn_executions,
-)
 from learn.generation.units_routes import generate_learn_realization
-from learn.generation.worker import LearnRealizationWorker
 
 
 class _SharedDocumentSourcebookProvider:
@@ -196,6 +190,7 @@ async def test_p04_create_replay_leaves_recoverable_failure_parked(
     output = await db_session.get(GenerationModel, result["output_id"])
     assert row is not None and output is not None
     row.status = "failed_recoverable"
+    row.shared_document_state = "failed"  # document-level failure projected without a Run
     output.status = "failed"
     await db_session.flush()
 
@@ -320,7 +315,7 @@ async def test_p04_worker_completes_only_learn_output_and_links_editable_documen
         preparation_generation_id=str(lesson.pack_id),
     )
 
-    worker = LearnRealizationWorker(worker_id="p04-test-worker")
+    worker = RealizationWorker(db_session_factory, worker_id="p04-test-worker")
     # Match the lifespan worker: each claim runs in a disposable session. A
     # fresh session below proves success was committed before that session
     # closed rather than merely visible in its identity map.
@@ -386,7 +381,7 @@ async def test_p04_worker_parks_escaped_post_production_failure(
         "validate_publishable_lesson_document",
         fail_publication_validation,
     )
-    worker = LearnRealizationWorker(worker_id="p04-finalize-worker")
+    worker = RealizationWorker(db_session_factory, worker_id="p04-finalize-worker")
     async with db_session_factory() as worker_session:
         assert await worker.run_one(worker_session) is True
 
@@ -395,14 +390,13 @@ async def test_p04_worker_parks_escaped_post_production_failure(
         output = await verify_session.get(GenerationModel, result["output_id"])
         source = await verify_session.get(GenerationModel, str(lesson.pack_id))
         assert row is not None and output is not None and source is not None
-        assert row.status == "failed_recoverable"
-        assert row.error_summary == "injected post-production validation failure"
-        assert output.status == "failed"
-        error_detail = (output.chunked_state_json or {}).get("error_detail") or {}
-        assert error_detail["code"] == "LEARN_EXECUTION_FINALIZATION_FAILED"
-        assert error_detail["failure_class"] == "learn_finalization"
-        assert error_detail["recovery_action"] == "retry"
-        assert (output.chunked_state_json or {})[LEARN_EXECUTION_KEY]["status"] == "failed"
+        # Deterministic contract failures are terminal work-item failures on
+        # the shared runtime (regenerate), not a bespoke worker-parked state.
+        assert row.status == "failed_terminal"
+        assert row.error_summary.startswith("realization_contract_violation")
+        assert "injected post-production validation failure" in row.error_summary
+        assert output.status == "queued"
+        assert output.document_json is None
         page_state = (source.chunked_state_json or {}).get("page_document_v2") or {}
         assert page_state["teaching_review"]["status"] == "approved"
         editable = await verify_session.scalar(
@@ -471,8 +465,9 @@ async def test_p04_worker_parks_corrupt_foreign_output_without_mutating_it(
     row.output_id = foreign.id
     await db_session.commit()
 
-    worker = LearnRealizationWorker(worker_id="p04-integrity-worker")
-    assert await worker.run_one(db_session) is True
+    worker = RealizationWorker(db_session_factory, worker_id="p04-integrity-worker")
+    async with db_session_factory() as worker_session:
+        assert await worker.run_one(worker_session) is True
     await db_session.refresh(row)
     await db_session.refresh(foreign)
     assert row.status == "failed_terminal"
@@ -612,102 +607,6 @@ async def test_p04_concurrent_retry_reuses_single_new_learn_output(
             )
         )
         assert owned_generations == 3  # preparation + original output + one retry output
-
-
-@pytest.mark.asyncio
-async def test_p07_expired_worker_is_parked_without_touching_ready_print_sibling(
-    db_session: AsyncSession,
-) -> None:
-    """An interrupted Learn run becomes retryable; its ready Print sibling and approval survive."""
-    lesson, plan, source_state, _document = await _approved_native_preparation(
-        db_session, user_id="p07-interrupted-learn"
-    )
-    admitted = await realize_learn_from_preparation(
-        db_session,
-        preparation_generation_id=str(lesson.pack_id),
-        user_id="p07-interrupted-learn",
-        path_lesson_id=lesson.id,
-    )
-    learn = await db_session.get(NativeRealizationModel, admitted["realization_id"])
-    output = await db_session.get(GenerationModel, admitted["output_id"])
-    assert learn is not None and output is not None
-
-    print_rows = await request_outputs(
-        db_session,
-        path_lesson_id=lesson.id,
-        paths=["print"],
-        teaching_plan_id=str(plan.teaching_plan_id),
-        teaching_plan_revision=int(plan.revision or 1),
-        teaching_plan_hash=admitted["teaching_plan_hash"],
-        preparation_generation_id=str(lesson.pack_id),
-    )
-    print_row = print_rows[0][0]
-    print_row.status = "ready"
-    print_row.output_id = "p07-ready-print-sibling"
-    print_identity = (
-        print_row.status,
-        print_row.output_id,
-        print_row.realization_revision,
-        print_row.teaching_plan_hash,
-    )
-
-    interrupted_at = datetime.now(UTC) - timedelta(minutes=30)
-    execution = empty_learn_execution_meta()
-    execution.update(
-        {
-            "worker_id": "learn-worker-lost",
-            "lease_token": 7,
-            "lease_seconds": 10,
-            "heartbeat_at": interrupted_at.isoformat().replace("+00:00", "Z"),
-            "claimed_at": interrupted_at.isoformat().replace("+00:00", "Z"),
-            "status": "running",
-            # A completed sibling work item must be retained when the process is recovered.
-            "checkpoints": {
-                "section:orient": {
-                    "status": "ready",
-                    "payload": {"text": "Already completed before worker loss."},
-                    "lease_token": 7,
-                }
-            },
-            "call_budgets": {"section:explain": {"consumed": 1}},
-        }
-    )
-    output_state = dict(output.chunked_state_json or {})
-    output_state[LEARN_EXECUTION_KEY] = execution
-    output.chunked_state_json = output_state
-    output.status = "running"
-    learn.status = "running"
-    source = await db_session.get(GenerationModel, str(lesson.pack_id))
-    assert source is not None
-    approval_before = dict(source_state.get("page_document_v2") or {})
-    await db_session.commit()
-
-    recovered = await fail_stale_learn_executions(
-        db_session, now=datetime.now(UTC)
-    )
-    assert recovered == 1
-    restarted_worker = LearnRealizationWorker(worker_id="p07-restarted-worker")
-    assert await restarted_worker.run_one(db_session) is False
-    await db_session.refresh(learn)
-    await db_session.refresh(output)
-    await db_session.refresh(print_row)
-    await db_session.refresh(source)
-    recovered_execution = (output.chunked_state_json or {}).get(LEARN_EXECUTION_KEY) or {}
-    assert learn.status == "failed_recoverable"
-    assert output.status == "failed"
-    assert "interrupted" in str(learn.error_summary).lower()
-    assert recovered_execution["checkpoints"]["section:orient"]["status"] == "ready"
-    assert recovered_execution["checkpoints"]["section:orient"]["payload"]["text"].startswith(
-        "Already completed"
-    )
-    assert recovered_execution["call_budgets"]["section:explain"]["consumed"] == 1
-    assert (
-        print_row.status,
-        print_row.output_id,
-        print_row.realization_revision,
-        print_row.teaching_plan_hash,
-    ) == print_identity
-    assert (source.chunked_state_json or {}).get("page_document_v2") == approval_before
 
 
 def test_p04_stale_status_does_not_offer_retry() -> None:

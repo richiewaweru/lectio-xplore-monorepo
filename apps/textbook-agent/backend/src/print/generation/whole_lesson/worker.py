@@ -1,4 +1,10 @@
-"""In-process DB-leased worker for native whole-lesson execution."""
+"""In-process DB-leased worker for preparation pre-worker retries.
+
+Option D (4A): Print output realization runs on the shared-runtime
+RealizationWorker.  This minimal worker remains only because
+``native_retry.py`` (preparation pre-worker retry) claims through
+``claim_next_native_job`` until preparation moves onto Runs (package 3A).
+"""
 
 from __future__ import annotations
 
@@ -7,9 +13,7 @@ import logging
 import uuid
 from typing import Any
 
-from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from print.generation.whole_lesson.failure_policy import classify_failure
 from print.generation.whole_lesson.repository import PageDocumentRepository, claim_next_native_job
 from print.generation.whole_lesson.states import (
     DEFAULT_LEASE_SECONDS,
@@ -129,16 +133,9 @@ class NativeExecutionWorker:
                     self.worker_id,
                     exc_info=True,
                 )
-
     async def _run_job(self, lease: ExecutionLease) -> None:
-        from core.database.models import NativeRealizationModel
-        from document.shared_lesson.realization_source import load_realization_source
-        from print.generation.shared_document_execution import (
-            execute_print_realization_from_shared_document,
-        )
         from print.generation.whole_lesson.native_retry import run_pre_worker_retry
         from print.generation.whole_lesson.repository import empty_execution_meta
-        from sqlalchemy import select
 
         heartbeat = asyncio.create_task(
             self._heartbeat_loop(lease),
@@ -151,151 +148,35 @@ class NativeExecutionWorker:
                 work_kind = (state.get("execution") or empty_execution_meta()).get(
                     "work_kind"
                 )
-                cutover_realization = await session.scalar(
-                    select(NativeRealizationModel).where(
-                        NativeRealizationModel.path == "print",
-                        NativeRealizationModel.output_id == lease.generation_id,
-                        NativeRealizationModel.preparation_generation_id
-                        != lease.generation_id,
-                    )
-                )
-
-            if work_kind in PRE_WORKER_WORK_KINDS:
-                try:
-                    await run_pre_worker_retry(lease=lease)
-                except LeaseLostError:
-                    raise
-                except Exception:
-                    # Failure already persisted inside run_pre_worker_retry.
-                    logger.exception(
-                        "pre-worker retry failed generation_id=%s worker_id=%s",
+                if work_kind not in PRE_WORKER_WORK_KINDS:
+                    # Option D (4A): Print output execution moved to the
+                    # shared-runtime RealizationWorker. Only preparation
+                    # pre-worker retries are claimed here (until package 3A).
+                    logger.warning(
+                        "native worker released non-pre-worker job generation_id=%s",
                         lease.generation_id,
-                        self.worker_id,
                     )
-                return
-
-            if cutover_realization is not None:
-                # P11: every detached Print realization is admitted through
-                # ensure_shared_document_run. It must never reach ordinary
-                # form planning/writing — re-verify readiness under the lease
-                # and lower the verified shared document with the pure
-                # adapter instead of calling execute_after_teaching_approval.
-                async with async_session_factory() as session:
-                    generation = await session.get(GenerationModel, lease.generation_id)
-                    realization = await session.get(
-                        NativeRealizationModel, cutover_realization.id
+                    await repo.release_execution(
+                        worker_id=lease.worker_id, lease_token=lease.lease_token
                     )
-                    assert generation is not None and realization is not None
-                    result = await load_realization_source(
-                        session,
-                        owner_user_id=str(generation.user_id),
-                        path_lesson_id=str(realization.path_lesson_id),
-                    )
-                    if result.state != "ready":
-                        # A concurrent mutation (reprepare, plan edit) made
-                        # this shared source non-ready after the lease was
-                        # claimed. Release the lease without persisting a
-                        # false document rather than force through stale
-                        # content.
-                        logger.warning(
-                            "shared document no longer ready after claim "
-                            "generation_id=%s state=%s",
-                            lease.generation_id,
-                            result.state,
-                        )
-                        await repo.release_execution(
-                            worker_id=lease.worker_id, lease_token=lease.lease_token
-                        )
-                        return
-                    assert result.ready is not None
-                    ready = result.ready
-                    if (
-                        ready.plan_id != realization.teaching_plan_id
-                        or int(ready.plan_revision) != int(realization.teaching_plan_revision)
-                        or ready.plan_hash != realization.teaching_plan_hash
-                    ):
-                        # The realization was pinned against an older approved
-                        # Teaching Plan revision than the one this shared
-                        # document now verifies against. Never lower content
-                        # under a stale pinned identity — release the lease
-                        # untouched; reprepare/re-admission resolves this.
-                        logger.warning(
-                            "shared document plan identity no longer matches "
-                            "pinned realization generation_id=%s",
-                            lease.generation_id,
-                        )
-                        await repo.release_execution(
-                            worker_id=lease.worker_id, lease_token=lease.lease_token
-                        )
-                        return
-                    await execute_print_realization_from_shared_document(
-                        session,
-                        realization=realization,
-                        ready=ready,
-                        lease=lease,
-                    )
-                return
-
-            # P11B: standalone Print generation is retired, and the ordinary
-            # whole-lesson planning/writing executor it used is deleted. A
-            # claimed job that is neither a pre-worker retry nor a detached
-            # cutover realization can only be a stale pre-P11B standalone
-            # row; it has no ordinary authoring path left to run through, so
-            # fail it closed rather than silently dropping the lease.
-            raise RuntimeError(
-                "Print job has no SharedLessonDocument realization and standalone "
-                "Print generation is retired; cannot execute ordinary authoring "
-                f"for generation_id={lease.generation_id!r}"
-            )
-        except LeaseLostError:
-            raise
-        except Exception as exc:
-            await self._persist_failure(lease, exc)
-            raise
+                    return
+            try:
+                await run_pre_worker_retry(lease=lease)
+            except LeaseLostError:
+                raise
+            except Exception:
+                # Failure already persisted inside run_pre_worker_retry.
+                logger.exception(
+                    "pre-worker retry failed generation_id=%s worker_id=%s",
+                    lease.generation_id,
+                    self.worker_id,
+                )
         finally:
             heartbeat.cancel()
             try:
                 await heartbeat
             except asyncio.CancelledError:
                 pass
-
-    async def _persist_failure(self, lease: ExecutionLease, exc: BaseException) -> None:
-        classification = classify_failure(exc)
-        if classification.code in {"LEASE_LOST", "CANCELLED"}:
-            return
-        try:
-            async with async_session_factory() as session:
-                repo = PageDocumentRepository(session, lease.generation_id)
-                generation = await session.get(GenerationModel, lease.generation_id)
-                current = str(generation.status if generation else "")
-                # P12B: writing_sections/writing_blocks removed. claim_execution
-                # no longer reclaims a row parked in either (ACTIVE_STATUSES is now
-                # just {planning_forms, assembling}), so this method can never see
-                # current in that state.
-                if current in {
-                    "planning_forms",
-                    "assembling",
-                }:
-                    await repo.persist_native_failure(
-                        exc=exc,
-                        stage=str(lease.stage or current or "assembling"),
-                        event="worker_failure",
-                        attempt=1,
-                        worker_id=lease.worker_id,
-                        lease_token=lease.lease_token,
-                        expected={current},
-                    )
-                    await repo.release_execution(
-                        worker_id=lease.worker_id,
-                        lease_token=lease.lease_token,
-                    )
-        except LeaseLostError:
-            return
-        except Exception:
-            logger.exception(
-                "failed to persist worker failure generation_id=%s",
-                lease.generation_id,
-            )
 
 
 _WORKER: NativeExecutionWorker | None = None
