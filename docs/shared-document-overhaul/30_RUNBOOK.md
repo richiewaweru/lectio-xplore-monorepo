@@ -490,3 +490,7 @@ Do not silently invent a new architecture.
 - Merged `08c21119` (branch `f43c943e`, `09aa903e`): plan page uses `/api/v1/preparations/{id}/plan[:regenerate]`, runtime run retry with `failed_work_item_ids`, progress text from `workspace.preparation.progress`, legacy re-prepare; `error.work_item_id` populated. Deleted `/v3/chunked/{id}/approve` alias, `/v3/generations/{id}/retry-native`, frontend chunked approve/regenerate/status/retry-native clients and legacy stage maps.
 - Kept (live callers): `GET /v3/chunked/{id}/plan` (structural preview), `GET /v3/chunked/{id}/status` + `native_status.py` + `native_retry.py` (Print studio `doc_version`, `visual_quality_summary`). `retry_preparation_run` is test-only now.
 - Verification: worker full backend 1921 passed; main checkout frontend check 0 errors, 256 tests.
+
+## 3C (2026-09-30): planner out of the Print folder
+- Merged `f5275842` (branch `fc3a3846`): `print/generation/whole_lesson/{teaching_agent,service}.py` -> `application/unit_lesson/{teaching_planner,teaching_plan_service}.py` (git mv). Curriculum stays print-free: runner bound via `bind_shared_teaching_runner` when `teaching_plan_service` is imported (lazily by `preparation_worker`). Guards: old paths retired; AST test that no `src/print/**` module defines the planner entry points. First attempt into `curriculum.teaching_plan` was abandoned: domain guard `curriculum-must-not-import-product` (19 violations) - no allowlist added.
+- Verification (main checkout, after 3A+3B+3C): backend 1925 passed / 5 skipped; domain guards PASS.
