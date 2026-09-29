@@ -43,7 +43,13 @@ from infra.database.models import GenerationBuildModel, GenerationRunModel
 from infra.database.session import get_async_session
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime.http import _run_status
-from infra.generation_runtime.repository import RunAdmissionConflict, RunNotFound, get_run_status
+from infra.generation_runtime.repository import (
+    InvalidRunTransition,
+    RunAdmissionConflict,
+    RunNotFound,
+    cancel_run,
+    get_run_status,
+)
 
 router = APIRouter(prefix="/api/v1/shared-documents", tags=["shared-documents"])
 
@@ -59,7 +65,14 @@ class SharedDocumentAdmissionRequest(BaseModel):
 
 
 class ReviewDraftTextEdit(BaseModel):
-    """One allowlisted text-only edit targeting an existing ordinary node."""
+    """One allowlisted text-only edit targeting an existing node.
+
+    ``task_*`` fields target the SharedTaskSpec behind a ``task_anchor`` node
+    (``node_id`` is the anchor). Only wording may change: the prompt, the text
+    of an id-keyed choice option (``option_id``), or one feedback message
+    (``feedback_key``: ``correct``/``incorrect``/``partial`` or
+    ``by_option.<option id>``). The answer key is never editable.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -74,14 +87,25 @@ class ReviewDraftTextEdit(BaseModel):
         "list_item_text",
         "table_cell_text",
         "accessibility_description",
+        "task_prompt",
+        "task_option_text",
+        "task_feedback_text",
     ]
     value: str = Field(min_length=1)
     item_index: int | None = Field(default=None, ge=0)
     row_index: int | None = Field(default=None, ge=0)
     column_index: int | None = Field(default=None, ge=0)
+    option_id: str | None = Field(default=None, min_length=1)
+    feedback_key: str | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
     def _validate_indices(self) -> ReviewDraftTextEdit:
+        if (self.option_id is not None) != (self.field == "task_option_text"):
+            raise ValueError("option_id is required for, and only valid with, task_option_text")
+        if (self.feedback_key is not None) != (self.field == "task_feedback_text"):
+            raise ValueError(
+                "feedback_key is required for, and only valid with, task_feedback_text"
+            )
         if self.field == "list_item_text":
             if self.item_index is None or self.row_index is not None or self.column_index is not None:
                 raise ValueError("list_item_text requires only item_index")
@@ -103,6 +127,39 @@ class ReviewDraftRevisionRequest(BaseModel):
     expected_revision: int = Field(ge=1)
     expected_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     edits: tuple[ReviewDraftTextEdit, ...] = Field(min_length=1)
+
+
+def _apply_task_text_edit(task: dict[str, Any], edit: ReviewDraftTextEdit) -> bool:
+    """Apply one wording edit to a task payload; False when the target is absent.
+
+    Whether the edit is *allowed* (answer key and structure untouched) is
+    proven afterwards by ``prove_review_draft_revision``.
+    """
+    if edit.field == "task_prompt":
+        task["prompt"] = edit.value
+        return True
+    if edit.field == "task_option_text":
+        options = (task.get("response") or {}).get("options")
+        if not isinstance(options, list):
+            return False
+        for option in options:
+            if isinstance(option, dict) and option.get("id") == edit.option_id and "text" in option:
+                option["text"] = edit.value
+                return True
+        return False
+    if edit.field == "task_feedback_text":
+        feedback = task.get("feedback")
+        if not isinstance(feedback, dict) or edit.feedback_key is None:
+            return False
+        parts = edit.feedback_key.split(".")
+        target: Any = feedback
+        for part in parts[:-1]:
+            target = target.get(part) if isinstance(target, dict) else None
+        if not isinstance(target, dict) or not isinstance(target.get(parts[-1]), str):
+            return False
+        target[parts[-1]] = edit.value
+        return True
+    return False
 
 
 def _not_found() -> HTTPException:
@@ -297,6 +354,7 @@ async def post_shared_document_review_draft_revision(
 
     payload = current.model_dump(mode="json")
     sections = {section["id"]: section for section in payload["sections"]}
+    tasks_by_id = {task["id"]: task for task in payload.get("tasks") or []}
     for edit in body.edits:
         section = sections.get(edit.section_id)
         if section is None:
@@ -338,6 +396,10 @@ async def post_shared_document_review_draft_revision(
             ):
                 raise HTTPException(status_code=422, detail="Review edit target is invalid")
             rows[edit.row_index][edit.column_index] = edit.value
+        elif field_name.startswith("task_") and node["kind"] == "task_anchor":
+            task = tasks_by_id.get(node.get("task_spec_id"))
+            if task is None or not _apply_task_text_edit(task, edit):
+                raise HTTPException(status_code=422, detail="Review edit target is invalid")
         else:
             raise HTTPException(status_code=422, detail="Review edit field is not allowed for target")
 
@@ -431,6 +493,80 @@ async def post_shared_document_review_draft_submit(
     }
 
 
+
+_REGENERATABLE_RUN_STATUSES = frozenset({"failed_recoverable", "failed_terminal", "cancelled"})
+
+
+@router.post("/runs/{run_id}/regenerate", status_code=202)
+async def post_shared_document_regenerate(
+    run_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    """Replace a flagged or failed SharedDocument Run with a fresh bounded attempt.
+
+    For defects a reviewer cannot fix by editing wording (e.g. a task whose
+    answer key itself is wrong). The current Run is cancelled if still
+    recoverable, then the next attempt is admitted through the same
+    deterministic, bounded ``ensure_shared_document_run`` keys that Learn and
+    Print use, so every consumer converges on the new Run. READY and active
+    Runs are never replaced here.
+    """
+    from document.shared_lesson.realization_source import (
+        RealizationAttemptsExhausted,
+        RealizationSourceNotFound,
+        ensure_shared_document_run,
+    )
+
+    row = (
+        await session.execute(
+            select(GenerationRunModel, GenerationBuildModel.path_lesson_id)
+            .join(GenerationBuildModel, GenerationBuildModel.id == GenerationRunModel.build_id)
+            .where(
+                GenerationRunModel.id == run_id,
+                GenerationRunModel.owner_user_id == current_user.id,
+                GenerationRunModel.run_type == "shared_document",
+            )
+        )
+    ).first()
+    if row is None:
+        raise _not_found()
+    run, path_lesson_id = row
+    if run.status not in _REGENERATABLE_RUN_STATUSES:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_NOT_REGENERATABLE",
+                "message": "Only a flagged or failed lesson document can be regenerated.",
+            },
+        )
+    try:
+        if run.status == "failed_recoverable":
+            await cancel_run(session, run_id=run.id, owner_user_id=current_user.id)
+        replacement = await ensure_shared_document_run(
+            session, owner_user_id=current_user.id, path_lesson_id=path_lesson_id
+        )
+        await session.commit()
+    except RealizationAttemptsExhausted as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_ATTEMPTS_EXHAUSTED",
+                "message": "This lesson's document attempts are used up; regenerate the plan instead.",
+            },
+        ) from exc
+    except (RealizationSourceNotFound, InvalidRunTransition, RunNotFound) as exc:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail="Lesson document cannot be regenerated") from exc
+    return {
+        "status": replacement.status,
+        "replaced_run_id": run.id,
+        "run_id": replacement.id,
+        "path_lesson_id": path_lesson_id,
+    }
+
+
 __all__ = [
     "ReviewDraftSubmitRequest",
     "SharedDocumentAdmissionRequest",
@@ -439,5 +575,6 @@ __all__ = [
     "post_shared_document_review_draft_revision",
     "post_shared_document_review_draft_submit",
     "post_shared_document_generation",
+    "post_shared_document_regenerate",
     "router",
 ]

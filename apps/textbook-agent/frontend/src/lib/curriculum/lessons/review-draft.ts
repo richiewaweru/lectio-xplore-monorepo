@@ -68,6 +68,22 @@ export interface SharedSection {
 	nodes: SharedNode[];
 }
 
+export interface SharedTaskOption {
+	id: string;
+	text: string;
+	[key: string]: unknown;
+}
+
+/** The reviewer-visible slice of a SharedTaskSpec (the answer key is never edited). */
+export interface SharedTask {
+	id: string;
+	action: string;
+	prompt: string;
+	response: { type?: string; options?: SharedTaskOption[]; [key: string]: unknown };
+	feedback?: Record<string, unknown> | null;
+	[key: string]: unknown;
+}
+
 export interface SharedLessonDocument {
 	schema_version: number;
 	id: string;
@@ -75,6 +91,7 @@ export interface SharedLessonDocument {
 	content_hash: string;
 	title: string;
 	sections: SharedSection[];
+	tasks?: SharedTask[];
 	[key: string]: unknown;
 }
 
@@ -94,7 +111,10 @@ export type ReviewEditField =
 	| 'figure_alt_text'
 	| 'list_item_text'
 	| 'table_cell_text'
-	| 'accessibility_description';
+	| 'accessibility_description'
+	| 'task_prompt'
+	| 'task_option_text'
+	| 'task_feedback_text';
 
 export interface ReviewDraftTextEdit {
 	section_id: string;
@@ -104,6 +124,8 @@ export interface ReviewDraftTextEdit {
 	item_index?: number;
 	row_index?: number;
 	column_index?: number;
+	option_id?: string;
+	feedback_key?: string;
 }
 
 /** One reviewer-editable slot in the document, with its current value. */
@@ -116,6 +138,8 @@ export interface EditableField {
 	item_index?: number;
 	row_index?: number;
 	column_index?: number;
+	option_id?: string;
+	feedback_key?: string;
 	label: string;
 	value: string;
 }
@@ -128,6 +152,8 @@ export interface EditableFieldTarget {
 	item_index?: number;
 	row_index?: number;
 	column_index?: number;
+	option_id?: string;
+	feedback_key?: string;
 }
 
 export function fieldKey(target: EditableFieldTarget): string {
@@ -137,8 +163,93 @@ export function fieldKey(target: EditableFieldTarget): string {
 		target.field,
 		target.item_index ?? '',
 		target.row_index ?? '',
-		target.column_index ?? ''
+		target.column_index ?? '',
+		target.option_id ?? '',
+		target.feedback_key ?? ''
 	].join('::');
+}
+
+/** Response types whose option *text* is editable (the key references option ids). */
+const TEXT_EDITABLE_RESPONSE_TYPES = new Set(['single_choice', 'multiple_choice']);
+
+const FEEDBACK_LABELS: Record<string, string> = {
+	correct: 'Feedback when correct',
+	incorrect: 'Feedback when incorrect',
+	partial: 'Feedback when partly correct'
+};
+
+/** Flatten string feedback messages to dotted keys (e.g. ``by_option.b``). */
+function feedbackEntries(
+	feedback: Record<string, unknown> | null | undefined,
+	prefix = ''
+): Array<[string, string]> {
+	if (!feedback) return [];
+	const entries: Array<[string, string]> = [];
+	for (const [key, value] of Object.entries(feedback)) {
+		const path = prefix ? `${prefix}.${key}` : key;
+		if (typeof value === 'string') entries.push([path, value]);
+		else if (value && typeof value === 'object' && !Array.isArray(value)) {
+			entries.push(...feedbackEntries(value as Record<string, unknown>, path));
+		}
+	}
+	return entries;
+}
+
+function feedbackLabel(path: string): string {
+	if (FEEDBACK_LABELS[path]) return FEEDBACK_LABELS[path];
+	const option = path.startsWith('by_option.') ? path.slice('by_option.'.length) : null;
+	return option ? `Feedback for option ${option}` : `Feedback (${path})`;
+}
+
+/** Editable wording for the task behind one task anchor. The answer key is never offered. */
+export function editableTaskFields(
+	sectionId: string,
+	anchor: SharedNode,
+	task: SharedTask
+): EditableField[] {
+	const base = { section_id: sectionId, node_id: anchor.id, node_kind: anchor.kind };
+	const fields: EditableField[] = [
+		{
+			...base,
+			key: fieldKey({ section_id: sectionId, node_id: anchor.id, field: 'task_prompt' }),
+			field: 'task_prompt',
+			label: 'Question prompt',
+			value: task.prompt ?? ''
+		}
+	];
+	if (TEXT_EDITABLE_RESPONSE_TYPES.has(String(task.response?.type ?? ''))) {
+		for (const option of task.response.options ?? []) {
+			fields.push({
+				...base,
+				key: fieldKey({
+					section_id: sectionId,
+					node_id: anchor.id,
+					field: 'task_option_text',
+					option_id: option.id
+				}),
+				field: 'task_option_text',
+				option_id: option.id,
+				label: `Option ${option.id}`,
+				value: option.text ?? ''
+			});
+		}
+	}
+	for (const [path, value] of feedbackEntries(task.feedback)) {
+		fields.push({
+			...base,
+			key: fieldKey({
+				section_id: sectionId,
+				node_id: anchor.id,
+				field: 'task_feedback_text',
+				feedback_key: path
+			}),
+			field: 'task_feedback_text',
+			feedback_key: path,
+			label: feedbackLabel(path),
+			value
+		});
+	}
+	return fields;
 }
 
 const ISSUE_LABELS: Record<string, string> = {
@@ -180,6 +291,7 @@ function displayOf<T>(node: SharedNode): T {
 /** Enumerate every reviewer-editable field on a document, in document order. */
 export function editableFieldsForDocument(document: SharedLessonDocument): EditableField[] {
 	const fields: EditableField[] = [];
+	const tasksById = new Map((document.tasks ?? []).map((task) => [task.id, task]));
 	for (const section of document.sections) {
 		for (const node of section.nodes) {
 			if (node.kind === 'paragraph' || node.kind === 'heading') {
@@ -328,7 +440,11 @@ export function editableFieldsForDocument(document: SharedLessonDocument): Edita
 					value: node.accessibility?.description ?? ''
 				});
 			}
-			// task_anchor nodes are frozen from the plan and carry no editable field.
+			if (node.kind === 'task_anchor' && node.task_spec_id) {
+				// Only the task's wording is editable; its answer key stays locked.
+				const task = tasksById.get(node.task_spec_id);
+				if (task) fields.push(...editableTaskFields(section.id, node, task));
+			}
 		}
 	}
 	return fields;
@@ -356,7 +472,9 @@ export function buildReviewDraftEdits(
 			value: next,
 			item_index: field.item_index,
 			row_index: field.row_index,
-			column_index: field.column_index
+			column_index: field.column_index,
+			option_id: field.option_id,
+			feedback_key: field.feedback_key
 		});
 	}
 	return edits;

@@ -176,9 +176,21 @@ def test_review_revision_allows_only_review_api_text_edits_and_reports_revalidat
     ("label", "mutate", "message"),
     [
         (
-            "task",
-            lambda payload: payload["tasks"][0].update(prompt="Forged task meaning"),
-            "document or source lineage",
+            "task answer key",
+            lambda payload: payload["tasks"][0].update(
+                evaluation={"type": "exact_match", "correct_option_id": "no"}
+            ),
+            "protected task fields",
+        ),
+        (
+            "task option id",
+            lambda payload: payload["tasks"][0]["response"]["options"][1].update(id="maybe"),
+            "protected task fields",
+        ),
+        (
+            "task action",
+            lambda payload: payload["tasks"][0].update(difficulty="independent"),
+            "protected task fields",
         ),
         (
             "provenance",
@@ -269,3 +281,56 @@ def test_review_revision_rejects_stale_canonical_hash() -> None:
 
     with pytest.raises(ReviewRevisionValidationError, match="content hash is stale"):
         prove_review_draft_revision(origin, revised)
+
+
+def test_review_revision_allows_task_wording_corrections_only() -> None:
+    """Prompt, choice-option text and feedback wording are editable; the key is not."""
+    origin = _origin()
+
+    def mutate(payload: dict) -> None:
+        task = payload["tasks"][0]
+        task["prompt"] = "Which choice does the passage support?"
+        task["response"]["options"][1]["text"] = "No, it does not"
+
+    revised = _revise(origin, mutate)
+    proof = prove_review_draft_revision(origin, revised)
+
+    assert proof.changed_task_ids == ("task-1",)
+    assert proof.changed_section_ids == ()
+    assert revised.tasks[0].evaluation == origin.tasks[0].evaluation
+
+
+def test_review_revision_rejects_blank_task_prompt() -> None:
+    origin = _origin()
+    payload = origin.model_dump(mode="json")
+    payload["tasks"][0]["prompt"] = "   "
+    payload["revision"] = origin.revision + 1
+    payload.pop("content_hash", None)
+    try:
+        revised = build_shared_lesson_document(payload)
+    except (TypeError, ValueError):
+        return  # schema already refuses a blank prompt
+    with pytest.raises(ReviewRevisionValidationError, match="protected task fields"):
+        prove_review_draft_revision(origin, revised)
+
+
+def test_review_revision_freezes_text_that_is_the_answer_key() -> None:
+    """For matching/ordering responses the displayed text is the key: frozen."""
+    from document.shared_lesson.review_revision import _task_matches_review_contract
+
+    origin = {
+        "id": "t",
+        "prompt": "Put the stages in order.",
+        "response": {"type": "ordered_items", "items": ["A", "B"], "correct_order": ["A", "B"]},
+        "evaluation": {"type": "sequence", "order": ["A", "B"]},
+        "feedback": {"correct": "Yes.", "incorrect": "Not quite."},
+    }
+    reworded_prompt = {**origin, "prompt": "Order the stages."}
+    reworded_feedback = {**origin, "feedback": {"correct": "Well done.", "incorrect": "Try again."}}
+    edited_item = {**origin, "response": {**origin["response"], "items": ["A!", "B"]}}
+    new_feedback_key = {**origin, "feedback": {"correct": "Yes.", "partial": "Almost."}}
+
+    assert _task_matches_review_contract(origin, reworded_prompt)
+    assert _task_matches_review_contract(origin, reworded_feedback)
+    assert not _task_matches_review_contract(origin, edited_item)
+    assert not _task_matches_review_contract(origin, new_feedback_key)

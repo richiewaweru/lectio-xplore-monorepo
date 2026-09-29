@@ -165,3 +165,84 @@ describe('issue id helpers', () => {
 		expect(issueNodeIds(issues)).toEqual(new Set(['node-1', 'node-2']));
 	});
 });
+
+describe('task wording fields', () => {
+	function withTasks(): SharedLessonDocument {
+		return {
+			schema_version: 1,
+			id: 'doc',
+			revision: 1,
+			content_hash: 'h',
+			title: 'Shadows',
+			sections: [
+				{
+					id: 'confront',
+					title: 'Confront',
+					position: 0,
+					nodes: [
+						{ id: 'anchor-choice', kind: 'task_anchor', task_spec_id: 'task-choice' },
+						{ id: 'anchor-order', kind: 'task_anchor', task_spec_id: 'task-order' }
+					]
+				}
+			],
+			tasks: [
+				{
+					id: 'task-choice',
+					action: 'select-one',
+					prompt: 'On that belief, how wide?',
+					response: {
+						type: 'single_choice',
+						options: [
+							{ id: 'a', text: 'Narrow' },
+							{ id: 'b', text: 'Wide' }
+						]
+					},
+					evaluation: { type: 'choice_keys', correct_keys: ['b'] },
+					feedback: { correct: 'Yes.', by_option: { a: 'Look again.' } }
+				},
+				{
+					id: 'task-order',
+					action: 'order-items',
+					prompt: 'Order the stages.',
+					response: { type: 'ordered_items', items: ['A', 'B'] },
+					feedback: null
+				}
+			]
+		};
+	}
+
+	it('offers prompt, choice option text and feedback, never the answer key', () => {
+		const fields = editableFieldsForDocument(withTasks());
+		const choice = fields.filter((field) => field.node_id === 'anchor-choice');
+		expect(choice.map((field) => [field.field, field.option_id ?? field.feedback_key ?? null])).toEqual([
+			['task_prompt', null],
+			['task_option_text', 'a'],
+			['task_option_text', 'b'],
+			['task_feedback_text', 'correct'],
+			['task_feedback_text', 'by_option.a']
+		]);
+		expect(fields.some((field) => field.value === 'b' && field.field !== 'task_option_text')).toBe(false);
+	});
+
+	it('only offers the prompt when the displayed text is the answer key', () => {
+		const order = editableFieldsForDocument(withTasks()).filter((field) => field.node_id === 'anchor-order');
+		expect(order.map((field) => field.field)).toEqual(['task_prompt']);
+	});
+
+	it('builds task edits carrying option_id and feedback_key', () => {
+		const fields = editableFieldsForDocument(withTasks());
+		const values = new Map(fields.map((field) => [field.key, field.value]));
+		const prompt = fields.find((field) => field.field === 'task_prompt' && field.node_id === 'anchor-choice')!;
+		const option = fields.find((field) => field.option_id === 'a')!;
+		const feedback = fields.find((field) => field.feedback_key === 'by_option.a')!;
+		values.set(prompt.key, 'Predict the width the wall will actually show.');
+		values.set(option.key, 'A narrow band');
+		values.set(feedback.key, 'Check the grazing rays again.');
+		const edits = buildReviewDraftEdits(fields, values);
+		expect(edits).toEqual([
+			expect.objectContaining({ field: 'task_prompt', node_id: 'anchor-choice' }),
+			expect.objectContaining({ field: 'task_option_text', option_id: 'a', value: 'A narrow band' }),
+			expect.objectContaining({ field: 'task_feedback_text', feedback_key: 'by_option.a' })
+		]);
+	});
+});

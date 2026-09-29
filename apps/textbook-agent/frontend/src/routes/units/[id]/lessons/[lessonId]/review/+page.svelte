@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount } from 'svelte';
-	import { getReviewDraft, saveReviewDraftRevision, submitReviewDraft } from '$lib/api/shared-documents';
+	import {
+		getReviewDraft,
+		regenerateSharedDocument,
+		saveReviewDraftRevision,
+		submitReviewDraft
+	} from '$lib/api/shared-documents';
 	import { isApiError } from '$lib/api/errors';
 	import type { PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Badge, Button, EmptyState, InlineError } from '$lib/ui';
@@ -45,6 +50,7 @@
 	let values = $state<Record<string, string>>({});
 	let saving = $state(false);
 	let submitting = $state(false);
+	let regenerating = $state(false);
 	let phase = $state<'editing' | 'rechecking' | 'ready' | 'needs_review_again' | 'failed'>('editing');
 
 	const flaggedNodeIds = $derived(issueNodeIds(issues));
@@ -143,6 +149,8 @@
 		}
 		if (state === 'needs_review') {
 			phase = 'needs_review_again';
+			// A regenerated document is a new run; follow it.
+			runId = resolveRunId() ?? runId;
 			void loadDraft().catch((err) => {
 				error = err instanceof Error ? err.message : 'Could not reload the review draft.';
 			});
@@ -173,6 +181,26 @@
 			}
 		} finally {
 			submitting = false;
+		}
+	}
+
+	async function regenerateDocument(): Promise<void> {
+		if (!runId || regenerating) return;
+		const confirmed = window.confirm(
+			'Regenerate this lesson document from the approved plan? Unsubmitted edits here will be discarded, and a new document will be written and checked.'
+		);
+		if (!confirmed) return;
+		regenerating = true;
+		error = null;
+		notice = null;
+		try {
+			await regenerateSharedDocument(runId);
+			phase = 'rechecking';
+			recheckPoll.start();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Could not regenerate the lesson document.';
+		} finally {
+			regenerating = false;
 		}
 	}
 
@@ -264,7 +292,17 @@
 					{#each section.nodes as node (node.id)}
 						<div class="node" class:flagged={flaggedNodeIds.has(node.id)}>
 							{#if node.kind === 'task_anchor'}
-								<p class="frozen">Task (frozen from the approved plan) — task {node.task_spec_id}{#if node.role} · {node.role}{/if}</p>
+								<p class="frozen">Question — you can correct its wording; the answer key is locked.{#if node.role} · {node.role}{/if}</p>
+								{#each fieldsFor(section, node) as field (field.key)}
+									<label class="field">
+										<span>{field.label}</span>
+										<textarea
+											rows={field.field === 'task_prompt' ? 3 : 2}
+											value={values[field.key] ?? ''}
+											oninput={(event) => setValue(field.key, (event.target as HTMLTextAreaElement).value)}
+										></textarea>
+									</label>
+								{/each}
 							{:else}
 								{#if node.kind === 'figure'}
 									<p class="frozen">Figure — asset {(node.display as { asset_id?: string | null })?.asset_id ?? 'unassigned'} (image editing is not supported here)</p>
@@ -305,6 +343,12 @@
 				{submitting ? 'Submitting…' : 'Submit for re-check'}
 			</Button>
 			{#if hasUnsavedChanges}<span class="hint">Save your changes before submitting.</span>{/if}
+			<span class="regen">
+				<Button variant="secondary" busy={regenerating} disabled={regenerating || submitting || saving} onclick={() => void regenerateDocument()}>
+					{regenerating ? 'Regenerating…' : 'Regenerate document'}
+				</Button>
+				<span class="hint">Use this when an issue can't be fixed by editing wording (for example, a wrong answer key).</span>
+			</span>
 		</footer>
 	{/if}
 </div>
@@ -333,6 +377,7 @@
 	.node:first-of-type { border-top: none; }
 	.node.flagged { background: color-mix(in srgb, var(--danger) 6%, transparent); border-radius: var(--radius-sm); }
 	.frozen { color: var(--ink-2); font-style: italic; font-size: 0.875rem; }
+	.regen { display: inline-flex; align-items: center; gap: var(--space-2); margin-left: auto; flex-wrap: wrap; }
 	.field { display: grid; gap: 0.35rem; margin-bottom: var(--space-2); font-size: 0.8125rem; font-weight: 600; color: var(--ink-2); }
 	.field.muted-field { font-weight: 500; }
 	textarea { font: inherit; font-weight: 400; padding: 0.55rem 0.7rem; border-radius: var(--radius-md); border: 1px solid var(--rule); background: var(--surface); color: var(--ink); resize: vertical; width: 100%; box-sizing: border-box; }

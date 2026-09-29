@@ -74,3 +74,24 @@ export function submitReviewDraft(
 		{ method: 'POST', headers: jsonHeaders, body: JSON.stringify(body) }
 	);
 }
+
+export interface RegenerateDocumentResult {
+	status: string;
+	replaced_run_id: string;
+	run_id: string;
+	path_lesson_id: string;
+}
+
+/**
+ * Replace a flagged or failed lesson document with a fresh generation attempt.
+ * For defects that editing wording cannot fix (e.g. a task whose answer key is
+ * wrong). Fails with a 409 ApiError when the document is still generating or
+ * its attempts are used up.
+ */
+export function regenerateSharedDocument(runId: string): Promise<RegenerateDocumentResult> {
+	return jsonRequest(
+		`/api/v1/shared-documents/runs/${encodeURIComponent(runId)}/regenerate`,
+		'Could not regenerate the lesson document.',
+		{ method: 'POST' }
+	);
+}
