@@ -117,19 +117,12 @@ NATIVE_STATUSES = frozenset(
 )
 
 # Durable work_kind values stored on page_document_v2.execution
-WORK_KIND_PRE_WORKER_ITEM = "pre_worker_item_retry"
-WORK_KIND_PRE_WORKER_TEACHING = "pre_worker_teaching_retry"
 WORK_KIND_POST_APPROVAL = "post_approval_execution"
-PRE_WORKER_WORK_KINDS = frozenset(
-    {WORK_KIND_PRE_WORKER_ITEM, WORK_KIND_PRE_WORKER_TEACHING}
-)
 
 DEFAULT_VARIANT_ID = "everyone"
-HEARTBEAT_INTERVAL_SECONDS = 25
 MAX_SECTION_CONCURRENCY = 4
 # Within a single section, bound concurrent block writers.
 MAX_WRITER_CONCURRENCY = 3
-DEFAULT_WORKER_POLL_SECONDS = 2.0
 
 
 class IllegalTransitionError(ValueError):

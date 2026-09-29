@@ -457,43 +457,45 @@ async def post_retry_native(
     generation_id: str,
     current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
-    """Accept-only native retry: durable checkpoint + worker-owned recovery.
+    """Retry a failed preparation Run (delegates to the runtime retry).
 
-    Routes by execution.last_error.stage:
-    - item_generation → checkpoint item_generation (work_kind pre_worker_item_retry)
-    - planning_teaching → checkpoint planning_teaching (work_kind pre_worker_teaching_retry)
-    - post-approval stages → queued for worker reclaim
-    Visual failures must use /visuals/retry.
+    Compatibility route for the current frontend (Option D, 3A): reopens every
+    retryable failed leaf of the lesson's preparation Run.  Anything that is not
+    a recoverable preparation Run (terminal failure, a lesson prepared before
+    preparation Runs, or a non-preparation generation) answers 409 with
+    ``recovery_action`` so the client shows Regenerate instead.
     """
-    model = await _load_owned_generation(generation_id, current_user.id)
-    from print.generation.whole_lesson.native_retry import (
-        NativeRetryConflict,
-        accept_native_retry,
+    await _load_owned_generation(generation_id, current_user.id)
+    from application.unit_lesson.preparation_runs import (
+        PreparationRunError,
+        retry_preparation_run,
     )
-    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from curriculum.planning.persistence import load_chunked_state
 
-    state = await load_chunked_state(generation_id)
-    if not generation_is_native_whole_lesson(state, model):
-        raise HTTPException(
-            status_code=409,
-            detail="retry-native is only available for native whole-lesson generations",
-        )
-    try:
-        result = await accept_native_retry(
-            generation_id, user_id=current_user.id
-        )
-    except NativeRetryConflict as exc:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "error_type": exc.code,
-                "message": str(exc),
-                "stage": exc.status or str(model.status or ""),
-                "retry_target": exc.target.value if exc.target else None,
-                "generation_id": generation_id,
-                **(exc.detail or {}),
-            },
-        ) from exc
-    return JSONResponse(status_code=202, content=result)
-
+    async with async_session_factory() as session:
+        try:
+            run = await retry_preparation_run(
+                session, generation_id=generation_id, owner_user_id=current_user.id
+            )
+            await session.commit()
+        except PreparationRunError as exc:
+            await session.rollback()
+            raise HTTPException(
+                status_code=exc.status_code,
+                detail={
+                    "error_type": exc.code,
+                    "message": str(exc),
+                    "recovery_action": "regenerate",
+                    "generation_id": generation_id,
+                },
+            ) from exc
+    return JSONResponse(
+        status_code=202,
+        content={
+            "generation_id": generation_id,
+            "run_id": run.id,
+            "status": run.status,
+            "accepted": True,
+            "retry_target": "preparation_run",
+            "next_action": "wait",
+        },
+    )

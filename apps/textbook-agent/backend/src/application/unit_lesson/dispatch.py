@@ -110,6 +110,10 @@ async def initialise_path_generation(
         "display_title": plan.cards[0].title,
         "execution_started": False,
         "path_prepared": True,
+        # Stage-1 structural review is open until the teacher approves the
+        # structure (which admits the preparation Run). Status projection reads
+        # this marker, never the worker stage (Option D, 3A).
+        "structure_review_open": True,
         # Units owns admission. Select once and persist before any later state merge.
         **build_control_patch(select_default_pipeline()),
     }

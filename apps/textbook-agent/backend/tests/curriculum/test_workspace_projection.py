@@ -14,6 +14,7 @@ from curriculum.routes import get_path_lesson_status
 from curriculum.service import approve_path, create_unit, persist_path_plan
 from curriculum.teaching_plan.revisions import TeachingRevisionStore
 from curriculum.workspace_projection import (
+    PreparationRunView,
     project_lesson_workspace,
     workspace_state_from_layers,
 )
@@ -46,11 +47,10 @@ def _realization(path: str, *, status: str, output_id: str | None) -> dict:
     }
 
 
-def test_ready_output_projects_ready_even_when_preparation_worker_is_active() -> None:
+def test_ready_output_projects_ready_even_when_preparation_run_is_active() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-1",
-        generation_status="running",
-        workflow_stage="planning_forms",
+        preparation_run=PreparationRunView(run_id="run-1", status="running"),
         learn_realization=_realization("learn", status="ready", output_id="learn-out-1"),
     )
 
@@ -59,31 +59,27 @@ def test_ready_output_projects_ready_even_when_preparation_worker_is_active() ->
     assert workspace.preparation.state == "planning"
 
 
-@pytest.mark.parametrize("legacy_stage", ["writing_sections", "writing_blocks"])
-def test_legacy_writing_stage_projects_truthful_stall_not_active_planning(
+@pytest.mark.parametrize("legacy_stage", ["writing_sections", "writing_blocks", "stage2_running"])
+def test_old_worker_stage_is_ignored_legacy_row_without_run_is_unsupported(
     legacy_stage: str,
 ) -> None:
-    """P12B retired writing_sections/writing_blocks: no worker can ever advance
-    a row still parked there, so it must not project as an eternal "planning"
-    spinner. It should mirror native_status.LEGACY_STATUSES: a non-retryable
-    failed_terminal stall the teacher can inspect."""
+    """A row prepared before preparation Runs (no Run, no structural-review
+    marker, no plan) projects the truthful ``legacy_unsupported`` state whatever
+    worker stage it is parked at: the stage is never read."""
     workspace = project_lesson_workspace(
         generation_id="prep-legacy",
-        generation_status=legacy_stage,
-        workflow_stage=legacy_stage,
+        state={"stage": legacy_stage, "structural_plan": {"sections": []}},
     )
 
-    assert workspace.preparation.state == "failed_terminal"
+    assert workspace.preparation.state == "legacy_unsupported"
+    assert workspace.preparation.recovery_action == "regenerate"
     assert workspace.preparation.error is not None
-    assert workspace.preparation.error.code == "LEGACY_STAGE_RETIRED"
     assert workspace.preparation.error.retryable is False
 
 
 def test_failed_realization_never_projects_ready_when_output_pointer_exists() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-1",
-        generation_status="completed",
-        workflow_stage="awaiting_teaching_approval",
         state=_approved_state(),
         learn_realization=_realization(
             "learn", status="failed_recoverable", output_id="old-output"
@@ -195,8 +191,6 @@ def test_p07_learn_print_state_truth_table_is_independent(
 def test_ambiguous_legacy_row_is_reported_without_assigning_either_path() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-legacy",
-        generation_status="completed",
-        workflow_stage="completed",
         legacy_ambiguous=True,
     )
 
@@ -205,16 +199,13 @@ def test_ambiguous_legacy_row_is_reported_without_assigning_either_path() -> Non
     assert "ambiguous_legacy_realization_path" in workspace.legacy_ambiguities
     assert workspace.learn.legacy_ambiguous is True
     assert workspace.print.legacy_ambiguous is True
-    assert workspace.preparation.state == "failed_terminal"
-    assert workspace.preparation.legacy_ambiguous is True
+    assert workspace.preparation.state == "legacy_unsupported"
 
 
 def test_structural_awaiting_review_is_not_reported_as_failed_or_approved() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-structural",
-        generation_status="awaiting_review",
-        workflow_stage="awaiting_review",
-        state={"structural_plan": {"sections": []}},
+        state={"structural_plan": {"sections": []}, "structure_review_open": True},
     )
 
     assert workspace.preparation.state == "awaiting_review"
@@ -222,36 +213,55 @@ def test_structural_awaiting_review_is_not_reported_as_failed_or_approved() -> N
     assert workspace.preparation.approved_snapshot_verified is False
 
 
-def test_teaching_worker_stage_stays_planning_despite_legacy_status_alias() -> None:
+def test_active_run_projects_planning_with_card_progress_despite_structural_state() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-teaching-worker",
-        generation_status="awaiting_review",
-        workflow_stage="planning_teaching",
-        state={"structural_plan": {"sections": []}},
+        state={"structural_plan": {"sections": []}, "structure_review_open": True},
+        preparation_run=PreparationRunView(
+            run_id="run-1", status="running", items_total=3, items_ready=1, teaching_plan="not_started"
+        ),
     )
 
     assert workspace.preparation.state == "planning"
     assert workspace.preparation.review_kind is None
+    assert workspace.preparation.run_id == "run-1"
+    assert workspace.preparation.progress is not None
+    assert (
+        workspace.preparation.progress.items_total,
+        workspace.preparation.progress.items_ready,
+    ) == (3, 1)
 
 
-def test_failed_generation_status_wins_over_stale_active_worker_stage() -> None:
-    workspace = project_lesson_workspace(
+def test_failed_run_projects_failure_with_recovery_action() -> None:
+    recoverable = project_lesson_workspace(
         generation_id="prep-failed",
-        generation_status="failed_recoverable",
-        workflow_stage="writing_sections",
-        generation_error="work-item budget exhausted",
-    )
+        preparation_run=PreparationRunView(
+            run_id="run-1",
+            status="failed_recoverable",
+            error_code="preparation_provider_timeout",
+            error_summary="The AI provider was unavailable or too slow. Retry it.",
+            retryable=True,
+            items_failed=1,
+            failed_work_item_ids=("wi-1",),
+        ),
+    ).preparation
+    assert recoverable.state == "failed_recoverable"
+    assert (recoverable.retryable, recoverable.recovery_action) == (True, "retry")
+    assert recoverable.error is not None
+    assert recoverable.error.code == "preparation_provider_timeout"
+    assert recoverable.progress.failed_work_item_ids == ["wi-1"]
 
-    assert workspace.preparation.state == "failed_recoverable"
-    assert workspace.preparation.error is not None
-    assert workspace.preparation.error.retryable is True
+    terminal = project_lesson_workspace(
+        generation_id="prep-failed",
+        preparation_run=PreparationRunView(run_id="run-2", status="failed_terminal"),
+    ).preparation
+    assert terminal.state == "failed_terminal"
+    assert (terminal.retryable, terminal.recovery_action) == (False, "regenerate")
 
 
 def test_stale_preparation_keeps_approval_identity_and_marks_it_stale() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-1",
-        generation_status="failed",
-        workflow_stage="failed_recoverable",
         state=_approved_state(),
         stale=True,
     )
@@ -270,8 +280,6 @@ def test_revisionless_verified_snapshot_projects_approved_like_consumer_gate() -
     admitted = accept_approved_teaching_revision(state, consumer="print")
     workspace = project_lesson_workspace(
         generation_id="prep-legacy-revisionless",
-        generation_status="completed",
-        workflow_stage="approved",
         state=state,
     )
 
@@ -290,8 +298,6 @@ def test_new_pending_draft_is_not_hidden_by_older_approved_snapshot() -> None:
 
     workspace = project_lesson_workspace(
         generation_id="prep-1",
-        generation_status="completed",
-        workflow_stage="awaiting_teaching_approval",
         state=state,
     )
 
@@ -304,8 +310,6 @@ def test_new_pending_draft_is_not_hidden_by_older_approved_snapshot() -> None:
 def test_synthesized_legacy_approval_is_not_projected_as_verified() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-legacy-approved",
-        generation_status="completed",
-        workflow_stage="approved",
         state={
             "teaching_plan": {"arc": "Legacy plan", "sections": []},
             "teaching_review": {"status": "approved", "approved_revision": 1},
@@ -328,8 +332,6 @@ def test_approval_projection_matches_consumer_content_hash_gate(mutation: str) -
 
     workspace = project_lesson_workspace(
         generation_id="prep-unverifiable-hash",
-        generation_status="completed",
-        workflow_stage="approved",
         state=state,
     )
 
@@ -344,59 +346,26 @@ def test_approval_projection_matches_consumer_content_hash_gate(mutation: str) -
     assert workspace.preparation.error.recovery_action == "reprepare"
 
 
-def test_mismatched_pending_plan_does_not_poll_as_active_planning() -> None:
+def test_mismatched_pending_plan_on_a_ready_run_fails_closed_not_planning() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-pending-mismatch",
-        generation_status="running",
-        workflow_stage="planning_teaching",
         state={
             "teaching_plan": {"arc": "invalid legacy plan"},
             "teaching_review": {"status": "pending", "revision": 2},
         },
+        preparation_run=PreparationRunView(run_id="run-1", status="ready"),
     )
 
     assert workspace.preparation.state == "failed_terminal"
     assert workspace.preparation.legacy_ambiguous is True
     assert workspace.preparation.error is not None
-    assert workspace.preparation.error.code == "PENDING_REVISION_UNVERIFIED"
-
-
-def test_preparation_failure_projects_underlying_typed_error_details() -> None:
-    workspace = project_lesson_workspace(
-        generation_id="prep-1",
-        generation_status="failed_recoverable",
-        workflow_stage="failed_recoverable",
-        generation_error="writer retries exhausted",
-        generation_error_code="OUTPUT_INVALID",
-        generation_error_type="generation",
-        state={
-            "error_detail": {
-                "failure_class": "validation",
-                "retryable": True,
-                "stage": "writing",
-                "work_item_id": "section-2:block-1",
-                "attempt": 2,
-            }
-        },
-    )
-
-    error = workspace.preparation.error
-    assert error is not None
-    assert error.code == "OUTPUT_INVALID"
-    assert error.error_type == "generation"
-    assert error.failure_class == "validation"
-    assert error.stage == "writing"
-    assert error.work_item_id == "section-2:block-1"
-    assert error.attempt == 2
-    assert error.retryable is True
+    assert workspace.preparation.error.code == "PREPARATION_STATE_UNKNOWN"
+    assert workspace.preparation.recovery_action == "regenerate"
 
 
 def test_approved_snapshot_stays_approved_when_downstream_print_failed() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-1",
-        generation_status="failed",
-        workflow_stage="failed_recoverable",
-        generation_error="Print worker failed",
         state=_approved_state(),
         print_realization=_realization("print", status="failed_recoverable", output_id="prep-1"),
     )
@@ -420,8 +389,6 @@ def test_nested_page_document_approval_projects_through_route_state_merge() -> N
     merged = workspace_state_from_layers(outer, page_state)
     workspace = project_lesson_workspace(
         generation_id="prep-nested",
-        generation_status="failed",
-        workflow_stage=outer["stage"],
         state=merged,
     )
 
@@ -437,8 +404,6 @@ def test_outer_legacy_approval_string_cannot_verify_snapshot() -> None:
     )
     workspace = project_lesson_workspace(
         generation_id="prep-outer-legacy",
-        generation_status="completed",
-        workflow_stage="completed",
         state=merged,
     )
 
@@ -446,18 +411,14 @@ def test_outer_legacy_approval_string_cannot_verify_snapshot() -> None:
     assert workspace.preparation.approved_snapshot_verified is False
 
 
-def test_completed_preparation_without_approved_snapshot_fails_closed() -> None:
+def test_preparation_without_approved_snapshot_is_never_projected_approved() -> None:
     workspace = project_lesson_workspace(
         generation_id="prep-unverified",
-        generation_status="completed",
-        workflow_stage="ready",
         state={"teaching_plan": {"arc": "unverified"}},
     )
 
-    assert workspace.preparation.state == "failed_terminal"
+    assert workspace.preparation.state == "legacy_unsupported"
     assert workspace.preparation.approved_snapshot_verified is False
-    assert workspace.preparation.error is not None
-    assert workspace.preparation.error.code == "APPROVED_REVISION_UNVERIFIED"
 
 
 @pytest.mark.asyncio

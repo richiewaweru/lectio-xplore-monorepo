@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tests.planning._lease_helper import claim_test_execution
+from tests.planning._lease_helper import claim_test_execution, heartbeat_test_execution
 import asyncio
 import uuid
 
@@ -56,7 +56,7 @@ async def test_heartbeat_and_block_outcome_do_not_clobber(db_session_factory) ->
         async with db_session_factory() as session:
             repo = PageDocumentRepository(session, gid)
             for _ in range(8):
-                await repo.heartbeat(worker_id=worker_id, lease_token=token)
+                await heartbeat_test_execution(repo, worker_id=worker_id, lease_token=token)
 
     async def _blocks() -> None:
         async with db_session_factory() as session:

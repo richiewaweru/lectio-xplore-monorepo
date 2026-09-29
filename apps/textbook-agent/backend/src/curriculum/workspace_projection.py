@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from copy import deepcopy
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from curriculum.models import (
     ArtifactWorkspaceDTO,
     LessonWorkspaceStateDTO,
+    PreparationProgressDTO,
     PreparationWorkspaceDTO,
     WorkspaceErrorDTO,
 )
@@ -29,27 +31,6 @@ ArtifactState = Literal[
     "needs_review",
 ]
 
-# P12B: writing_sections/writing_blocks are retired pre-P11B execution stages.
-# No worker transitions into them any more (states.LEGAL_TRANSITIONS has no
-# entry for them), so a row still parked there can never advance. They are
-# handled explicitly in _preparation_projection (see LEGACY_PREPARATION_STAGES
-# below) rather than counted as active, or this projection would report a
-# stalled row as "planning" forever.
-_ACTIVE_PREPARATION_STAGES = {
-    "queued",
-    "item_generation",
-    "planning_teaching",
-    "planning_forms",
-    "assembling",
-    "stage1_running",
-    "stage2_running",
-    "variants_running",
-}
-# Mirrors print.generation.whole_lesson.native_status.LEGACY_STATUSES. Kept as
-# a local constant (rather than importing across the print/curriculum
-# boundary) since this projection only needs the stage names, not the native
-# whole-lesson retry machinery.
-LEGACY_PREPARATION_STAGES = frozenset({"writing_sections", "writing_blocks"})
 _ACTIVE_REALIZATION_STAGES = {
     "selecting",
     "writing",
@@ -190,26 +171,62 @@ def _approved_snapshot_error(state: Mapping[str, Any]) -> tuple[str, str]:
     )
 
 
+LEGACY_UNSUPPORTED_MESSAGE = "Prepared before the planning update — re-prepare this lesson."
+
+
+@dataclass(frozen=True)
+class PreparationRunView:
+    """Plain-data view of a lesson's preparation Run (built by the application layer).
+
+    The preparation Run is the only job status the UI projection reads.  It is
+    deliberately plain data so this module never imports the runtime.
+    """
+
+    run_id: str
+    status: str
+    error_code: str | None = None
+    error_summary: str | None = None
+    retryable: bool = False
+    items_total: int = 0
+    items_ready: int = 0
+    items_failed: int = 0
+    teaching_plan: str = "not_started"
+    failed_work_item_ids: tuple[str, ...] = field(default_factory=tuple)
+
+
+def _progress(run: PreparationRunView | None) -> PreparationProgressDTO | None:
+    if run is None:
+        return None
+    return PreparationProgressDTO(
+        items_total=run.items_total,
+        items_ready=run.items_ready,
+        items_failed=run.items_failed,
+        teaching_plan=run.teaching_plan,  # type: ignore[arg-type]
+        failed_work_item_ids=list(run.failed_work_item_ids),
+    )
+
+
 def _preparation_projection(
     *,
     generation_id: str | None,
-    generation_status: str | None,
-    workflow_stage: str | None,
-    generation_error: str | None,
-    generation_error_code: str | None,
-    generation_error_type: str | None,
     state: Mapping[str, Any] | None,
+    run: PreparationRunView | None,
     stale: bool,
 ) -> PreparationWorkspaceDTO:
+    """Project preparation state from the preparation Run and the teaching ledger.
+
+    Never reads ``generation.status`` or ``chunked.stage``: the Run is the job
+    status, ``teaching_review`` (hash-bound revision store) is the approval
+    state, and ``structure_review_open`` marks the stage-1 structural review.
+    """
     if not generation_id:
         return PreparationWorkspaceDTO(state="not_started", stale=stale)
 
     chunked = state or {}
     review = _mapping(chunked.get("teaching_review"))
     raw_plan = _mapping(chunked.get("teaching_plan"))
-    stage = str(workflow_stage or "").lower()
-    status = str(generation_status or "").lower()
-    stage_detail = _mapping(chunked.get("error_detail"))
+    run_id = run.run_id if run is not None else None
+    progress = _progress(run)
 
     approved = _approved_snapshot(chunked)
     review_status = str(review.get("status") or "").lower()
@@ -223,199 +240,169 @@ def _preparation_projection(
             approved_content_hash=approved[2],
             approved_snapshot_verified=True,
             stale=stale,
+            run_id=run_id,
+            recovery_action="none",
+            progress=progress,
         )
 
-    legacy_ambiguous = review_status == "approved" and approved is None
-    if review_status == "pending" and raw_plan:
-        try:
-            plan = TeachingPlan.model_validate(raw_plan)
-            review_revision = int(review.get("revision") or plan.revision)
-            if review_revision == plan.revision:
-                return PreparationWorkspaceDTO(
-                    state="awaiting_review",
-                    review_kind="teaching_plan",
-                    generation_id=generation_id,
-                    teaching_plan_id=plan.teaching_plan_id,
-                    approved_revision=approved[1] if approved else None,
-                    approved_content_hash=approved[2] if approved else None,
-                    approved_snapshot_verified=approved is not None,
-                    stale=stale,
-                )
-            legacy_ambiguous = True
-        except (TypeError, ValueError):
-            legacy_ambiguous = True
-
-    if legacy_ambiguous and review_status in {"approved", "pending"}:
-        code, message = (
-            _approved_snapshot_error(chunked)
-            if review_status == "approved"
-            else (
-                "PENDING_REVISION_UNVERIFIED",
-                "The pending Teaching Plan does not match its review revision.",
-            )
-        )
+    if review_status == "approved" and approved is None:
+        code, message = _approved_snapshot_error(chunked)
         return PreparationWorkspaceDTO(
             state="failed_terminal",
             generation_id=generation_id,
             stale=stale,
             legacy_ambiguous=True,
+            run_id=run_id,
+            progress=progress,
             error=_workspace_error(
                 code=code,
                 error_type="workspace_state_ambiguous",
                 failure_class="state_integrity",
                 message=message,
                 retryable=False,
-                stage=stage or None,
-                recovery_action="reprepare" if review_status == "approved" else None,
+                recovery_action="reprepare",
             ),
         )
 
-    if status in {"failed_terminal", "cancelled"} or stage in {
-        "failed_terminal",
-        "stage1_failed",
-    }:
-        failure_state: Literal["failed_recoverable", "failed_terminal"] = "failed_terminal"
-    elif status in {"failed", "failed_recoverable"} or stage == "failed_recoverable":
-        failure_state = "failed_recoverable"
-    else:
-        failure_state = "failed_terminal"
-
-    if status in {"failed", "failed_recoverable", "failed_terminal", "cancelled"} or stage in {
-        "failed_recoverable",
-        "failed_terminal",
-        "stage1_failed",
-    }:
-        error = _workspace_error(
-            code=generation_error_code,
-            error_type=generation_error_type,
-            failure_class=(
-                str(stage_detail["failure_class"])
-                if stage_detail.get("failure_class") is not None
-                else None
-            ),
-            message=generation_error
-            or (str(stage_detail["message"]) if stage_detail.get("message") else None),
-            retryable=(
-                stage_detail.get("retryable")
-                if isinstance(stage_detail.get("retryable"), bool)
-                else failure_state == "failed_recoverable"
-            ),
-            stage=(str(stage_detail.get("stage") or stage) or None),
-            work_item_id=(
-                str(stage_detail["work_item_id"])
-                if stage_detail.get("work_item_id") is not None
-                else None
-            ),
-            attempt=stage_detail.get("attempt"),
+    def _pending_plan_review() -> PreparationWorkspaceDTO | None:
+        if review_status != "pending" or not raw_plan:
+            return None
+        try:
+            plan = TeachingPlan.model_validate(raw_plan)
+            if int(review.get("revision") or plan.revision) != plan.revision:
+                return None
+        except (TypeError, ValueError):
+            return None
+        return PreparationWorkspaceDTO(
+            state="awaiting_review",
+            review_kind="teaching_plan",
+            generation_id=generation_id,
+            teaching_plan_id=plan.teaching_plan_id,
+            approved_revision=approved[1] if approved else None,
+            approved_content_hash=approved[2] if approved else None,
+            approved_snapshot_verified=approved is not None,
+            stale=stale,
+            run_id=run_id,
+            recovery_action="review",
+            progress=progress,
         )
+
+    def _failed(
+        failure_state: Literal["failed_recoverable", "failed_terminal"],
+        *,
+        code: str,
+        message: str,
+        retryable: bool,
+        action: Literal["retry", "regenerate"],
+    ) -> PreparationWorkspaceDTO:
         return PreparationWorkspaceDTO(
             state=failure_state,
             generation_id=generation_id,
             stale=stale,
-            legacy_ambiguous=legacy_ambiguous,
-            error=error,
-        )
-
-    if stage in LEGACY_PREPARATION_STAGES:
-        # No worker will ever claim or advance this row again (P12B deleted the
-        # only executor that targeted these stages). Report a truthful,
-        # non-retryable stall instead of falling through to the generic
-        # PREPARATION_STATE_UNKNOWN message below, mirroring the
-        # native_status.LEGACY_STATUSES projection used by the chunked-status
-        # endpoint (next_action: "inspect_error").
-        return PreparationWorkspaceDTO(
-            state="failed_terminal",
-            generation_id=generation_id,
-            stale=stale,
-            legacy_ambiguous=legacy_ambiguous,
+            run_id=run_id,
+            recovery_action=action,
+            retryable=retryable,
+            progress=progress,
             error=_workspace_error(
-                code="LEGACY_STAGE_RETIRED",
-                error_type="workspace_state_ambiguous",
-                failure_class="state_integrity",
-                message=(
-                    "This generation is parked at a pre-P11B execution stage "
-                    "that no longer runs (standalone Print form-planning/"
-                    "writing was retired). It cannot resume automatically."
-                ),
-                retryable=False,
-                stage=stage or None,
+                code=code,
+                error_type="preparation_run",
+                message=message,
+                retryable=retryable,
+                stage="preparation",
+                recovery_action=action,
             ),
         )
 
-    structural_review_stages = {
-        "awaiting_review",
-        "plan_ready",
-        "blueprint_ready",
-        "assembly_blocked",
-        "stage2_error",
-    }
-    if (stage in _ACTIVE_PREPARATION_STAGES and stage not in structural_review_stages) or (
-        status in {"pending", "queued", "running", "generating"}
-        and stage not in structural_review_stages
-    ):
-        return PreparationWorkspaceDTO(
-            state="planning",
-            generation_id=generation_id,
-            stale=stale,
-            legacy_ambiguous=legacy_ambiguous,
-        )
-
-    if stage in structural_review_stages or (
-        status == "awaiting_review" and stage not in _ACTIVE_PREPARATION_STAGES
-    ):
-        if isinstance(chunked.get("structural_plan"), dict):
+    if run is not None:
+        status = run.status
+        if status in {"queued", "running", "awaiting_review"}:
             return PreparationWorkspaceDTO(
-                state="awaiting_review",
-                review_kind="structural",
+                state="planning",
                 generation_id=generation_id,
                 stale=stale,
-                legacy_ambiguous=legacy_ambiguous,
+                run_id=run_id,
+                recovery_action="none",
+                progress=progress,
             )
-        legacy_ambiguous = True
-
-    if (
-        status in {"completed", "ready", "approved"}
-        or stage
-        in {
-            "ready",
-            "completed",
-            "approved",
-            "awaiting_teaching_approval",
-        }
-        or legacy_ambiguous
-    ):
-        message = (
-            "Preparation claims approval but has no persisted matching approved revision snapshot."
-            if legacy_ambiguous
-            else "Preparation completed without a verifiable approved teaching revision."
-        )
+        if status == "failed_recoverable":
+            return _failed(
+                "failed_recoverable",
+                code=run.error_code or "PREPARATION_RUN_FAILED",
+                message=run.error_summary or "Plan generation failed.",
+                retryable=run.retryable,
+                action="retry" if run.retryable else "regenerate",
+            )
+        if status in {"failed_terminal", "cancelled"}:
+            return _failed(
+                "failed_terminal",
+                code=run.error_code or "PREPARATION_RUN_FAILED",
+                message=run.error_summary or "Plan generation failed.",
+                retryable=False,
+                action="regenerate",
+            )
+        if status == "ready":
+            pending = _pending_plan_review()
+            if pending is not None:
+                return pending
+            if review_status == "rejected":
+                return _failed(
+                    "failed_terminal",
+                    code="TEACHING_PLAN_REJECTED",
+                    message="The Teaching Plan was rejected. Regenerate it.",
+                    retryable=False,
+                    action="regenerate",
+                )
         return PreparationWorkspaceDTO(
             state="failed_terminal",
             generation_id=generation_id,
             stale=stale,
             legacy_ambiguous=True,
+            run_id=run_id,
+            recovery_action="regenerate",
+            progress=progress,
             error=_workspace_error(
-                code="APPROVED_REVISION_UNVERIFIED",
+                code="PREPARATION_STATE_UNKNOWN",
                 error_type="workspace_state_ambiguous",
                 failure_class="state_integrity",
-                message=message,
+                message=(
+                    "Preparation state cannot be determined from the plan run "
+                    "and review data. Regenerate the plan."
+                ),
                 retryable=False,
-                stage=stage or None,
+                recovery_action="regenerate",
             ),
         )
 
+    # No preparation Run.
+    pending = _pending_plan_review()
+    if pending is not None:
+        # A plan generated before Runs is fully reviewable: approval is
+        # hash-bound to the revision store, not to a job.
+        return pending
+    if chunked.get("structure_review_open") is True and isinstance(
+        chunked.get("structural_plan"), dict
+    ):
+        return PreparationWorkspaceDTO(
+            state="awaiting_review",
+            review_kind="structural",
+            generation_id=generation_id,
+            stale=stale,
+            recovery_action="review",
+        )
     return PreparationWorkspaceDTO(
-        state="failed_terminal",
+        state="legacy_unsupported",
         generation_id=generation_id,
         stale=stale,
-        legacy_ambiguous=True,
+        recovery_action="regenerate",
+        retryable=False,
         error=_workspace_error(
-            code="PREPARATION_STATE_UNKNOWN",
-            error_type="workspace_state_ambiguous",
-            failure_class="state_integrity",
-            message="Preparation state cannot be determined from persisted status and review data.",
+            code="PREPARATION_LEGACY_UNSUPPORTED",
+            error_type="legacy_unsupported",
+            failure_class="legacy",
+            message=LEGACY_UNSUPPORTED_MESSAGE,
             retryable=False,
-            stage=stage or None,
+            stage="preparation",
+            recovery_action="regenerate",
         ),
     )
 
@@ -544,20 +531,16 @@ def _artifact_projection(
 def project_lesson_workspace(
     *,
     generation_id: str | None,
-    generation_status: str | None = None,
-    workflow_stage: str | None = None,
-    generation_error: str | None = None,
-    generation_error_code: str | None = None,
-    generation_error_type: str | None = None,
     state: Mapping[str, Any] | None = None,
     stale: bool = False,
+    preparation_run: PreparationRunView | None = None,
     learn_realization: Mapping[str, Any] | None = None,
     print_realization: Mapping[str, Any] | None = None,
     legacy_ambiguous: bool = False,
 ) -> LessonWorkspaceStateDTO:
-    """Project persisted stage/ledger rows to stable teacher-facing state.
+    """Project the preparation Run + persisted ledgers to stable teacher-facing state.
 
-    Approval is decided before worker status: a verified approved snapshot stays
+    Approval is decided before job status: a verified approved snapshot stays
     approved even if a downstream realization has failed. A status claiming
     completion without a verifiable approval record fails closed. Legacy rows
     with no path identity are reported at workspace level and never assigned to
@@ -565,12 +548,8 @@ def project_lesson_workspace(
     """
     preparation = _preparation_projection(
         generation_id=generation_id,
-        generation_status=generation_status,
-        workflow_stage=workflow_stage,
-        generation_error=generation_error,
-        generation_error_code=generation_error_code,
-        generation_error_type=generation_error_type,
         state=state,
+        run=preparation_run,
         stale=stale,
     )
     ambiguities: list[str] = []
@@ -590,4 +569,8 @@ def project_lesson_workspace(
     )
 
 
-__all__ = ["project_lesson_workspace", "workspace_state_from_layers"]
+__all__ = [
+    "PreparationRunView",
+    "project_lesson_workspace",
+    "workspace_state_from_layers",
+]

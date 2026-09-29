@@ -34,14 +34,6 @@ class FailureClassification:
     repairable: bool
 
 
-class PipelineOrphanedError(RuntimeError):
-    """Raised by the P12A orphan reaper for a generation whose owning
-    in-process stage-2 pipeline task can no longer be observed (dead
-    process or lost heartbeat). Always classified recoverable so the
-    existing native retry UI/endpoint can resume it.
-    """
-
-
 def classify_failure(exc: BaseException) -> FailureClassification:
     # ContentValidationError: repair already consumed inside dispatch_writer_async.
     # Surface VALIDATION as retryable (failed_recoverable) but not executor-repairable.
@@ -87,10 +79,6 @@ def classify_failure(exc: BaseException) -> FailureClassification:
     if isinstance(exc, ItemGenerationOutputInvalidError):
         return FailureClassification(
             code="MODEL_OUTPUT_INVALID", retryable=True, repairable=False
-        )
-    if isinstance(exc, PipelineOrphanedError):
-        return FailureClassification(
-            code="PIPELINE_ORPHANED", retryable=True, repairable=False
         )
     if isinstance(exc, LeaseLostError):
         return FailureClassification(code="LEASE_LOST", retryable=False, repairable=False)

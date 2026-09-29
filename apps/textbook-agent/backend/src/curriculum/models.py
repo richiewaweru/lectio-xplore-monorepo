@@ -368,6 +368,16 @@ class WorkspaceErrorDTO(StrictModel):
     recovery_action: str | None = None
 
 
+class PreparationProgressDTO(StrictModel):
+    """Per-card practice-item progress of a preparation Run."""
+
+    items_total: int = 0
+    items_ready: int = 0
+    items_failed: int = 0
+    teaching_plan: Literal["not_started", "queued", "running", "ready", "failed"] = "not_started"
+    failed_work_item_ids: list[str] = Field(default_factory=list)
+
+
 class PreparationWorkspaceDTO(StrictModel):
     state: Literal[
         "not_started",
@@ -376,6 +386,8 @@ class PreparationWorkspaceDTO(StrictModel):
         "approved",
         "failed_recoverable",
         "failed_terminal",
+        # Prepared before preparation Runs and not approved: re-prepare (:regenerate).
+        "legacy_unsupported",
     ]
     review_kind: Literal["structural", "teaching_plan"] | None = None
     generation_id: str | None = None
@@ -386,6 +398,11 @@ class PreparationWorkspaceDTO(StrictModel):
     stale: bool = False
     legacy_ambiguous: bool = False
     error: WorkspaceErrorDTO | None = None
+    # Option D (3A): the preparation Run is the status.
+    run_id: str | None = None
+    recovery_action: Literal["retry", "review", "regenerate", "none"] | None = None
+    retryable: bool | None = None
+    progress: PreparationProgressDTO | None = None
 
 
 class ArtifactWorkspaceDTO(StrictModel):

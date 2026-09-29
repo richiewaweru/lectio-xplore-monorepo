@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import select
@@ -15,9 +14,7 @@ from core.database.models import (
 )
 from core.database.session import async_session_factory
 from print.http.v3_studio.router import (
-    _chunked_stage2_tasks,
     _ensure_chunked_generation_row,
-    _run_pack_variant_pipeline,
     _with_shared_pack_assessment,
 )
 from curriculum.planning.models import (
@@ -112,58 +109,6 @@ def _form_context() -> dict:
         },
         "resource_spec": {"resource_type": "lesson"},
     }
-
-
-@pytest.mark.asyncio
-async def test_variant_failure_is_isolated_from_siblings() -> None:
-    state = {
-        "pack_id": "pack-isolation",
-        "structural_plan": _plan().model_dump(mode="json"),
-        "variants": [
-            {
-                "label": "Support",
-                "group_description": "More scaffolding.",
-                "voice": {
-                    "register_name": "simple",
-                    "tone": "encouraging",
-                    "notation": None,
-                },
-            }
-        ],
-        "context": _form_context(),
-    }
-    persisted = AsyncMock()
-    run_variant = AsyncMock(
-        side_effect=[RuntimeError("support failed"), None],
-    )
-    with (
-        patch(
-            "print.http.v3_studio.router.load_chunked_state",
-            new=AsyncMock(return_value=state),
-        ),
-        patch(
-            "print.http.v3_studio.router._generate_shared_pack_items",
-            new=AsyncMock(return_value={"pack_id": "pack-isolation"}),
-        ),
-        patch(
-            "print.http.v3_studio.router._run_chunked_stage2_pipeline",
-            new=run_variant,
-        ),
-        patch(
-            "print.http.v3_studio.router.persist_chunked_state",
-            new=persisted,
-        ),
-    ):
-        await _run_pack_variant_pipeline(
-            coordinator_id="coordinator",
-            user_id="teacher",
-            generation_ids={"Support": "variant-a", "Core": "variant-b"},
-        )
-
-    assert run_variant.await_count == 2
-    final_patch = persisted.await_args_list[-1].args[1]
-    assert final_patch["stage"] == "variants_running"
-    assert final_patch["variant_failures"] == {"variant-a": "support failed"}
 
 
 @pytest.mark.asyncio
@@ -385,11 +330,9 @@ async def test_awaiting_review_halt_survives_process_restart() -> None:
         },
     )
 
-    # Simulate a clean worker process after restart: no in-memory execution task.
-    _chunked_stage2_tasks.clear()
+    # A clean process after restart: the durable state alone carries the halt.
     restored = await load_chunked_state(generation_id)
 
     assert restored["stage"] == "awaiting_review"
     assert restored["approval_required"] is True
     assert restored["approved"] is False
-    assert generation_id not in _chunked_stage2_tasks

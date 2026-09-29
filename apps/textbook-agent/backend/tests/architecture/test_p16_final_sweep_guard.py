@@ -15,6 +15,12 @@ import importlib
 import pytest
 
 RETIRED_MODULES = (
+    # 3A: preparation runs on the shared runtime. The NativeExecutionWorker only
+    # served the preparation pre-worker retry; the Print awaiting_visuals dispatch
+    # and topology-recovery modules have had no production caller since 4A.
+    "print.generation.whole_lesson.worker",
+    "print.generation.whole_lesson.visual_dispatch",
+    "print.generation.whole_lesson.visual_topology_recovery",
     # 4B: realization progress/status routes (status now projected from Runs)
     "application.unit_lesson.progress_routes",
     # old ordinary document authoring (replaced by document.shared_lesson.composer)
