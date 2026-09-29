@@ -419,11 +419,17 @@ class RealizationWorker:
             (
                 await session.scalars(
                     select(NativeRealizationModel)
+                    .join(
+                        GenerationRunModel,
+                        GenerationRunModel.id == NativeRealizationModel.generation_run_id,
+                    )
                     .where(
-                        NativeRealizationModel.generation_run_id.is_not(None),
                         NativeRealizationModel.status.in_(
                             ("queued", "running", "failed_recoverable")
                         ),
+                        # Only rows whose projection is out of sync, so parked
+                        # failures can never starve the bounded scan.
+                        NativeRealizationModel.status != GenerationRunModel.status,
                     )
                     .order_by(NativeRealizationModel.updated_at.asc())
                     .limit(self.scan_limit)
