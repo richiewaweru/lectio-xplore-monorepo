@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from tests.planning._lease_helper import claim_test_execution
 import uuid
 
 import pytest
@@ -105,7 +106,7 @@ async def test_retry_reset_and_claim_project_running_status(db_session_factory) 
             process_status="running",
         )
 
-        lease = await repo.claim_execution(worker_id="report-projection-worker")
+        lease = await claim_test_execution(repo, worker_id="report-projection-worker")
 
         assert lease is not None
         assert lease.stage == "planning_forms"

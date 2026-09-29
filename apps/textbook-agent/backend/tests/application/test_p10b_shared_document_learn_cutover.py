@@ -20,10 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tests.application.test_p03_realization_gates import _approved_native_preparation
 from tests.application.test_p04_learn_worker import _drive_shared_document_ready
 
-from application.unit_lesson.realize_learn_handoff import (
-    execute_learn_realization,
-    realize_learn_from_preparation,
-)
+from application.unit_lesson.realization_worker import RealizationWorker
+from application.unit_lesson.realize_learn_handoff import realize_learn_from_preparation
 from core.database.models import (
     EditableLessonModel,
     GenerationModel,
@@ -39,7 +37,6 @@ from learn.authoring.builder.service import (
     SharedDocumentLineageMismatchError,
     get_or_create_native_learn_builder_lesson,
 )
-from learn.generation.worker import LearnRealizationWorker
 
 
 @pytest.mark.asyncio
@@ -87,7 +84,7 @@ async def test_duplicate_admission_reuses_same_shared_document_run_pin(
 
 @pytest.mark.asyncio
 async def test_worker_reports_pending_without_consuming_an_attempt(
-    db_session: AsyncSession,
+    db_session: AsyncSession, db_session_factory
 ) -> None:
     lesson, _plan, _source, _document = await _approved_native_preparation(
         db_session, user_id="p10b-pending"
@@ -103,13 +100,12 @@ async def test_worker_reports_pending_without_consuming_an_attempt(
     assert row is not None
     assert row.status == "queued"
 
-    result = await execute_learn_realization(
-        db_session, realization=row, worker_id="p10b-pending-worker"
-    )
-
-    assert result["status"] == "waiting_shared_document"
+    worker = RealizationWorker(db_session_factory, worker_id="p10b-pending-worker")
+    async with db_session_factory() as worker_session:
+        await worker.run_one(worker_session)
     await db_session.refresh(row)
-    assert row.status == "queued"  # never claimed; no attempt consumed
+    assert row.status == "queued"  # no Run, no lease, no attempt consumed
+    assert row.generation_run_id is None
     assert row.shared_document_state == "pending"
     assert row.realization_revision == 1
 
@@ -178,16 +174,16 @@ async def test_worker_reports_needs_shared_review_without_authoring(
     )
     assert outcome.state == "blocked"
 
+    realization_worker = RealizationWorker(
+        db_session_factory, worker_id="p10b-needs-review-learn-worker"
+    )
+    async with db_session_factory() as tick_session:
+        await realization_worker.run_one(tick_session)
     async with db_session_factory() as verify:
         row = await verify.get(NativeRealizationModel, admitted["realization_id"])
-        result = await execute_learn_realization(
-            verify, realization=row, worker_id="p10b-needs-review-learn-worker"
-        )
-        assert result["status"] == "needs_shared_review"
-        await verify.commit()
-        await verify.refresh(row)
         assert row.status == "needs_shared_review"
         assert row.shared_document_state == "needs_review"
+        assert row.generation_run_id is None
 
 
 @pytest.mark.asyncio
@@ -230,14 +226,11 @@ async def test_worker_reports_stale_after_new_approved_revision(
         generation.chunked_state_json = state
         await writer.commit()
 
+    stale_worker = RealizationWorker(db_session_factory, worker_id="p10b-stale-worker")
+    async with db_session_factory() as tick_session:
+        await stale_worker.run_one(tick_session)
     async with db_session_factory() as verify:
         row = await verify.get(NativeRealizationModel, admitted["realization_id"])
-        result = await execute_learn_realization(
-            verify, realization=row, worker_id="p10b-stale-worker"
-        )
-        assert result["status"] == "failed_recoverable"
-        await verify.commit()
-        await verify.refresh(row)
         assert row.status == "failed_recoverable"
         assert row.shared_document_state == "stale"
         assert row.error_summary is not None
@@ -266,7 +259,7 @@ async def test_ready_path_never_calls_ordinary_authoring_or_retired_producer(
         preparation_generation_id=str(lesson.pack_id),
     )
 
-    worker = LearnRealizationWorker(worker_id="p10b-ready-guard-worker")
+    worker = RealizationWorker(db_session_factory, worker_id="p10b-ready-guard-worker")
     async with db_session_factory() as worker_session:
         assert await worker.run_one(worker_session) is True
 
@@ -317,7 +310,7 @@ async def test_builder_open_rejects_stamped_lineage_mismatch(
         path_lesson_id=lesson.id,
         preparation_generation_id=str(lesson.pack_id),
     )
-    worker = LearnRealizationWorker(worker_id="p10b-builder-mismatch-worker")
+    worker = RealizationWorker(db_session_factory, worker_id="p10b-builder-mismatch-worker")
     async with db_session_factory() as worker_session:
         assert await worker.run_one(worker_session) is True
 

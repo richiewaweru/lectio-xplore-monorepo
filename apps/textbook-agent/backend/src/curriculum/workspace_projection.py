@@ -442,6 +442,8 @@ def _artifact_projection(
         "shared_document_id": realization.get("shared_document_id"),
         "shared_document_revision": realization.get("shared_document_revision"),
         "shared_document_hash": realization.get("shared_document_hash"),
+        "run_id": realization.get("run_id"),
+        "recovery_action": realization.get("recovery_action"),
     }
     if status == "needs_shared_review":
         return ArtifactWorkspaceDTO(
@@ -522,6 +524,8 @@ def _artifact_projection(
                 if detail.get("recovery_action")
                 else "reprepare"
                 if status == "stale"
+                else str(realization.get("recovery_action"))
+                if realization.get("recovery_action")
                 else None
             ),
         )

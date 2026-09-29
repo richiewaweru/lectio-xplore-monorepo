@@ -52,7 +52,6 @@ from curriculum.workspace_projection import project_lesson_workspace
 from print.generation.whole_lesson.repository import (
     PAGE_DOCUMENT_KEY,
     PageDocumentRepository,
-    claim_next_native_job,
     empty_page_document_state,
 )
 
@@ -358,7 +357,7 @@ async def test_p03_r02b_print_retry_without_override_keeps_preparation_output(
 
 @pytest.mark.asyncio
 async def test_p03_detached_print_output_is_idempotent_and_failure_retry_isolated(
-    db_session: AsyncSession, db_session_factory
+    db_session: AsyncSession, db_session_factory, monkeypatch
 ) -> None:
     lesson, plan, source_chunked, _source_document = await _approved_native_preparation(
         db_session, user_id="p03-detached-print"
@@ -474,27 +473,28 @@ async def test_p03_detached_print_output_is_idempotent_and_failure_retry_isolate
         preparation_generation_id=preparation_id,
     )
 
-    lease = await claim_next_native_job(
-        db_session, worker_id="detached-print-worker"
-    )
-    assert lease is not None
-    assert lease.generation_id == output_id
-    await db_session.refresh(print_row)
-    assert print_row.status == "running"
-
+    # Option D (4A): the RealizationWorker runs the Print Run on the shared
+    # runtime; a deterministic contract failure is a terminal work-item failure.
     output.document_json = {"document_version": 2, "title": "Retained failed Print snapshot"}
-    await PageDocumentRepository(db_session, output_id).persist_native_failure(
-        exc=TimeoutError("temporary provider timeout"),
-        stage="planning_forms",
-        event="worker_failure",
-        attempt=1,
-        worker_id=lease.worker_id,
-        lease_token=lease.lease_token,
-        expected={"planning_forms"},
+    await db_session.commit()
+
+    import print.generation.shared_document_execution as print_exec
+    from application.unit_lesson.realization_worker import RealizationWorker
+    from print.generation.shared_document_adapter import SharedDocumentPrintMappingError
+
+    async def _unmappable(*_args, **_kwargs):
+        raise SharedDocumentPrintMappingError("unmappable task anchor")
+
+    monkeypatch.setattr(
+        print_exec, "materialize_print_output_from_shared_document", _unmappable
     )
+    worker = RealizationWorker(db_session_factory, worker_id="detached-print-worker")
+    async with db_session_factory() as worker_session:
+        assert await worker.run_one(worker_session) is True
     await db_session.refresh(print_row)
-    assert print_row.status == "failed_recoverable"
-    assert "timeout" in str(print_row.error_summary).lower()
+    assert print_row.status == "failed_terminal"
+    assert print_row.generation_run_id is not None
+    assert "unmappable" in str(print_row.error_summary).lower()
 
     preparation_page = source_snapshot[PAGE_DOCUMENT_KEY]
     pinned_approval_before = (
@@ -547,7 +547,7 @@ async def test_p03_detached_print_output_is_idempotent_and_failure_retry_isolate
 
 @pytest.mark.asyncio
 async def test_p07_detached_print_export_failure_preserves_approval_and_ready_learn(
-    db_session: AsyncSession, db_session_factory
+    db_session: AsyncSession, db_session_factory, monkeypatch
 ) -> None:
     lesson, plan, source_state, _source_document = await _approved_native_preparation(
         db_session, user_id="p07-print-export-failure"
@@ -597,26 +597,26 @@ async def test_p07_detached_print_export_failure_preserves_approval_and_ready_le
         preparation_generation_id=preparation_id,
     )
 
-    lease = await claim_next_native_job(db_session, worker_id="p07-print-renderer")
-    assert lease is not None and lease.generation_id == admitted["output_id"]
-    await PageDocumentRepository(db_session, admitted["output_id"]).persist_native_failure(
-        exc=TimeoutError("controlled PDF export timeout"),
-        stage="exporting",
-        event="print_export_failure",
-        attempt=1,
-        worker_id=lease.worker_id,
-        lease_token=lease.lease_token,
-        expected={"planning_forms"},
+    import print.generation.shared_document_execution as print_exec
+    from application.unit_lesson.realization_worker import RealizationWorker
+    from sqlalchemy.exc import OperationalError
+
+    async def _transient(*_args, **_kwargs):
+        raise OperationalError("SELECT 1", {}, Exception("controlled storage timeout"))
+
+    monkeypatch.setattr(
+        print_exec, "materialize_print_output_from_shared_document", _transient
     )
+    worker = RealizationWorker(db_session_factory, worker_id="p07-print-renderer")
+    async with db_session_factory() as worker_session:
+        assert await worker.run_one(worker_session) is True
 
     await db_session.refresh(print_row)
     await db_session.refresh(learn_row)
     await db_session.refresh(source)
-    failed_output = await db_session.get(GenerationModel, admitted["output_id"])
     assert print_row.status == "failed_recoverable"
     assert print_row.output_id == admitted["output_id"]
-    assert failed_output is not None and failed_output.status == "failed_recoverable"
-    assert "timeout" in str(failed_output.error).lower()
+    assert print_row.generation_run_id is not None
     assert (
         learn_row.status,
         learn_row.output_id,
@@ -751,7 +751,9 @@ async def test_p03_ready_print_artifact_resolves_through_its_owned_output(
         )
         row = await session.get(NativeRealizationModel, admitted["realization_id"])
         assert row is not None
-        assert row.status == "ready"
+        # Realization status is projected from the Run (4A), never mirrored from
+        # the output row; the ready Print output resolves through its own id.
+        assert row.status == "queued"
         assert row.output_id == output_id
         source = await session.get(GenerationModel, preparation_id)
         assert source is not None

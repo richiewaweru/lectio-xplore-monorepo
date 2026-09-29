@@ -20,6 +20,12 @@ from application.unit_lesson.realization_contracts import (
     package_contract_for,
     policy_for,
 )
+from application.unit_lesson.realization_projection import (
+    LEGACY_SUMMARY,
+    effective_status,
+    identity_extras,
+    is_legacy_realization,
+)
 from core.database.models import NativeRealizationModel
 
 
@@ -54,7 +60,10 @@ def to_identity(row: NativeRealizationModel) -> RealizationIdentity:
     # Older worker attempts persisted the broad generation status ``failed``.
     # Keep those rows readable while exposing only the closed realization
     # status vocabulary to API callers.
-    status = "failed_recoverable" if str(row.status) == "failed" else row.status
+    # Legacy rows (created before the Run-based job update) project as
+    # failed_terminal / regenerate with a fixed safe summary.
+    status = effective_status(row)
+    legacy = is_legacy_realization(row)
     return RealizationIdentity(
         realization_id=row.id,
         path=path,
@@ -69,7 +78,7 @@ def to_identity(row: NativeRealizationModel) -> RealizationIdentity:
         realization_revision=int(row.realization_revision),
         status=status,  # type: ignore[arg-type]
         output_id=row.output_id,
-        error_summary=row.error_summary,
+        error_summary=LEGACY_SUMMARY if legacy else row.error_summary,
         pack_id=row.pack_id,
         preparation_generation_id=row.preparation_generation_id,
         open_href=open_href_for(path, output_id=row.output_id, status=str(row.status)),
@@ -78,6 +87,7 @@ def to_identity(row: NativeRealizationModel) -> RealizationIdentity:
         shared_document_revision=row.shared_document_revision,
         shared_document_hash=row.shared_document_hash,
         shared_document_state=row.shared_document_state,
+        **identity_extras(row),
     )
 
 
@@ -336,6 +346,7 @@ async def admit_realization(
             existing.output_id = output_id
             existing.status = "queued"
             existing.error_summary = None
+            existing.generation_run_id = None
             existing.realization_revision = int(existing.realization_revision or 1) + 1
             if admission_request_key:
                 existing.admission_request_key = admission_request_key
@@ -484,6 +495,7 @@ async def retry_realization(
         row.output_id = str(uuid.uuid4())
     row.status = "queued"
     row.error_summary = None
+    row.generation_run_id = None
     await session.flush()
 
     # Hard assertions: path and shared plan pins never flip on retry.

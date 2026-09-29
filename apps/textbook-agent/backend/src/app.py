@@ -44,7 +44,6 @@ from infra.telemetry.service import telemetry_monitor
 from infra.version import VERSION
 from learn.analytics.insight_service import router as learn_analytics_router
 from learn.authoring.builder.routes import router as builder_router
-from learn.generation.fencing import fail_stale_learn_executions
 from learn.generation.units_routes import router as units_generation_router
 from learn.publishing.release_routes import router as learn_release_router
 from learn.runtime.runtime_routes import router as learn_runtime_router
@@ -238,13 +237,6 @@ async def lifespan(app: FastAPI):
             )
     except Exception:
         logger.exception("Stale v3 generation sweep failed at startup")
-    try:
-        async with async_session_factory() as session:
-            stale_learn = await fail_stale_learn_executions(session)
-        if stale_learn:
-            logger.warning("Reconciled %d stale Learn execution(s) after restart", stale_learn)
-    except Exception:
-        logger.exception("Stale Learn execution sweep failed at startup")
     if settings.prep_pipeline_reaper_enabled:
         # Phase 12A: reap Preparation/Teaching-Plan stage-2 pipeline rows
         # orphaned by a dead process before this boot (see
@@ -282,14 +274,17 @@ async def lifespan(app: FastAPI):
         },
     )
     if settings.xplore_native_worker_enabled:
-        from learn.generation.worker import start_learn_worker
-        from print.generation.whole_lesson.worker import start_native_worker
+        from application.unit_lesson.realization_worker import RealizationWorker
         from document.shared_lesson.worker import SharedDocumentWorker
+        from print.generation.whole_lesson.worker import start_native_worker
 
+        # The Print NativeExecutionWorker only serves the preparation
+        # pre-worker retry path now (removed with package 3A).
         await start_native_worker()
-        await start_learn_worker()
         shared_document_worker = SharedDocumentWorker(async_session_factory)
         await shared_document_worker.start()
+        realization_worker = RealizationWorker(async_session_factory)
+        await realization_worker.start()
     if settings.prep_pipeline_reaper_enabled:
         from application.unit_lesson.native_pipeline import (
             start_pipeline_orphan_reaper,
@@ -310,7 +305,6 @@ async def lifespan(app: FastAPI):
         except Exception:
             logger.exception("Failed to stop preparation pipeline orphan reaper")
     if settings.xplore_native_worker_enabled:
-        from learn.generation.worker import stop_learn_worker
         from print.generation.whole_lesson.worker import stop_native_worker
 
         async def stop_worker(label, stop, **kwargs):
@@ -319,7 +313,7 @@ async def lifespan(app: FastAPI):
             except Exception:
                 logger.exception("Failed to stop %s worker", label)
 
-        await stop_worker("Learn", stop_learn_worker, drain_seconds=5.0)
+        await stop_worker("Realization", realization_worker.stop)
         await stop_worker("Print", stop_native_worker, drain_seconds=5.0)
         await stop_worker("SharedDocument", shared_document_worker.stop)
     try:

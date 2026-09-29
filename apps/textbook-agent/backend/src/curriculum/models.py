@@ -352,6 +352,8 @@ class RealizationStatusDTO(StrictModel):
     shared_document_revision: int | None = None
     shared_document_hash: str | None = None
     shared_document_state: str | None = None
+    run_id: str | None = None
+    recovery_action: str | None = None
 
 
 class WorkspaceErrorDTO(StrictModel):
@@ -407,6 +409,8 @@ class ArtifactWorkspaceDTO(StrictModel):
     shared_document_id: str | None = None
     shared_document_revision: int | None = None
     shared_document_hash: str | None = None
+    run_id: str | None = None
+    recovery_action: str | None = None
 
 
 class LessonWorkspaceStateDTO(StrictModel):

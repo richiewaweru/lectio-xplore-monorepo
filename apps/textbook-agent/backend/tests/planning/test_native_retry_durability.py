@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from tests.planning._lease_helper import claim_test_execution
 import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -194,7 +195,7 @@ async def test_retry_accept_does_not_count_as_worker_attempt(
         assert execution["claimed_at"] is None
 
         if accepted_status == "queued":
-            lease = await repo.claim_execution(worker_id="attempt-worker")
+            lease = await claim_test_execution(repo, worker_id="attempt-worker")
         else:
             lease = await repo.claim_pre_worker_retry(worker_id="attempt-worker")
 
