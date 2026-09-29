@@ -6,7 +6,7 @@ from pydantic_ai import ToolOutput
 
 from core.config import settings
 from core.llm import ModelFamily, ModelSpec, build_structured_model
-from v3_execution.llm_helpers import prepare_structured_agent
+from infra.authoring.structured_provider import prepare_structured_agent
 
 
 class _SpikeModel(BaseModel):

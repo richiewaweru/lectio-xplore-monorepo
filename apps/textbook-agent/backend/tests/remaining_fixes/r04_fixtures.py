@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
@@ -16,32 +14,6 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from infra.authoring import AuthoringProviderCall
-from learn.generation.authoring_adapter import run_learn_work_order_authoring
-from learn.generation.preparation_context import LearnPreparationContext
-
-# Eight core interaction kinds exercised by R04-G05 and envelope production.
-CORE_INTERACTIONS = (
-    "choice",
-    "multi-select",
-    "fill-blank",
-    "numeric",
-    "short-response",
-    "match-pairs",
-    "classify",
-    "sequence",
-)
-
-CORE_ACTIONS = {
-    "choice": "select-one",
-    "multi-select": "select-many",
-    "fill-blank": "complete-missing-values",
-    "numeric": "enter-number",
-    "short-response": "enter-text",
-    "match-pairs": "match-pairs",
-    "classify": "classify-items",
-    "sequence": "order-items",
-}
 
 CORE_PROVIDER_CONFIG: dict[str, dict[str, Any]] = {
     "choice": {
@@ -75,77 +47,6 @@ CORE_PROVIDER_CONFIG: dict[str, dict[str, Any]] = {
         "order": ["light", "water", "carbon"],
     },
 }
-
-CONTENT_PAYLOADS: dict[str, dict[str, Any]] = {
-    "explanation-block": {"body": "Plants use light energy to make food.", "emphasis": ["light"]},
-    "callout-block": {"variant": "info", "body": "Covered leaves cannot make food without light."},
-}
-
-R04_PREP = LearnPreparationContext(
-    objective="Plants use light to make food through photosynthesis.",
-    allowed_facts=[
-        "Light is required for food production in leaves.",
-        "Covered leaves cannot make food without light.",
-    ],
-    terminology=["photosynthesis", "chlorophyll"],
-)
-
-
-def _interaction_envelope(capability_id: str, *, prompt: str | None = None) -> dict[str, Any]:
-    return {
-        "prompt": prompt or f"Student task for {capability_id.replace('-', ' ')}.",
-        "config": dict(CORE_PROVIDER_CONFIG[capability_id]),
-        "feedback": {"correct": "Correct.", "incorrect": "Try again."},
-        "ai_config_rule": "config-only",
-        "attempt_policy": {
-            "max_attempts": None,
-            "show_feedback_after_submit": True,
-            "allow_retry_after_correct": True,
-        },
-    }
-
-
-class R04EnvelopeProvider:
-    """MOCK — schema-valid envelope payloads for closed Learn production."""
-
-    def __init__(self) -> None:
-        self.calls: list[AuthoringProviderCall] = []
-
-    async def invoke(self, call: AuthoringProviderCall) -> dict[str, Any]:
-        self.calls.append(call)
-        if call.capability_id in CORE_PROVIDER_CONFIG:
-            return _interaction_envelope(call.capability_id)
-        return dict(
-            CONTENT_PAYLOADS.get(call.capability_id, CONTENT_PAYLOADS["explanation-block"])
-        )
-
-
-async def _author_all_async(
-    orders: list,
-    *,
-    prep: LearnPreparationContext = R04_PREP,
-) -> dict[str, Any]:
-    provider = R04EnvelopeProvider()
-    lesson_context = {"objective": prep.objective, "subject": "biology"}
-    return {
-        order.work_order_id: await run_learn_work_order_authoring(
-            order,
-            provider=provider,
-            lesson_context=lesson_context,
-            allowed_facts=prep.allowed_facts,
-            terminology=prep.terminology,
-        )
-        for order in orders
-    }
-
-
-def author_all_work_orders(orders: list) -> dict[str, Any]:
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(_author_all_async(orders))
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        return executor.submit(lambda: asyncio.run(_author_all_async(orders))).result()
 
 
 def _block(

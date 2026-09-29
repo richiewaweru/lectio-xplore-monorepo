@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tests.application.test_p03_realization_gates import _approved_native_preparation
 from tests.application.test_p04_learn_worker import _drive_shared_document_ready
 
-import document.writer as writer_module
 from application.unit_lesson.realize_learn_handoff import (
     execute_learn_realization,
     realize_learn_from_preparation,
@@ -41,13 +40,6 @@ from learn.authoring.builder.service import (
     get_or_create_native_learn_builder_lesson,
 )
 from learn.generation.worker import LearnRealizationWorker
-
-
-def _forbid(name: str):
-    def _raise(*_args, **_kwargs):
-        raise AssertionError(f"{name} must not be called on the SharedLessonDocument Learn path")
-
-    return _raise
 
 
 @pytest.mark.asyncio
@@ -256,10 +248,6 @@ async def test_worker_reports_stale_after_new_approved_revision(
 async def test_ready_path_never_calls_ordinary_authoring_or_retired_producer(
     db_session: AsyncSession, db_session_factory, monkeypatch
 ) -> None:
-    monkeypatch.setattr(
-        writer_module, "write_document_primitive", _forbid("write_document_primitive")
-    )
-
     lesson, _plan, _source, _document = await _approved_native_preparation(
         db_session, user_id="p10b-ready-guard"
     )

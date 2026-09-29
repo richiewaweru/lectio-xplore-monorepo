@@ -31,8 +31,6 @@ V2_COMPONENT_SELECTOR = "v2_component_selector"
 V2_PATH_STRUCTURAL_PLANNER = "v2_path_structural_planner"
 V2_PATH_CHAT_EDITOR = "v2_path_chat_editor"
 V2_LESSON_APPROACH_PLANNER = "v2_lesson_approach_planner"
-V2_FORM_PLANNER = "v2_form_planner"
-NATIVE_CAPABILITY_SELECTOR = "native_capability_selector"
 V3_CONSTRUCTOR = "v3_constructor"
 V3_VISUAL_TOPOLOGY_PLANNER = "v3_visual_topology_planner"
 V3_LESSON_SOURCEBOOK_WRITER = "v3_lesson_sourcebook_writer"
@@ -70,8 +68,6 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V2_PATH_STRUCTURAL_PLANNER: ModelSlot.STANDARD,
     V2_PATH_CHAT_EDITOR: ModelSlot.STANDARD,
     V2_LESSON_APPROACH_PLANNER: ModelSlot.STANDARD,
-    V2_FORM_PLANNER: ModelSlot.FAST,
-    NATIVE_CAPABILITY_SELECTOR: ModelSlot.FAST,
     V3_CONSTRUCTOR: ModelSlot.FAST,
     V3_VISUAL_TOPOLOGY_PLANNER: ModelSlot.STANDARD,
     V3_LESSON_SOURCEBOOK_WRITER: ModelSlot.STANDARD,
@@ -136,8 +132,6 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     # replay failure mode documented for V2_PATH_STRUCTURAL_PLANNER/
     # V2_PATH_CHAT_EDITOR does not apply.
     V2_LESSON_APPROACH_PLANNER: "medium",
-    V2_FORM_PLANNER: False,
-    NATIVE_CAPABILITY_SELECTOR: False,
     V3_CONSTRUCTOR: False,
     V3_VISUAL_TOPOLOGY_PLANNER: False,
     V3_LESSON_SOURCEBOOK_WRITER: False,
@@ -362,14 +356,12 @@ def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
 __all__ = [
     "BOUNDARY_CONTINUITY_VALIDATOR",
     "DOCUMENT_SEMANTIC_QA",
-    "NATIVE_CAPABILITY_SELECTOR",
     "SECTION_COMPOSER",
     "SHARED_SECTION_WRITER",
     "SHARED_SOURCEBOOK_AUTHORING",
     "SHARED_TASK_AUTHORING",
     "TEACHING_PLAN_SEMANTIC_REVIEWER",
     "V2_COMPONENT_SELECTOR",
-    "V2_FORM_PLANNER",
     "V2_LESSON_APPROACH_PLANNER",
     "V2_MERGE_CRITIC",
     "V2_PATH_CHAT_EDITOR",

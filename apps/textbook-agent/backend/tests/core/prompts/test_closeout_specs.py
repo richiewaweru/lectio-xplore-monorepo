@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 from core.prompts import loader
-from document.writer import _definition_for
-from document.writer_prompts import document_writer_prompt
 
 CLOSEOUT_IDS = (
     "learner-action-policy",
-    "document-writer",
-    "interaction-writer",
     "figure-authoring",
     "print-realization",
 )
@@ -23,13 +19,6 @@ def test_closeout_prompts_are_manifest_backed_and_locked() -> None:
         assert loader.hash_prompt(text) == loader.closeout_prompt_hashes()[prompt_id]
 
 
-def test_document_writer_uses_canonical_loader() -> None:
-    assert document_writer_prompt() == loader.get_default_prompt("document-writer")
-    writer = _definition_for("paragraph")
-    assert writer.instructions == document_writer_prompt()
-    assert writer.definition_hash.startswith(loader.hash_prompt(document_writer_prompt()))
-
-
 def test_markdown_default_change_alters_effective_hash_without_python_logic() -> None:
     original = loader.get_default_prompt("figure-authoring")
     original_hash = loader.hash_prompt(original)
@@ -41,4 +30,4 @@ def test_markdown_default_change_alters_effective_hash_without_python_logic() ->
 async def test_closeout_prompts_reject_teacher_overlays(db_session_factory) -> None:
     async with db_session_factory() as session:
         with __import__("pytest").raises(loader.PromptLockedError):
-            await loader.save_override("document-writer", "closeout-user", "nope", session)
+            await loader.save_override("figure-authoring", "closeout-user", "nope", session)

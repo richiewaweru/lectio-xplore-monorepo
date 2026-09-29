@@ -312,12 +312,6 @@ async def test_p04_worker_completes_only_learn_output_and_links_editable_documen
     print_row.output_id = "p04-existing-print-output"
     # API admission commits before a separate worker process can poll it.
     await db_session.commit()
-    # The reliability checkpoint writer uses its own session. Point it at this
-    # test's database rather than the process-wide runtime database.
-    from learn.generation import reliability_persist
-
-    monkeypatch.setattr(reliability_persist, "async_session_factory", db_session_factory)
-
     await _drive_shared_document_ready(
         db_session,
         db_session_factory,
@@ -375,10 +369,6 @@ async def test_p04_worker_parks_escaped_post_production_failure(
         path_lesson_id=lesson.id,
     )
     await db_session.commit()
-
-    from learn.generation import reliability_persist
-
-    monkeypatch.setattr(reliability_persist, "async_session_factory", db_session_factory)
 
     await _drive_shared_document_ready(
         db_session,

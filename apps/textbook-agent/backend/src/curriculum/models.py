@@ -507,7 +507,7 @@ class FlowChoice(StrictModel):
 # deliberately NOT the canonical execution contracts:
 #
 #   * They are prompt-facing. On DeepSeek the schema is rendered into the prompt
-#     text (see v3_execution.llm_helpers.structured_output_type_for_model), not
+#     text (see infra.authoring.structured_provider.structured_output_type_for_model), not
 #     enforced by constrained decoding, so ``extra="forbid"`` here would not stop
 #     the model emitting stray keys — it would only turn drift that
 #     application.unit_lesson._normalize_page_concept_card_payload already absorbs into

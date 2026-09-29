@@ -74,18 +74,6 @@ prompts:
     editable: false
     version: 1
 
-  - id: document-writer
-    file: document-writer.md
-    stage_label: Writes ordinary lesson content
-    editable: false
-    version: 1
-
-  - id: interaction-writer
-    file: interaction-writer.md
-    stage_label: Writes learner interactions
-    editable: false
-    version: 1
-
   - id: figure-authoring
     file: figure-authoring.md
     stage_label: Designs lesson figures

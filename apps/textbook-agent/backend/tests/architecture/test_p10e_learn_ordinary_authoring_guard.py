@@ -49,25 +49,6 @@ LEARN_SCAN_DIRS = [
     "application/unit_lesson",
 ]
 
-# Pre-existing, narrowly-scoped exception outside this work package's bounded
-# candidate list (see docs/shared-document-overhaul/phase10_learn_cutover_audit.md
-# and the P10E Luna report). ``work_orders.py`` keeps a closed LessonDocument
-# v1 ``compile_learn_work_orders`` path whose only remaining callers are
-# tests (zero production callers); it reads ``document.writer._PRIMITIVE_SCHEMAS``
-# for schema lookups only, never composes or writes ordinary content. Deleting
-# it means touching the still-live ``LearnWorkOrder``/interaction-writer
-# machinery, which is out of P10E's scope. Recorded for Sol as a follow-up
-# decision rather than silently ignored.
-FORBIDDEN_IMPORT_EXCEPTIONS = {
-    "learn/generation/work_orders.py": {"document.writer"},
-}
-
-
-def _is_excepted(rel_path: Path, forbidden: str) -> bool:
-    key = rel_path.as_posix()
-    return forbidden in FORBIDDEN_IMPORT_EXCEPTIONS.get(key, set())
-
-
 def test_retired_learn_ordinary_modules_cannot_be_imported() -> None:
     """Deleted Learn ordinary-authoring modules must not be importable."""
     for mod_name in RETIRED_MODULES:
@@ -107,7 +88,7 @@ def test_learn_generation_does_not_import_ordinary_composer_or_writer() -> None:
                             if (
                                 alias.name == forbidden
                                 or alias.name.startswith(forbidden + ".")
-                            ) and not _is_excepted(rel, forbidden):
+                            ):
                                 violations.append(
                                     f"Forbidden ordinary-authoring import: {rel} -> {alias.name}"
                                 )
@@ -117,7 +98,7 @@ def test_learn_generation_does_not_import_ordinary_composer_or_writer() -> None:
                         if (
                             full_module == forbidden
                             or full_module.startswith(forbidden + ".")
-                        ) and not _is_excepted(rel, forbidden):
+                        ):
                             violations.append(
                                 f"Forbidden ordinary-authoring import: {rel} -> {full_module}"
                             )
@@ -126,9 +107,7 @@ def test_learn_generation_does_not_import_ordinary_composer_or_writer() -> None:
                         for alias in node.names:
                             qualified = f"document.{alias.name}"
                             for forbidden in FORBIDDEN_ORDINARY_MODULES:
-                                if qualified == forbidden and not _is_excepted(
-                                    rel, forbidden
-                                ):
+                                if qualified == forbidden:
                                     violations.append(
                                         f"Forbidden ordinary-authoring import: {rel} -> {qualified}"
                                     )

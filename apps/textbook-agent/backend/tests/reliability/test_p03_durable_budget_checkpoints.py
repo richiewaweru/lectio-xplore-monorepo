@@ -9,7 +9,6 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, UserModel
-from document.writer import DocumentWriterError, write_document_primitive
 from infra.authoring import (
     AuthoringDefinition,
     AuthoringEngine,
@@ -223,89 +222,6 @@ async def test_g09_g11_crash_injection_before_after_commit() -> None:
     )
     assert again.content_hash == before_hash
     assert provider3.dispatches == prior_dispatches
-
-
-@pytest.mark.asyncio
-async def test_g10_selective_recovery_skips_ready_sibling() -> None:
-    store = CheckpointStore()
-    ledger = CallBudgetLedger()
-    compat_a = CheckpointCompatibility(1, content_hash("a"), "def", composition_identity="a")
-    compat_b = CheckpointCompatibility(1, content_hash("b"), "def", composition_identity="b")
-    store.commit("node:a", payload={"id": "a", "text": "done"}, compatibility=compat_a)
-    store.begin("node:b", compatibility=compat_b)
-
-    assert store.decide_resume("node:a", compatibility=compat_a) == ResumeDecision.SKIP_READY
-    assert store.decide_resume("node:b", compatibility=compat_b) == ResumeDecision.RETRY_ABANDONED
-
-    provider = FakeProvider({"kind": "paragraph", "text": "only b"})
-    node = await write_document_primitive(
-        kind="paragraph",
-        brief="Write about leaf light.",
-        teaching_block={"id": "b", "brief": "Write about leaf light."},
-        lesson_context={"teaching_plan_revision": 1},
-        provider=provider,
-        work_order_id="b",
-        budget_ledger=ledger,
-        checkpoint_store=store,
-        node_id="node-b",
-    )
-    assert node["text"] == "only b"
-    assert provider.dispatches == 1
-    # Sibling A unchanged.
-    ready_a = store.get("node:a")
-    assert ready_a is not None
-    assert ready_a.payload == {"id": "a", "text": "done"}
-
-
-@pytest.mark.asyncio
-async def test_document_quality_failure_repairs_in_engine_and_only_then_commits() -> None:
-    brief = "Explain why leaves need light."
-    provider = FakeProvider(
-        {"kind": "paragraph", "text": brief},
-        {"kind": "paragraph", "text": "Light supplies energy for photosynthesis."},
-    )
-    ledger = CallBudgetLedger()
-    store = CheckpointStore()
-    node = await write_document_primitive(
-        kind="paragraph",
-        brief=brief,
-        teaching_block={"id": "quality-block", "brief": brief},
-        provider=provider,
-        work_order_id="node-quality-repair",
-        budget_ledger=ledger,
-        checkpoint_store=store,
-    )
-
-    assert node["text"] == "Light supplies energy for photosynthesis."
-    assert [call.is_repair for call in provider.calls] == [False, True]
-    budget = ledger.get_or_create("node-quality-repair")
-    assert budget.consumed == budget.dispatched_count == 2
-    checkpoint = store.get("node:node-quality-repair")
-    assert checkpoint is not None and checkpoint.status == "ready"
-
-
-@pytest.mark.asyncio
-async def test_document_quality_repair_exhaustion_never_commits_ready_checkpoint() -> None:
-    brief = "Explain why leaves need light."
-    provider = FakeProvider(
-        {"kind": "paragraph", "text": brief},
-        {"kind": "paragraph", "text": brief},
-        {"kind": "paragraph", "text": brief},
-    )
-    store = CheckpointStore()
-    with pytest.raises(DocumentWriterError) as caught:
-        await write_document_primitive(
-            kind="paragraph",
-            brief=brief,
-            teaching_block={"id": "quality-block", "brief": brief},
-            provider=provider,
-            work_order_id="node-quality-exhausted",
-            checkpoint_store=store,
-        )
-    assert caught.value.code == "REPAIR_EXHAUSTED"
-    assert len(provider.calls) == 3
-    checkpoint = store.get("node:node-quality-exhausted")
-    assert checkpoint is not None and checkpoint.status != "ready"
 
 
 def test_g10_media_assembly_export_selective_recovery() -> None:

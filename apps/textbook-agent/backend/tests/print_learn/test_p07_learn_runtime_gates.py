@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -12,17 +11,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 
-from curriculum.teaching_plan.models import (
-    LearnerActionBrief,
-    TeachingPlan,
-    TeachingPlanBlock,
-)
-from infra.authoring import AuthoringProviderCall
-from infra.authoring.capability_selector import CapabilitySelection
-from learn.generation.authoring_adapter import run_learn_work_order_authoring
-from learn.generation.native_selection import build_learn_selection_snapshot_async
-from learn.resources.native_policy import default_learn_policy
-from learn.resources.native_policy import policy_version_and_hash as learn_policy_hash
 from learn.runtime.evaluation import (
     InteractionConfigError,
     InteractionResponseError,
@@ -76,104 +64,6 @@ _P07_PROVIDER_PAYLOADS = {
         "alt": "Four stages of butterfly metamorphosis.",
     },
 }
-
-
-class _P07AuthoringProvider:
-    async def invoke(self, call: AuthoringProviderCall):
-        return dict(
-            _P07_PROVIDER_PAYLOADS.get(
-                call.capability_id,
-                _P07_PROVIDER_PAYLOADS["paragraph"],
-            )
-        )
-
-
-async def _author_all_async(orders):
-    provider = _P07AuthoringProvider()
-    return {
-        order.work_order_id: await run_learn_work_order_authoring(
-            order,
-            provider=provider,
-            lesson_context={"objective": "P07 offline fixture objective", "subject": "biology"},
-            allowed_facts=["P07 fixture fact for generate authoring."],
-            terminology=[],
-        )
-        for order in orders
-    }
-
-
-def _author_all(orders):
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(_author_all_async(orders))
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        return executor.submit(lambda: asyncio.run(_author_all_async(orders))).result()
-
-
-async def _test_choose(context: dict) -> CapabilitySelection:
-    """MOCK selector for offline P07 fixtures — picks first eligible closed-set ID."""
-    ids = list(context.get("candidate_ids") or [])
-    if not ids:
-        eligible = context.get("eligible_candidates") or []
-        ids = [
-            str(row["id"] if isinstance(row, dict) else row)
-            for row in eligible
-        ]
-    if not ids:
-        raise AssertionError(f"mock selector received empty shortlist: {context!r}")
-    return CapabilitySelection(capability_id=str(ids[0]), reason="p07-mock-selector")
-
-
-def _snapshot(plan: TeachingPlan):
-    _, policy_hash = learn_policy_hash()
-
-    async def _run():
-        return await build_learn_selection_snapshot_async(
-            plan,
-            teaching_plan_hash=f"hash-{plan.teaching_plan_id}",
-            native_policy_hash=policy_hash,
-            package_contract_hash="pkg-learn-p07",
-            policy=default_learn_policy(),
-            choose=_test_choose,
-            teaching_context={"objective": "P07 offline fixture objective"},
-        )
-
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(_run())
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        return executor.submit(lambda: asyncio.run(_run())).result()
-
-
-def _block(
-    block_id: str,
-    *,
-    intent: str,
-    brief: str = "Brief",
-    action: str | None = None,
-    position: int = 0,
-) -> TeachingPlanBlock:
-    learner = None
-    if action is not None:
-        learner = LearnerActionBrief(
-            action=action,
-            target=action.replace("-", " "),
-            purpose="Check understanding",
-            expected_evidence="Evidence",
-            difficulty="guided",
-        )
-    return TeachingPlanBlock(
-        id=block_id,
-        position=position,
-        intent=intent,
-        brief=brief,
-        evidence="Evidence",
-        source_question_ids=[],
-        stimulus_dependencies=[],
-        learner_action=learner,
-    )
 
 
 def _sequence_document(
