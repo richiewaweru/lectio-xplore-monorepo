@@ -158,12 +158,6 @@ class BlueprintPreviewDTO(BaseModel):
     learner_context: V3LearnerContextDTO | None = None
 
 
-class V3ChunkedApproveRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    display_title: str | None = Field(default=None, max_length=120)
-
-
 class V3ChunkedPlanStateDTO(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -433,7 +427,6 @@ __all__ = [
     "AdjustBlueprintRequest",
     "BlueprintPreviewDTO",
     "ProductionBlueprintEnvelope",
-    "V3ChunkedApproveRequest",
     "V3ChunkedPlanDTO",
     "V3ChunkedPlanStateDTO",
     "V3ChunkedStatusDTO",

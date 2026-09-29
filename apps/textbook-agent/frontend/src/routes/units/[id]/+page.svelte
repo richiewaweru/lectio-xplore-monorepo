@@ -124,7 +124,7 @@
 			preparation &&
 				preparationFresh &&
 				!preparation.workspace?.preparation?.stale &&
-				['failed_recoverable', 'failed_terminal'].includes(canonicalPreparationState(preparation)) &&
+				['failed_recoverable', 'failed_terminal', 'legacy_unsupported'].includes(canonicalPreparationState(preparation)) &&
 				preparation.can_regenerate
 		)
 	);
@@ -413,7 +413,7 @@
 				preparation ?? (selected.pack_id ? await getPreparedLessonStatus(unitId, selected.id) : null);
 			preparation = currentPreparation;
 			const prepState = canonicalPreparationState(currentPreparation);
-			const failedPreparation = ['failed_recoverable', 'failed_terminal'].includes(prepState);
+			const failedPreparation = ['failed_recoverable', 'failed_terminal', 'legacy_unsupported'].includes(prepState);
 			const existingGenerationId = failedPreparation
 				? null
 				: currentPreparation?.workspace?.preparation?.generation_id || null;

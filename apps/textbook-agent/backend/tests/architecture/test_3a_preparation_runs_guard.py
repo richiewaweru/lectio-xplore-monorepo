@@ -104,3 +104,12 @@ def test_preparation_worker_is_started_with_the_runtime_workers() -> None:
     assert "start_native_worker" not in text
     assert "fail_stale_running" not in text
     assert "prep_pipeline" not in text
+
+
+def test_chunked_approve_and_retry_native_compatibility_routes_are_deleted() -> None:
+    """3B: the plan page uses /preparations/{id}/plan and the runtime retry routes."""
+    from app import app
+
+    paths = {getattr(route, "path", "") for route in app.routes}
+    assert not any(p.endswith("/chunked/{generation_id}/approve") for p in paths)
+    assert not any(p.endswith("/generations/{generation_id}/retry-native") for p in paths)

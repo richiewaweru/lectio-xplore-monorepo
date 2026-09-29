@@ -226,7 +226,7 @@ export interface PreparedLessonStatus {
 	worker_debug?: Record<string, unknown>;
 }
 
-export type PreparationWorkspaceState = 'not_started' | 'planning' | 'awaiting_review' | 'approved' | 'failed_recoverable' | 'failed_terminal';
+export type PreparationWorkspaceState = 'not_started' | 'planning' | 'awaiting_review' | 'approved' | 'failed_recoverable' | 'failed_terminal' | 'legacy_unsupported';
 export type ReviewKind = 'structural' | 'teaching_plan';
 
 export interface PreparationWorkspaceStatus {
@@ -240,6 +240,19 @@ export interface PreparationWorkspaceStatus {
 	stale?: boolean;
 	legacy_ambiguous?: boolean;
 	error?: WorkspaceStateError | null;
+	/** Preparation Run backing plan generation (Option D). */
+	run_id?: string | null;
+	recovery_action?: 'retry' | 'review' | 'regenerate' | 'none' | null;
+	retryable?: boolean | null;
+	progress?: PreparationProgress | null;
+}
+
+export interface PreparationProgress {
+	items_total: number;
+	items_ready: number;
+	items_failed: number;
+	teaching_plan: 'not_started' | 'queued' | 'running' | 'ready' | 'failed';
+	failed_work_item_ids: string[];
 }
 
 export interface WorkspaceStateError {

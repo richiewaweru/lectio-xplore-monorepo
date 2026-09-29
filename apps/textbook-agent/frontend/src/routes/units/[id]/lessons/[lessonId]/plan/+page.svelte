@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { getContext, onDestroy } from 'svelte';
+	import { getContext, onDestroy, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import {
 		getUnitGroups,
 		preparePathLesson,
+		regeneratePathLesson,
 		generateLearnRealization,
 		generatePrintRealization,
 		retryLessonRealization,
@@ -11,29 +12,33 @@
 	} from '$lib/api/units';
 	import {
 		getChunkedPlan,
-		getChunkedPlanStatus,
-		approveChunkedPlan,
-		regenerateChunkedPlan
+		startPreparationPlan,
+		regeneratePreparationPlan,
+		retryPreparationRun
 	} from '$lib/api/lesson-planning';
 	import {
 		getLessonApproach,
 		approveLessonApproach,
 		rejectLessonApproach
 	} from '$lib/api/teaching-plan';
-	import { realizePrintFromGeneration, retryNativeGeneration } from '$lib/api/realizations';
+	import { realizePrintFromGeneration } from '$lib/api/realizations';
 	import type { PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
-	import type { V3ChunkedPlanState, V3StructuralPlan } from '$lib/types/v3';
+	import type { V3StructuralPlan } from '$lib/types/v3';
 	import { Button, ProgressSteps, InlineError, Card } from '$lib/ui';
 	import {
 		lessonWorkspaceHref,
 		resolvePlanGenerationId,
 		lessonArtifactUi,
-		preparationIsApprovedAndFresh,
-		canonicalPreparationState,
-		preparationErrorMessage
+		preparationIsApprovedAndFresh
 	} from '$lib/curriculum/lessons/lesson-context';
 	import {
-		planFailureMessage
+		canRegeneratePlan,
+		canRetryPlan,
+		isPlanPollingState,
+		LEGACY_UNSUPPORTED_COPY,
+		planFailureMessage,
+		planPhaseFromPreparation,
+		planProgressText
 	} from '$lib/curriculum/lessons/plan-status';
 	import StructuralPlanPreview from '$lib/curriculum/lessons/StructuralPlanPreview.svelte';
 	import StructuralPlanActions from '$lib/curriculum/lessons/StructuralPlanActions.svelte';
@@ -59,28 +64,47 @@
 
 	const ctx = getContext<Ctx>('lessonWorkspace');
 
+	const POLL_MS = 2000;
+
 	let busy = $state<string | null>(null);
 	let error = $state<string | null>(null);
 	let changeNote = $state('');
 	let showChangeNote = $state(false);
-	let chunked = $state<V3ChunkedPlanState | null>(null);
 	let structuralPlan = $state<V3StructuralPlan | null>(null);
 	let lessonApproach = $state<LessonApproachView | null>(null);
-	let pollTimer: ReturnType<typeof setInterval> | null = null;
-	let hydrationInFlight = false;
-
-	type PlanPhase = 'idle' | 'structural' | 'teaching' | 'approved' | 'working' | 'failed_recoverable' | 'failed_terminal';
-	let phase = $state<PlanPhase>('idle');
+	// Verification of the approved Teaching Plan: null until checked.
+	let approvalCheck = $state<'ok' | 'bad' | null>(null);
+	// Set once this page verified an approval it just submitted.
+	let approvedLocally = $state(false);
+	let hydrationSeq = 0;
 
 	const unitId = $derived(ctx.unitId);
 	const lessonId = $derived(ctx.lessonId);
 	const path = $derived(ctx.path);
 	const lesson = $derived(ctx.lesson);
 	const preparation = $derived(ctx.preparation);
+	const prep = $derived(preparation?.workspace?.preparation ?? null);
 	const generationId = $derived(resolvePlanGenerationId(preparation));
 	const approvedFresh = $derived(ctx.statusFresh && preparationIsApprovedAndFresh(preparation));
 	const learnArtifact = $derived(lessonArtifactUi(preparation, 'learn'));
 	const printArtifact = $derived(lessonArtifactUi(preparation, 'print'));
+
+	const phase = $derived.by(() => {
+		if (approvedLocally) return 'approved' as const;
+		const mapped = planPhaseFromPreparation(prep);
+		if (mapped === 'approved') {
+			if (approvalCheck === 'ok' && approvedFresh) return 'approved' as const;
+			if (approvalCheck === 'bad' || approvalCheck === 'ok') return 'failed_terminal' as const;
+			return 'working' as const;
+		}
+		return mapped;
+	});
+
+	const workingText = $derived(
+		prep?.state === 'approved' && approvalCheck === null
+			? 'Verifying the approved Teaching Plan…'
+			: planProgressText(prep?.progress)
+	);
 
 	const steps = [
 		{ id: 'structural', label: 'Structural plan' },
@@ -100,101 +124,92 @@
 		return [] as string[];
 	});
 
+	const failureText = $derived(
+		prep?.state === 'approved'
+			? 'The approved Teaching Plan is stale or could not be verified. Re-prepare and review it before creating outputs.'
+			: planFailureMessage(prep)
+	);
+
 	function friendly(err: unknown): string {
 		return err instanceof Error ? err.message : 'Something went wrong.';
 	}
 
-	function stopPoll() {
-		if (pollTimer) {
-			clearInterval(pollTimer);
-			pollTimer = null;
+	// Poll lesson-status only, and only while the preparation Run is planning.
+	$effect(() => {
+		if (!isPlanPollingState(prep?.state)) return;
+		const timer = setInterval(() => {
+			ctx.refreshPreparation().catch((err) => {
+				error = `Lesson status could not be refreshed: ${friendly(err)}`;
+				clearInterval(timer);
+			});
+		}, POLL_MS);
+		return () => clearInterval(timer);
+	});
+
+	// Load review/approval detail for the current canonical state.
+	$effect(() => {
+		const gid = generationId;
+		const state = prep?.state;
+		const kind = prep?.review_kind ?? null;
+		untrack(() => void hydrate(gid, state, kind));
+	});
+
+	async function hydrate(
+		gid: string | null,
+		state: string | undefined,
+		kind: 'structural' | 'teaching_plan' | null
+	) {
+		const seq = ++hydrationSeq;
+		if (!gid) return;
+		if (state === 'approved') {
+			approvalCheck = null;
+			let approach: LessonApproachView | null = null;
+			let loadError: string | null = null;
+			try {
+				approach = await getLessonApproach(gid);
+			} catch (err) {
+				loadError = `Could not verify the approved Teaching Plan: ${friendly(err)}`;
+			}
+			if (seq !== hydrationSeq) return;
+			lessonApproach = approach;
+			approvalCheck = isVerifiedApprovedTeachingPlan(approach) ? 'ok' : 'bad';
+			if (loadError) error = loadError;
+			return;
+		}
+		if (state === 'awaiting_review' && kind === 'teaching_plan') {
+			let approach: LessonApproachView | null = null;
+			try {
+				approach = await getLessonApproach(gid);
+			} catch {
+				approach = null;
+			}
+			if (seq === hydrationSeq) lessonApproach = approach;
+			return;
+		}
+		if (state === 'awaiting_review' && kind === 'structural') {
+			try {
+				const planDoc = await getChunkedPlan(gid);
+				if (seq === hydrationSeq) structuralPlan = planDoc.structural_plan;
+			} catch (err) {
+				if (seq === hydrationSeq) error = `Could not load the structural plan: ${friendly(err)}`;
+			}
 		}
 	}
 
-	async function refreshAndHydrate(gid: string) {
+	async function refreshStatus() {
 		try {
 			await ctx.refreshPreparation();
 		} catch (err) {
 			error = `Lesson status could not be refreshed: ${friendly(err)}`;
-			stopPoll();
-			return;
 		}
-		await hydrateFromGeneration(gid);
 	}
 
-	async function hydrateFromGeneration(gid: string) {
-		if (hydrationInFlight) return;
-		hydrationInFlight = true;
-		error = null;
+	async function groupIdsForUnit(): Promise<string[]> {
 		try {
-			const workspacePrep = preparation?.workspace?.preparation;
-			if (workspacePrep?.state === 'approved') {
-				try { lessonApproach = await getLessonApproach(gid); }
-				catch (err) { lessonApproach = null; error = `Could not verify the approved Teaching Plan: ${friendly(err)}`; }
-				phase = isVerifiedApprovedTeachingPlan(lessonApproach) && approvedFresh ? 'approved' : 'failed_terminal';
-				if (phase === 'failed_terminal' && !error) error = 'The approved Teaching Plan is stale or could not be verified. Reprepare and review it before creating outputs.';
-				stopPoll();
-				return;
-			}
-			if (workspacePrep?.state === 'awaiting_review' && workspacePrep.review_kind === 'teaching_plan') {
-				try { lessonApproach = await getLessonApproach(gid); } catch { lessonApproach = null; }
-				phase = 'teaching';
-				stopPoll();
-				return;
-			}
-			if (workspacePrep?.state === 'failed_recoverable' || workspacePrep?.state === 'failed_terminal') {
-				phase = workspacePrep.state;
-				error = workspacePrep.error ? preparationErrorMessage(workspacePrep.error) : null;
-				stopPoll();
-				return;
-			}
-			if (workspacePrep?.state === 'planning') {
-				phase = 'working';
-				if (!pollTimer) pollTimer = setInterval(() => void refreshAndHydrate(gid), 2000);
-				return;
-			}
-			if (workspacePrep?.state === 'not_started' || canonicalPreparationState(preparation) === 'legacy_ambiguous') {
-				phase = workspacePrep?.state === 'not_started' ? 'idle' : 'failed_terminal';
-				error = phase === 'failed_terminal' ? 'This preparation has ambiguous legacy state. Reprepare it before approval.' : null;
-				stopPoll();
-				return;
-			}
-			const status = await getChunkedPlanStatus(gid);
-			chunked = {
-				generation_id: gid,
-				stage: status.stage,
-				structural_plan: null,
-				section_briefs: {},
-				failed_sections: status.failed_sections ?? [],
-				blueprint_id: status.blueprint_id,
-					execution_started: status.execution_started,
-				next_action: status.next_action,
-				error: status.error,
-				error_type: status.error_type,
-				error_detail: status.error_detail,
-				inferred_lesson_mode: null,
-				lesson_mode_confidence: null
-			};
-			try {
-				const planDoc = await getChunkedPlan(gid);
-				structuralPlan = planDoc.structural_plan;
-				chunked = { ...chunked, structural_plan: planDoc.structural_plan };
-			} catch {
-				/* plan may not be ready */
-			}
-			if (workspacePrep?.state === 'awaiting_review' && workspacePrep.review_kind === 'structural') {
-				phase = 'structural';
-				stopPoll();
-				return;
-			}
-		stopPoll();
-		phase = 'failed_terminal';
-		error = 'The canonical preparation state is not an active review state. Refresh status or reprepare the lesson.';
-		} catch (err) {
-			error = friendly(err);
-			phase = 'idle';
-		} finally {
-			hydrationInFlight = false;
+			const groups = await getUnitGroups(unitId);
+			return groups.groups.map((g) => g.id);
+		} catch {
+			return [];
 		}
 	}
 
@@ -202,79 +217,75 @@
 		if (!ctx.statusFresh || !path || !lesson) return;
 		busy = 'prepare';
 		error = null;
-		phase = 'working';
 		try {
-			let groupIds: string[] = [];
-			try {
-				const groups = await getUnitGroups(unitId);
-				groupIds = groups.groups.map((g) => g.id);
-			} catch {
-				groupIds = [];
-			}
-			const prepared = await preparePathLesson(unitId, path, lesson, 'first_exposure', groupIds);
-			const status = await getPreparedLessonStatus(unitId, lessonId);
-			ctx.setPreparation(status);
-			const gid = prepared.generation_id || resolvePlanGenerationId(status);
-			if (gid) await hydrateFromGeneration(gid);
+			await preparePathLesson(unitId, path, lesson, 'first_exposure', await groupIdsForUnit());
+			ctx.setPreparation(await getPreparedLessonStatus(unitId, lessonId));
 		} catch (err) {
 			error = friendly(err);
-			phase = 'idle';
+		} finally {
+			busy = null;
+		}
+	}
+
+	// Stage-1 re-prepare: used for legacy lessons and structural regeneration.
+	async function reprepareLesson(reason: string) {
+		if (!ctx.statusFresh || !path || !lesson) return;
+		busy = 'reprepare';
+		error = null;
+		try {
+			await regeneratePathLesson(unitId, path, lesson, 'first_exposure', reason, await groupIdsForUnit());
+			ctx.setPreparation(await getPreparedLessonStatus(unitId, lessonId));
+		} catch (err) {
+			error = friendly(err);
 		} finally {
 			busy = null;
 		}
 	}
 
 	async function approveStructural() {
-		if (!ctx.statusFresh || !chunked) return;
+		if (!ctx.statusFresh || !generationId) return;
 		busy = 'approve-structural';
 		error = null;
 		try {
-			const title = lesson?.title?.trim() || 'Lesson';
-			const next = await approveChunkedPlan(chunked.generation_id, { display_title: title });
-			chunked = next;
-			phase = 'working';
-			// Poll until teaching review or failure
-			stopPoll();
-			pollTimer = setInterval(() => void refreshAndHydrate(chunked!.generation_id), 2000);
-			await hydrateFromGeneration(chunked.generation_id);
+			// Idempotent: a repeat click returns the existing Run.
+			await startPreparationPlan(generationId, { display_title: lesson?.title?.trim() || 'Lesson' });
+			await refreshStatus();
 		} catch (err) {
-			const message = friendly(err);
-			if (message.includes('Generation is not awaiting explicit approval')) {
-				// The worker can advance to Teaching Plan review between status load
-				// and this structural action. Re-read canonical state so the page
-				// does not leave a stale structural approval control visible.
-				try {
-					await ctx.refreshPreparation();
-					const current = preparation?.workspace?.preparation;
-					if (current?.state !== 'awaiting_review' || current.review_kind !== 'structural') {
-						error = null;
-						await hydrateFromGeneration(chunked.generation_id);
-					} else {
-						error = message;
-					}
-				} catch {
-					error = message;
-				}
-			} else {
-				error = message;
-			}
+			error = friendly(err);
 		} finally {
 			busy = null;
 		}
 	}
 
 	async function regenerateStructural(note: string) {
-		if (!ctx.statusFresh || !chunked) return;
-		busy = 'regen';
+		await reprepareLesson(note || 'Teacher requested a new structure.');
+	}
+
+	async function retryPlan() {
+		const runId = prep?.run_id;
+		if (!ctx.statusFresh || !runId || !canRetryPlan(prep)) return;
+		busy = 'retry-plan';
 		error = null;
 		try {
-			const next = await regenerateChunkedPlan({
-				generation_id: chunked.generation_id,
-				note
-			});
-			chunked = next;
-			phase = 'structural';
+			await retryPreparationRun(runId, prep?.progress?.failed_work_item_ids ?? []);
+			await refreshStatus();
 		} catch (err) {
+			error = friendly(err);
+		} finally {
+			busy = null;
+		}
+	}
+
+	async function regeneratePlan() {
+		if (!ctx.statusFresh || !generationId) return;
+		busy = 'regenerate-plan';
+		error = null;
+		try {
+			await regeneratePreparationPlan(generationId);
+			await refreshStatus();
+		} catch (err) {
+			// 409 codes (not regeneratable / attempts exhausted / no run) carry
+			// a teacher-readable message from the server.
 			error = friendly(err);
 		} finally {
 			busy = null;
@@ -307,8 +318,8 @@
 				throw new Error('Approval was saved, but its Teaching Plan identity could not be verified. Reload the review.');
 			}
 			await ctx.refreshPreparation();
-			phase = 'approved';
-			stopPoll();
+			approvalCheck = 'ok';
+			approvedLocally = true;
 		} catch (err) {
 			error = friendly(err);
 		} finally {
@@ -328,8 +339,8 @@
 			});
 			changeNote = '';
 			showChangeNote = false;
-			phase = 'structural';
-			await hydrateFromGeneration(generationId);
+			// A rejected plan projects as failed_terminal (regenerate the plan).
+			await refreshStatus();
 		} catch (err) {
 			error = friendly(err);
 		} finally {
@@ -372,24 +383,6 @@
 		}
 	}
 
-	async function retryFailedGeneration() {
-		const generationToRetry = generationId ?? chunked?.generation_id;
-		if (!ctx.statusFresh || !generationToRetry || preparation?.workspace?.preparation?.error?.retryable !== true) return;
-		busy = 'retry-generation';
-		error = null;
-		try {
-			await retryNativeGeneration(generationToRetry);
-			phase = 'working';
-			stopPoll();
-			pollTimer = setInterval(() => void refreshAndHydrate(generationToRetry), 2000);
-			await refreshAndHydrate(generationToRetry);
-		} catch (err) {
-			error = friendly(err);
-		} finally {
-			busy = null;
-		}
-	}
-
 	async function retryArtifact(artifact: typeof learnArtifact) {
 		if (!ctx.statusFresh || !path || !lesson || !artifact.realizationId || !artifact.retryable) return;
 		busy = artifact.path;
@@ -408,14 +401,9 @@
 		return pathName === 'learn' ? 'Learn' : 'Print';
 	}
 
-	$effect(() => {
-		const gid = generationId;
-		if (gid && phase === 'idle') {
-			void hydrateFromGeneration(gid);
-		}
+	onDestroy(() => {
+		hydrationSeq++;
 	});
-
-	onDestroy(stopPoll);
 
 	const teachingReview = $derived(lessonApproach?.teaching_review ?? null);
 </script>
@@ -446,30 +434,50 @@
 				</Button>
 			{/if}
 		</Card>
-	{:else if phase === 'working'}
+	{:else if busy === 'prepare' || busy === 'reprepare' || phase === 'working'}
 		<Card padding="lg">
-			<p class="working">Preparing structure and teaching plan…</p>
+			<p class="working">{busy === 'prepare' || busy === 'reprepare' ? 'Preparing structure and teaching plan…' : workingText}</p>
+		</Card>
+	{:else if phase === 'legacy_unsupported'}
+		<Card padding="lg">
+			<h3>This lesson needs re-preparing</h3>
+			<p>{LEGACY_UNSUPPORTED_COPY}</p>
+			<Button disabled={!ctx.statusFresh || !path || !lesson} busy={busy === 'reprepare'} onclick={() => void reprepareLesson('Prepared before the planning update.')}>
+				{busy === 'reprepare' ? 'Re-preparing…' : 'Re-prepare lesson'}
+			</Button>
 		</Card>
 	{:else if phase === 'failed_recoverable' || phase === 'failed_terminal'}
 		<Card padding="lg">
 			<h3>{phase === 'failed_recoverable' ? 'Lesson preparation needs a retry' : 'Lesson preparation failed'}</h3>
-			<p>{planFailureMessage(chunked ?? { stage: phase, error: null, error_detail: null })}</p>
-			{#if phase === 'failed_recoverable' && preparation?.workspace?.preparation?.error?.retryable === true}
-				<Button disabled={!ctx.statusFresh} busy={busy === 'retry-generation'} onclick={() => void retryFailedGeneration()}>
-					{busy === 'retry-generation' ? 'Retrying…' : 'Retry'}
-				</Button>
-			{:else}
-				<p class="warn">{preparation?.workspace?.preparation?.error?.recovery_action === 'reprepare' ? 'Reprepare this lesson from the unit workspace, then review the new plan.' : 'This failure cannot be retried here. Review the lesson inputs or regenerate the lesson from the unit workspace.'}</p>
-			{/if}
+			<p>{failureText}</p>
+			<div class="actions">
+				{#if canRetryPlan(prep)}
+					<Button disabled={!ctx.statusFresh} busy={busy === 'retry-plan'} onclick={() => void retryPlan()}>
+						{busy === 'retry-plan' ? 'Retrying…' : 'Retry'}
+					</Button>
+				{/if}
+				{#if canRegeneratePlan(prep)}
+					<Button
+						variant={canRetryPlan(prep) ? 'secondary' : 'primary'}
+						disabled={!ctx.statusFresh}
+						busy={busy === 'regenerate-plan'}
+						onclick={() => void regeneratePlan()}
+					>
+						{busy === 'regenerate-plan' ? 'Regenerating…' : 'Regenerate plan'}
+					</Button>
+				{:else if !canRetryPlan(prep)}
+					<Button disabled={!ctx.statusFresh || !path || !lesson} busy={busy === 'reprepare'} onclick={() => void reprepareLesson('Re-prepare after a failed preparation.')}>
+						{busy === 'reprepare' ? 'Re-preparing…' : 'Re-prepare lesson'}
+					</Button>
+				{/if}
+			</div>
 		</Card>
 	{:else if phase === 'structural'}
 		<section class="stage">
 			<p class="eyebrow">Structural plan</p>
-			{#if structuralPlan || chunked}
+			{#if structuralPlan}
 				<div class="preview-wrap">
-					{#if structuralPlan}
-						<StructuralPlanPreview plan={structuralPlan} />
-					{/if}
+					<StructuralPlanPreview plan={structuralPlan} />
 				</div>
 				<StructuralPlanActions
 					isRunning={busy !== null || !ctx.statusFresh}

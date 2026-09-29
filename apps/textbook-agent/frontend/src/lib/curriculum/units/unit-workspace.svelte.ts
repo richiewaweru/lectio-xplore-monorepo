@@ -171,7 +171,7 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 		Boolean(
 			preparation &&
 				!preparation.stale &&
-				preparation.workflow_stage === 'failed_terminal' &&
+				preparation.workspace?.preparation?.state === 'failed_terminal' &&
 				preparation.can_regenerate
 		)
 	);
@@ -400,7 +400,7 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 		try {
 			const next = await getPreparedLessonStatus(getUnitId(), selected.id);
 			preparation = next;
-			if (!next.stale && next.workflow_stage === 'failed_terminal') {
+			if (!next.stale && next.workspace?.preparation?.state === 'failed_terminal') {
 				regenerationReason = 'The previous generation did not finish.';
 			}
 			if (wasDirty) {

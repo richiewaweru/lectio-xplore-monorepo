@@ -1,75 +1,95 @@
-import type { V3ChunkedPlanStage, V3ChunkedStatus } from '$lib/types/v3';
+/**
+ * Plan-page status mapping. The only input is the lesson-status DTO's
+ * `workspace.preparation` (Option D): the preparation Run is the job status.
+ */
+import type { PreparationProgress, PreparationWorkspaceStatus } from '$lib/types/units';
 
-export type PlanGenerationPhase =
-	| 'working'
+export type PlanPagePhase =
+	| 'idle'
 	| 'structural'
+	| 'working'
 	| 'teaching'
 	| 'approved'
 	| 'failed_recoverable'
-	| 'failed_terminal';
+	| 'failed_terminal'
+	| 'legacy_unsupported';
 
-// writing_sections/writing_blocks are retired (P12B): no worker transitions
-// into them any more, so a row still parked there can never advance. Treating
-// them as active would make the UI poll forever; the backend's
-// native_status.LEGACY_STATUSES projection reports next_action: "inspect_error"
-// for these instead, which isPlanGenerationFailure-adjacent call sites should
-// surface via planFailureMessage/error_detail rather than a spinner.
-const ACTIVE_STAGES = new Set<V3ChunkedPlanStage>([
-	'queued',
-	'planning_forms',
-	'assembling',
-	'stage1_running',
-	'stage2_running',
-	'variants_running',
-	'blueprint_ready'
-]);
+export const LEGACY_UNSUPPORTED_COPY = 'Prepared before the planning update — re-prepare this lesson.';
 
-export function isPlanGenerationActive(status: Pick<V3ChunkedStatus, 'stage'>): boolean {
-	return ACTIVE_STAGES.has(status.stage);
+/** Map the canonical preparation state to the page phase. */
+export function planPhaseFromPreparation(
+	prep: Pick<PreparationWorkspaceStatus, 'state' | 'review_kind'> | null | undefined
+): PlanPagePhase {
+	switch (prep?.state) {
+		case undefined:
+		case 'not_started':
+			return 'idle';
+		case 'planning':
+			return 'working';
+		case 'awaiting_review':
+			return prep.review_kind === 'structural' ? 'structural' : 'teaching';
+		case 'approved':
+			return 'approved';
+		case 'failed_recoverable':
+			return 'failed_recoverable';
+		case 'failed_terminal':
+			return 'failed_terminal';
+		case 'legacy_unsupported':
+			return 'legacy_unsupported';
+	}
 }
 
-// Retired pre-P11B stages (P12B): a row still parked here cannot ever resume,
-// so it is reported as a non-retryable failure rather than an active stage.
-const LEGACY_STALLED_STAGES = new Set<V3ChunkedPlanStage>(['writing_sections', 'writing_blocks']);
+/** Terminal for polling purposes: anything but `planning`. */
+export function isPlanPollingState(state: PreparationWorkspaceStatus['state'] | undefined): boolean {
+	return state === 'planning';
+}
 
-export function isPlanGenerationFailure(
-	status: Pick<V3ChunkedStatus, 'stage'>
-): status is Pick<V3ChunkedStatus, 'stage'> & {
-	stage: 'stage1_failed' | 'failed_recoverable' | 'failed_terminal' | 'writing_sections' | 'writing_blocks';
-} {
-	return (
-		status.stage === 'stage1_failed' ||
-		status.stage === 'failed_recoverable' ||
-		status.stage === 'failed_terminal' ||
-		LEGACY_STALLED_STAGES.has(status.stage)
+/** Teacher-facing progress line while a plan is being generated. */
+export function planProgressText(progress: PreparationProgress | null | undefined): string {
+	if (!progress) return 'Preparing structure and teaching plan…';
+	const { items_total: total, items_ready: ready, teaching_plan: teaching } = progress;
+	if (teaching === 'queued' || teaching === 'running') return 'Writing the Teaching Plan…';
+	if (teaching === 'ready') return 'Finishing the Teaching Plan…';
+	if (total > 0 && ready < total) return `Writing practice items: ${ready}/${total} cards`;
+	if (total > 0) return 'Practice items ready. Preparing the Teaching Plan…';
+	return 'Preparing structure and teaching plan…';
+}
+
+export function planFailureMessage(
+	prep: Pick<PreparationWorkspaceStatus, 'state' | 'error' | 'progress'> | null | undefined
+): string {
+	if (prep?.state === 'legacy_unsupported') return LEGACY_UNSUPPORTED_COPY;
+	const message = prep?.error?.message?.trim();
+	if (prep?.state === 'failed_recoverable') {
+		const failed = prep.progress?.items_failed ?? 0;
+		const base =
+			failed > 0
+				? `${failed} practice ${failed === 1 ? 'item' : 'items'} could not be written.`
+				: 'Plan generation stopped before it finished.';
+		return message ? `${base} ${message}` : `${base} You can retry.`;
+	}
+	return message || 'Plan generation could not be completed. Regenerate the plan to try again.';
+}
+
+/** Retry needs a Run and at least one failed work item to reopen. */
+export function canRetryPlan(
+	prep: Pick<PreparationWorkspaceStatus, 'state' | 'retryable' | 'run_id' | 'progress'> | null | undefined
+): boolean {
+	return Boolean(
+		prep?.state === 'failed_recoverable' &&
+			prep.retryable === true &&
+			prep.run_id &&
+			(prep.progress?.failed_work_item_ids.length ?? 0) > 0
 	);
 }
 
-export function planFailureMessage(status: Pick<V3ChunkedStatus, 'stage' | 'error' | 'error_detail'>): string {
-	const detail = status.error_detail;
-	const message =
-		typeof detail?.message === 'string'
-			? detail.message
-			: typeof status.error === 'string'
-				? status.error
-				: '';
-
-		if (LEGACY_STALLED_STAGES.has(status.stage)) {
-			return 'This generation is parked at a pre-P11B execution stage that no longer runs. It cannot resume automatically and needs attention.';
-		}
-		if (status.stage === 'failed_terminal' || status.stage === 'stage1_failed') {
-			return 'Lesson preparation could not be completed. Lectio needs attention before this lesson can continue.';
-		}
-		if (message.toLowerCase().includes('teaching')) {
-			return 'Lesson preparation failed while generating the teaching plan. Lectio exhausted its automatic repairs.';
-		}
-		return 'Lesson preparation failed. Lectio exhausted its automatic repairs and is ready for a retry.';
-}
-
-export function failureAllowsRetry(
-	status: Pick<V3ChunkedStatus, 'stage' | 'next_action' | 'error_detail'>
+/** Regenerate is offered for terminal failure or a non-retryable recoverable one. */
+export function canRegeneratePlan(
+	prep: Pick<PreparationWorkspaceStatus, 'state' | 'run_id'> | null | undefined
 ): boolean {
-	if (status.stage !== 'failed_recoverable') return false;
-	if (status.next_action && status.next_action.startsWith('retry_')) return true;
-	return status.error_detail?.retryable === true;
+	return Boolean(
+		prep &&
+			prep.run_id &&
+			(prep.state === 'failed_terminal' || prep.state === 'failed_recoverable')
+	);
 }

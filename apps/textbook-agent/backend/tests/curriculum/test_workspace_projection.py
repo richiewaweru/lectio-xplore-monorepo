@@ -250,6 +250,7 @@ def test_failed_run_projects_failure_with_recovery_action() -> None:
     assert recoverable.error is not None
     assert recoverable.error.code == "preparation_provider_timeout"
     assert recoverable.progress.failed_work_item_ids == ["wi-1"]
+    assert recoverable.error.work_item_id == "wi-1"
 
     terminal = project_lesson_workspace(
         generation_id="prep-failed",
