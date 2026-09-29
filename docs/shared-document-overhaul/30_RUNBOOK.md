@@ -479,3 +479,9 @@ Do not silently invent a new architecture.
 - Merged `6bb00011` (branch `08498c42`): deleted `progress_routes.py`, `visuals/retry` + `reopen_flagged_visuals`, frontend `reliability.ts` / `retryNativeVisuals` / subscription code; `derivePathJob(workspace)` maps DTO state + `recovery_action` to wait/review/retry/regenerate/open; Regenerate button for terminal/legacy rows.
 - Kept (live callers): `ProgressStore` (authoring engine), `awaiting_visuals` dispatch machinery -> retire in 3A with native_retry.
 - Verification: frontend check 0 errors, 249 tests; backend focused 785 (worker) / 187 (main checkout) passed.
+
+## 3A (2026-09-29): plan generation on the shared runtime
+- Merged `3d68d9a2` (branch `87306baf`): `preparation` Run (`items:{card}` + `teaching_plan`), `PreparationWorker` (300s lease, heartbeat), `POST /api/v1/preparations/{id}/plan[:regenerate]`, projection incl. `legacy_unsupported`; deleted stage-2 asyncio task, P12A heartbeat/reaper, native_retry pre-worker path, NativeExecutionWorker, boot `fail_stale_running`, chunked events/start/regenerate routes, Print visuals dispatch; variant fan-out removed (never produced an approvable plan).
+- Tests: focused 646 passed in main checkout (worker full suite 1923 passed).
+- Live proof (Convection `a124fcb0`, fresh): HTTP prepare -> structural review -> `/plan` -> Run `c9c3a741` -> card item attempt 1 ready -> `teaching_plan` failed_recoverable twice (DeepSeek truncated JSON; planner reviewer rejected duplicate scenario) -> generic work-item retry -> ready attempt 3 -> status awaiting_review(teaching_plan) -> hash-bound approve -> Learn/Print requested -> build `b339daa8`: preparation, shared_document, learn, print all READY on one build.
+- Follow-up (quality, out of scope): the V2 planner needed all 3 attempts on this lesson (output truncation + reviewer rejection).
