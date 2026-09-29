@@ -31,6 +31,9 @@ from learn.generation.fencing import (
 
 logger = logging.getLogger(__name__)
 
+# Queued Learn runs inspected per poll; waiting runs are skipped, not claimed.
+_MAX_QUEUED_SCAN = 20
+
 
 class LearnRealizationWorker:
     def __init__(
@@ -75,19 +78,33 @@ class LearnRealizationWorker:
         self._task = None
 
     async def run_one(self, session: AsyncSession) -> bool:
+        """Execute the oldest queued Learn run that can make progress.
+
+        A run still waiting for its SharedLessonDocument stays ``queued``; it
+        must not count as claimed work (that busy-looped the worker) or block
+        younger runs behind it, so waiting rows are skipped until the next
+        poll.  Returns True only when some run advanced.
+        """
         result = await session.execute(
-            select(NativeRealizationModel)
+            select(NativeRealizationModel.id)
             .where(
                 NativeRealizationModel.path == "learn",
                 NativeRealizationModel.status == "queued",
                 NativeRealizationModel.output_id.is_not(None),
             )
             .order_by(NativeRealizationModel.created_at.asc())
-            .limit(1)
-            .execution_options(populate_existing=True)
+            .limit(_MAX_QUEUED_SCAN)
         )
-        realization = result.scalar_one_or_none()
-        if realization is None:
+        for candidate_id in [str(row) for row in result.scalars().all()]:
+            if await self._run_candidate(session, candidate_id):
+                return True
+        return False
+
+    async def _run_candidate(self, session: AsyncSession, candidate_id: str) -> bool:
+        realization = await session.get(
+            NativeRealizationModel, candidate_id, populate_existing=True
+        )
+        if realization is None or realization.status != "queued":
             return False
         realization_id = str(realization.id)
         output_id = str(realization.output_id or "")
@@ -103,6 +120,12 @@ class LearnRealizationWorker:
             # editable lesson, and realization; commit before that session
             # closes or the context manager will roll the success back.
             await session.commit()
+            if result.get("status") == "waiting_shared_document":
+                logger.debug(
+                    "Learn realization waiting for SharedLessonDocument realization_id=%s",
+                    realization_id,
+                )
+                return False
             logger.info(
                 "Learn realization result committed realization_id=%s output_id=%s status=%s",
                 realization_id,

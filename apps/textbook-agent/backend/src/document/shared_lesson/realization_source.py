@@ -230,6 +230,29 @@ async def ensure_shared_document_run(
         ) from exc
     identity = verify_teaching_plan_source(source)
 
+    # Reuse any READY Run already built from this exact approved plan identity,
+    # whatever request key admitted it (e.g. a Run a reviewer promoted to
+    # READY, or one admitted before Learn/Print was requested).  The reader
+    # still re-verifies every hash before a realization consumes it.
+    ready_existing = await session.scalar(
+        select(GenerationRunModel)
+        .join(GenerationBuildModel, GenerationBuildModel.id == GenerationRunModel.build_id)
+        .where(
+            GenerationRunModel.owner_user_id == owner_user_id,
+            GenerationRunModel.run_type == "shared_document",
+            GenerationRunModel.status == "ready",
+            GenerationBuildModel.path_lesson_id == path_lesson_id,
+            GenerationRunModel.source_artifact_type == identity.source_artifact_type,
+            GenerationRunModel.source_artifact_id == identity.source_artifact_id,
+            GenerationRunModel.source_revision == identity.source_revision,
+            GenerationRunModel.source_hash == identity.source_hash,
+        )
+        .order_by(GenerationRunModel.completed_at.desc().nullslast())
+        .limit(1)
+    )
+    if ready_existing is not None:
+        return ready_existing
+
     for attempt in range(1, _MAX_TERMINAL_ATTEMPTS + 1):
         request_key = _request_key(
             path_lesson_id=path_lesson_id,
