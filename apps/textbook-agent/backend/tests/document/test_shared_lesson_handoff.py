@@ -112,6 +112,10 @@ def _accepted() -> tuple[TeachingPlanSource, SectionCompositionPlan, SharedSecti
     return source, composition, section
 
 
+async def _passing_reviewer(_request):
+    return DocumentSemanticVerdict(status="pass")
+
+
 async def _handoff(
     *,
     source: TeachingPlanSource | None = None,
@@ -121,6 +125,9 @@ async def _handoff(
     verified_semantic_qa=None,
 ):
     default_source, default_composition, default_section = _accepted()
+    if semantic_validator is None and verified_semantic_qa is None:
+        # Unit tests never reach the live semantic-QA provider.
+        semantic_validator = _passing_reviewer
     return await handoff_accepted_sections_to_document(
         source=source or default_source,
         compositions={"explain": composition or default_composition},
