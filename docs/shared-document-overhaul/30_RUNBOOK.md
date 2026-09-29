@@ -494,3 +494,8 @@ Do not silently invent a new architecture.
 ## 3C (2026-09-30): planner out of the Print folder
 - Merged `f5275842` (branch `fc3a3846`): `print/generation/whole_lesson/{teaching_agent,service}.py` -> `application/unit_lesson/{teaching_planner,teaching_plan_service}.py` (git mv). Curriculum stays print-free: runner bound via `bind_shared_teaching_runner` when `teaching_plan_service` is imported (lazily by `preparation_worker`). Guards: old paths retired; AST test that no `src/print/**` module defines the planner entry points. First attempt into `curriculum.teaching_plan` was abandoned: domain guard `curriculum-must-not-import-product` (19 violations) - no allowlist added.
 - Verification (main checkout, after 3A+3B+3C): backend 1925 passed / 5 skipped; domain guards PASS.
+
+## 3D + Option D closeout (2026-09-30)
+- Merged `bcaf6665` (branch `00e0dcff`): `GET /api/v1/preparations/{id}/structure`, `document_revision` on generation detail; deleted `/v3/chunked/{id}/plan|status`, `native_status.py`, `native_retry.py`, `retry_preparation_run`; `visual_quality_summary` moved to `whole_lesson/visual_quality.py`.
+- Final verification at `bcaf6665`: backend 1916 passed / 5 skipped; frontend check 0 errors, 257 tests; domain guards PASS; restarted backend `20260930-021608` smoke OK.
+- Closeout: `38_OPTION_D_CLOSEOUT.md`.

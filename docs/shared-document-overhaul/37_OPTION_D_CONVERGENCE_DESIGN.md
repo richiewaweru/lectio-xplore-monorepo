@@ -1,6 +1,6 @@
 # Option D: plan generation and Learn/Print jobs on the shared job system
 
-Status: **design, approved scope** (2026-09-29). This implements items 3 and 4 from `36_DEFERRED_CONVERGENCE_REPORT.md`.
+Status: **implemented** (closeout: `38_OPTION_D_CLOSEOUT.md`); originally design, approved scope (2026-09-29). This implements items 3 and 4 from `36_DEFERRED_CONVERGENCE_REPORT.md`.
 Scope decision (user): **new lessons only.** Nothing is backfilled or dual-run. Old in-flight lessons get a clear "re-prepare / regenerate" state.
 Order: **item 4 (Learn/Print jobs) first, then item 3 (plan generation).**
 
