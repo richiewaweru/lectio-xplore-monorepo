@@ -41,9 +41,7 @@ from infra.database.models import GenerationRunModel
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime import (
     AdmissionResult,
-    AttemptLimitExceeded,
     BuildAdmission,
-    InvalidWorkItemTransition,
     RunAdmission,
     RunAdmissionConflict,
     RunType,
@@ -54,7 +52,6 @@ from infra.generation_runtime import (
     add_work_item,
     admit_run,
     create_build,
-    retry_work_items,
 )
 
 PREPARATION_STAGE = "preparation"
@@ -509,58 +506,6 @@ async def admit_preparation_run(
     return PreparationAdmission(run=refreshed or run, created=admission.created, attempt=attempt)
 
 
-async def retry_preparation_run(
-    session: AsyncSession, *, generation_id: str, owner_user_id: str
-) -> GenerationRunModel:
-    """Reopen every retryable failed leaf of a failed_recoverable preparation Run."""
-    generation = await session.get(GenerationModel, generation_id)
-    if generation is None or generation.user_id != owner_user_id:
-        raise PreparationRunError(
-            "Preparation not found", code="PREPARATION_NOT_FOUND", status_code=404
-        )
-    run = await latest_preparation_run(
-        session, generation_id=generation_id, owner_user_id=owner_user_id
-    )
-    if run is None:
-        raise PreparationRunError(
-            "This lesson was prepared before the planning update; re-prepare it",
-            code="PREPARATION_LEGACY",
-        )
-    if run.status != "failed_recoverable":
-        raise PreparationRunError(
-            "Only a recoverable failure can be retried; regenerate the plan instead",
-            code="PREPARATION_NOT_RETRYABLE",
-        )
-    failed = [
-        item
-        for item in active_work_items(tuple(run.work_items))
-        if item.status == "failed_recoverable"
-    ]
-    if not failed or any(item.recovery_action != "retry" for item in failed):
-        raise PreparationRunError(
-            "This failure cannot be retried; regenerate the plan instead",
-            code="PREPARATION_NOT_RETRYABLE",
-        )
-    try:
-        async with session.begin_nested():
-            await retry_work_items(
-                session,
-                run_id=run.id,
-                work_item_ids=[item.id for item in failed],
-                owner_user_id=owner_user_id,
-            )
-    except (InvalidWorkItemTransition, AttemptLimitExceeded, WorkItemConflict) as exc:
-        raise PreparationRunError(
-            "Retry attempts are used up; regenerate the plan instead",
-            code="PREPARATION_NOT_RETRYABLE",
-        ) from exc
-    refreshed = await latest_preparation_run(
-        session, generation_id=generation_id, owner_user_id=owner_user_id
-    )
-    assert refreshed is not None
-    return refreshed
-
-
 __all__ = [
     "APPROVABLE_STAGES",
     "ITEMS_ITEM_STAGE",
@@ -580,7 +525,6 @@ __all__ = [
     "load_preparation_run_views",
     "preparation_run_view",
     "preparation_request_key",
-    "retry_preparation_run",
     "run_source",
     "source_hash_for",
     "source_identity_from_rows",

@@ -66,10 +66,6 @@ def test_unit_path_status_buckets_do_not_read_generation_status() -> None:
              "_generate_shared_pack_items"),
         ),
         (
-            "print.generation.whole_lesson.native_retry",
-            ("accept_native_retry", "run_pre_worker_retry", "execute_native_retry"),
-        ),
-        (
             "print.generation.whole_lesson.repository",
             ("claim_next_native_job", "persist_native_failure_for_generation"),
         ),

@@ -31,9 +31,7 @@ from print.http.v3_studio.dtos import (
     BlueprintPreviewDTO,
     V3CardItemReviewDTO,
     V3CardLibraryItemDTO,
-    V3ChunkedPlanDTO,
     V3ChunkedPlanStateDTO,
-    V3ChunkedStatusDTO,
     V3ConceptCardDTO,
     V3ConceptCardPatchRequest,
     V3GenerationDetailDTO,
@@ -75,9 +73,7 @@ from curriculum.planning.models import (
 from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
 from application.unit_lesson.native_pipeline import (
     _contract_version_for_generation,
-    _load_owned_generation,
     _normalize_chunked_state,
-    _normalize_chunked_status,
     _require_current_native_generation,
 )
 from application.unit_lesson.preparation_items import (
@@ -451,49 +447,6 @@ async def _ensure_generation_stream(
 
 
 
-
-
-@v3_studio_router.get("/chunked/{generation_id}/plan", response_model=V3ChunkedPlanDTO)
-async def get_chunked_plan(
-    generation_id: str,
-    current_user: User = Depends(get_current_user),
-) -> V3ChunkedPlanDTO:
-    await _load_owned_generation(generation_id, current_user.id)
-    try:
-        state = await load_chunked_state(generation_id)
-    except Exception as exc:
-        raise HTTPException(status_code=404, detail="Chunked state not found") from exc
-    full_state = _normalize_chunked_state(generation_id, state)
-    if full_state.structural_plan is None:
-        raise HTTPException(status_code=404, detail="Structural plan not found")
-    return V3ChunkedPlanDTO(
-        generation_id=generation_id,
-        pack_id=full_state.pack_id,
-        structural_plan=full_state.structural_plan,
-        display_title=full_state.display_title,
-        inferred_lesson_mode=full_state.inferred_lesson_mode,
-        lesson_mode_confidence=full_state.lesson_mode_confidence,
-        variants=full_state.variants,
-        variant_generation_ids=full_state.variant_generation_ids,
-    )
-
-
-@v3_studio_router.get("/chunked/{generation_id}/status", response_model=V3ChunkedStatusDTO)
-async def get_chunked_plan_status(
-    generation_id: str,
-    current_user: User = Depends(get_current_user),
-) -> V3ChunkedStatusDTO:
-    model = await _load_owned_generation(generation_id, current_user.id)
-    try:
-        state = await load_chunked_state(generation_id)
-    except Exception as exc:
-        raise HTTPException(status_code=404, detail="Chunked state not found") from exc
-    return _normalize_chunked_status(
-        generation_id,
-        state,
-        model.document_json,
-        generation_status=str(model.status or "") or None,
-    )
 
 
 @v3_studio_router.get(
@@ -1299,6 +1252,17 @@ async def list_v3_generations(
     return items
 
 
+def _document_revision(chunked: dict[str, Any]) -> int | None:
+    """Monotonic document revision of the native page document, if one exists."""
+    page = chunked.get("page_document_v2")
+    if not isinstance(page, dict):
+        return None
+    try:
+        return int(page.get("document_revision") or 0)
+    except (TypeError, ValueError):
+        return None
+
+
 @v3_studio_router.get("/generations/{generation_id}", response_model=V3GenerationDetailDTO)
 async def get_v3_generation_detail(
     generation_id: str,
@@ -1313,7 +1277,7 @@ async def get_v3_generation_detail(
         current_user.id,
     )
     from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from print.generation.whole_lesson.native_status import visual_quality_summary
+    from print.generation.whole_lesson.visual_quality import visual_quality_summary
 
     chunked = dict(model.chunked_state_json or {})
     contract_version = _contract_version_for_generation(model, chunked)
@@ -1335,6 +1299,7 @@ async def get_v3_generation_detail(
         native_whole_lesson=native_whole_lesson,
         document_contract_version=contract_version,
         visual_quality=visual_quality_summary(chunked),
+        document_revision=_document_revision(chunked),
     )
 
 
@@ -1469,7 +1434,7 @@ async def get_v3_generation_document(
         }
     document_json = await _with_shared_pack_assessment(model, document_json)
     from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from print.generation.whole_lesson.native_status import visual_quality_summary
+    from print.generation.whole_lesson.visual_quality import visual_quality_summary
     chunked_state = dict(model.chunked_state_json or {})
     if generation_is_native_whole_lesson(chunked_state, model):
         document_json = {

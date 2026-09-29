@@ -456,72 +456,11 @@ def project_status_timeline(
     document: dict[str, Any] | None,
     terminal_stage: str,
 ) -> list[dict[str, Any]]:
-    from print.generation.whole_lesson.native_status import project_native_status
-    from print.generation.whole_lesson.states import DEFAULT_VARIANT_ID, execution_key
+    """Retired: the legacy chunked status projector was removed (Option D, 3D).
 
-    form_plan_payload = {
-        "sections": [
-            {
-                "slot_id": section.slot_id,
-                "forms": [
-                    {
-                        "block_id": block.id,
-                        "object": block.object,
-                        "placement": block.placement,
-                        "reason": getattr(block, "reason", "") or "",
-                        "escalation": getattr(block, "escalation", None),
-                    }
-                    for block in section.blocks
-                ],
-            }
-            for section in form_plan.sections
-        ]
-    }
-
-    def _block_execution(ready: bool) -> dict[str, Any]:
-        out: dict[str, Any] = {}
-        for section in form_plan.sections:
-            results = {
-                r.block_id: r for r in section_results.get(section.slot_id, [])
-            }
-            for block in section.blocks:
-                key = execution_key(section.slot_id, block.id, DEFAULT_VARIANT_ID)
-                if not ready and section.slot_id not in section_results:
-                    continue
-                result = results.get(block.id)
-                status = "ready"
-                if result is not None and getattr(result, "status", None) == "visual_pending":
-                    status = "visual_pending"
-                elif result is None and not ready:
-                    status = "started"
-                out[key] = {
-                    "status": status,
-                    "section_id": section.slot_id,
-                    "block_id": block.id,
-                    "object": block.object,
-                }
-        return out
-
-    timeline: list[dict[str, Any]] = []
-    for stage in ("writing_sections", "assembling", terminal_stage):
-        block_execution = _block_execution(ready=(stage != "writing_sections"))
-        state = {
-            "stage": stage,
-            "native_whole_lesson": True,
-            "page_document_v2": {
-                "form_plan": form_plan_payload,
-                "block_execution": block_execution,
-                "execution": {"stage": stage},
-            },
-        }
-        projected = project_native_status(
-            generation_id,
-            state,
-            document if stage == "ready" else None,
-            generation_status=stage,
-        )
-        timeline.append({"stage": stage, "status": projected})
-    return timeline
+    Native progress is a Run projection now; the fixture reports no timeline.
+    """
+    return []
 
 
 def has_llm_credentials() -> tuple[bool, list[str]]:

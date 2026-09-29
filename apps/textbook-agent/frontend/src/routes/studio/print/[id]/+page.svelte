@@ -110,19 +110,8 @@
 				sectionCount = v2.sections.length;
 				templateId = 'lectio-page-v2';
 				subject = typeof v2.subject === 'string' ? v2.subject.trim() : v2.title;
-				const revRaw = (detail as V3GenerationDetail & { document_revision?: number }).document_revision;
-				if (typeof revRaw === 'number') {
-					documentRevision = revRaw;
-				} else {
-					const statusRes = await apiFetch(
-						`/api/v1/v3/chunked/${encodeURIComponent(generationId)}/status`,
-						{ headers }
-					);
-					if (statusRes.ok) {
-						const statusJson = (await statusRes.json()) as { doc_version?: string };
-						const match = String(statusJson.doc_version || '').match(/^rev:(\d+)$/);
-						if (match) documentRevision = Number(match[1]);
-					}
+				if (typeof detail.document_revision === 'number') {
+					documentRevision = detail.document_revision;
 				}
 			} else {
 				const root = data as unknown as Record<string, unknown>;
