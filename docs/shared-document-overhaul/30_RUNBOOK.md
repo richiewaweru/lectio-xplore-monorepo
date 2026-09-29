@@ -459,3 +459,10 @@ Stop and escalate if:
 - provider limitation makes the closed contract impossible.
 
 Do not silently invent a new architecture.
+
+## Item 2 (2026-09-29): Learn LLM-authoring engine retired
+- Merged `c86a4a41` (56 files, -8.7k lines): interaction_writer write path, work_orders, activity/authoring adapters, source_resolver, preparation_context, reliability_persist, action_map, learn resource selection, document writer/prompts/heuristics, capability selector, llm_helpers, writer/selector prompts and model slots.
+- `validate_interaction_contract` kept, moved to `learn/interactions/contract_validation.py` (publish + builder callers).
+- Guard: `test_p16_final_sweep_guard.py` extended (+15 retired modules, prompt ids gone).
+- Verification in main checkout: backend 1992 passed / 5 skipped; ruff 34 pre-existing (40 before); domain guards PASS.
+- Left on purpose: vendored `contracts/learn-*.json` views (contract-sync generated), `core/policies` learn action map (test-only consumer).
