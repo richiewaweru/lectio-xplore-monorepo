@@ -29,7 +29,8 @@
 		resolvePlanGenerationId,
 		lessonArtifactUi,
 		preparationIsApprovedAndFresh,
-		canonicalPreparationState
+		canonicalPreparationState,
+		preparationErrorMessage
 	} from '$lib/curriculum/lessons/lesson-context';
 	import {
 		planFailureMessage
@@ -143,7 +144,7 @@
 			}
 			if (workspacePrep?.state === 'failed_recoverable' || workspacePrep?.state === 'failed_terminal') {
 				phase = workspacePrep.state;
-				error = workspacePrep.error?.message ?? null;
+				error = workspacePrep.error ? preparationErrorMessage(workspacePrep.error) : null;
 				stopPoll();
 				return;
 			}

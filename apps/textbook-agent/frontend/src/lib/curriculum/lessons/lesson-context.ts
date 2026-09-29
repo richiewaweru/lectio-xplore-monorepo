@@ -4,10 +4,33 @@ import type {
 	ArtifactUiState,
 	LessonArtifactUi,
 	PreparedLessonStatus,
-	PreparationWorkspaceState
+	PreparationWorkspaceState,
+	WorkspaceStateError
 } from '$lib/types/units';
 
 export type LessonPrepUiState = 'not_prepared' | 'preparing' | 'awaiting_review' | 'ready' | 'needs_attention';
+
+// Backend error codes whose raw `message` is written for logs/support, not
+// for a teacher. Map the ones seen in the wild to plain language; anything
+// else falls back to the backend's message as-is.
+const FRIENDLY_ERROR_MESSAGES: Record<string, string> = {
+	// P12A: the orphan reaper marks a crashed/unobservable stage-2 pipeline
+	// task this way. Always retryable -- the raw message ("... no longer
+	// observable (owner_boot_id=...)") is debugging detail, not something a
+	// teacher should have to parse.
+	PIPELINE_ORPHANED:
+		'Lesson preparation was interrupted (its process stopped unexpectedly). It is safe to retry.',
+	LEGACY_STAGE_RETIRED:
+		'This generation is parked at a pre-P11B execution stage that no longer runs. It cannot resume automatically and needs attention.'
+};
+
+/** Prefer a known-friendly message for the error's code; fall back to the
+ * backend's own message, then a generic default. */
+export function preparationErrorMessage(error: WorkspaceStateError | null | undefined): string {
+	const code = error?.code ?? null;
+	if (code && FRIENDLY_ERROR_MESSAGES[code]) return FRIENDLY_ERROR_MESSAGES[code];
+	return error?.message ?? 'Lesson preparation failed unexpectedly.';
+}
 
 export function lessonWorkspaceHref(
 	unitId: string,

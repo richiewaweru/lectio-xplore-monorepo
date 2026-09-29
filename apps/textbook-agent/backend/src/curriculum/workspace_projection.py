@@ -29,18 +29,27 @@ ArtifactState = Literal[
     "needs_review",
 ]
 
+# P12B: writing_sections/writing_blocks are retired pre-P11B execution stages.
+# No worker transitions into them any more (states.LEGAL_TRANSITIONS has no
+# entry for them), so a row still parked there can never advance. They are
+# handled explicitly in _preparation_projection (see LEGACY_PREPARATION_STAGES
+# below) rather than counted as active, or this projection would report a
+# stalled row as "planning" forever.
 _ACTIVE_PREPARATION_STAGES = {
     "queued",
     "item_generation",
     "planning_teaching",
     "planning_forms",
-    "writing_sections",
-    "writing_blocks",
     "assembling",
     "stage1_running",
     "stage2_running",
     "variants_running",
 }
+# Mirrors print.generation.whole_lesson.native_status.LEGACY_STATUSES. Kept as
+# a local constant (rather than importing across the print/curriculum
+# boundary) since this projection only needs the stage names, not the native
+# whole-lesson retry machinery.
+LEGACY_PREPARATION_STAGES = frozenset({"writing_sections", "writing_blocks"})
 _ACTIVE_REALIZATION_STAGES = {
     "selecting",
     "writing",
@@ -305,6 +314,32 @@ def _preparation_projection(
             stale=stale,
             legacy_ambiguous=legacy_ambiguous,
             error=error,
+        )
+
+    if stage in LEGACY_PREPARATION_STAGES:
+        # No worker will ever claim or advance this row again (P12B deleted the
+        # only executor that targeted these stages). Report a truthful,
+        # non-retryable stall instead of falling through to the generic
+        # PREPARATION_STATE_UNKNOWN message below, mirroring the
+        # native_status.LEGACY_STATUSES projection used by the chunked-status
+        # endpoint (next_action: "inspect_error").
+        return PreparationWorkspaceDTO(
+            state="failed_terminal",
+            generation_id=generation_id,
+            stale=stale,
+            legacy_ambiguous=legacy_ambiguous,
+            error=_workspace_error(
+                code="LEGACY_STAGE_RETIRED",
+                error_type="workspace_state_ambiguous",
+                failure_class="state_integrity",
+                message=(
+                    "This generation is parked at a pre-P11B execution stage "
+                    "that no longer runs (standalone Print form-planning/"
+                    "writing was retired). It cannot resume automatically."
+                ),
+                retryable=False,
+                stage=stage or None,
+            ),
         )
 
     structural_review_stages = {

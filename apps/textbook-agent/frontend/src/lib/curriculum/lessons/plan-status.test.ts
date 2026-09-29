@@ -38,7 +38,23 @@ describe('lesson plan status projection', () => {
 
 	it('keeps actual execution stages pollable', () => {
 		expect(isPlanGenerationActive({ stage: 'planning_forms' })).toBe(true);
-		expect(isPlanGenerationActive({ stage: 'writing_blocks' })).toBe(true);
 		expect(isPlanGenerationActive({ stage: 'awaiting_teaching_approval' })).toBe(false);
+	});
+
+	it('reports retired pre-P11B stages as a non-retryable failure, not an active spinner', () => {
+		const status = {
+			stage: 'writing_blocks' as const,
+			next_action: 'inspect_error',
+			error: null,
+			error_detail: { retryable: false }
+		};
+
+		expect(isPlanGenerationActive(status)).toBe(false);
+		expect(isPlanGenerationFailure(status)).toBe(true);
+		expect(failureAllowsRetry(status)).toBe(false);
+		expect(planFailureMessage(status)).toMatch(/no longer runs/i);
+
+		expect(isPlanGenerationActive({ stage: 'writing_sections' })).toBe(false);
+		expect(isPlanGenerationFailure({ stage: 'writing_sections' })).toBe(true);
 	});
 });

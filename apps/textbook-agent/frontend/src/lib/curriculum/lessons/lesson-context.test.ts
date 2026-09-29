@@ -3,6 +3,7 @@ import type { PreparedLessonStatus } from '$lib/types/units';
 import {
 	canonicalPreparationState,
 	lessonArtifactUi,
+	preparationErrorMessage,
 	preparationIsApprovedAndFresh,
 	preparationUiState,
 	resolvePlanGenerationId,
@@ -203,5 +204,22 @@ describe('canonical Unit lesson workspace mapping', () => {
 		});
 		expect(lessonArtifactUi(status, 'print', 'preview unavailable')).toMatchObject({ state: 'ready', retryable: false, errorSummary: 'preview unavailable' });
 		expect(resolvePrintGenerationId(status)).toBe('po');
+	});
+
+	it('maps known error codes to a teacher-friendly message, falling back otherwise', () => {
+		expect(
+			preparationErrorMessage({
+				code: 'PIPELINE_ORPHANED',
+				message: 'Preparation pipeline task is no longer observable (owner_boot_id=abc, heartbeat_at=None)',
+				retryable: true
+			})
+		).toMatch(/interrupted/i);
+		expect(
+			preparationErrorMessage({ code: 'LEGACY_STAGE_RETIRED', message: 'raw internal detail' })
+		).toMatch(/no longer runs/i);
+		expect(preparationErrorMessage({ code: 'SOME_UNMAPPED_CODE', message: 'raw backend message' })).toBe(
+			'raw backend message'
+		);
+		expect(preparationErrorMessage(null)).toBe('Lesson preparation failed unexpectedly.');
 	});
 });
