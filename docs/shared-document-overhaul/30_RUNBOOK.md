@@ -485,3 +485,8 @@ Do not silently invent a new architecture.
 - Tests: focused 646 passed in main checkout (worker full suite 1923 passed).
 - Live proof (Convection `a124fcb0`, fresh): HTTP prepare -> structural review -> `/plan` -> Run `c9c3a741` -> card item attempt 1 ready -> `teaching_plan` failed_recoverable twice (DeepSeek truncated JSON; planner reviewer rejected duplicate scenario) -> generic work-item retry -> ready attempt 3 -> status awaiting_review(teaching_plan) -> hash-bound approve -> Learn/Print requested -> build `b339daa8`: preparation, shared_document, learn, print all READY on one build.
 - Follow-up (quality, out of scope): the V2 planner needed all 3 attempts on this lesson (output truncation + reviewer rejection).
+
+## 3B (2026-09-30): plan page on preparation Runs
+- Merged `08c21119` (branch `f43c943e`, `09aa903e`): plan page uses `/api/v1/preparations/{id}/plan[:regenerate]`, runtime run retry with `failed_work_item_ids`, progress text from `workspace.preparation.progress`, legacy re-prepare; `error.work_item_id` populated. Deleted `/v3/chunked/{id}/approve` alias, `/v3/generations/{id}/retry-native`, frontend chunked approve/regenerate/status/retry-native clients and legacy stage maps.
+- Kept (live callers): `GET /v3/chunked/{id}/plan` (structural preview), `GET /v3/chunked/{id}/status` + `native_status.py` + `native_retry.py` (Print studio `doc_version`, `visual_quality_summary`). `retry_preparation_run` is test-only now.
+- Verification: worker full backend 1921 passed; main checkout frontend check 0 errors, 256 tests.
