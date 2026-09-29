@@ -108,6 +108,11 @@ export type V3ChunkedPlanStage =
 	| 'awaiting_teaching_approval'
 	| 'queued'
 	| 'planning_forms'
+	// P12B retired these: no worker transitions into them any more, but a
+	// pre-P11B DB row can still be parked here and native_status.py's
+	// LEGACY_STATUSES projection reports the stage literally (with
+	// next_action: "inspect_error") so the type keeps them as legacy-only,
+	// non-active values. See plan-status.ts LEGACY_STALLED_STAGES.
 	| 'writing_sections'
 	| 'writing_blocks'
 	| 'assembling'

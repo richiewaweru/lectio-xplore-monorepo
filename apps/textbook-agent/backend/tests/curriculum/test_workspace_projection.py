@@ -50,13 +50,33 @@ def test_ready_output_projects_ready_even_when_preparation_worker_is_active() ->
     workspace = project_lesson_workspace(
         generation_id="prep-1",
         generation_status="running",
-        workflow_stage="writing_sections",
+        workflow_stage="planning_forms",
         learn_realization=_realization("learn", status="ready", output_id="learn-out-1"),
     )
 
     assert workspace.learn.state == "ready"
     assert workspace.learn.output_id == "learn-out-1"
     assert workspace.preparation.state == "planning"
+
+
+@pytest.mark.parametrize("legacy_stage", ["writing_sections", "writing_blocks"])
+def test_legacy_writing_stage_projects_truthful_stall_not_active_planning(
+    legacy_stage: str,
+) -> None:
+    """P12B retired writing_sections/writing_blocks: no worker can ever advance
+    a row still parked there, so it must not project as an eternal "planning"
+    spinner. It should mirror native_status.LEGACY_STATUSES: a non-retryable
+    failed_terminal stall the teacher can inspect."""
+    workspace = project_lesson_workspace(
+        generation_id="prep-legacy",
+        generation_status=legacy_stage,
+        workflow_stage=legacy_stage,
+    )
+
+    assert workspace.preparation.state == "failed_terminal"
+    assert workspace.preparation.error is not None
+    assert workspace.preparation.error.code == "LEGACY_STAGE_RETIRED"
+    assert workspace.preparation.error.retryable is False
 
 
 def test_failed_realization_never_projects_ready_when_output_pointer_exists() -> None:
