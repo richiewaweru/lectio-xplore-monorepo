@@ -474,3 +474,8 @@ Do not silently invent a new architecture.
 - Tests: focused application/print_learn/architecture/core/planning 747 passed in main checkout; worker full suite 1996 passed (3 env/timing-only).
 - Live proof (Shadows `9df8aaf9`): admitted Learn+Print via handoff services -> fresh doc Run `53b6da28` READY -> `learn`/`print` Runs on the same build, `learn:realize`/`print:realize` attempt 1 READY, realizations ready (Learn output completed, Print output ready). No busy loop while waiting.
 - Note: the fresh doc Run was admitted because earlier Shadows READY runs used operator request keys, not the deterministic realization key.
+
+## 4B (2026-09-29): realization progress routes retired; Learn/Print pages on lesson-status
+- Merged `6bb00011` (branch `08498c42`): deleted `progress_routes.py`, `visuals/retry` + `reopen_flagged_visuals`, frontend `reliability.ts` / `retryNativeVisuals` / subscription code; `derivePathJob(workspace)` maps DTO state + `recovery_action` to wait/review/retry/regenerate/open; Regenerate button for terminal/legacy rows.
+- Kept (live callers): `ProgressStore` (authoring engine), `awaiting_visuals` dispatch machinery -> retire in 3A with native_retry.
+- Verification: frontend check 0 errors, 249 tests; backend focused 785 (worker) / 187 (main checkout) passed.
