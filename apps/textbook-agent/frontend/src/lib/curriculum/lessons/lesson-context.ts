@@ -1,4 +1,5 @@
 /** Canonical Unit lesson workspace projection helpers. */
+import { derivePathJob } from '$lib/reliability/path-job-lane';
 import type {
 	ArtifactPath,
 	ArtifactUiState,
@@ -115,11 +116,12 @@ export function lessonArtifactUi(
 			path, exists: false, state: status ? 'needs_attention' : 'not_created',
 			realizationId: null, outputId: null, openHref: null,
 			errorSummary: loadError ?? (status ? 'Path status is ambiguous. Refresh the lesson workspace.' : null),
-			retryable: false, recoveryAction: status ? 'reload_lesson' : null, legacyAmbiguous: Boolean(status),
+			retryable: false, regenerable: false, runId: null, recoveryAction: status ? 'reload_lesson' : null, legacyAmbiguous: Boolean(status),
 			sharedDocumentState: null
 		};
 	}
 	const canonicalState = workspace.state;
+	const derived = derivePathJob(workspace);
 	// `needs_review` is authoritative from the backend: a pinned SharedLessonDocument
 	// awaiting a human review decision. Never infer this from output_id/hash alone.
 	const state: ArtifactUiState = canonicalState === 'needs_review'
@@ -146,7 +148,9 @@ export function lessonArtifactUi(
 		// needs_review never advertises a retry action: the backend has no retry
 		// endpoint for a pending human review, and offering one would be retry spam.
 		retryable: state !== 'needs_review' && canonicalState === 'failed_recoverable' && workspace.error?.retryable === true && !workspace.stale && !workspace.legacy_ambiguous,
-		recoveryAction: state === 'needs_review' ? null : (workspace.error?.recovery_action ?? null),
+		regenerable: derived.action === 'regenerate' && Boolean(workspace.realization_id) && !workspace.legacy_ambiguous && !workspace.stale,
+		runId: derived.runId,
+		recoveryAction: state === 'needs_review' ? null : derived.recoveryAction,
 		legacyAmbiguous: Boolean(workspace.legacy_ambiguous),
 		sharedDocumentState: workspace.shared_document_state ?? null
 	};

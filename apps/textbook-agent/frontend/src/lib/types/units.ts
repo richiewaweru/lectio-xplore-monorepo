@@ -274,6 +274,10 @@ export interface ArtifactWorkspaceStatus {
 	error?: WorkspaceStateError | null;
 	shared_document_state?: SharedDocumentState | null;
 	shared_document_run_id?: string | null;
+	/** Generation Run backing this Learn/Print job (projected by the backend). */
+	run_id?: string | null;
+	/** Closed vocabulary: retry / review / regenerate / none. */
+	recovery_action?: string | null;
 	shared_document_id?: string | null;
 	shared_document_revision?: number | null;
 	shared_document_hash?: string | null;
@@ -291,6 +295,9 @@ export interface LessonArtifactUi {
 	openHref: string | null;
 	errorSummary: string | null;
 	retryable: boolean;
+	/** failed_terminal (incl. legacy rows): offer Regenerate via the realization retry route. */
+	regenerable: boolean;
+	runId: string | null;
 	recoveryAction: string | null;
 	legacyAmbiguous: boolean;
 	/** Null when the backend carries no SharedLessonDocument identity yet (pre-P10B rows). */

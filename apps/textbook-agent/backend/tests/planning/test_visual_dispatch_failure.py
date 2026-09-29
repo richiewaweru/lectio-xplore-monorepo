@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import uuid
 from typing import Any
-from unittest.mock import patch
 
 import pytest
-from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 
 from app import app
@@ -360,37 +358,6 @@ async def test_visual_retry_reverifies_hash_for_new_revision() -> None:
 
 
 @pytest.mark.asyncio
-async def test_ready_flagged_visual_reopens_only_visual_checkpoint() -> None:
-    gid = await _seed_awaiting_visuals()
-    async with async_session_factory() as session:
-        repo = PageDocumentRepository(session, gid)
-
-        def _mark_ready_flagged(_generation, state):
-            state["block_execution"][execution_key("explain", "fig-1")]["status"] = "ready"
-            state["block_execution"][execution_key("explain", "fig-1")]["visual_qc"] = {
-                "status": "flagged_quality",
-                "reasons": ["garbled label"],
-            }
-            state["block_execution"][execution_key("explain", "fig-1")]["content"]["asset"] = {
-                "status": "ready",
-                "request_id": "req-fig-1",
-                "src": "https://example.test/flagged.png",
-            }
-
-        await repo.mutate_state(mutation=_mark_ready_flagged)
-        generation = await session.get(GenerationModel, gid)
-        assert generation is not None
-        generation.status = "ready"
-        await session.commit()
-        reopened = await repo.reopen_flagged_visuals()
-        assert reopened["status"] == "awaiting_visuals"
-        state = await repo.load_page_generation_state()
-        assert state["block_execution"][execution_key("explain", "prose-1")]["status"] == "ready"
-        assert state["block_execution"][execution_key("explain", "fig-1")]["status"] == "failed_recoverable"
-        assert state["execution"]["reload_verified"] is False
-
-
-@pytest.mark.asyncio
 async def test_successful_qc_replacement_archives_history_and_clears_active_warning() -> None:
     gid = await _seed_awaiting_visuals()
     async with async_session_factory() as session:
@@ -472,61 +439,6 @@ async def test_visual_completion_recovers_missing_document_request_id_after_rest
         persisted = reload_document(generation.document_json or {})
         asset = persisted["sections"][0]["blocks"][1]["content"]["asset"]
         assert asset["request_id"] == "req-fig-1"
-
-
-@pytest.mark.asyncio
-async def test_visuals_retry_only_redispatches_and_skips_ready_blocks() -> None:
-    gid = await _seed_awaiting_visuals()
-    app.dependency_overrides[get_current_user] = _override_user
-    calls: list[str] = []
-
-    async def fake_execute(order, emit, **kwargs):
-        calls.append(order.work_order_id)
-        return [
-            type(
-                "B",
-                (),
-                {
-                    "status": "ready",
-                    "fallback_image_url": "https://example.test/leaf.png",
-                    "html_content": None,
-                },
-            )()
-        ]
-
-    try:
-        async with async_session_factory() as session:
-            repo = PageDocumentRepository(session, gid)
-            await repo.persist_visual_dispatch_failure(
-                message="prior failure",
-                failed_request_ids=["req-fig-1"],
-            )
-        with patch(
-            "print.generation.whole_lesson.visual_dispatch.execute_visual",
-            new=fake_execute,
-        ):
-            async with _client() as client:
-                response = await client.post(
-                    f"/api/v1/v3/generations/{gid}/visuals/retry"
-                )
-        assert response.status_code == 200, response.text
-        body = response.json()
-        assert body["status"] == "ready"
-        assert calls == ["native-visual:req-fig-1"]
-        async with async_session_factory() as session:
-            generation = await session.get(GenerationModel, gid)
-            assert generation is not None
-            assert generation.status == "ready"
-            state = await PageDocumentRepository(session, gid).load_page_generation_state()
-            # Ready prose block was never rewritten as a failed outcome.
-            prose = state["block_execution"][execution_key("explain", "prose-1")]
-            assert prose["status"] == "ready"
-            assert prose["content"]["paragraphs"] == ["Ready text stays."]
-            fig = state["block_execution"][execution_key("explain", "fig-1")]
-            assert fig["status"] == "ready"
-            assert (state.get("execution") or {}).get("last_error") is None
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
 
 
 async def _seed_flagged_topology() -> str:

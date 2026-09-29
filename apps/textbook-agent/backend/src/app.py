@@ -15,7 +15,6 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from application.unit_lesson.native_http import native_lesson_router
-from application.unit_lesson.progress_routes import router as realization_progress_router
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
@@ -373,7 +372,6 @@ def create_app() -> FastAPI:
     # D3: /api/v1/skeletons* retired (non-Unit HTTP)
     app.include_router(planning_router)
     app.include_router(units_generation_router)
-    app.include_router(realization_progress_router)
     app.include_router(shared_document_router)
     from infra.generation_runtime.http import router as generation_runtime_router
     app.include_router(generation_runtime_router)

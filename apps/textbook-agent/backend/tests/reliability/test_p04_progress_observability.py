@@ -7,12 +7,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from core.auth.middleware import get_current_user
-from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
-from app import app
-from application.unit_lesson.progress_routes import get_progress_store
 from application.unit_lesson.realizations import admit_realization
 from core.database.models import (
     GenerationModel,
@@ -234,51 +230,7 @@ def test_g16_retention_gap_returns_snapshot() -> None:
     assert replay.oldest_retained_seq == 3
 
 
-@pytest.mark.asyncio
-async def test_g16_http_status_agrees_with_db() -> None:
-    await _ensure_user(OWNER)
-    realization = await _prepared_realization(user_id=OWNER.id)
-    store = ProgressStore()
-    store.sync_from_db(
-        realization.id,
-        path=str(realization.path),
-        owner_user_id=OWNER.id,
-        status=str(realization.status),
-        realization_revision=int(realization.realization_revision),
-        teaching_plan_revision=int(realization.teaching_plan_revision),
-        stage="writing",
-    )
-    store.set_counts(realization.id, completed=0, total=2)
-    store.append_event(realization.id, event_type="run_started", stage="writing")
 
-    async def _owner() -> User:
-        return OWNER
-
-    app.dependency_overrides[get_current_user] = _owner
-    app.dependency_overrides[get_progress_store] = lambda: store
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.get(f"/api/v1/realizations/{realization.id}/status")
-            assert response.status_code == 200, response.text
-            body = response.json()
-            assert body["status"] == realization.status
-            assert body["db_status"] == realization.status
-            assert body["revisions"]["realization_revision"] == realization.realization_revision
-            assert body["completed"] == 0
-            assert body["total"] == 2
-            assert body["latest_seq"] >= 1
-
-            events = await client.get(
-                f"/api/v1/realizations/{realization.id}/events",
-                params={"after_seq": 0},
-            )
-            assert events.status_code == 200
-            payload = events.json()
-            assert payload["mode"] == "replay"
-            assert payload["events"][0]["seq"] == 1
-            assert payload["events"][0]["event_type"] == "run_started"
-    finally:
-        app.dependency_overrides.clear()
 
 
 # --- G17: model call traces + unknown usage -----------------------------------
@@ -381,38 +333,7 @@ async def test_g17_authoring_engine_records_trace_with_unknown_usage() -> None:
 # --- G18: auth / redaction / exporter isolation -------------------------------
 
 
-@pytest.mark.asyncio
-async def test_g18_unauthorized_status_and_events_rejected() -> None:
-    await _ensure_user(OWNER)
-    await _ensure_user(OTHER)
-    realization = await _prepared_realization(user_id=OWNER.id)
-    store = ProgressStore()
-    store.sync_from_db(
-        realization.id,
-        path=str(realization.path),
-        owner_user_id=OWNER.id,
-        status=str(realization.status),
-        realization_revision=int(realization.realization_revision),
-        teaching_plan_revision=int(realization.teaching_plan_revision),
-    )
 
-    app.dependency_overrides[get_progress_store] = lambda: store
-    try:
-        # No credentials → rejected (401/403).
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            unauth = await client.get(f"/api/v1/realizations/{realization.id}/status")
-            assert unauth.status_code in {401, 403}
-
-            async def _other() -> User:
-                return OTHER
-
-            app.dependency_overrides[get_current_user] = _other
-            forbidden = await client.get(f"/api/v1/realizations/{realization.id}/status")
-            assert forbidden.status_code == 404
-            forbidden_events = await client.get(f"/api/v1/realizations/{realization.id}/events")
-            assert forbidden_events.status_code == 404
-    finally:
-        app.dependency_overrides.clear()
 
 
 def test_g18_secrets_redacted_from_events() -> None:

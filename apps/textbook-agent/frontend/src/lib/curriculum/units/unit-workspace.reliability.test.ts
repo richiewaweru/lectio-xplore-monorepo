@@ -1,11 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import {
-	createManagedReliabilitySubscription,
-	createScopedEventSink,
-	reliabilityEventsPath,
-	reliabilityStatusPath
-} from '$lib/api/reliability';
 import {
 	applyProgressRefreshWhileEditing,
 	conflictFrom409,
@@ -15,43 +9,10 @@ import {
 import { createLearnPathJobState } from '$lib/learn/jobs/path-job-state';
 import { createPrintPathJobState } from '$lib/print/jobs/path-job-state';
 import { anyPathJobBusy, emptyBusyMap } from '$lib/reliability/operation-lanes';
-import type { ReliabilityProgressEvent, ReliabilityRunStatus } from '$lib/types/reliability';
+import type { ArtifactWorkspaceStatus } from '$lib/types/units';
 
-function event(
-	overrides: Partial<ReliabilityProgressEvent> & Pick<ReliabilityProgressEvent, 'sequence'>
-): ReliabilityProgressEvent {
-	return {
-		run_id: 'run-1',
-		owner_id: 'unit-1',
-		path: 'print',
-		stage: 'generate',
-		item_id: null,
-		attempt: 1,
-		event_type: 'progress',
-		occurred_at: '2026-09-13T00:00:00Z',
-		error_category: null,
-		message: null,
-		...overrides
-	};
-}
-
-function status(overrides: Partial<ReliabilityRunStatus> = {}): ReliabilityRunStatus {
-	return {
-		run_id: 'run-1',
-		owner_id: 'unit-1',
-		path: 'print',
-		stage: 'generate',
-		status: 'running',
-		active_items: [],
-		completed_count: 1,
-		total_count: 3,
-		next_retry_at: null,
-		allowed_actions: ['prepare_print', 'save'],
-		document_revision: 2,
-		path_revision: 4,
-		last_sequence: 2,
-		...overrides
-	};
+function ws(overrides: Partial<ArtifactWorkspaceStatus> = {}): ArtifactWorkspaceStatus {
+	return { state: 'running', realization_id: 'r1', run_id: 'run-1', ...overrides };
 }
 
 describe('P05 independent path jobs (G19/G20)', () => {
@@ -77,71 +38,56 @@ describe('P05 independent path jobs (G19/G20)', () => {
 		expect(learnJob.canPrepare(true, false)).toBe(false);
 	});
 
-	it('derives prepare availability from server allowed_actions', () => {
+	it('gates prepare on the lesson-status workspace state', () => {
 		const printJob = createPrintPathJobState();
-		printJob.applyStatus(status({ allowed_actions: ['prepare_learn'] }));
-		expect(printJob.canPrepare(true, false)).toBe(false);
-
-		printJob.applyStatus(status({ allowed_actions: ['prepare_print'] }));
 		expect(printJob.canPrepare(true, false)).toBe(true);
-	});
-});
-
-describe('P05 scoped subscriptions (G20)', () => {
-	it('ignores stale, wrong-owner, and disposed events', () => {
-		const sink = createScopedEventSink('unit-1', 'run-1', 2);
-		expect(sink.accept(event({ sequence: 2 }))).toBeNull();
-		expect(sink.accept(event({ sequence: 3, owner_id: 'other' }))).toBeNull();
-		expect(sink.accept(event({ sequence: 3, run_id: 'run-2' }))).toBeNull();
-		expect(sink.accept(event({ sequence: 3 }))?.sequence).toBe(3);
-		expect(sink.accept(event({ sequence: 3 }))).toBeNull();
-		sink.dispose();
-		expect(sink.accept(event({ sequence: 4 }))).toBeNull();
+		printJob.applyWorkspace(ws({ state: 'running' }));
+		expect(printJob.canPrepare(true, false)).toBe(false);
+		printJob.applyWorkspace(ws({ state: 'needs_review' }));
+		expect(printJob.canPrepare(true, false)).toBe(false);
+		printJob.applyWorkspace(ws({ state: 'failed_recoverable' }));
+		expect(printJob.canPrepare(true, false)).toBe(true);
+		expect(printJob.canPrepare(false, false)).toBe(false);
+		expect(printJob.canPrepare(true, true)).toBe(false);
 	});
 
-	it('unsubscribes on dispose and does not duplicate listeners on reconnect', () => {
-		const unsubs: Array<() => void> = [];
-		const subscribe = vi.fn(
-			(opts: {
-				ownerId: string;
-				runId: string;
-				afterSequence?: number;
-				handlers: { onEvent?: (e: ReliabilityProgressEvent) => void };
-			}) => {
-				const unsub = vi.fn();
-				unsubs.push(unsub);
-				// expose handler for reconnect proof
-				(subscribe as unknown as { lastHandlers: typeof opts.handlers }).lastHandlers =
-					opts.handlers;
-				return unsub;
-			}
-		);
-
-		const managed = createManagedReliabilitySubscription(
-			'unit-1',
-			'run-1',
-			{
-				onEvent: vi.fn()
-			},
-			{ subscribe: subscribe as never, afterSequence: 0 }
-		);
-
-		expect(subscribe).toHaveBeenCalledTimes(1);
-		managed.reconnect(1);
-		expect(subscribe).toHaveBeenCalledTimes(2);
-		expect(unsubs[0]).toHaveBeenCalledTimes(1);
-
-		managed.dispose();
-		expect(unsubs[1]).toHaveBeenCalledTimes(1);
-		managed.reconnect(5);
-		expect(subscribe).toHaveBeenCalledTimes(2);
+	it('maps every workspace state to a phase and action', () => {
+		const learnJob = createLearnPathJobState();
+		const cases: Array<[Partial<ArtifactWorkspaceStatus>, string, string]> = [
+			[{ state: 'not_created' }, 'not_created', 'none'],
+			[{ state: 'queued' }, 'in_progress', 'wait'],
+			[{ state: 'running' }, 'in_progress', 'wait'],
+			[{ state: 'needs_review' }, 'needs_review', 'review'],
+			[{ state: 'failed_recoverable', recovery_action: 'retry' }, 'failed_recoverable', 'retry'],
+			[{ state: 'failed_terminal', recovery_action: 'regenerate' }, 'failed_terminal', 'regenerate'],
+			[{ state: 'failed_terminal', recovery_action: 'none' }, 'failed_terminal', 'regenerate'],
+			[{ state: 'ready' }, 'ready', 'open']
+		];
+		for (const [overrides, phase, action] of cases) {
+			learnJob.applyWorkspace(ws(overrides));
+			expect(learnJob.job.phase).toBe(phase);
+			expect(learnJob.job.action).toBe(action);
+		}
 	});
 
-	it('builds planned P04 status/events paths', () => {
-		expect(reliabilityStatusPath('run-1')).toBe('/api/v1/realizations/run-1/status');
-		expect(reliabilityEventsPath('run-1', 7)).toBe(
-			'/api/v1/realizations/run-1/events?after_seq=7'
+	it('carries run_id, recovery_action, and error from the DTO; legacy rows regenerate', () => {
+		const printJob = createPrintPathJobState();
+		printJob.applyWorkspace(
+			ws({
+				state: 'failed_terminal',
+				recovery_action: 'regenerate',
+				error: { message: 'Created before the job update - regenerate this output.' }
+			})
 		);
+		expect(printJob.job).toEqual({
+			phase: 'failed_terminal',
+			action: 'regenerate',
+			recoveryAction: 'regenerate',
+			runId: 'run-1',
+			errorMessage: 'Created before the job update - regenerate this output.'
+		});
+		printJob.applyWorkspace(null);
+		expect(printJob.job.phase).toBe('not_created');
 	});
 });
 
