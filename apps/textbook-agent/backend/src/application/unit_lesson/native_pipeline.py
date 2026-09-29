@@ -10,6 +10,9 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
+import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException
@@ -47,6 +50,277 @@ from print.http.v3_studio.session_store import v3_studio_store
 logger = logging.getLogger(__name__)
 
 _chunked_stage2_tasks: dict[str, asyncio.Task[None]] = {}
+
+# --- Phase 12A: crash safety for this in-process stage-2 pipeline -------
+#
+# ``_run_chunked_stage2_pipeline`` (and the pack variant fan-out that calls
+# it per-variant) is a fire-and-forget ``asyncio.Task`` tracked only by the
+# in-memory ``_chunked_stage2_tasks`` dict above. If this process dies mid
+# task, the row's GenerationModel.status/chunked_state_json.stage stay
+# wedged at "running"/"pending" + "stage2_running" forever and the teacher
+# sees a spinner that never resolves. This does not go through the leased
+# ``PageDocumentRepository.execution`` machinery used by post-approval and
+# pre-worker-retry work (that machinery re-derives ``chunked["stage"]`` from
+# ``GenerationModel.status`` on every write, which the un-leased first-run
+# pipeline does not keep in lockstep). Reusing it here would clobber the
+# ``stage2_running``/``variants_running`` progression this module already
+# persists via ``persist_chunked_state``. Instead this stamps a narrow,
+# additive top-level marker (``pipeline_heartbeat``) alongside the existing
+# keys and reaps it with the same legal-transition/persist-failure path
+# native retries already use. See docs/shared-document-overhaul/30_RUNBOOK.md.
+_PIPELINE_BOOT_ID = uuid.uuid4().hex
+_PIPELINE_HEARTBEAT_KEY = "pipeline_heartbeat"
+
+
+def _pipeline_heartbeat_payload() -> dict[str, Any]:
+    return {
+        "owner_boot_id": _PIPELINE_BOOT_ID,
+        "pid": os.getpid(),
+        "heartbeat_at": datetime.now(UTC).isoformat(),
+    }
+
+
+async def _write_pipeline_heartbeat(generation_id: str, payload: dict[str, Any] | None) -> None:
+    """Atomically set (or clear, when ``payload`` is None) only the heartbeat key.
+
+    The pipeline itself read-modify-writes ``chunked_state_json`` without a
+    row lock, so the heartbeat must never rewrite the whole blob: a single
+    ``jsonb_set``/``-`` statement touches only its own key and cannot clobber
+    concurrent stage progress.
+    """
+    from sqlalchemy import text
+
+    async with async_session_factory() as session:
+        dialect = session.bind.dialect.name if session.bind is not None else ""
+        if dialect != "postgresql":
+            # Non-Postgres (tests/dev SQLite) has no JSONB ops; a plain
+            # read-modify-write is acceptable there (single-process only).
+            row = await session.get(GenerationModel, generation_id)
+            if row is None:
+                return
+            chunked = _coerce_pipeline_state(row.chunked_state_json)
+            chunked = dict(chunked)
+            if payload is None:
+                if _PIPELINE_HEARTBEAT_KEY not in chunked:
+                    return
+                chunked.pop(_PIPELINE_HEARTBEAT_KEY)
+            else:
+                chunked[_PIPELINE_HEARTBEAT_KEY] = payload
+            row.chunked_state_json = chunked
+            await session.commit()
+            return
+        if payload is None:
+            await session.execute(
+                text(
+                    "UPDATE generations SET chunked_state_json = "
+                    "(chunked_state_json::jsonb - CAST(:key AS text)) "
+                    "WHERE id = :generation_id"
+                ),
+                {"key": _PIPELINE_HEARTBEAT_KEY, "generation_id": generation_id},
+            )
+        else:
+            await session.execute(
+                text(
+                    "UPDATE generations SET chunked_state_json = jsonb_set("
+                    "COALESCE(chunked_state_json, '{}'::jsonb), "
+                    "CAST(:path AS text[]), CAST(:payload AS JSONB), true) "
+                    "WHERE id = :generation_id"
+                ),
+                {
+                    "path": "{" + _PIPELINE_HEARTBEAT_KEY + "}",
+                    "payload": json.dumps(payload),
+                    "generation_id": generation_id,
+                },
+            )
+        await session.commit()
+
+
+async def _stamp_pipeline_heartbeat(generation_id: str) -> None:
+    try:
+        await _write_pipeline_heartbeat(generation_id, _pipeline_heartbeat_payload())
+    except Exception:  # noqa: BLE001 - heartbeat must never break the pipeline
+        logger.warning(
+            "pipeline heartbeat stamp failed generation_id=%s",
+            generation_id,
+            exc_info=True,
+        )
+
+
+async def _pipeline_heartbeat_loop(generation_id: str, *, interval_seconds: float) -> None:
+    """Refresh the durable heartbeat while this task's owning coroutine runs.
+
+    A periodic background loop (rather than stamping only at stage
+    boundaries) is the simplest robust option here: stage boundaries in this
+    pipeline are coarse (item generation, then one teaching-plan call), so a
+    single long-running LLM call could otherwise leave the heartbeat stale
+    for the entire pipeline duration and make a live task look orphaned.
+    """
+    try:
+        while True:
+            await asyncio.sleep(interval_seconds)
+            await _stamp_pipeline_heartbeat(generation_id)
+    except asyncio.CancelledError:
+        raise
+
+
+def _parse_pipeline_heartbeat_iso(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _coerce_pipeline_state(raw: Any) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str) and raw.strip():
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError):
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
+async def reap_orphaned_preparation_pipelines(
+    *, threshold_seconds: float | None = None
+) -> int:
+    """Reclaim rows abandoned by a dead/crashed in-process stage-2 pipeline task.
+
+    Only rows carrying this module's own ``pipeline_heartbeat`` marker are
+    ever considered, so a genuinely idle row (e.g. awaiting teacher plan
+    approval, or awaiting the pack coordinator's fan-out before any variant
+    task has started) is never touched: it was never stamped. A row still
+    owned by a live task in *this* process is also left untouched.
+
+    Safe to call repeatedly (idempotent) and from multiple processes: the
+    actual state change goes through
+    ``PageDocumentRepository.persist_native_failure``, which row-locks the
+    generation and is a no-op once the row is already
+    failed_recoverable/failed_terminal.
+    """
+    from infra.config import settings
+    from print.generation.whole_lesson.failure_policy import PipelineOrphanedError
+    from print.generation.whole_lesson.repository import PageDocumentRepository
+    from print.generation.whole_lesson.states import IllegalTransitionError
+
+    effective_threshold = (
+        float(threshold_seconds)
+        if threshold_seconds is not None
+        else float(settings.prep_pipeline_orphan_threshold_seconds)
+    )
+    now = datetime.now(UTC)
+
+    async with async_session_factory() as session:
+        result = await session.execute(
+            select(GenerationModel.id, GenerationModel.chunked_state_json).where(
+                GenerationModel.status.in_(("pending", "running")),
+                GenerationModel.mode == "v3",
+            )
+        )
+        candidates = list(result.all())
+
+    reaped = 0
+    for generation_id, raw_state in candidates:
+        gid = str(generation_id)
+        live_task = _chunked_stage2_tasks.get(gid)
+        if live_task is not None and not live_task.done():
+            continue
+        state = _coerce_pipeline_state(raw_state)
+        marker = state.get(_PIPELINE_HEARTBEAT_KEY)
+        if not isinstance(marker, dict):
+            continue
+        owner_boot_id = marker.get("owner_boot_id")
+        heartbeat_at = _parse_pipeline_heartbeat_iso(marker.get("heartbeat_at"))
+        # Only a stale heartbeat proves an orphan: a different boot id alone
+        # may be a live sibling process (multi-worker deployments).
+        stale = heartbeat_at is None or (now - heartbeat_at) > timedelta(
+            seconds=effective_threshold
+        )
+        if not stale:
+            continue
+        try:
+            async with async_session_factory() as session:
+                # expected: under the row lock, skip a row that finished (or
+                # was otherwise moved on) between the scan and this write.
+                await PageDocumentRepository(session, gid).persist_native_failure(
+                    exc=PipelineOrphanedError(
+                        "Preparation pipeline task is no longer observable "
+                        f"(owner_boot_id={owner_boot_id!r}, "
+                        f"heartbeat_at={marker.get('heartbeat_at')!r})"
+                    ),
+                    stage="item_generation",
+                    event="pipeline_orphan_reaped",
+                    expected={"pending", "running"},
+                )
+            await _write_pipeline_heartbeat(gid, None)
+            reaped += 1
+        except IllegalTransitionError:
+            continue
+        except Exception:  # noqa: BLE001 - one bad row must not stop the sweep
+            logger.exception(
+                "orphan reap failed to persist failure generation_id=%s", gid
+            )
+    return reaped
+
+
+_orphan_reaper_task: asyncio.Task[None] | None = None
+_orphan_reaper_stop = asyncio.Event()
+
+
+async def _orphan_reaper_loop(*, interval_seconds: float, threshold_seconds: float) -> None:
+    while not _orphan_reaper_stop.is_set():
+        try:
+            await asyncio.wait_for(_orphan_reaper_stop.wait(), timeout=interval_seconds)
+        except TimeoutError:
+            pass
+        else:
+            break
+        try:
+            reaped = await reap_orphaned_preparation_pipelines(
+                threshold_seconds=threshold_seconds
+            )
+            if reaped:
+                logger.warning(
+                    "Preparation pipeline orphan reaper reconciled %d row(s)",
+                    reaped,
+                )
+        except Exception:  # noqa: BLE001 - keep the periodic loop alive
+            logger.exception("Preparation pipeline orphan reap tick failed")
+
+
+async def start_pipeline_orphan_reaper(
+    *, interval_seconds: float, threshold_seconds: float
+) -> None:
+    global _orphan_reaper_task
+    if _orphan_reaper_task is not None and not _orphan_reaper_task.done():
+        return
+    _orphan_reaper_stop.clear()
+    _orphan_reaper_task = asyncio.create_task(
+        _orphan_reaper_loop(
+            interval_seconds=interval_seconds, threshold_seconds=threshold_seconds
+        ),
+        name="prep-pipeline-orphan-reaper",
+    )
+
+
+async def stop_pipeline_orphan_reaper(*, drain_seconds: float = 5.0) -> None:
+    global _orphan_reaper_task
+    _orphan_reaper_stop.set()
+    task = _orphan_reaper_task
+    if task is None:
+        return
+    try:
+        await asyncio.wait_for(task, timeout=max(drain_seconds, 0.1))
+    except TimeoutError:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+    _orphan_reaper_task = None
 
 
 def _render_chunked_sse(event: str, payload: dict[str, Any]) -> str:
@@ -613,6 +887,16 @@ async def _run_chunked_stage2_pipeline(
         f"\n[STAGE2 PIPELINE START] generation_id={generation_id}",
         flush=True,
     )
+    from infra.config import settings
+
+    await _stamp_pipeline_heartbeat(generation_id)
+    heartbeat_task = asyncio.create_task(
+        _pipeline_heartbeat_loop(
+            generation_id,
+            interval_seconds=settings.prep_pipeline_heartbeat_seconds,
+        ),
+        name=f"stage2-hb-{generation_id[:8]}",
+    )
     cache_token = None
     native_failure_stage = "item_generation"
     try:
@@ -821,6 +1105,21 @@ async def _run_chunked_stage2_pipeline(
                 },
             )
     finally:
+        heartbeat_task.cancel()
+        try:
+            await heartbeat_task
+        except asyncio.CancelledError:
+            pass
+        # The task is settled (success or persisted failure): drop the marker
+        # so a later idle pending/running row is never mistaken for an orphan.
+        try:
+            await _write_pipeline_heartbeat(generation_id, None)
+        except Exception:  # noqa: BLE001 - cleanup must not mask the outcome
+            logger.warning(
+                "pipeline heartbeat clear failed generation_id=%s",
+                generation_id,
+                exc_info=True,
+            )
         if cache_token is not None:
             from core.prompts import reset_prompt_cache
 

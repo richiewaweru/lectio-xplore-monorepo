@@ -219,6 +219,21 @@ class Settings(BaseSettings):
             "xplore_native_worker_enabled",
         ),
     )
+    # Phase 12A: crash safety for the in-process Preparation/Teaching-Plan
+    # stage-2 pipeline (application.unit_lesson.native_pipeline). This is a
+    # narrower, standalone lease-lite layer; it does not touch generation_runs.
+    prep_pipeline_reaper_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "PREP_PIPELINE_REAPER_ENABLED",
+            "prep_pipeline_reaper_enabled",
+        ),
+    )
+    prep_pipeline_heartbeat_seconds: int = Field(default=20, ge=1)
+    # Orphan threshold should stay a multiple of the heartbeat interval so a
+    # single missed stamp cannot look like a crash.
+    prep_pipeline_orphan_threshold_seconds: int = Field(default=60, ge=1)
+    prep_pipeline_reaper_interval_seconds: int = Field(default=60, ge=1)
     # Live Learn admission. Print (whole_lesson) remains a separate realization path.
     generation_pipeline_default: GenerationPipeline = Field(
         default="native_learn",

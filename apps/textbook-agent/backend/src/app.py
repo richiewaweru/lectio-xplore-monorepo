@@ -247,6 +247,23 @@ async def lifespan(app: FastAPI):
             logger.warning("Reconciled %d stale Learn execution(s) after restart", stale_learn)
     except Exception:
         logger.exception("Stale Learn execution sweep failed at startup")
+    if settings.prep_pipeline_reaper_enabled:
+        # Phase 12A: reap Preparation/Teaching-Plan stage-2 pipeline rows
+        # orphaned by a dead process before this boot (see
+        # application.unit_lesson.native_pipeline.reap_orphaned_preparation_pipelines).
+        try:
+            from application.unit_lesson.native_pipeline import (
+                reap_orphaned_preparation_pipelines,
+            )
+
+            reaped_prep_pipelines = await reap_orphaned_preparation_pipelines()
+            if reaped_prep_pipelines:
+                logger.warning(
+                    "Reconciled %d orphaned preparation pipeline row(s) after restart",
+                    reaped_prep_pipelines,
+                )
+        except Exception:
+            logger.exception("Preparation pipeline orphan reap failed at startup")
     initialize_resource_registry()
     initialize_skeleton_catalog()
     await telemetry_monitor.start()
@@ -275,7 +292,25 @@ async def lifespan(app: FastAPI):
         await start_learn_worker()
         shared_document_worker = SharedDocumentWorker(async_session_factory)
         await shared_document_worker.start()
+    if settings.prep_pipeline_reaper_enabled:
+        from application.unit_lesson.native_pipeline import (
+            start_pipeline_orphan_reaper,
+        )
+
+        await start_pipeline_orphan_reaper(
+            interval_seconds=settings.prep_pipeline_reaper_interval_seconds,
+            threshold_seconds=settings.prep_pipeline_orphan_threshold_seconds,
+        )
     yield
+    if settings.prep_pipeline_reaper_enabled:
+        from application.unit_lesson.native_pipeline import (
+            stop_pipeline_orphan_reaper,
+        )
+
+        try:
+            await stop_pipeline_orphan_reaper(drain_seconds=5.0)
+        except Exception:
+            logger.exception("Failed to stop preparation pipeline orphan reaper")
     if settings.xplore_native_worker_enabled:
         from learn.generation.worker import stop_learn_worker
         from print.generation.whole_lesson.worker import stop_native_worker

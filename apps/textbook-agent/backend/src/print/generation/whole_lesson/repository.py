@@ -670,6 +670,8 @@ class PageDocumentRepository:
             "TIMEOUT",
             "RATE_LIMIT",
             "MODEL_OUTPUT_INVALID",
+            # P12A: orphan-reaped stage-2 pipeline rows are always retryable.
+            "PIPELINE_ORPHANED",
         }
         target = "failed_recoverable" if recoverable else "failed_terminal"
         error = structured_error_from_exc(
