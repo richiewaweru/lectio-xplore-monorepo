@@ -52,14 +52,6 @@ export async function realizePrintFromGeneration(generationId: string): Promise<
 	return res.json();
 }
 
-export async function retryNativeGeneration(generationId: string): Promise<void> {
-	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/retry-native`,
-		{ method: 'POST', headers: bearerHeaders() }
-	);
-	await ensureOk(res, 'Could not retry the failed generation stage.');
-}
-
 export async function downloadGenerationPdf(
 	generationId: string,
 	body: V3PdfExportBody

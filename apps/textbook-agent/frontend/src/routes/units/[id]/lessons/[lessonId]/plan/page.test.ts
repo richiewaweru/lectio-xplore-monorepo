@@ -3,16 +3,16 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/sv
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-	getChunkedPlanStatus: vi.fn(),
 	getChunkedPlan: vi.fn(),
 	getLessonApproach: vi.fn(),
 	approveLessonApproach: vi.fn(),
-	approveChunkedPlan: vi.fn(),
+	startPreparationPlan: vi.fn(),
+	regeneratePreparationPlan: vi.fn(),
+	retryPreparationRun: vi.fn(),
+	regeneratePathLesson: vi.fn(),
 	rejectLessonApproach: vi.fn(),
-	regenerateChunkedPlan: vi.fn(),
 	realizeLearnFromGeneration: vi.fn(),
 	realizePrintFromGeneration: vi.fn(),
-	retryNativeGeneration: vi.fn(),
 	getUnitGroups: vi.fn(),
 	preparePathLesson: vi.fn(),
 	generateLearnRealization: vi.fn(),
@@ -29,13 +29,14 @@ vi.mock('$lib/api/units', () => ({
 	generateLearnRealization: mocks.generateLearnRealization,
 	generatePrintRealization: mocks.generatePrintRealization,
 	retryLessonRealization: mocks.retryLessonRealization,
+	regeneratePathLesson: mocks.regeneratePathLesson,
 	getPreparedLessonStatus: mocks.getPreparedLessonStatus
 }));
 vi.mock('$lib/api/lesson-planning', () => ({
 	getChunkedPlan: mocks.getChunkedPlan,
-	getChunkedPlanStatus: mocks.getChunkedPlanStatus,
-	approveChunkedPlan: mocks.approveChunkedPlan,
-	regenerateChunkedPlan: mocks.regenerateChunkedPlan
+	startPreparationPlan: mocks.startPreparationPlan,
+	regeneratePreparationPlan: mocks.regeneratePreparationPlan,
+	retryPreparationRun: mocks.retryPreparationRun
 }));
 vi.mock('$lib/api/teaching-plan', () => ({
 	getLessonApproach: mocks.getLessonApproach,
@@ -44,8 +45,7 @@ vi.mock('$lib/api/teaching-plan', () => ({
 }));
 vi.mock('$lib/api/realizations', () => ({
 	realizeLearnFromGeneration: mocks.realizeLearnFromGeneration,
-	realizePrintFromGeneration: mocks.realizePrintFromGeneration,
-	retryNativeGeneration: mocks.retryNativeGeneration
+	realizePrintFromGeneration: mocks.realizePrintFromGeneration
 }));
 vi.mock('$lib/curriculum/lessons/StructuralPlanPreview.svelte', async () => ({
 	default: (await import('../../../../../studio/__fixtures__/MockGeneric.svelte')).default
@@ -89,9 +89,6 @@ function workspaceContext() {
 describe('Units Teaching Plan review', () => {
 	beforeEach(() => {
 		for (const mock of Object.values(mocks)) mock.mockReset();
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'generation-1', stage: 'awaiting_teaching_approval', failed_sections: [], next_action: 'review'
-		});
 		mocks.getChunkedPlan.mockRejectedValue(new Error('structural details not needed'));
 		mocks.getLessonApproach.mockImplementation(() =>
 			Promise.resolve(mocks.approveLessonApproach.mock.calls.length ? approved : pending)
@@ -138,54 +135,71 @@ describe('Units Teaching Plan review', () => {
 		expect(screen.getByRole('button', { name: 'Approve plan' })).toBeTruthy();
 	});
 
-	it('shows a verified current draft despite a stale downstream ready stage', async () => {
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'generation-1', stage: 'ready', failed_sections: [], next_action: 'done'
-		});
-		render(PlanPage, { context: new Map([['lessonWorkspace', workspaceContext()]]) });
-		expect(await screen.findByText('Trace water through a plant.')).toBeTruthy();
-		expect((await screen.findByRole('button', { name: 'Approve plan' }) as HTMLButtonElement).disabled).toBe(false);
-	});
-
-	it('shows canonical recoverable preparation failure despite a stale ready worker stage', async () => {
+	function withPrep(prep: Record<string, unknown>) {
 		const ctx = workspaceContext();
-		ctx.preparation.workflow_stage = 'ready';
 		ctx.preparation.workspace.preparation = {
-			state: 'failed_recoverable', generation_id: 'generation-1',
-			error: { message: 'The preparation run failed.', retryable: true }
+			generation_id: 'generation-1', ...prep
 		} as unknown as typeof ctx.preparation.workspace.preparation;
+		ctx.preparation.workflow_stage = 'ready'; // stale worker stage must be ignored
+		return ctx;
+	}
+
+	it('shows canonical recoverable failure and retries the failed run items', async () => {
+		const ctx = withPrep({
+			state: 'failed_recoverable', run_id: 'run-1', retryable: true, recovery_action: 'retry',
+			error: { message: 'The preparation run failed.', retryable: true },
+			progress: { items_total: 5, items_ready: 3, items_failed: 2, teaching_plan: 'not_started', failed_work_item_ids: ['wi-1', 'wi-2'] }
+		});
+		mocks.retryPreparationRun.mockResolvedValue(undefined);
 		render(PlanPage, { context: new Map([['lessonWorkspace', ctx]]) });
 		expect(await screen.findByText('Lesson preparation needs a retry')).toBeTruthy();
-		expect(screen.getByText('The preparation run failed.')).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Approve plan' })).toBeNull();
+		expect(mocks.getLessonApproach).not.toHaveBeenCalled();
+		await fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+		await waitFor(() => expect(mocks.retryPreparationRun).toHaveBeenCalledWith('run-1', ['wi-1', 'wi-2']));
+		expect(ctx.refreshPreparation).toHaveBeenCalled();
+	});
+
+	it('offers Regenerate plan for terminal failure and shows 409 messages', async () => {
+		const ctx = withPrep({ state: 'failed_terminal', run_id: 'run-1', recovery_action: 'regenerate', error: { message: 'Bad plan' } });
+		mocks.regeneratePreparationPlan.mockRejectedValue(new Error('This plan has used all its attempts.'));
+		render(PlanPage, { context: new Map([['lessonWorkspace', ctx]]) });
+		expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+		await fireEvent.click(await screen.findByRole('button', { name: 'Regenerate plan' }));
+		await waitFor(() => expect(mocks.regeneratePreparationPlan).toHaveBeenCalledWith('generation-1'));
+		expect(await screen.findByText('This plan has used all its attempts.')).toBeTruthy();
+	});
+
+	it('shows the legacy message and re-prepares through the stage-1 regenerate API', async () => {
+		const ctx = withPrep({ state: 'legacy_unsupported', recovery_action: 'regenerate' });
+		mocks.regeneratePathLesson.mockResolvedValue({});
+		mocks.getUnitGroups.mockResolvedValue({ groups: [] });
+		mocks.getPreparedLessonStatus.mockResolvedValue(ctx.preparation);
+		render(PlanPage, { context: new Map([['lessonWorkspace', ctx]]) });
+		expect(await screen.findByText(/Prepared before the planning update/)).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Re-prepare lesson' }));
+		await waitFor(() => expect(mocks.regeneratePathLesson).toHaveBeenCalledTimes(1));
+		expect(mocks.regeneratePathLesson.mock.calls[0][0]).toBe('unit-1');
+		expect(ctx.setPreparation).toHaveBeenCalled();
+	});
+
+	it('shows planning progress from the lesson-status DTO', async () => {
+		const ctx = withPrep({
+			state: 'planning', run_id: 'run-1',
+			progress: { items_total: 5, items_ready: 3, items_failed: 0, teaching_plan: 'not_started', failed_work_item_ids: [] }
+		});
+		render(PlanPage, { context: new Map([['lessonWorkspace', ctx]]) });
+		expect(await screen.findByText('Writing practice items: 3/5 cards')).toBeTruthy();
 		expect(mocks.getLessonApproach).not.toHaveBeenCalled();
 	});
 
-	it('refreshes stale structural review into Teaching Plan review after an approval conflict', async () => {
-		const ctx = workspaceContext();
-		ctx.preparation.workspace.preparation = {
-			state: 'awaiting_review', review_kind: 'structural', generation_id: 'generation-1'
-		} as unknown as typeof ctx.preparation.workspace.preparation;
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'generation-1', stage: 'awaiting_teaching_approval', failed_sections: [], next_action: 'review'
-		});
-		mocks.getChunkedPlan.mockResolvedValue({
-			generation_id: 'generation-1', structural_plan: { lesson_title: 'Plant water' }
-		});
-		mocks.approveChunkedPlan.mockRejectedValue(new Error('Generation is not awaiting explicit approval'));
-		ctx.refreshPreparation = vi.fn(async () => {
-			ctx.preparation.workspace.preparation = {
-				state: 'awaiting_review', review_kind: 'teaching_plan', generation_id: 'generation-1'
-			} as unknown as typeof ctx.preparation.workspace.preparation;
-		});
-
+	it('starts planning through the preparation plan endpoint from structural review', async () => {
+		const ctx = withPrep({ state: 'awaiting_review', review_kind: 'structural' });
+		mocks.getChunkedPlan.mockResolvedValue({ generation_id: 'generation-1', structural_plan: { lesson_title: 'Plant water' } });
+		mocks.startPreparationPlan.mockResolvedValue({ generation_id: 'generation-1', run_id: 'run-1', status: 'queued', attempt: 1, created: true, recovery_action: null });
 		render(PlanPage, { context: new Map([['lessonWorkspace', ctx]]) });
 		await fireEvent.click(await screen.findByRole('button', { name: 'Review concepts' }));
-
-		expect(await screen.findByText('Trace water through a plant.')).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Approve plan' })).toBeTruthy();
-		expect(screen.queryByRole('button', { name: 'Review concepts' })).toBeNull();
-		expect(screen.queryByRole('alert')).toBeNull();
-		expect(ctx.refreshPreparation).toHaveBeenCalledTimes(1);
+		await waitFor(() => expect(mocks.startPreparationPlan).toHaveBeenCalledWith('generation-1', { display_title: 'Plant water' }));
+		expect(ctx.refreshPreparation).toHaveBeenCalled();
 	});
 });
