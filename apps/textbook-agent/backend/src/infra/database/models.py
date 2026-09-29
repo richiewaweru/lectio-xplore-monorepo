@@ -672,18 +672,6 @@ class LLMCallModel(Base):
     user = relationship("UserModel", back_populates="llm_calls")
 
 
-class LessonShareModel(Base):
-    """Read-only public share of a Lesson Builder document (Phase 7)."""
-
-    __tablename__ = "lesson_shares"
-
-    id = Column(String, primary_key=True)
-    document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
-    expires_at = Column(DateTime, nullable=False, index=True)
-    allow_download = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=_utcnow, nullable=False)
-
-
 class EditableLessonModel(Base):
     """Teacher-owned lesson workspace persisted for the Builder."""
 

@@ -11,7 +11,7 @@ Superseded surfaces removed in P13C:
     ``print-preflight``) -- distinct from the live v3_studio PDF export and
     from the still-live Builder ``print-document`` endpoint.
   * ``core.routes.shares`` (public Lesson Builder share links) -- zero
-    frontend or backend callers; ``LessonShareModel``/its table are
+    frontend or backend callers; ``LessonShareModel``/its table were
     intentionally left alone pending Phase 14 DB cleanup.
 
 Route presence/absence is asserted via real ASGI requests rather than static
