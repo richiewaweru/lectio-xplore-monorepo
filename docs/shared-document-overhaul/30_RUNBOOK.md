@@ -466,3 +466,11 @@ Do not silently invent a new architecture.
 - Guard: `test_p16_final_sweep_guard.py` extended (+15 retired modules, prompt ids gone).
 - Verification in main checkout: backend 1992 passed / 5 skipped; ruff 34 pre-existing (40 before); domain guards PASS.
 - Left on purpose: vendored `contracts/learn-*.json` views (contract-sync generated), `core/policies` learn action map (test-only consumer).
+
+## 4A (2026-09-29): Learn/Print realization Runs on the shared runtime
+- Merged `e6ef0959` (branch commits `639a2285`, `83965d8f`): `RealizationWorker`, `project_realization_status` (single writer), `realization_retry` (in-place runtime retry or revision bump), migration 0049 `native_realizations.generation_run_id`; Learn worker + fencing deleted; Print worker trimmed to preparation pre-worker retry (removed in 3A).
+- Deviations accepted: terminal run projects `failed_terminal` (regenerate); `needs_shared_review` rows rescanned; output `generations` row status not mirrored on failure.
+- DB: backup `.tmp/textbook_agent_db_pre_0049_20260929_202004.dump`; 0049 applied on Postgres, downgrade/upgrade round-trip OK.
+- Tests: focused application/print_learn/architecture/core/planning 747 passed in main checkout; worker full suite 1996 passed (3 env/timing-only).
+- Live proof (Shadows `9df8aaf9`): admitted Learn+Print via handoff services -> fresh doc Run `53b6da28` READY -> `learn`/`print` Runs on the same build, `learn:realize`/`print:realize` attempt 1 READY, realizations ready (Learn output completed, Print output ready). No busy loop while waiting.
+- Note: the fresh doc Run was admitted because earlier Shadows READY runs used operator request keys, not the deterministic realization key.
