@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/sv
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-	getChunkedPlan: vi.fn(),
+	getPreparationStructure: vi.fn(),
 	getLessonApproach: vi.fn(),
 	approveLessonApproach: vi.fn(),
 	startPreparationPlan: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock('$lib/api/units', () => ({
 	getPreparedLessonStatus: mocks.getPreparedLessonStatus
 }));
 vi.mock('$lib/api/lesson-planning', () => ({
-	getChunkedPlan: mocks.getChunkedPlan,
+	getPreparationStructure: mocks.getPreparationStructure,
 	startPreparationPlan: mocks.startPreparationPlan,
 	regeneratePreparationPlan: mocks.regeneratePreparationPlan,
 	retryPreparationRun: mocks.retryPreparationRun
@@ -89,7 +89,7 @@ function workspaceContext() {
 describe('Units Teaching Plan review', () => {
 	beforeEach(() => {
 		for (const mock of Object.values(mocks)) mock.mockReset();
-		mocks.getChunkedPlan.mockRejectedValue(new Error('structural details not needed'));
+		mocks.getPreparationStructure.mockRejectedValue(new Error('structural details not needed'));
 		mocks.getLessonApproach.mockImplementation(() =>
 			Promise.resolve(mocks.approveLessonApproach.mock.calls.length ? approved : pending)
 		);
@@ -195,7 +195,7 @@ describe('Units Teaching Plan review', () => {
 
 	it('starts planning through the preparation plan endpoint from structural review', async () => {
 		const ctx = withPrep({ state: 'awaiting_review', review_kind: 'structural' });
-		mocks.getChunkedPlan.mockResolvedValue({ generation_id: 'generation-1', structural_plan: { lesson_title: 'Plant water' } });
+		mocks.getPreparationStructure.mockResolvedValue({ generation_id: 'generation-1', structural_plan: { lesson_title: 'Plant water' } });
 		mocks.startPreparationPlan.mockResolvedValue({ generation_id: 'generation-1', run_id: 'run-1', status: 'queued', attempt: 1, created: true, recovery_action: null });
 		render(PlanPage, { context: new Map([['lessonWorkspace', ctx]]) });
 		await fireEvent.click(await screen.findByRole('button', { name: 'Review concepts' }));

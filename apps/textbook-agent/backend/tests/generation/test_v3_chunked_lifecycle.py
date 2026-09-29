@@ -25,7 +25,6 @@ from curriculum.planning.models import (
     StructuralPlan,
 )
 from curriculum.planning.persistence import (
-    persist_chunked_state,
     persist_structural_plan,
 )
 
@@ -269,92 +268,7 @@ async def test_generation_events_404_before_execution_queue_registration_for_chu
 
 
 @pytest.mark.asyncio
-async def test_chunked_status_reports_next_action_by_stage() -> None:
-    app.dependency_overrides[get_current_user] = _override_user_a
-    await _ensure_user(TEST_USER_A)
-    generation_id = str(uuid.uuid4())
-
-    from print.http.v3_studio.router import _ensure_chunked_generation_row
-
-    await _ensure_chunked_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        subject="Math",
-        context="Equivalent fractions",
-    )
-    await persist_chunked_state(generation_id, {"stage": "assembly_blocked", "failed_sections": ["model"]})
-
-    async with async_session_factory() as session:
-        model = await session.get(GenerationModel, generation_id)
-        assert model is not None
-        model.document_json = {
-            "progress": {"stage": "writing", "updated_at": "2026-07-17T10:00:00+00:00"}
-        }
-        await session.commit()
-
-    async with _client() as client:
-        blocked = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
-    assert blocked.status_code == 200
-    blocked_payload = blocked.json()
-    assert blocked_payload["next_action"] == "retry_failed_sections"
-    assert blocked_payload["doc_version"] == "2026-07-17T10:00:00+00:00"
-    assert "structural_plan" not in blocked_payload
-    assert "section_briefs" not in blocked_payload
-
-    await persist_chunked_state(
-        generation_id,
-        {"stage": "stage2_error", "error": "executor failed", "error_type": "RuntimeError"},
-    )
-    async with _client() as client:
-        stage2_error = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
-    assert stage2_error.status_code == 200
-    assert stage2_error.json()["stage"] == "stage2_error"
-    assert stage2_error.json()["next_action"] == "resume_stage2"
-    assert stage2_error.json()["error_type"] == "RuntimeError"
-
-    await persist_chunked_state(
-        generation_id,
-        {"stage": "blueprint_ready", "execution_started": True, "blueprint_id": "bp-123"},
-    )
-    async with _client() as client:
-        ready = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
-    assert ready.status_code == 200
-    assert ready.json()["next_action"] == "generation_running"
-
-
-@pytest.mark.asyncio
-async def test_chunked_status_derives_version_for_legacy_document_without_progress() -> None:
-    app.dependency_overrides[get_current_user] = _override_user_a
-    await _ensure_user(TEST_USER_A)
-    generation_id = str(uuid.uuid4())
-
-    from print.http.v3_studio.router import _ensure_chunked_generation_row
-
-    await _ensure_chunked_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        subject="Math",
-        context="Legacy snapshot",
-    )
-    await persist_chunked_state(
-        generation_id,
-        {"stage": "stage2_running", "execution_started": True},
-    )
-    async with async_session_factory() as session:
-        model = await session.get(GenerationModel, generation_id)
-        assert model is not None
-        model.document_json = {"kind": "v3_booklet_pack", "sections": [{"section_id": "intro"}]}
-        await session.commit()
-
-    async with _client() as client:
-        response = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
-
-    assert response.status_code == 200
-    assert response.json()["doc_version"].startswith("sha256:")
-
-
-@pytest.mark.asyncio
-async def test_chunked_plan_endpoint_returns_immutable_plan_metadata() -> None:
+async def test_preparation_structure_endpoint_returns_structural_plan() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
     generation_id = str(uuid.uuid4())
@@ -377,19 +291,30 @@ async def test_chunked_plan_endpoint_returns_immutable_plan_metadata() -> None:
     )
 
     async with _client() as client:
-        response = await client.get(f"/api/v1/v3/chunked/{generation_id}/plan")
+        response = await client.get(f"/api/v1/preparations/{generation_id}/structure")
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["generation_id"] == generation_id
     assert payload["structural_plan"]["anchor"]["example"] == "splitting a pizza into 8 equal slices"
-    assert payload["display_title"] == form.topic
-    assert "section_briefs" not in payload
+    assert set(payload) == {"generation_id", "structural_plan"}
 
     app.dependency_overrides[get_current_user] = _override_user_b
     async with _client() as client:
-        forbidden = await client.get(f"/api/v1/v3/chunked/{generation_id}/plan")
+        forbidden = await client.get(f"/api/v1/preparations/{generation_id}/structure")
     assert forbidden.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_legacy_chunked_plan_and_status_routes_are_deleted() -> None:
+    """3D: structure preview and revision moved to /preparations and generation detail."""
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    async with _client() as client:
+        plan = await client.get("/api/v1/v3/chunked/any/plan")
+        status = await client.get("/api/v1/v3/chunked/any/status")
+    assert plan.status_code in {404, 405}
+    assert status.status_code in {404, 405}
 
 
 @pytest.mark.asyncio

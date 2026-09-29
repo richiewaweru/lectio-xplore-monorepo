@@ -25,6 +25,9 @@ RETIRED_MODULES = (
     "print.generation.whole_lesson.visual_topology_recovery",
     # 4B: realization progress/status routes (status now projected from Runs)
     "application.unit_lesson.progress_routes",
+    # 3D: legacy chunked status projector + native retry-target decision
+    "print.generation.whole_lesson.native_status",
+    "print.generation.whole_lesson.native_retry",
     # 3C: the Teaching Plan planner moved to application.unit_lesson
     "print.generation.whole_lesson.teaching_agent",
     "print.generation.whole_lesson.service",

@@ -27,7 +27,6 @@ from application.unit_lesson.preparation_runs import (
     load_current_source,
     load_preparation_run_views,
     preparation_request_key,
-    retry_preparation_run,
 )
 from application.unit_lesson.preparation_worker import PreparationWorker
 from core.database.models import (
@@ -402,6 +401,34 @@ async def test_http_plan_admission_and_regenerate_routes(
     assert foreign.status_code == 404
 
 
+@pytest.mark.asyncio
+async def test_http_structure_preview_is_owner_scoped(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    user_id = "3d-structure"
+    _lesson, prep_id = await _seed(db_session, user_id=user_id)
+
+    async def override_session():
+        async with db_session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_async_session] = override_session
+    app.dependency_overrides[get_current_user] = lambda: _user(user_id)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            ok = await client.get(f"/api/v1/preparations/{prep_id}/structure")
+            app.dependency_overrides[get_current_user] = lambda: _user("intruder")
+            foreign = await client.get(f"/api/v1/preparations/{prep_id}/structure")
+    finally:
+        app.dependency_overrides.pop(get_async_session, None)
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert ok.status_code == 200
+    assert ok.json()["generation_id"] == prep_id
+    assert ok.json()["structural_plan"] == _structural_plan()
+    assert foreign.status_code == 404
+
+
 # ------------------------------------------------------------------------ worker
 
 
@@ -546,29 +573,6 @@ async def test_recoverable_card_failure_isolates_the_card_and_retries_to_ready(
 
 
 @pytest.mark.asyncio
-async def test_retry_preparation_run_reopens_every_retryable_failed_card(
-    db_session: AsyncSession, db_session_factory
-) -> None:
-    user_id = "3a-retry-all"
-    _lesson, prep_id = await _seed(db_session, user_id=user_id, cards=("c1", "c2"))
-    await _admit(db_session, prep_id, user_id)
-    calls = _Calls()
-    calls.fail[f"{user_id}-c1"] = TimeoutError("slow")
-    calls.fail[f"{user_id}-c2"] = TimeoutError("slow")
-    worker = _worker(db_session_factory, calls)
-    await _drain(worker, db_session_factory)
-    assert (await _run(db_session_factory, prep_id)).status == "failed_recoverable"
-
-    calls.fail.clear()
-    async with db_session_factory() as session:
-        run = await retry_preparation_run(session, generation_id=prep_id, owner_user_id=user_id)
-        await session.commit()
-        assert run.status in {"queued", "running"}
-    await _drain(worker, db_session_factory)
-    assert (await _run(db_session_factory, prep_id)).status == "ready"
-
-
-@pytest.mark.asyncio
 async def test_teaching_plan_failure_is_typed_and_retryable(
     db_session: AsyncSession, db_session_factory
 ) -> None:
@@ -592,7 +596,7 @@ async def test_teaching_plan_failure_is_typed_and_retryable(
 
     del calls.fail["teaching_plan"]
     async with db_session_factory() as session:
-        await retry_preparation_run(session, generation_id=prep_id, owner_user_id=user_id)
+        await retry_work_item(session, work_item_id=teaching_item.id, owner_user_id=user_id)
         await session.commit()
     await _drain(worker, db_session_factory)
     assert (await _run(db_session_factory, prep_id)).status == "ready"
@@ -616,10 +620,6 @@ async def test_terminal_failure_regenerates_attempts_bounded_at_three(
     workspace = await _workspace(db_session_factory, prep_id)
     assert workspace.state == "failed_terminal" and workspace.recovery_action == "regenerate"
     assert workspace.retryable is not True
-    with pytest.raises(PreparationRunError) as not_retryable:
-        async with db_session_factory() as session:
-            await retry_preparation_run(session, generation_id=prep_id, owner_user_id=user_id)
-    assert not_retryable.value.code == "PREPARATION_NOT_RETRYABLE"
 
     source = await load_current_source(db_session, generation_id=prep_id)
     attempts = [run1]
@@ -769,21 +769,6 @@ async def test_structure_edited_after_admission_fails_the_run_as_source_conflict
     assert calls.events == []  # nothing was generated from a stale structure
     workspace = await _workspace(db_session_factory, prep_id)
     assert workspace.state == "failed_terminal" and workspace.recovery_action == "regenerate"
-
-
-@pytest.mark.asyncio
-async def test_retry_without_a_run_is_a_clear_regenerate_conflict(
-    db_session: AsyncSession,
-) -> None:
-    """``retry-native`` delegates to the Run retry; a legacy prep answers 409 + regenerate."""
-    user_id = "3a-retry-legacy"
-    _lesson, prep_id = await _seed(db_session, user_id=user_id)
-    with pytest.raises(PreparationRunError) as legacy:
-        await retry_preparation_run(db_session, generation_id=prep_id, owner_user_id=user_id)
-    assert legacy.value.code == "PREPARATION_LEGACY" and legacy.value.status_code == 409
-    with pytest.raises(PreparationRunError) as foreign:
-        await retry_preparation_run(db_session, generation_id=prep_id, owner_user_id="other")
-    assert foreign.value.status_code == 404
 
 
 # -------------------------------------------------------------------- projection

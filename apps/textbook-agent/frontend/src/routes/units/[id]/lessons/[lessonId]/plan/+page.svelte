@@ -11,7 +11,7 @@
 		getPreparedLessonStatus
 	} from '$lib/api/units';
 	import {
-		getChunkedPlan,
+		getPreparationStructure,
 		startPreparationPlan,
 		regeneratePreparationPlan,
 		retryPreparationRun
@@ -188,7 +188,7 @@
 		}
 		if (state === 'awaiting_review' && kind === 'structural') {
 			try {
-				const planDoc = await getChunkedPlan(gid);
+				const planDoc = await getPreparationStructure(gid);
 				if (seq === hydrationSeq) structuralPlan = planDoc.structural_plan;
 			} catch (err) {
 				if (seq === hydrationSeq) error = `Could not load the structural plan: ${friendly(err)}`;

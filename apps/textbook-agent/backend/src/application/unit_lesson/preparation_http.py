@@ -20,7 +20,9 @@ from application.unit_lesson.preparation_runs import (
     PreparationRunError,
     admit_preparation_run,
 )
+from core.database.models import GenerationModel
 from core.entities.user import User
+from curriculum.planning.persistence import load_chunked_state
 from infra.auth.middleware import get_current_user
 from infra.database.session import get_async_session
 
@@ -101,6 +103,26 @@ async def post_preparation_plan_regenerate(
     return await _admit(
         session, generation_id=generation_id, user=current_user, regenerate=True
     )
+
+
+@router.get("/{generation_id}/structure")
+async def get_preparation_structure(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    """Structural plan preview shown while the teacher reviews the lesson structure."""
+    generation = await session.get(GenerationModel, generation_id)
+    if generation is None or generation.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Generation not found")
+    try:
+        state = await load_chunked_state(generation_id, session)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Chunked state not found") from exc
+    plan = state.get("structural_plan")
+    if not isinstance(plan, dict):
+        raise HTTPException(status_code=404, detail="Structural plan not found")
+    return {"generation_id": generation_id, "structural_plan": plan}
 
 
 __all__ = ["router"]

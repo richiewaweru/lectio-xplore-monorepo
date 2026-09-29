@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 import { ensureOk } from '$lib/api/errors';
 import { apiFetch } from '$lib/api/client';
 import { authToken } from '$lib/shared/stores/auth';
-import type { V3ChunkedPlan } from '$lib/types/v3';
+import type { PreparationStructure } from '$lib/types/v3';
 
 function bearerHeaders(): Record<string, string> {
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -69,11 +69,11 @@ export async function retryPreparationRun(
 }
 
 /** Structural plan preview shown during the stage-1 structural review. */
-export async function getChunkedPlan(generationId: string): Promise<V3ChunkedPlan> {
-	const res = await apiFetch(`/api/v1/v3/chunked/${encodeURIComponent(generationId)}/plan`, {
+export async function getPreparationStructure(generationId: string): Promise<PreparationStructure> {
+	const res = await apiFetch(`/api/v1/preparations/${encodeURIComponent(generationId)}/structure`, {
 		method: 'GET',
 		headers: bearerHeaders()
 	});
 	await ensureOk(res, 'Could not load the structural lesson plan.');
-	return res.json() as Promise<V3ChunkedPlan>;
+	return res.json() as Promise<PreparationStructure>;
 }

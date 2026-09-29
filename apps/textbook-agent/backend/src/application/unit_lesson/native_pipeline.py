@@ -9,7 +9,6 @@ until the frontend reads lesson-status only (3B).
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 from typing import Any
@@ -19,7 +18,7 @@ from fastapi import HTTPException
 from core.database.models import GenerationModel, LessonProvenanceModel
 from core.database.session import async_session_factory
 from curriculum.planning.persistence import load_chunked_state
-from print.http.v3_studio.dtos import V3ChunkedPlanStateDTO, V3ChunkedStatusDTO
+from print.http.v3_studio.dtos import V3ChunkedPlanStateDTO
 
 logger = logging.getLogger(__name__)
 
@@ -88,82 +87,6 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
             if state.get("requested_realization_path") in {"learn", "print"}
             else None
         ),
-    )
-
-def _normalize_chunked_status(
-    generation_id: str,
-    state: dict[str, Any],
-    document_json: Any,
-    *,
-    generation_status: str | None = None,
-) -> V3ChunkedStatusDTO:
-    from print.generation.whole_lesson.native_status import project_native_status
-
-    full_state = _normalize_chunked_state(generation_id, state)
-    progress = document_json.get("progress") if isinstance(document_json, dict) else None
-    doc_version = progress.get("updated_at") if isinstance(progress, dict) else None
-    if not isinstance(doc_version, str) and isinstance(document_json, dict):
-        canonical = json.dumps(document_json, sort_keys=True, separators=(",", ":"), default=str)
-        doc_version = f"sha256:{hashlib.sha256(canonical.encode('utf-8')).hexdigest()}"
-
-    native = project_native_status(
-        generation_id,
-        state,
-        document_json,
-        generation_status=generation_status,
-    )
-    if native is not None:
-        # Prefer monotonic document_revision so pollers see streaming/visual patches.
-        revision = native.get("document_revision")
-        if revision is not None:
-            doc_version = f"rev:{int(revision)}"
-        failed_sections = list(native.get("failed_section_ids") or full_state.failed_sections)
-        return V3ChunkedStatusDTO(
-            generation_id=generation_id,
-            pack_id=full_state.pack_id,
-            stage=str(native.get("stage") or full_state.stage),
-            doc_version=doc_version if isinstance(doc_version, str) else None,
-            failed_sections=failed_sections,
-            blueprint_id=full_state.blueprint_id,
-            execution_started=bool(native.get("execution_started", full_state.execution_started)),
-            next_action=native.get("next_action"),
-            error=native.get("error") if isinstance(native.get("error"), str) else full_state.error,
-            error_type=native.get("error_type")
-            if isinstance(native.get("error_type"), str)
-            else full_state.error_type,
-            variant_generation_ids=full_state.variant_generation_ids,
-            requested_realization_path=full_state.requested_realization_path,
-            document_version=native.get("document_version"),
-            document_exists=bool(native.get("document_exists")),
-            sections_total=int(native.get("sections_total") or 0),
-            sections_ready=int(native.get("sections_ready") or 0),
-            sections_failed=int(native.get("sections_failed") or 0),
-            blocks_total=int(native.get("blocks_total") or 0),
-            blocks_ready=int(native.get("blocks_ready") or 0),
-            blocks_failed=int(native.get("blocks_failed") or 0),
-            failed_section_ids=list(native.get("failed_section_ids") or []),
-            failed_block_ids=list(native.get("failed_block_ids") or []),
-            error_detail=native.get("error_detail")
-            if isinstance(native.get("error_detail"), dict)
-            else None,
-            visual_quality=native.get("visual_quality")
-            if isinstance(native.get("visual_quality"), dict)
-            else {},
-        )
-
-    return V3ChunkedStatusDTO(
-        generation_id=generation_id,
-        pack_id=full_state.pack_id,
-        stage=full_state.stage,
-        doc_version=doc_version if isinstance(doc_version, str) else None,
-        failed_sections=full_state.failed_sections,
-        blueprint_id=full_state.blueprint_id,
-        execution_started=full_state.execution_started,
-        next_action=full_state.next_action,
-        error=full_state.error,
-        error_type=full_state.error_type,
-        variant_generation_ids=full_state.variant_generation_ids,
-        requested_realization_path=full_state.requested_realization_path,
     )
 
 
