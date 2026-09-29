@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 
 from print.http.v3_studio import router as studio_router
-from v3_blueprint.planning import persistence as persistence_mod
+from curriculum.planning import persistence as persistence_mod
 
 
 def test_resume_stage2_no_longer_imported_by_studio_router() -> None:

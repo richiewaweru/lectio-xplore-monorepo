@@ -6,13 +6,13 @@ import pytest
 from core.llm.deepseek_schema import to_deepseek_strict_schema
 from pydantic import ValidationError
 
-from v3_blueprint.planning.models import (
+from curriculum.planning.models import (
     ConceptCard,
     ItemOption,
     Misconception,
     QuestionBrief,
 )
-from v3_execution.executors.item_executor import (
+from curriculum.items.generator import (
     ItemGenerationDraft,
     ItemGenerationResult,
     ItemQuestionDraft,
@@ -20,7 +20,7 @@ from v3_execution.executors.item_executor import (
     materialize_item_result,
     validate_item_result,
 )
-from v3_execution.prompts.item_prompt import build_item_messages
+from curriculum.items.prompt import build_item_messages
 
 
 def _card() -> ConceptCard:

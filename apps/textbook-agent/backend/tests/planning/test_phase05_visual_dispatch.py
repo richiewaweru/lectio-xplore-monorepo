@@ -15,7 +15,7 @@ from print.generation.whole_lesson.visual_dispatch import (
 )
 from v3_execution.models import ExecutorOutcome
 from media.generation.prompt import build_visual_prompt
-from v3_execution.runtime.retry_runner import run_with_retries
+from infra.execution.retry_runner import run_with_retries
 
 
 def test_v01_native_visual_work_order_mapping() -> None:

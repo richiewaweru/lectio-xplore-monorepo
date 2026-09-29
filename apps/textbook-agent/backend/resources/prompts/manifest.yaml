@@ -74,12 +74,6 @@ prompts:
     editable: false
     version: 1
 
-  - id: document-composer
-    file: document-composer.md
-    stage_label: Chooses document forms
-    editable: false
-    version: 1
-
   - id: document-writer
     file: document-writer.md
     stage_label: Writes ordinary lesson content

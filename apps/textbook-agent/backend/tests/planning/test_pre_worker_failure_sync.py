@@ -26,7 +26,7 @@ from print.generation.whole_lesson.packet import (
 from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
 from print.generation.whole_lesson.teaching_plan import TeachingPlan
 from print.http.v3_studio.router import _run_chunked_stage2_pipeline
-from v3_blueprint.planning.models import (
+from curriculum.planning.models import (
     AnchorSpec,
     ComponentSlot,
     LessonIntent,

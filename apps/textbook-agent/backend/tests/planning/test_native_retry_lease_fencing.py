@@ -24,10 +24,10 @@ from print.generation.whole_lesson.repository import (
     empty_execution_meta,
 )
 from print.generation.whole_lesson.states import LeaseLostError
-from v3_blueprint.planning.models import ItemOption, QuestionBrief
-from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
-from v3_execution.executors.item_diagnostics import attempt_record
-from v3_execution.executors.item_executor import ItemGenerationResult, ItemGenerationRun
+from curriculum.planning.models import ItemOption, QuestionBrief
+from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
+from curriculum.items.diagnostics import attempt_record
+from curriculum.items.generator import ItemGenerationResult, ItemGenerationRun
 
 
 async def _age_heartbeat(generation_id: str, *, seconds_ago: int = 120) -> None:
@@ -137,7 +137,7 @@ async def test_f01_stale_item_worker_cannot_persist_after_reclaim() -> None:
         )
 
     with patch(
-        "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+        "curriculum.items.generator.execute_items_with_diagnostics",
         new=_blocked_items,
     ):
         task = asyncio.create_task(run_pre_worker_retry(lease=lease1))
@@ -228,7 +228,7 @@ async def test_f02_stale_item_worker_cannot_overwrite_worker2_results() -> None:
         )
 
     with patch(
-        "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+        "curriculum.items.generator.execute_items_with_diagnostics",
         new=_blocked_w1,
     ):
         task1 = asyncio.create_task(run_pre_worker_retry(lease=lease1))
@@ -243,7 +243,7 @@ async def test_f02_stale_item_worker_cannot_overwrite_worker2_results() -> None:
 
         with (
             patch(
-                "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+                "curriculum.items.generator.execute_items_with_diagnostics",
                 new=_ok_w2,
             ),
             patch(
@@ -570,7 +570,7 @@ async def test_f06_healthy_worker_path_still_works() -> None:
 
     with (
         patch(
-            "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+            "curriculum.items.generator.execute_items_with_diagnostics",
             new=_ok_items,
         ),
         patch(
@@ -618,7 +618,7 @@ async def test_f07_current_worker_failure_diagnostics_still_persist() -> None:
         raise exc
 
     with patch(
-        "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+        "curriculum.items.generator.execute_items_with_diagnostics",
         new=_timeout_items,
     ), pytest.raises(TimeoutError):
         await run_pre_worker_retry(lease=lease)

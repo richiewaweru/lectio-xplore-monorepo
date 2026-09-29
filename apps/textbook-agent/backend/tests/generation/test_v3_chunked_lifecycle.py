@@ -21,7 +21,7 @@ from core.database.session import async_session_factory
 from core.entities.user import User
 from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
 from print.http.v3_studio.session_store import v3_studio_store
-from v3_blueprint.planning.models import (
+from curriculum.planning.models import (
     AnchorSpec,
     ComponentSlot,
     LessonIntent,
@@ -29,7 +29,7 @@ from v3_blueprint.planning.models import (
     SectionPlan,
     StructuralPlan,
 )
-from v3_blueprint.planning.persistence import (
+from curriculum.planning.persistence import (
     load_chunked_state,
     persist_chunked_state,
     persist_structural_plan,
@@ -447,7 +447,7 @@ async def test_chunked_approve_accepts_native_path_generation() -> None:
 async def test_variant_children_inherit_native_identity_before_scheduling(monkeypatch) -> None:
     from print.http.v3_studio import router
     from print.http.v3_studio.dtos import V3InputForm
-    from v3_blueprint.planning.models import core_variant_spec
+    from curriculum.planning.models import core_variant_spec
 
     _signals, form = _seed_context_models()
     plan = _sample_structural_plan().model_copy(

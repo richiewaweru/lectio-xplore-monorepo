@@ -9,8 +9,6 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, UserModel
-from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, TeachingPlanSection
-from document.composer import DocumentComposerError, compose_document_plan
 from document.writer import DocumentWriterError, write_document_primitive
 from infra.authoring import (
     AuthoringDefinition,
@@ -18,7 +16,6 @@ from infra.authoring import (
     AuthoringEngineError,
     AuthoringProviderCall,
     AuthoringRequest,
-    AuthoringTransportError,
 )
 from infra.authoring.engine import AuthoringRegistry
 from infra.execution.call_budget import (
@@ -113,28 +110,6 @@ def _request(work_order_id: str = "wi-p03") -> AuthoringRequest:
         teaching_revision=1,
         source_identities=("b1",),
         mode="generate",
-    )
-
-
-def _plan() -> TeachingPlan:
-    return TeachingPlan(
-        arc="P03",
-        teaching_plan_id="tp-p03",
-        revision=1,
-        sections=[
-            TeachingPlanSection(
-                slot_id="s1",
-                blocks=[
-                    TeachingPlanBlock(
-                        id="b1",
-                        position=0,
-                        intent="explain",
-                        brief="Explain why leaves need light.",
-                        evidence="Learner names light as energy source.",
-                    )
-                ],
-            )
-        ],
     )
 
 
@@ -416,7 +391,7 @@ def test_g14_resource_limits_concurrency_and_cost() -> None:
 
 
 @pytest.mark.asyncio
-async def test_g15_incompatible_checkpoint_and_budgeted_heuristic_fallback() -> None:
+async def test_g15_incompatible_checkpoint_is_rejected() -> None:
     store = CheckpointStore()
     compat = CheckpointCompatibility(1, "in", "def", schema_version=1)
     store.commit("composition:x", payload={"composition_mode": "llm"}, compatibility=compat)
@@ -425,76 +400,6 @@ async def test_g15_incompatible_checkpoint_and_budgeted_heuristic_fallback() -> 
             "composition:x",
             compatibility=CheckpointCompatibility(1, "in", "def", schema_version=2),
         )
-
-    ledger = CallBudgetLedger()
-    invalid_semantic = {
-        "nodes": [
-            {
-                "id": "unknown-node",
-                "teaching_block_id": "unknown-block",
-                "kind": "paragraph",
-                "reason": "unknown block is a semantic defect",
-            }
-        ]
-    }
-    provider = FakeProvider(invalid_semantic, invalid_semantic)
-    plan = await compose_document_plan(
-        _plan(),
-        path="learn",
-        provider=provider,
-        allow_heuristic_fallback=True,
-        work_order_id="compose-fallback",
-        budget_ledger=ledger,
-        checkpoint_store=store,
-    )
-    assert plan.composition_mode == "heuristic_fallback"
-    resumed = ledger.get_or_create("compose-fallback")
-    assert resumed.fallback_declared is True
-    assert resumed.consumed == 3
-    assert provider.dispatches == 2
-
-    # Exhausted budget is visible and never converted into another fallback.
-    with pytest.raises(DocumentComposerError) as caught:
-        await compose_document_plan(
-            _plan(),
-            path="learn",
-            provider=FakeProvider(AuthoringTransportError("still down")),
-            allow_heuristic_fallback=True,
-            work_order_id="compose-fallback",
-            budget_ledger=ledger,
-        )
-    assert caught.value.code == "BUDGET_EXHAUSTED"
-
-
-@pytest.mark.asyncio
-async def test_composer_transport_and_missing_provider_never_use_quality_fallback() -> None:
-    ledger = CallBudgetLedger()
-    provider = FakeProvider(AuthoringTransportError("composer down"))
-    with pytest.raises(DocumentComposerError) as caught:
-        await compose_document_plan(
-            _plan(),
-            path="learn",
-            provider=provider,
-            allow_heuristic_fallback=True,
-            work_order_id="compose-transport",
-            budget_ledger=ledger,
-        )
-    assert caught.value.code == "PROVIDER_TRANSPORT_EXHAUSTED"
-    budget = ledger.get_or_create("compose-transport")
-    assert budget.consumed == 1
-    assert budget.fallback_declared is False
-
-    with pytest.raises(DocumentComposerError) as missing:
-        await compose_document_plan(
-            _plan(),
-            path="learn",
-            provider=None,
-            allow_heuristic_fallback=True,
-            work_order_id="compose-no-provider",
-            budget_ledger=ledger,
-        )
-    assert missing.value.code == "NO_PROVIDER"
-    assert ledger.get_or_create("compose-no-provider").consumed == 0
 
 
 @pytest.mark.asyncio

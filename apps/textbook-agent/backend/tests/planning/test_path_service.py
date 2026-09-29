@@ -308,7 +308,7 @@ async def test_approve_blocks_objective_hash_mismatch(db_session, owner) -> None
 
 
 async def test_approve_blocks_do_not_cover_violation(db_session, owner) -> None:
-    from v3_blueprint.planning.objective_ownership import hash_path_objective
+    from curriculum.planning.objective_ownership import hash_path_objective
 
     plan = _plan("grade4-photosynthesis-path.json")
     unit = await _unit(

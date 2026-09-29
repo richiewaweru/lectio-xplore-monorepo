@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from print.rendering.page_objects import WriterContext, assemble_questions, dispatch_writer
 from print.rendering.page_objects.visual_completion import apply_figure_asset_update
-from v3_blueprint.planning.models import PlannedBlock
+from curriculum.planning.models import PlannedBlock
 
 
 def test_item_generation_inputs_exclude_lesson_prose() -> None:

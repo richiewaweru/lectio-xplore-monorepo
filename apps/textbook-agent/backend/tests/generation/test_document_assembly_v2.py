@@ -10,7 +10,7 @@ from print.rendering.page_objects.document_assembly import (
     reload_document,
     write_planned_section,
 )
-from v3_blueprint.planning.models import PlannedBlock, SectionBlockPlan
+from curriculum.planning.models import PlannedBlock, SectionBlockPlan
 
 
 def test_manual_lesson_persists_and_reloads_equal() -> None:

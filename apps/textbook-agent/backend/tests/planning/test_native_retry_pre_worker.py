@@ -33,7 +33,7 @@ from print.generation.whole_lesson.states import (
     execution_key,
 )
 from print.rendering.page_objects.document_assembly import persist_document_json
-from v3_blueprint.planning.models import (
+from curriculum.planning.models import (
     AnchorSpec,
     ComponentSlot,
     ItemOption,
@@ -43,10 +43,10 @@ from v3_blueprint.planning.models import (
     SectionPlan,
     StructuralPlan,
 )
-from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
-from v3_execution.executors.item_diagnostics import attempt_record
-from v3_execution.executors.item_errors import ItemGenerationOutputInvalidError
-from v3_execution.executors.item_executor import ItemGenerationResult, ItemGenerationRun
+from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
+from curriculum.items.diagnostics import attempt_record
+from curriculum.items.errors import ItemGenerationOutputInvalidError
+from curriculum.items.generator import ItemGenerationResult, ItemGenerationRun
 
 TEST_USER = User(
     id="native-retry-owner",
@@ -388,7 +388,7 @@ async def test_r01_item_transport_failure_then_retry() -> None:
 
     with (
         patch(
-            "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+            "curriculum.items.generator.execute_items_with_diagnostics",
             new=_ok_items,
         ),
         patch(
@@ -514,7 +514,7 @@ async def test_r02_teaching_retry_does_not_rerun_items() -> None:
 
     with (
         patch(
-            "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+            "curriculum.items.generator.execute_items_with_diagnostics",
             new=item_exec,
         ),
         patch(

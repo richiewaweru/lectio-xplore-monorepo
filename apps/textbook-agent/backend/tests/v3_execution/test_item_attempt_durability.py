@@ -15,7 +15,7 @@ from print.http.v3_studio.router import (
     _ensure_chunked_generation_row,
     _generate_shared_pack_items,
 )
-from v3_blueprint.planning.models import (
+from curriculum.planning.models import (
     AnchorSpec,
     ConceptCard,
     ItemOption,
@@ -23,9 +23,9 @@ from v3_blueprint.planning.models import (
     QuestionBrief,
     StructuralPlan,
 )
-from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
-from v3_execution.executors.item_diagnostics import attempt_record
-from v3_execution.executors.item_executor import (
+from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
+from curriculum.items.diagnostics import attempt_record
+from curriculum.items.generator import (
     ITEM_MAX_ATTEMPTS,
     ItemGenerationResult,
     ItemGenerationRun,
@@ -157,7 +157,7 @@ async def test_semantic_fail_then_success_persists_both_attempts() -> None:
 
     with (
         patch(
-            "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+            "curriculum.items.generator.execute_items_with_diagnostics",
             new=_flaky,
         ),
         patch(
@@ -208,7 +208,7 @@ async def test_all_attempts_fail_persisted_after_stage_failure() -> None:
         raise exc
 
     with patch(
-        "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+        "curriculum.items.generator.execute_items_with_diagnostics",
         new=_always_fail,
     ), pytest.raises(ValueError, match="exhausted"):
         await _generate_shared_pack_items(
@@ -251,7 +251,7 @@ async def test_transport_class_survives_persistence() -> None:
         raise exc
 
     with patch(
-        "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+        "curriculum.items.generator.execute_items_with_diagnostics",
         new=_transport_fail,
     ), pytest.raises(TimeoutError):
         await _generate_shared_pack_items(
@@ -292,7 +292,7 @@ async def test_first_attempt_success_one_record() -> None:
 
     with (
         patch(
-            "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+            "curriculum.items.generator.execute_items_with_diagnostics",
             new=_ok,
         ),
         patch(

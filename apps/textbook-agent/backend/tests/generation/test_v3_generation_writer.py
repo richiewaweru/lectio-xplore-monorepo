@@ -18,7 +18,7 @@ from print.http.v3_studio.planning_artifact import (
     parse_planning_artifact,
 )
 from v3_blueprint.models import ProductionBlueprint
-from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
+from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
 
 
 async def _cleanup_generation(generation_id: str) -> None:

@@ -20,7 +20,7 @@ from print.http.v3_studio.router import (
     _run_pack_variant_pipeline,
     _with_shared_pack_assessment,
 )
-from v3_blueprint.planning.models import (
+from curriculum.planning.models import (
     AnchorSpec,
     ComponentSlot,
     ConceptCard,
@@ -31,7 +31,7 @@ from v3_blueprint.planning.models import (
     VariantSpec,
     VoiceSpec,
 )
-from v3_blueprint.planning.persistence import (
+from curriculum.planning.persistence import (
     load_chunked_state,
     persist_chunked_state,
     persist_structural_plan,

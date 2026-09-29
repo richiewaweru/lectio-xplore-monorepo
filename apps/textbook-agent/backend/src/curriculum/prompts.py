@@ -40,7 +40,6 @@ _PROMPT_NAMES = {
 _PACKAGED_PROMPT_NAMES = {
     "path-planner.md",
     "merge-critic.md",
-    "document-composer-v1.txt",
     "document-writer-v1.txt",
 }
 
@@ -112,12 +111,6 @@ def capability_selector_prompt() -> str:
 
 def page_writer_common_prompt() -> str:
     return prompt_text("page-writer-common-v1.txt")
-
-
-def document_composer_prompt() -> str:
-    from core.prompts import effective_prompt_text
-
-    return effective_prompt_text("document-composer")
 
 
 def document_writer_prompt() -> str:

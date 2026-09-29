@@ -21,15 +21,6 @@ from application.unit_lesson.realizations import (
     admit_realization,
     mark_stale_for_preparation_regenerate,
 )
-from application.unit_lesson.stage_registry import (
-    IllegalStageTransitionError,
-    UnknownStageError,
-    active_entrypoint_map,
-    assert_transition,
-    get_stage,
-    is_approval_wait,
-    is_worker_claimable,
-)
 from application.unit_lesson.status import try_reuse_existing_preparation
 from core.database.models import (
     GenerationModel,
@@ -92,22 +83,6 @@ async def _prepared_lesson(db_session: AsyncSession, *, user_id: str) -> PathLes
     lesson.pack_id = prep_id
     await db_session.flush()
     return lesson
-
-
-@pytest.mark.asyncio
-async def test_g05_stage_registry_rejects_unknown_and_illegal() -> None:
-    assert is_approval_wait("print", "awaiting_teaching_approval")
-    assert not is_worker_claimable("print", "awaiting_teaching_approval")
-    assert is_worker_claimable("print", "queued")
-    assert get_stage("learn", "queued").worker_claimable
-    with pytest.raises(UnknownStageError):
-        get_stage("learn", "not-a-stage")
-    with pytest.raises(IllegalStageTransitionError):
-        assert_transition("learn", "queued", "ready")
-    assert_transition("learn", "queued", "running")
-    mapping = active_entrypoint_map()
-    assert "realize_learn_from_preparation" in mapping
-    assert "queued" in mapping["realize_print_from_preparation"]
 
 
 @pytest.mark.asyncio

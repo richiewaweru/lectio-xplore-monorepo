@@ -45,8 +45,8 @@ from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fi
 from tests.planning.test_path_bridge import (
     _fake_structural_planner,
 )
-from v3_blueprint.planning.persistence import load_chunked_state
-from v3_blueprint.skeletons import SkeletonPreviewRequest, load_skeleton_catalog
+from curriculum.planning.persistence import load_chunked_state
+from curriculum.planning.skeletons import SkeletonPreviewRequest, load_skeleton_catalog
 
 
 @pytest.mark.asyncio
@@ -131,7 +131,7 @@ def test_p02_s02_objective_refs_scope_and_code_owned_ids() -> None:
     from application.unit_lesson.prepare import (
         _normalize_page_concept_card_payload,
     )
-    from v3_blueprint.planning.objective_ownership import (
+    from curriculum.planning.objective_ownership import (
         ObjectiveOwnership,
         ObjectiveOwnershipError,
     )

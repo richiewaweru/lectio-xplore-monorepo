@@ -35,12 +35,12 @@ from print.generation.whole_lesson.states import (
     LeaseLostError,
 )
 from print.generation.whole_lesson.worker import NativeExecutionWorker
-from v3_blueprint.planning.persistence import (
+from curriculum.planning.persistence import (
     merge_failed_card_records,
     merge_item_generation_summary,
 )
-from v3_execution.executors.item_diagnostics import attempt_record
-from v3_execution.executors.item_executor import ItemGenerationRun
+from curriculum.items.diagnostics import attempt_record
+from curriculum.items.generator import ItemGenerationRun
 
 
 async def _override_user() -> User:
@@ -305,7 +305,7 @@ async def test_d04_item_checkpoint_then_teaching_only_reclaim() -> None:
 
     with (
         patch(
-            "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+            "curriculum.items.generator.execute_items_with_diagnostics",
             new=_ok_items,
         ),
         patch(
@@ -332,7 +332,7 @@ async def test_d04_item_checkpoint_then_teaching_only_reclaim() -> None:
 
     with (
         patch(
-            "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+            "curriculum.items.generator.execute_items_with_diagnostics",
             new=AsyncMock(side_effect=AssertionError("items must not rerun")),
         ),
         patch(
@@ -620,7 +620,7 @@ async def test_i02_integrated_item_checkpoint_items_once() -> None:
 
     with (
         patch(
-            "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+            "curriculum.items.generator.execute_items_with_diagnostics",
             new=_ok_items,
         ),
         patch(
@@ -648,7 +648,7 @@ async def test_i02_integrated_item_checkpoint_items_once() -> None:
 
     with (
         patch(
-            "v3_execution.executors.item_executor.execute_items_with_diagnostics",
+            "curriculum.items.generator.execute_items_with_diagnostics",
             new=AsyncMock(side_effect=AssertionError("no item rerun")),
         ),
         patch(

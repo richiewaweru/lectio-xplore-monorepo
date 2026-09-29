@@ -12,7 +12,7 @@ from core.database.models import UserModel
 from core.entities.user import User
 from infra.auth.middleware import get_current_user, get_optional_user
 from infra.database.session import get_async_session
-from learn.release_routes import document_hash
+from learn.publishing.release_routes import document_hash
 
 
 def _now() -> datetime:

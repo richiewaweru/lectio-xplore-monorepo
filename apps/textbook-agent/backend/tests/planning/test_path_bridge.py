@@ -34,8 +34,8 @@ from curriculum.path_models import (
 from curriculum.schedule import write_groups
 from curriculum.service import approve_path, create_unit, persist_path_plan
 from curriculum.shapes import decide_shape_deviation, request_shape_deviation
-from v3_blueprint.planning.objective_ownership import hash_path_objective
-from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
+from curriculum.planning.objective_ownership import hash_path_objective
+from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
 
 
 @pytest.mark.asyncio
@@ -100,7 +100,7 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
     from types import SimpleNamespace
 
     from application.unit_lesson.prepare import _normalize_page_concept_card_payload
-    from v3_blueprint.planning.models import ConceptCard
+    from curriculum.planning.models import ConceptCard
 
     lesson = SimpleNamespace(
         concept_id="c-1",
@@ -158,7 +158,7 @@ def test_normalize_page_concept_card_payload_drops_empty_misconceptions():
     from types import SimpleNamespace
 
     from application.unit_lesson.prepare import _normalize_page_concept_card_payload
-    from v3_blueprint.planning.models import ConceptCard
+    from curriculum.planning.models import ConceptCard
 
     lesson = SimpleNamespace(
         concept_id="c-1",
@@ -357,7 +357,7 @@ def test_normalize_page_concept_card_payload_forces_approved_objective(raw_overr
     from types import SimpleNamespace
 
     from application.unit_lesson.prepare import _normalize_page_concept_card_payload
-    from v3_blueprint.planning.models import ConceptCard
+    from curriculum.planning.models import ConceptCard
 
     lesson = SimpleNamespace(
         concept_id="c-owned",
@@ -382,7 +382,7 @@ def test_normalize_page_concept_card_payload_forces_approved_objective(raw_overr
 def test_length_limits_are_advisory_not_enforced():
     """Character limits on planner contracts are advisory: long compound
     objectives / titles must not fail generation."""
-    from v3_blueprint.planning.models import AnchorSpec, LessonIntent
+    from curriculum.planning.models import AnchorSpec, LessonIntent
 
     long_objective = (
         "Explain why plants need light to make food: light provides the energy that "

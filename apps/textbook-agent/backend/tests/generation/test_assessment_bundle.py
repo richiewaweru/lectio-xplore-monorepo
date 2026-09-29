@@ -10,7 +10,7 @@ from print.rendering.page_objects import (
     assemble_questions,
     build_assessment_bundle,
 )
-from v3_blueprint.planning.models import PlannedBlock
+from curriculum.planning.models import PlannedBlock
 
 
 def test_open_response_bundle_separates_answers() -> None:

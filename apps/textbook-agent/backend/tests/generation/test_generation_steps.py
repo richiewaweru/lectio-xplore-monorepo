@@ -9,8 +9,8 @@ import pytest
 from sqlalchemy import select
 
 from core.database.models import GenerationModel, GenerationStepModel, UserModel
-from v3_blueprint.planning.models import ComponentBrief, SectionBrief
-from v3_blueprint.planning.persistence import (
+from curriculum.planning.models import ComponentBrief, SectionBrief
+from curriculum.planning.persistence import (
     fold,
     insert_step,
     load_chunked_state,
@@ -136,7 +136,7 @@ async def test_persist_section_brief_inserts_step_and_fold_loads(
 
 @pytest.mark.asyncio
 async def test_resume_stage2_is_disabled_for_new_lessons(db_session) -> None:
-    from v3_blueprint.planning.persistence import resume_stage2
+    from curriculum.planning.persistence import resume_stage2
 
     with pytest.raises(RuntimeError, match="Legacy stage2 back half is disabled"):
         await resume_stage2("gen-test", session=db_session)

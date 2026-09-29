@@ -10,7 +10,7 @@ from print.generation.catalogue_projections import project_teaching_guidance
 from resource_specs.candidates import assemble_lesson_guidance
 from resource_specs.loader import get_spec, load_all_specs
 from contracts.lectio_page import get_intent_catalogue, get_object_catalogue
-from v3_blueprint.skeletons import load_skeleton_catalog
+from curriculum.planning.skeletons import load_skeleton_catalog
 
 
 def main() -> int:

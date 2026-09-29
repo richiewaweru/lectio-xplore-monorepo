@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tests.application.test_p03_realization_gates import _approved_native_preparation
 from tests.application.test_p04_learn_worker import _drive_shared_document_ready
 
-import document.composer as composer_module
 import document.writer as writer_module
 from application.unit_lesson.realize_learn_handoff import (
     execute_learn_realization,
@@ -257,9 +256,6 @@ async def test_worker_reports_stale_after_new_approved_revision(
 async def test_ready_path_never_calls_ordinary_authoring_or_retired_producer(
     db_session: AsyncSession, db_session_factory, monkeypatch
 ) -> None:
-    monkeypatch.setattr(
-        composer_module, "compose_document_plan", _forbid("compose_document_plan")
-    )
     monkeypatch.setattr(
         writer_module, "write_document_primitive", _forbid("write_document_primitive")
     )

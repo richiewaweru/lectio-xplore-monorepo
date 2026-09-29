@@ -4,7 +4,7 @@ import pytest
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from core.llm import ModelFamily, ModelSlot, ModelSpec, build_model
-from v3_execution.config.models import (
+from infra.authoring.model_policy.models import (
     BOUNDARY_CONTINUITY_VALIDATOR,
     DOCUMENT_SEMANTIC_QA,
     SECTION_COMPOSER,

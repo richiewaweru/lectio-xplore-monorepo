@@ -13,8 +13,8 @@ from core.database.models import ConceptCardModel, PackItemModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
 from print.http.v3_studio.router import _ensure_chunked_generation_row
-from v3_blueprint.planning.persistence import persist_chunked_state
-from v3_execution.executors.item_executor import ItemGenerationResult
+from curriculum.planning.persistence import persist_chunked_state
+from curriculum.items.generator import ItemGenerationResult
 
 TEST_USER = User(
     id="v3-item-review-user",
