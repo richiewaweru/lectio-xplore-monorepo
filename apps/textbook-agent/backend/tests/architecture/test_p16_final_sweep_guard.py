@@ -10,7 +10,9 @@ canonical module directly.
 
 from __future__ import annotations
 
+import ast
 import importlib
+from pathlib import Path
 
 import pytest
 
@@ -23,6 +25,9 @@ RETIRED_MODULES = (
     "print.generation.whole_lesson.visual_topology_recovery",
     # 4B: realization progress/status routes (status now projected from Runs)
     "application.unit_lesson.progress_routes",
+    # 3C: the Teaching Plan planner moved to application.unit_lesson
+    "print.generation.whole_lesson.teaching_agent",
+    "print.generation.whole_lesson.service",
     # old ordinary document authoring (replaced by document.shared_lesson.composer)
     "document.composer",
     # dead generation/authoring leftovers
@@ -105,3 +110,31 @@ def test_retired_learn_and_document_writer_prompts_are_not_in_manifest() -> None
     retired = {"interaction-writer", "document-writer"}
     assert retired.isdisjoint({entry.id for entry in loader.load_manifest()})
     assert retired.isdisjoint(loader.CLOSEOUT_PROMPT_IDS)
+
+
+PLANNER_ENTRY_POINTS = {
+    "run_lesson_approach_planner",
+    "review_teaching_plan_draft",
+    "run_and_persist_teaching_plan",
+}
+_SRC = Path(__file__).resolve().parents[2] / "src"
+
+
+def test_planner_lives_in_application_layer() -> None:
+    from application.unit_lesson import teaching_plan_service, teaching_planner
+
+    assert callable(teaching_planner.run_lesson_approach_planner)
+    assert callable(teaching_plan_service.run_and_persist_teaching_plan)
+
+
+def test_print_does_not_define_planner_entry_points() -> None:
+    offenders: list[str] = []
+    for path in sorted((_SRC / "print").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name in PLANNER_ENTRY_POINTS
+            ):
+                offenders.append(f"{path.relative_to(_SRC)}: {node.name}")
+    assert not offenders, offenders

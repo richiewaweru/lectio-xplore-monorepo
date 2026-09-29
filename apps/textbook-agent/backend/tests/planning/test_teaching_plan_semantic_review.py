@@ -24,8 +24,8 @@ from infra.authoring.model_policy import (
     TEACHING_PLAN_SEMANTIC_REVIEWER,
     get_v3_slot,
 )
-from print.generation.whole_lesson import teaching_agent
-from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
+from application.unit_lesson import teaching_planner as teaching_agent
+from application.unit_lesson.teaching_planner import run_lesson_approach_planner
 from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 
 
@@ -474,7 +474,7 @@ async def test_reviewer_receives_frozen_approved_item_stems(monkeypatch) -> None
 
 def test_frozen_assessment_reuse_flags_verbatim_stem_leak() -> None:
     from print.generation.whole_lesson.packet import ApprovedItemRef
-    from print.generation.whole_lesson.teaching_agent import _frozen_assessment_reuse_errors
+    from application.unit_lesson.teaching_planner import _frozen_assessment_reuse_errors
 
     packet = _packet().model_copy(
         update={
@@ -498,7 +498,7 @@ def test_frozen_assessment_reuse_flags_verbatim_stem_leak() -> None:
 
 def test_frozen_assessment_reuse_allows_different_values() -> None:
     from print.generation.whole_lesson.packet import ApprovedItemRef
-    from print.generation.whole_lesson.teaching_agent import _frozen_assessment_reuse_errors
+    from application.unit_lesson.teaching_planner import _frozen_assessment_reuse_errors
 
     packet = _packet().model_copy(
         update={
@@ -520,7 +520,7 @@ def test_frozen_assessment_reuse_allows_different_values() -> None:
 
 def test_frozen_assessment_reuse_ignores_the_owning_assessment_block() -> None:
     from print.generation.whole_lesson.packet import ApprovedItemRef
-    from print.generation.whole_lesson.teaching_agent import _frozen_assessment_reuse_errors
+    from application.unit_lesson.teaching_planner import _frozen_assessment_reuse_errors
 
     packet = _packet().model_copy(
         update={

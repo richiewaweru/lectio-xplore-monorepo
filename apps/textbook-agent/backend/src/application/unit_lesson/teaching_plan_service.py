@@ -1,4 +1,6 @@
-"""Orchestrate teaching-plan creation after approved items exist."""
+"""Orchestrate teaching-plan creation after approved items exist.
+
+Application-layer composition root: binds the planner into curriculum."""
 
 from __future__ import annotations
 
@@ -26,10 +28,10 @@ from print.generation.whole_lesson.packet_builder import (
     build_lesson_packet,
 )
 from print.generation.whole_lesson.repository import PageDocumentRepository
-from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
+from application.unit_lesson.teaching_planner import run_lesson_approach_planner
 from curriculum.planning.persistence import load_chunked_state
 
-# Composition root: bind Print-owned planner without curriculum importing print.
+# Composition root: bind the application-owned planner without curriculum importing it.
 bind_shared_teaching_runner(run_lesson_approach_planner)
 
 

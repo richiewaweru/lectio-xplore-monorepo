@@ -6,7 +6,7 @@ from tests.planning.test_prompt_no_object_leak import _packet as _prompt_packet
 
 from print.generation.catalogue_projections import project_teaching_guidance
 from print.generation.whole_lesson.prompt_render import render_teaching_prompt
-from print.generation.whole_lesson.teaching_agent import (
+from application.unit_lesson.teaching_planner import (
     _missing_check_practice_action_errors,
     _task_source_contract_errors,
     _unknown_learner_action_errors,

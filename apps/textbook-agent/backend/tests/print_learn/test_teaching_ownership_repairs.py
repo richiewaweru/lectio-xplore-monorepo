@@ -14,7 +14,7 @@ from print.generation.whole_lesson.packet import (
     ScopeEntry,
     SlotRecord,
 )
-from print.generation.whole_lesson.teaching_agent import (
+from application.unit_lesson.teaching_planner import (
     _assessment_item_compatible_with_block,
     _missing_order_learner_action_errors,
     _repair_incompatible_assessment_sources,

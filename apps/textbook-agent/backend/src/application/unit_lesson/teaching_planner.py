@@ -1,4 +1,9 @@
-"""STANDARD-tier whole-lesson teaching approach agent."""
+"""Application-owned STANDARD-tier teaching approach planner.
+
+Composes curriculum planning contracts with Print packet/legality/validation
+helpers. Bound into curriculum via bind_shared_teaching_runner (see
+teaching_plan_service).
+"""
 
 from __future__ import annotations
 
