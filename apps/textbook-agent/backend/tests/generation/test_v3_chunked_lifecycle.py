@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from core.auth.middleware import get_current_user
@@ -13,7 +11,6 @@ from app import app
 from core.database.models import (
     GenerationModel,
     LearningPackModel,
-    LessonProvenanceModel,
     UserModel,
 )
 from core.database.session import async_session_factory
@@ -28,7 +25,6 @@ from curriculum.planning.models import (
     StructuralPlan,
 )
 from curriculum.planning.persistence import (
-    load_chunked_state,
     persist_chunked_state,
     persist_structural_plan,
 )
@@ -273,124 +269,6 @@ async def test_generation_events_404_before_execution_queue_registration_for_chu
 
 
 @pytest.mark.asyncio
-async def test_chunked_approve_rejects_historical_v1_before_scheduling() -> None:
-    app.dependency_overrides[get_current_user] = _override_user_a
-    await _ensure_user(TEST_USER_A)
-    sample_plan = _sample_structural_plan()
-    generation_id = str(uuid.uuid4())
-    signals, form = _seed_context_models()
-
-    from print.http.v3_studio.router import _ensure_chunked_generation_row
-
-    await _ensure_chunked_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        subject="Math",
-        context="Equivalent fractions",
-    )
-    await persist_structural_plan(
-        generation_id,
-        sample_plan,
-        signals=signals,
-        form=form,
-        resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
-    )
-
-    with patch("print.http.v3_studio.router.admit_preparation_run", new=AsyncMock(return_value=None)) as run_stage2:
-        async with _client() as client:
-            resp = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
-
-    assert resp.status_code == 409
-    assert "contract v2" in resp.json()["detail"]
-    run_stage2.assert_not_awaited()
-    state = await load_chunked_state(generation_id)
-    assert state["stage"] == "plan_ready"
-
-
-@pytest.mark.asyncio
-async def test_chunked_approve_accepts_native_path_generation() -> None:
-    app.dependency_overrides[get_current_user] = _override_user_a
-    await _ensure_user(TEST_USER_A)
-    generation_id = str(uuid.uuid4())
-    sample_plan = _sample_structural_plan().model_copy(
-        update={"document_contract_version": 2}
-    )
-    signals, form = _seed_context_models()
-
-    from print.http.v3_studio.router import _ensure_chunked_generation_row
-
-    await _ensure_chunked_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        subject="Math",
-        context="Equivalent fractions",
-        planning_spec_json=sample_plan.model_dump_json(),
-    )
-    await persist_structural_plan(
-        generation_id,
-        sample_plan,
-        signals=signals,
-        form=form,
-        resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
-    )
-    await persist_chunked_state(
-        generation_id,
-        {"stage": "awaiting_review", "native_whole_lesson": True},
-    )
-    async with async_session_factory() as session:
-        session.add(
-            LessonProvenanceModel(
-                pack_id=generation_id,
-                path_version_id="path-version-native",
-                path_lesson_id="path-lesson-native",
-            )
-        )
-        await session.commit()
-
-    with patch("print.http.v3_studio.router.admit_preparation_run", new=AsyncMock(return_value=None)) as run_stage2:
-        async with _client() as client:
-            resp = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
-
-    # Approve is a thin alias of the preparation admission (Option D, 3A): it
-    # admits the Run and returns; no in-process task runs stage 2.
-    assert resp.status_code == 200
-    run_stage2.assert_awaited_once()
-    assert run_stage2.await_args.kwargs["generation_id"] == generation_id
-    assert run_stage2.await_args.kwargs["owner_user_id"] == TEST_USER_A.id
-
-
-@pytest.mark.asyncio
-async def test_chunked_approve_is_user_scoped() -> None:
-    app.dependency_overrides[get_current_user] = _override_user_a
-    await _ensure_user(TEST_USER_A)
-    await _ensure_user(TEST_USER_B)
-    sample_plan = _sample_structural_plan()
-    generation_id = str(uuid.uuid4())
-    signals, form = _seed_context_models()
-
-    from print.http.v3_studio.router import _ensure_chunked_generation_row
-
-    await _ensure_chunked_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        subject="Math",
-        context="Equivalent fractions",
-    )
-    await persist_structural_plan(
-        generation_id,
-        sample_plan,
-        signals=signals,
-        form=form,
-        resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
-    )
-
-    app.dependency_overrides[get_current_user] = _override_user_b
-    async with _client() as client:
-        resp = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
-    assert resp.status_code == 404
-
-
-@pytest.mark.asyncio
 async def test_chunked_status_reports_next_action_by_stage() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
@@ -515,37 +393,10 @@ async def test_chunked_plan_endpoint_returns_immutable_plan_metadata() -> None:
 
 
 @pytest.mark.asyncio
-async def test_chunked_approve_resumes_stage2_error() -> None:
+async def test_chunked_approve_route_is_deleted() -> None:
+    """The plan page uses POST /preparations/{id}/plan (3B); the alias is gone."""
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
-    generation_id = str(uuid.uuid4())
-    signals, form = _seed_context_models()
-
-    from print.http.v3_studio.router import _ensure_chunked_generation_row
-
-    await _ensure_chunked_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        subject="Math",
-        context="Equivalent fractions",
-    )
-    await persist_structural_plan(
-        generation_id,
-        _sample_structural_plan(),
-        signals=signals,
-        form=form,
-        resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
-    )
-    await persist_chunked_state(generation_id, {"stage": "stage2_error", "error_type": "RuntimeError"})
-
-    pipeline = AsyncMock(return_value=None)
-    with patch("print.http.v3_studio.router.admit_preparation_run", new=pipeline):
-        async with _client() as client:
-            response = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
-        await asyncio.sleep(0)
-
-    assert response.status_code == 409
-    assert "contract v2" in response.json()["detail"]
-    pipeline.assert_not_awaited()
-
-
+    async with _client() as client:
+        resp = await client.post(f"/api/v1/v3/chunked/{uuid.uuid4()}/approve")
+    assert resp.status_code in {404, 405}

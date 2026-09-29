@@ -309,6 +309,11 @@ def _preparation_projection(
                 message=message,
                 retryable=retryable,
                 stage="preparation",
+                work_item_id=(
+                    run.failed_work_item_ids[0]
+                    if run is not None and run.failed_work_item_ids
+                    else None
+                ),
                 recovery_action=action,
             ),
         )

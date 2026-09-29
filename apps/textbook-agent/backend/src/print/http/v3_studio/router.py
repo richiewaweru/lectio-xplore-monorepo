@@ -9,7 +9,7 @@ from typing import Any
 
 from core.auth.jwt_handler import JWTHandler
 from core.auth.middleware import get_current_user
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
@@ -31,7 +31,6 @@ from print.http.v3_studio.dtos import (
     BlueprintPreviewDTO,
     V3CardItemReviewDTO,
     V3CardLibraryItemDTO,
-    V3ChunkedApproveRequest,
     V3ChunkedPlanDTO,
     V3ChunkedPlanStateDTO,
     V3ChunkedStatusDTO,
@@ -1035,11 +1034,7 @@ async def post_pack_concept_cards_approve(
                 )
             except ValueError as exc:
                 raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return await post_chunked_plan_approve(
-        generation_id,
-        body=None,
-        current_user=current_user,
-    )
+    return await _admit_chunked_plan(generation_id, current_user)
 
 
 async def _load_xplore_pack(
@@ -1231,20 +1226,19 @@ async def delete_xplore_variant(
     return refreshed
 
 
-@v3_studio_router.post("/chunked/{generation_id}/approve", response_model=V3ChunkedPlanStateDTO)
-async def post_chunked_plan_approve(
+async def _admit_chunked_plan(
     generation_id: str,
-    body: V3ChunkedApproveRequest | None = Body(default=None),
-    current_user: User = Depends(get_current_user),
+    current_user: User,
+    display_title: str | None = None,
 ) -> V3ChunkedPlanStateDTO:
-    """Compatibility alias of ``POST /api/v1/preparations/{id}/plan`` (Option D, 3A).
+    """Admit the preparation Run (idempotent) for cards approval (Option D, 3A/3B).
 
-    Admits the preparation Run (idempotent) and returns immediately; there is no
-    in-process task.  The Run is the status - read it through lesson-status.
+    The frontend plan page uses ``POST /api/v1/preparations/{id}/plan``; this
+    helper only serves ``/packs/{id}/cards/approve``.  There is no in-process
+    task: the Run is the status - read it through lesson-status.
     """
     # Validate immutable current/path provenance and contract v2 before admission.
     await _require_current_native_generation(generation_id, current_user.id)
-    display_title = body.display_title if body is not None else None
     async with async_session_factory() as session:
         try:
             await admit_preparation_run(

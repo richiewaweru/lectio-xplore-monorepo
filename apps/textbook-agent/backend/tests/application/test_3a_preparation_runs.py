@@ -585,6 +585,9 @@ async def test_teaching_plan_failure_is_typed_and_retryable(
     workspace = await _workspace(db_session_factory, prep_id)
     assert workspace.state == "failed_recoverable" and workspace.retryable is True
     assert workspace.progress.teaching_plan == "failed"
+    teaching_item = next(i for i in run.work_items if i.item_key == "teaching_plan")
+    assert workspace.progress.failed_work_item_ids == [teaching_item.id]
+    assert workspace.error is not None and workspace.error.work_item_id == teaching_item.id
     assert calls.events.count(f"items:{user_id}-c1") == 1  # items are not redone
 
     del calls.fail["teaching_plan"]
