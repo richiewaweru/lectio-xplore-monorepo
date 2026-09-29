@@ -15,6 +15,8 @@ import importlib
 import pytest
 
 RETIRED_MODULES = (
+    # 4B: realization progress/status routes (status now projected from Runs)
+    "application.unit_lesson.progress_routes",
     # old ordinary document authoring (replaced by document.shared_lesson.composer)
     "document.composer",
     # dead generation/authoring leftovers

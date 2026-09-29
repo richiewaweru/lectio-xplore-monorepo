@@ -23,6 +23,18 @@ const base = (overrides: Partial<PreparedLessonStatus> = {}): PreparedLessonStat
 });
 
 describe('canonical Unit lesson workspace mapping', () => {
+	it('offers Regenerate for failed_terminal and legacy regenerate rows, carrying run_id', () => {
+		const status = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: { state: 'failed_terminal', realization_id: 'lr', run_id: 'run-9', recovery_action: 'regenerate', error: { message: 'Created before the job update', retryable: false } },
+				print: { state: 'failed_terminal', realization_id: 'pr', stale: true, error: { recovery_action: 'reprepare' } }
+			}
+		});
+		expect(lessonArtifactUi(status, 'learn')).toMatchObject({ state: 'needs_attention', regenerable: true, retryable: false, recoveryAction: 'regenerate', runId: 'run-9' });
+		expect(lessonArtifactUi(status, 'print').regenerable).toBe(false);
+	});
+
 	it.each([
 		['not_started', 'not_prepared'],
 		['planning', 'preparing'],

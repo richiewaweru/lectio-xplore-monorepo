@@ -8,7 +8,6 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 
 from app import app
@@ -31,9 +30,7 @@ from print.generation.whole_lesson.repository import (
 from print.generation.whole_lesson.states import (
     WORK_KIND_PRE_WORKER_ITEM,
     WORK_KIND_PRE_WORKER_TEACHING,
-    execution_key,
 )
-from print.rendering.page_objects.document_assembly import persist_document_json
 from curriculum.planning.models import (
     AnchorSpec,
     ComponentSlot,
@@ -622,134 +619,6 @@ async def test_r05_post_approval_queues() -> None:
         assert lease.lease_token == 1
         # The accepted retry is claimable exactly once while its lease is fresh.
         assert await claim_test_execution(repo, worker_id="r05-other-worker") is None
-
-
-@pytest.mark.asyncio
-async def test_r06_visual_failure_not_owned_by_retry_native() -> None:
-    gid = str(uuid.uuid4())
-    await _ensure_user()
-    page = empty_page_document_state()
-    page["execution"]["last_error"] = {
-        "type": "VisualDispatchError",
-        "code": "VISUAL_DISPATCH",
-        "message": "dispatcher exploded",
-        "stage": "awaiting_visuals",
-        "retryable": True,
-    }
-    page["block_execution"] = {
-        execution_key("explain", "fig-1"): {
-            "status": "failed_recoverable",
-            "object": "figure",
-            "block_id": "fig-1",
-            "request_id": "req-1",
-            "content": {"asset": {"status": "failed", "request_id": "req-1"}},
-        }
-    }
-    doc = {
-        "document_version": 2,
-        "contract_version": "1.0.0",
-        "id": "doc-visual",
-        "title": "Plants",
-        "language": "en",
-        "metadata": {"catalogue_version": "1.1.0", "resource_type": "lesson"},
-        "sections": [
-            {
-                "id": "explain",
-                "title": "Explain",
-                "blocks": [
-                    {
-                        "id": "fig-1",
-                        "object": "figure",
-                        "intent": "explain",
-                        "position": 0,
-                        "content": {
-                            "alt_text": "Leaf",
-                            "caption": "Leaf",
-                            "asset": {
-                                "status": "failed",
-                                "request_id": "req-1",
-                                "kind": "image",
-                            },
-                        },
-                        "layout": {"placement": "main"},
-                    }
-                ],
-            }
-        ],
-    }
-    async with async_session_factory() as session:
-        session.add(
-            GenerationModel(
-                id=gid,
-                user_id=TEST_USER.id,
-                subject="Science",
-                requested_template_id="guided-concept-path",
-                requested_preset_id="default",
-                status="awaiting_visuals",
-                document_json=persist_document_json({}, doc),
-                error="dispatcher exploded",
-                error_type="VisualDispatchError",
-                error_code="VISUAL_DISPATCH",
-                chunked_state_json={
-                    "stage": "awaiting_visuals",
-                    "native_whole_lesson": True,
-                    "page_document_v2": page,
-                },
-            )
-        )
-        await session.commit()
-
-    projected = project_native_status(
-        gid,
-        await load_chunked_state(gid),
-        doc,
-        generation_status="awaiting_visuals",
-    )
-    assert projected is not None
-    assert projected["next_action"] == "retry_visuals"
-
-    app.dependency_overrides[get_current_user] = _override_user
-    try:
-        async with _client() as client:
-            denied = await client.post(f"/api/v1/v3/generations/{gid}/retry-native")
-            assert denied.status_code == 409
-            assert denied.json()["detail"]["error_type"] == "USE_VISUALS_RETRY"
-
-            async def fake_execute(order, emit, **kwargs):
-                return [
-                    type(
-                        "B",
-                        (),
-                        {
-                            "status": "ready",
-                            "fallback_image_url": "https://example.test/leaf.png",
-                            "html_content": None,
-                        },
-                    )()
-                ]
-
-            with (
-                patch(
-                    "print.generation.whole_lesson.visual_dispatch.execute_visual",
-                    new=fake_execute,
-                ),
-                patch(
-                    "print.http.v3_studio.router._generate_shared_pack_items",
-                    new=AsyncMock(side_effect=AssertionError("items")),
-                ),
-                patch(
-                    "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
-                    new=AsyncMock(side_effect=AssertionError("teaching")),
-                ),
-                # P11B: the ordinary whole-lesson form planner
-                # (``print.generation.whole_lesson.executor``) is retired, so
-                # there is no module left to patch as a "must not run" guard.
-            ):
-                ok = await client.post(f"/api/v1/v3/generations/{gid}/visuals/retry")
-            assert ok.status_code == 200, ok.text
-            assert ok.json()["status"] == "ready"
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio

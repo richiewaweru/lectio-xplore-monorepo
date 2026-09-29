@@ -301,13 +301,6 @@ export interface V3VisualQualitySummary extends V3VisualQualityFlag {
 	retryable?: boolean;
 }
 
-export interface V3VisualRetryResult {
-	generation_id: string;
-	status: string;
-	next_action?: string | null;
-	error_detail?: Record<string, unknown> | null;
-}
-
 export interface V3GenerationDetail {
 	id: string;
 	subject: string;
