@@ -14,7 +14,7 @@ from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
     empty_page_document_state,
 )
-from print.generation.whole_lesson.service import approve_teaching_and_queue
+from application.unit_lesson.teaching_plan_service import approve_teaching_and_queue
 from print.generation.whole_lesson.states import (
     LEGAL_TRANSITIONS,
     IllegalTransitionError,

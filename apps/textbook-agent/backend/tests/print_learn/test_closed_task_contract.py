@@ -9,8 +9,8 @@ from print.generation.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from print.generation.whole_lesson.service import assessment_slots_from_structural_plan
-from print.generation.whole_lesson.teaching_agent import (
+from application.unit_lesson.teaching_plan_service import assessment_slots_from_structural_plan
+from application.unit_lesson.teaching_planner import (
     _assessment_source_policy,
     _repair_sources_outside_structural_slots,
 )

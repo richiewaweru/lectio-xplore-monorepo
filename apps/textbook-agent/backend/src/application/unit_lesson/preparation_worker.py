@@ -170,7 +170,7 @@ def _default_item_runner() -> Callable[..., Any]:
 
 
 def _default_teaching_runner() -> Callable[..., Any]:
-    from print.generation.whole_lesson.service import run_and_persist_teaching_plan
+    from application.unit_lesson.teaching_plan_service import run_and_persist_teaching_plan
 
     return run_and_persist_teaching_plan
 
