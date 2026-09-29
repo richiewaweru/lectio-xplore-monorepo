@@ -275,8 +275,8 @@
 			{#snippet actions()}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
 	{:else if artifact.state === 'needs_review'}
-		<EmptyState title="This lesson needs a teacher review before Learn can be built" description="A teacher must review the prepared lesson document before Learn can continue.">
-			{#snippet actions()}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
+		<EmptyState title="This lesson needs a teacher review before Learn can be built" description="Quality checks flagged content in the prepared lesson document. Review and correct it before Learn can continue.">
+			{#snippet actions()}<a class="link" href={`/units/${encodeURIComponent(ctx.unitId)}/lessons/${encodeURIComponent(ctx.lessonId)}/review`}>Review flagged content</a><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
 	{:else if activeTab === 'preview'}
 		{#if document}

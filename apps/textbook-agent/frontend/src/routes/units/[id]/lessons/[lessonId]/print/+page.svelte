@@ -185,6 +185,10 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 		<LessonIssuesPanel {issues} onRetry={retryPrint} allowRetry={ctx.statusFresh && artifact.retryable} />
 	{:else if artifact.state === 'not_created'}
 		<EmptyState title="Print not created" description="Create a printable booklet from the approved teaching plan.">{#snippet actions()}<Button disabled={!ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)} busy={busy === 'create'} onclick={() => void createPrint()}>{busy === 'create' ? 'Creating…' : 'Create Print'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>
+	{:else if artifact.state === 'needs_review'}
+		<EmptyState title="This lesson needs a teacher review before Print can be built" description="Quality checks flagged content in the prepared lesson document. Review and correct it before Print can continue.">
+			{#snippet actions()}<a class="link" href={`/units/${encodeURIComponent(ctx.unitId)}/lessons/${encodeURIComponent(ctx.lessonId)}/review`}>Review flagged content</a><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
+		</EmptyState>
 	{:else if activeTab === 'preview'}
 		{#if pageDocumentV2}<div class="doc"><LectioPageDocumentView document={pageDocumentV2} edition="teacher" /></div>{:else}<EmptyState title="Print needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Print output is stale. Reprepare and review the lesson before creating another output.' : artifact.errorSummary || error || 'The Print document is unavailable.'}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Retry Print</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
 	{/if}
