@@ -60,6 +60,9 @@ def _object_block(node_id: str, position: int, object_id: str, content: dict[str
     }
 
 
+_USABLE_MEDIA_STATUSES = frozenset({"ready", "ready_with_quality_warning"})
+
+
 def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, FigureMediaResult]) -> dict[str, Any]:
     if isinstance(node, ParagraphNode):
         return _object_block(node.id, position, "prose", {"paragraphs": [node.display.text]})
@@ -343,7 +346,11 @@ def realize_shared_document_for_print(
             verified = verify_bound_figure_media(media, normalized)
         except SharedFigureMediaError as exc:
             raise SharedDocumentPrintMappingError(f"figure {media.figure_node_id!r} media binding failed") from exc
-        if verified.status != "ready" or not verified.asset_url.lower().startswith(("http://", "https://")):
+        # A produced image with a visual-QC quality warning is still a usable
+        # asset (same rule as shared media binding); only its absence blocks.
+        if verified.status not in _USABLE_MEDIA_STATUSES or not verified.asset_url.lower().startswith(
+            ("http://", "https://")
+        ):
             raise SharedDocumentPrintMappingError(f"figure {media.figure_node_id!r} media is not ready")
         media_by_figure[media.figure_node_id] = verified
 

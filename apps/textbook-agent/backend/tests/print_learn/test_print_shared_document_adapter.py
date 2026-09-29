@@ -144,3 +144,40 @@ def test_print_adapter_fails_when_required_figure_media_is_missing() -> None:
 
     with pytest.raises(SharedDocumentPrintMappingError, match="no document-bound Print media"):
         realize_shared_document_for_print(stored, expected_identity=_identity(stored))
+
+@pytest.mark.parametrize(
+    ("media_status", "accepted"),
+    [("ready", True), ("ready_with_quality_warning", True), ("failed", False)],
+)
+def test_print_adapter_accepts_quality_warning_media_but_not_failed(
+    monkeypatch: pytest.MonkeyPatch, media_status: str, accepted: bool
+) -> None:
+    """A produced image flagged by visual QC still prints (image quality is not a gate)."""
+    from types import SimpleNamespace
+
+    import print.generation.shared_document_adapter as adapter
+
+    stored = _stored(include_figure=True)
+    media = SimpleNamespace(
+        figure_node_id="figure-1",
+        status=media_status,
+        asset_url="https://cdn.example.test/figure.png",
+    )
+    monkeypatch.setattr(adapter, "verify_bound_figure_media", lambda m, _doc: m)
+
+    if accepted:
+        result = realize_shared_document_for_print(
+            stored, expected_identity=_identity(stored), figure_media=[media]
+        )
+        figures = [
+            block
+            for section in result.document["sections"]
+            for block in section["blocks"]
+            if block.get("object") == "figure"
+        ]
+        assert figures and figures[0]["content"]["asset"]["src"] == media.asset_url
+    else:
+        with pytest.raises(SharedDocumentPrintMappingError, match="media is not ready"):
+            realize_shared_document_for_print(
+                stored, expected_identity=_identity(stored), figure_media=[media]
+            )
