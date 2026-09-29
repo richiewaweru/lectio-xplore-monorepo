@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
 import logging
-import uuid
 from copy import deepcopy
 from datetime import datetime
 from typing import Any
@@ -35,9 +33,7 @@ from print.http.v3_studio.dtos import (
     V3CardLibraryItemDTO,
     V3ChunkedApproveRequest,
     V3ChunkedPlanDTO,
-    V3ChunkedPlanStartRequest,
     V3ChunkedPlanStateDTO,
-    V3ChunkedRegenerateRequest,
     V3ChunkedStatusDTO,
     V3ConceptCardDTO,
     V3ConceptCardPatchRequest,
@@ -79,18 +75,20 @@ from curriculum.planning.models import (
 )
 from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
 from application.unit_lesson.native_pipeline import (
-    _approved_card_for_items,
-    _chunked_emit_event,
-    _chunked_stage2_tasks,
     _contract_version_for_generation,
-    _decode_chunked_context,
-    _generate_shared_pack_items,
     _load_owned_generation,
     _normalize_chunked_state,
     _normalize_chunked_status,
-    _persist_item_results,
     _require_current_native_generation,
-    _run_chunked_stage2_pipeline,
+)
+from application.unit_lesson.preparation_items import (
+    approved_card_for_items as _approved_card_for_items,
+    decode_chunked_context as _decode_chunked_context,
+    persist_item_results as _persist_item_results,
+)
+from application.unit_lesson.preparation_runs import (
+    PreparationRunError,
+    admit_preparation_run,
 )
 
 logger = logging.getLogger(__name__)
@@ -234,14 +232,6 @@ def _template_id(model: GenerationModel) -> str:
     )
 
 
-def _render_chunked_sse(event: str, payload: dict[str, Any]) -> str:
-    return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
-
-
-
-
-
-
 def _build_chunked_resource_spec(
     *,
     resource_type: str,
@@ -282,9 +272,6 @@ def _build_chunked_resource_spec(
 
 
 
-
-
-from application.unit_lesson.native_pipeline import _generate_shared_pack_items
 
 
 async def _ensure_chunked_generation_row(
@@ -431,50 +418,6 @@ def _section_briefs_from_state(plan: StructuralPlan, state: dict[str, Any]) -> l
     return briefs
 
 
-async def _maybe_mark_chunked_complete(
-    generation_id: str,
-    *,
-    event_type: str,
-) -> None:
-    if event_type != "resource_finalised":
-        return
-    try:
-        state = await load_chunked_state(generation_id)
-    except Exception:  # noqa: BLE001
-        return
-    if not isinstance(state, dict) or not state:
-        return
-    await persist_chunked_state(
-        generation_id,
-        {
-            "stage": "complete",
-        },
-    )
-
-
-
-
-async def _ensure_chunked_stream(
-    *,
-    generation_id: str,
-    user_id: str,
-    blueprint_id: str,
-) -> asyncio.Queue[str | None]:
-    existing_owner = await v3_studio_store.get_generation_owner(generation_id)
-    if existing_owner is not None and existing_owner != user_id:
-        raise HTTPException(status_code=404, detail="Generation not found")
-    queue = await v3_studio_store.get_chunked_queue(generation_id)
-    if queue is None:
-        queue = asyncio.Queue()
-    await v3_studio_store.register_chunked_stream(
-        user_id=user_id,
-        generation_id=generation_id,
-        blueprint_id=blueprint_id,
-        queue=queue,
-    )
-    return queue
-
-
 async def _ensure_generation_stream(
     *,
     generation_id: str,
@@ -509,209 +452,6 @@ async def _ensure_generation_stream(
 
 
 
-
-
-def _variant_plan_for_fanout(
-    state: dict[str, Any],
-    variant_label: str,
-) -> dict[str, Any] | None:
-    """Select the declared variant structure while retaining approved shared cards."""
-    variant_plans = state.get("variant_structural_plans")
-    selected_plan = (
-        deepcopy(variant_plans.get(variant_label))
-        if isinstance(variant_plans, dict)
-        and isinstance(variant_plans.get(variant_label), dict)
-        else deepcopy(state.get("structural_plan"))
-    )
-    canonical_plan = state.get("structural_plan")
-    if isinstance(selected_plan, dict) and isinstance(canonical_plan, dict):
-        selected_plan["cards"] = deepcopy(canonical_plan.get("cards", []))
-        if "lesson_intent" in canonical_plan:
-            selected_plan["lesson_intent"] = deepcopy(canonical_plan["lesson_intent"])
-        return selected_plan
-    return None
-
-
-async def _prepare_variant_generations(
-    *,
-    coordinator_id: str,
-    user_id: str,
-    state: dict[str, Any],
-) -> dict[str, str]:
-    pack_id = state.get("pack_id")
-    variants_raw = state.get("variants")
-    if not isinstance(pack_id, str) or not isinstance(variants_raw, list):
-        return {}
-    variants = [
-        VariantSpec.model_validate(raw)
-        for raw in variants_raw
-        if isinstance(raw, dict)
-    ]
-    existing_map = state.get("variant_generation_ids")
-    generation_ids = (
-        {
-            str(label): str(generation_id)
-            for label, generation_id in existing_map.items()
-        }
-        if isinstance(existing_map, dict)
-        else {}
-    )
-    context = state.get("context")
-    form_raw = context.get("form") if isinstance(context, dict) else None
-    form = V3InputForm.model_validate(form_raw) if isinstance(form_raw, dict) else None
-    if form is None:
-        raise ValueError("Variant fan-out requires persisted form context")
-    native_variant = bool(
-        state.get("native_whole_lesson")
-        or (
-            state.get("context", {}).get("native_whole_lesson")
-            if isinstance(state.get("context"), dict)
-            else False
-        )
-    )
-
-    for index, variant in enumerate(variants):
-        generation_id = generation_ids.get(variant.label) or str(uuid.uuid4())
-        generation_ids[variant.label] = generation_id
-        resource_id = f"variant-{index + 1}"
-        selected_plan = _variant_plan_for_fanout(state, variant.label)
-        selected_sections = (
-            selected_plan.get("sections", []) if isinstance(selected_plan, dict) else []
-        )
-        await _ensure_chunked_generation_row(
-            generation_id=generation_id,
-            user_id=user_id,
-            subject=form.subject,
-            context=f"{form.topic} — {variant.label}",
-            section_count=len(selected_sections),
-            pack_id=pack_id,
-            pack_resource_id=resource_id,
-            pack_resource_label=variant.label,
-            variant=variant,
-            planning_spec_json=(
-                json.dumps(selected_plan, sort_keys=True)
-                if native_variant and isinstance(selected_plan, dict)
-                else None
-            ),
-        )
-        await persist_chunked_state(
-            generation_id,
-            {
-                "stage": "stage2_running",
-                "pack_id": pack_id,
-                "coordinator_generation_id": coordinator_id,
-                "variant_spec": variant.model_dump(mode="json"),
-                "structural_plan": selected_plan,
-                "section_briefs": {
-                    str(section["id"]): None
-                    for section in selected_sections
-                    if isinstance(section, dict) and section.get("id")
-                },
-                "failed_sections": [],
-                "context": deepcopy(state.get("context")),
-                "native_whole_lesson": native_variant,
-                "display_title": f"{form.topic} — {variant.label}",
-                "execution_started": False,
-                "skip_item_generation": True,
-            },
-        )
-        await _ensure_chunked_stream(
-            generation_id=generation_id,
-            user_id=user_id,
-            blueprint_id=f"chunked-plan-{generation_id}",
-        )
-    return generation_ids
-
-
-async def _run_pack_variant_pipeline(
-    *,
-    coordinator_id: str,
-    user_id: str,
-    generation_ids: dict[str, str],
-) -> None:
-    try:
-        state = await load_chunked_state(coordinator_id)
-        plan_raw = state.get("structural_plan")
-        if not isinstance(plan_raw, dict):
-            raise TypeError("Coordinator structural plan is missing")
-        plan = adapt_legacy_structural_plan(
-            plan_raw,
-            source=f"coordinator:{coordinator_id}",
-        )
-        variants = [
-            VariantSpec.model_validate(raw)
-            for raw in state.get("variants", [])
-            if isinstance(raw, dict)
-        ]
-        if variants:
-            plan = plan.with_variant(variants[0])
-        _signals, form, _resource_spec = _decode_chunked_context(state)
-        item_summary = await _generate_shared_pack_items(
-            generation_id=coordinator_id,
-            form=form,
-            plan=plan,
-        )
-        await persist_chunked_state(
-            coordinator_id,
-            {"item_generation": item_summary},
-        )
-
-        async def run_variant(generation_id: str) -> None:
-            await _run_chunked_stage2_pipeline(
-                generation_id=generation_id,
-                user_id=user_id,
-            )
-
-        tasks = {
-            generation_id: asyncio.create_task(run_variant(generation_id))
-            for generation_id in generation_ids.values()
-        }
-        _chunked_stage2_tasks.update(tasks)
-        results = await asyncio.gather(*tasks.values(), return_exceptions=True)
-        failures = {
-            generation_id: str(result)[:400]
-            for generation_id, result in zip(tasks, results, strict=True)
-            if isinstance(result, Exception)
-        }
-        await persist_chunked_state(
-            coordinator_id,
-            {
-                "stage": "variants_running" if len(failures) < len(tasks) else "stage2_error",
-                "variant_failures": failures,
-                "execution_started": bool(tasks),
-            },
-        )
-    except Exception as exc:
-        logger.exception(
-            "pack variant fan-out failed coordinator_id=%s",
-            coordinator_id,
-        )
-        await persist_chunked_state(
-            coordinator_id,
-            {
-                "stage": "stage2_error",
-                "error": str(exc)[:400],
-                "error_type": type(exc).__name__,
-                "execution_started": False,
-            },
-        )
-    finally:
-        _chunked_stage2_tasks.pop(coordinator_id, None)
-
-
-@v3_studio_router.post("/chunked/plan/start", response_model=V3ChunkedPlanStateDTO)
-async def post_chunked_plan_start(
-    body: V3ChunkedPlanStartRequest,
-    current_user: User = Depends(get_current_user),
-) -> V3ChunkedPlanStateDTO:
-    # This endpoint creates the historical contract-v1 workflow.  New lessons
-    # must originate from the approved unit/path flow, which persists immutable
-    # provenance and a native document contract before approval.  Keep the route
-    # explicit so direct callers cannot create orphaned legacy rows or state.
-    raise HTTPException(
-        status_code=410,
-        detail="Direct chunked plan start is retired; prepare a lesson from an approved path",
-    )
 
 
 @v3_studio_router.get("/chunked/{generation_id}/plan", response_model=V3ChunkedPlanDTO)
@@ -754,49 +494,6 @@ async def get_chunked_plan_status(
         state,
         model.document_json,
         generation_status=str(model.status or "") or None,
-    )
-
-
-@v3_studio_router.get("/chunked/{generation_id}/events")
-async def get_chunked_generation_events(
-    generation_id: str,
-    current_user: User = Depends(get_current_user),
-):
-    owns_stream = await v3_studio_store.owns_generation(current_user.id, generation_id)
-    if not owns_stream:
-        raise HTTPException(status_code=404, detail="Chunked stream not found")
-    queue = await v3_studio_store.get_chunked_queue(generation_id)
-    if queue is None:
-        raise HTTPException(status_code=404, detail="Chunked stream not found")
-
-    async def event_generator():
-        finished = False
-        try:
-            while True:
-                try:
-                    chunk = await asyncio.wait_for(
-                        queue.get(),
-                        timeout=HEARTBEAT_SECONDS,
-                    )
-                except TimeoutError:
-                    yield ": ping\n\n"
-                    continue
-                if chunk is None:
-                    finished = True
-                    break
-                yield chunk
-        finally:
-            if finished:
-                await v3_studio_store.cleanup_chunked_stream(generation_id)
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
     )
 
 
@@ -1476,71 +1173,6 @@ async def get_xplore_pack(
     return dto
 
 
-@v3_studio_router.post(
-    "/packs/{pack_id}/variants/{variant_label}/retry",
-    response_model=V3XplorePackDTO,
-)
-async def post_xplore_variant_retry(
-    pack_id: str,
-    variant_label: str,
-    current_user: User = Depends(get_current_user),
-) -> V3XplorePackDTO:
-    dto, _pack, coordinator = await _load_xplore_pack(pack_id, current_user.id)
-    variant = next(
-        (item for item in dto.variants if item.label == variant_label),
-        None,
-    )
-    if variant is None or variant.generation_id is None:
-        raise HTTPException(status_code=404, detail="Variant not found")
-    if not variant.can_retry:
-        raise HTTPException(status_code=409, detail="Only failed variants can be retried")
-    running = _chunked_stage2_tasks.get(variant.generation_id)
-    if running is not None and not running.done():
-        raise HTTPException(status_code=409, detail="Variant retry is already running")
-
-    state = await load_chunked_state(variant.generation_id)
-    plan_raw = state.get("structural_plan")
-    section_ids = [
-        str(section.get("id"))
-        for section in plan_raw.get("sections", [])
-        if isinstance(plan_raw, dict)
-        and isinstance(section, dict)
-        and section.get("id")
-    ] if isinstance(plan_raw, dict) else []
-    await persist_chunked_state(
-        variant.generation_id,
-        {
-            "stage": "stage2_running",
-            "section_briefs": {section_id: None for section_id in section_ids},
-            "failed_sections": [],
-            "execution_started": False,
-            "error": None,
-            "error_type": None,
-            "skip_item_generation": True,
-        },
-    )
-    async with async_session_factory() as session:
-        generation = await session.get(GenerationModel, variant.generation_id)
-        if generation is not None:
-            generation.status = "pending"
-            generation.error = None
-            generation.error_type = None
-        await session.commit()
-    task = asyncio.create_task(
-        _run_chunked_stage2_pipeline(
-            generation_id=variant.generation_id,
-            user_id=current_user.id,
-        )
-    )
-    _chunked_stage2_tasks[variant.generation_id] = task
-    await persist_chunked_state(
-        coordinator.id,
-        {"stage": "variants_running"},
-    )
-    refreshed, _pack, _coordinator = await _load_xplore_pack(pack_id, current_user.id)
-    return refreshed
-
-
 @v3_studio_router.delete(
     "/packs/{pack_id}/variants/{variant_label}",
     response_model=V3XplorePackDTO,
@@ -1559,11 +1191,6 @@ async def delete_xplore_variant(
         raise HTTPException(status_code=404, detail="Variant not found")
     if len([item for item in dto.variants if item.status != "deleted"]) <= 1:
         raise HTTPException(status_code=409, detail="A pack must keep at least one variant")
-    if variant.generation_id is not None:
-        running = _chunked_stage2_tasks.pop(variant.generation_id, None)
-        if running is not None and not running.done():
-            running.cancel()
-
     coordinator_state = await load_chunked_state(coordinator.id)
     variants = [
         raw for raw in coordinator_state.get("variants", [])
@@ -1610,108 +1237,29 @@ async def post_chunked_plan_approve(
     body: V3ChunkedApproveRequest | None = Body(default=None),
     current_user: User = Depends(get_current_user),
 ) -> V3ChunkedPlanStateDTO:
-    # Validate immutable current/path provenance and contract v2 before any
-    # resume claim, stream registration, task scheduling, or state patch.
-    _model, state, _provenance = await _require_current_native_generation(
-        generation_id,
-        current_user.id,
-    )
-    if not isinstance(state.get("structural_plan"), dict):
-        raise HTTPException(status_code=409, detail="Structural plan is not ready yet")
-    stage = str(state.get("stage") or "")
-    if stage not in {
-        "awaiting_review",
-        "plan_ready",
-        "stage2_error",
-        "assembly_blocked",
-    }:
-        if stage in {"stage2_running", "blueprint_ready", "complete"}:
-            return _normalize_chunked_state(generation_id, state)
-        raise HTTPException(
-            status_code=409,
-            detail="Generation is not awaiting explicit approval",
-        )
-    if stage in {"stage2_error", "assembly_blocked"}:
-        claimed = await V3GenerationWriter(async_session_factory).claim_resume_attempt(generation_id)
-        if not claimed:
-            latest = await load_chunked_state(generation_id)
-            return _normalize_chunked_state(generation_id, latest)
+    """Compatibility alias of ``POST /api/v1/preparations/{id}/plan`` (Option D, 3A).
 
-    await _ensure_chunked_stream(
-        generation_id=generation_id,
-        user_id=current_user.id,
-        blueprint_id=str(state.get("blueprint_id") or f"chunked-plan-{generation_id}"),
-    )
-
-    running_task = _chunked_stage2_tasks.get(generation_id)
-    if running_task is not None and not running_task.done():
-        latest = await load_chunked_state(generation_id)
-        return _normalize_chunked_state(generation_id, latest)
-
-    variants = [
-        raw for raw in state.get("variants", [])
-        if isinstance(raw, dict)
-    ]
-    patch: dict[str, Any] = {
-        "stage": "variants_running" if variants else "stage2_running",
-        "execution_started": False,
-    }
-    if body is not None and body.display_title and body.display_title.strip():
-        patch["display_title"] = body.display_title.strip()
-    # Stage 2 is an in-process task. Mark the durable generation row as running
-    # before scheduling it so a server restart can reconcile the interrupted
-    # task instead of leaving the row at the pre-approval awaiting_review
-    # checkpoint while the chunked state says stage2_running.
+    Admits the preparation Run (idempotent) and returns immediately; there is no
+    in-process task.  The Run is the status - read it through lesson-status.
+    """
+    # Validate immutable current/path provenance and contract v2 before admission.
+    await _require_current_native_generation(generation_id, current_user.id)
+    display_title = body.display_title if body is not None else None
     async with async_session_factory() as session:
-        generation = await session.get(GenerationModel, generation_id)
-        if generation is not None:
-            generation.status = "running"
-            generation.error = None
-            generation.error_type = None
-            generation.error_code = None
-            await session.commit()
-    if variants:
-        generation_ids = await _prepare_variant_generations(
-            coordinator_id=generation_id,
-            user_id=current_user.id,
-            state={**state, **patch},
-        )
-        patch["variant_generation_ids"] = generation_ids
-        await persist_chunked_state(generation_id, patch)
-        task = asyncio.create_task(
-            _run_pack_variant_pipeline(
-                coordinator_id=generation_id,
-                user_id=current_user.id,
-                generation_ids=generation_ids,
-            )
-        )
-    else:
-        await persist_chunked_state(generation_id, patch)
-        task = asyncio.create_task(
-            _run_chunked_stage2_pipeline(
+        try:
+            await admit_preparation_run(
+                session,
                 generation_id=generation_id,
-                user_id=current_user.id,
+                owner_user_id=current_user.id,
+                display_title=display_title,
             )
-        )
-    _chunked_stage2_tasks[generation_id] = task
+            await session.commit()
+        except PreparationRunError as exc:
+            await session.rollback()
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     latest = await load_chunked_state(generation_id)
     return _normalize_chunked_state(generation_id, latest)
 
-
-@v3_studio_router.post("/chunked/{generation_id}/regenerate", response_model=V3ChunkedPlanStateDTO)
-async def post_chunked_plan_regenerate(
-    generation_id: str,
-    body: V3ChunkedRegenerateRequest,
-    current_user: User = Depends(get_current_user),
-) -> V3ChunkedPlanStateDTO:
-    await _load_owned_generation(generation_id, current_user.id)
-    # Both current native generations and historical v1 records are read-only
-    # through this retired stage-1 handler.  Native recovery uses retry-native;
-    # old records remain available to view but cannot restart execution.
-    raise HTTPException(
-        status_code=409,
-        detail="Plan regeneration is retired; generation records are read-only",
-    )
 
 # P12B: /chunked/{generation_id}/retry-section is deleted outright (not
 # stubbed to 409 like /regenerate above). Its native branch only duplicated

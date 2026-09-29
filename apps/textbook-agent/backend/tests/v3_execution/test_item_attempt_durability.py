@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import time
 import uuid
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from core.database.models import ConceptCardModel, UserModel
 from core.database.session import async_session_factory
+from application.unit_lesson.preparation_items import generate_card_items
 from print.http.v3_studio.dtos import V3InputForm
-from print.http.v3_studio.router import (
-    _ensure_chunked_generation_row,
-    _generate_shared_pack_items,
-)
+from print.http.v3_studio.router import _ensure_chunked_generation_row
 from curriculum.planning.models import (
     AnchorSpec,
     ConceptCard,
@@ -100,7 +97,25 @@ async def _seed(generation_id: str, card_id: str) -> None:
         context="Plants",
         pack_id=generation_id,
     )
-    await persist_chunked_state(generation_id, {"stage": "item_generation"})
+    await persist_chunked_state(
+        generation_id,
+        {
+            "stage": "item_generation",
+            "structural_plan": _plan().model_dump(mode="json"),
+            "context": {
+                "signals": {
+                    "topic": "plants and light",
+                    "prior_knowledge": [],
+                    "learner_needs": [],
+                    "teacher_goal": "Explain why plants need light.",
+                    "inferred_lesson_mode": "first_exposure",
+                    "lesson_mode_confidence": "high",
+                },
+                "form": _form().model_dump(mode="json"),
+                "resource_spec": {},
+            },
+        },
+    )
     async with async_session_factory() as session:
         session.add(
             ConceptCardModel(
@@ -155,24 +170,14 @@ async def test_semantic_fail_then_success_persists_both_attempts() -> None:
             correlation_id=cid,
         )
 
-    with (
-        patch(
-            "curriculum.items.generator.execute_items_with_diagnostics",
-            new=_flaky,
-        ),
-        patch(
-            "print.http.v3_studio.router._persist_item_results",
-            new=AsyncMock(),
-        ),
-    ):
-        summary = await _generate_shared_pack_items(
-            generation_id=gid,
-            form=_form(),
-            plan=_plan(),
-        )
+    summary = await generate_card_items(
+        session_factory=async_session_factory,
+        generation_id=gid,
+        card_id=card_id,
+        item_runner=_flaky,
+    )
 
-    assert summary["generated_card_count"] == 1
-    assert len(summary["attempts"]) == 2
+    assert summary["generated_item_count"] == 5 and summary["skipped"] is False
     state = await load_chunked_state(gid)
     persisted = (state.get("item_generation") or {}).get("attempts") or []
     assert len(persisted) == 2
@@ -207,14 +212,12 @@ async def test_all_attempts_fail_persisted_after_stage_failure() -> None:
         exc.item_correlation_id = cid
         raise exc
 
-    with patch(
-        "curriculum.items.generator.execute_items_with_diagnostics",
-        new=_always_fail,
-    ), pytest.raises(ValueError, match="exhausted"):
-        await _generate_shared_pack_items(
+    with pytest.raises(ValueError, match="exhausted"):
+        await generate_card_items(
+            session_factory=async_session_factory,
             generation_id=gid,
-            form=_form(),
-            plan=_plan(),
+            card_id=card_id,
+            item_runner=_always_fail,
         )
 
     state = await load_chunked_state(gid)
@@ -250,14 +253,12 @@ async def test_transport_class_survives_persistence() -> None:
         exc.item_correlation_id = cid
         raise exc
 
-    with patch(
-        "curriculum.items.generator.execute_items_with_diagnostics",
-        new=_transport_fail,
-    ), pytest.raises(TimeoutError):
-        await _generate_shared_pack_items(
+    with pytest.raises(TimeoutError):
+        await generate_card_items(
+            session_factory=async_session_factory,
             generation_id=gid,
-            form=_form(),
-            plan=_plan(),
+            card_id=card_id,
+            item_runner=_transport_fail,
         )
 
     state = await load_chunked_state(gid)
@@ -290,23 +291,14 @@ async def test_first_attempt_success_one_record() -> None:
             correlation_id=cid,
         )
 
-    with (
-        patch(
-            "curriculum.items.generator.execute_items_with_diagnostics",
-            new=_ok,
-        ),
-        patch(
-            "print.http.v3_studio.router._persist_item_results",
-            new=AsyncMock(),
-        ),
-    ):
-        summary = await _generate_shared_pack_items(
-            generation_id=gid,
-            form=_form(),
-            plan=_plan(),
-        )
+    summary = await generate_card_items(
+        session_factory=async_session_factory,
+        generation_id=gid,
+        card_id=card_id,
+        item_runner=_ok,
+    )
 
-    assert len(summary["attempts"]) == 1
+    assert summary["generated_item_count"] == 5
     state = await load_chunked_state(gid)
     persisted = (state.get("item_generation") or {}).get("attempts") or []
     assert len(persisted) == 1

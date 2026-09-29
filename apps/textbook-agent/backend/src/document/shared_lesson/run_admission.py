@@ -143,6 +143,39 @@ async def _existing_run(
     return AdmissionResult(run, created=False)
 
 
+async def find_preparation_build_id(
+    session: AsyncSession,
+    *,
+    owner_user_id: str,
+    preparation_generation_id: str,
+    path_lesson_id: str,
+) -> str | None:
+    """Build of the preparation Run for this prep, so later Runs share one timeline.
+
+    Returns ``None`` (caller creates a fresh Build) when the preparation has no
+    Run (an old lesson prepared before preparation Runs) or its Build belongs to
+    a different path lesson.
+    """
+    row = (
+        await session.execute(
+            select(GenerationRunModel.build_id, GenerationBuildModel.path_lesson_id)
+            .join(GenerationBuildModel, GenerationBuildModel.id == GenerationRunModel.build_id)
+            .where(
+                GenerationRunModel.owner_user_id == owner_user_id,
+                GenerationRunModel.run_type == RunType.PREPARATION.value,
+                GenerationRunModel.source_artifact_type == "lesson_structural_plan",
+                GenerationRunModel.source_artifact_id == preparation_generation_id,
+                GenerationBuildModel.owner_user_id == owner_user_id,
+            )
+            .order_by(GenerationRunModel.created_at.desc(), GenerationRunModel.id.desc())
+            .limit(1)
+        )
+    ).first()
+    if row is None or row.path_lesson_id != path_lesson_id:
+        return None
+    return str(row.build_id)
+
+
 async def admit_shared_document_run(
     session: AsyncSession,
     *,
@@ -197,14 +230,23 @@ async def admit_shared_document_run(
         source=identity,
     )
     if existing is None:
-        build = await create_build(
+        build_id = await find_preparation_build_id(
             session,
-            BuildAdmission(owner_user_id=owner_user_id, path_lesson_id=path_lesson_id),
+            owner_user_id=owner_user_id,
+            preparation_generation_id=preparation_generation_id,
+            path_lesson_id=path_lesson_id,
         )
+        if build_id is None:
+            build_id = (
+                await create_build(
+                    session,
+                    BuildAdmission(owner_user_id=owner_user_id, path_lesson_id=path_lesson_id),
+                )
+            ).id
         run_admission = await admit_run(
             session,
             RunAdmission(
-                build_id=build.id,
+                build_id=build_id,
                 owner_user_id=owner_user_id,
                 run_type=RunType.SHARED_DOCUMENT,
                 request_key=request_key,
@@ -233,6 +275,7 @@ async def admit_shared_document_run(
 
 
 __all__ = [
+    "find_preparation_build_id",
     "SharedRunAdmissionError",
     "SharedRunAdmissionResult",
     "SharedSourcebookContractError",

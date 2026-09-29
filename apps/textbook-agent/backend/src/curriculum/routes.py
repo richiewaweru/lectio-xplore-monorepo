@@ -22,6 +22,7 @@ from application.unit_lesson import (
     resolve_by_path,
     to_identity,
 )
+from application.unit_lesson.preparation_runs import load_preparation_run_views
 from application.unit_lesson.realization_contracts import (
     RealizationRetryBody,
     RequestOutputsBody,
@@ -803,6 +804,17 @@ async def post_path_version_restore(
         _raise_http(exc)
 
 
+_PREPARATION_BUCKETS = {
+    "awaiting_review": "awaiting_review",
+    "planning": "generating",
+    "approved": "ready",
+    "failed_recoverable": "failed",
+    "failed_terminal": "failed",
+    # Prepared before preparation Runs: the teacher must re-prepare it.
+    "legacy_unsupported": "stale",
+}
+
+
 @router.get("/{unit_id}/path/status")
 async def get_path_status(
     unit_id: str,
@@ -846,6 +858,9 @@ async def get_path_status(
                 else []
             )
         }
+        run_views = await load_preparation_run_views(
+            session, generation_ids=[str(pack_id) for pack_id in pack_ids]
+        )
         statuses = {
             name: 0
             for name in (
@@ -882,18 +897,24 @@ async def get_path_status(
                 ):
                     state = "stale"
                 else:
-                    raw = str(generation.status or "unknown").casefold()
-                    if raw in {"awaiting_review", "review"}:
-                        state = "awaiting_review"
-                    elif raw in {"queued", "planning", "running", "generating", "writing"}:
-                        state = "generating"
-                    elif raw in {"completed", "complete", "ready", "landed", "succeeded"}:
-                        state = "ready"
-                    elif raw in {"failed", "error", "cancelled"}:
-                        state = "failed"
-                    else:
-                        state = "warning"
-                        warnings.append(f"Unrecognized generation state: {raw}")
+                    # Same projection as lesson-status (Option D, 3A): the
+                    # preparation Run + teaching ledger, never generation.status.
+                    try:
+                        prep_state = workspace_state_from_layers(
+                            await load_chunked_state(generation.id, session), None
+                        )
+                    except ValueError:
+                        prep_state = workspace_state_from_layers(
+                            dict(generation.chunked_state_json or {}), None
+                        )
+                    prep = project_lesson_workspace(
+                        generation_id=generation.id,
+                        state=prep_state,
+                        preparation_run=run_views.get(generation.id),
+                    ).preparation
+                    state = _PREPARATION_BUCKETS.get(prep.state, "warning")
+                    if state == "warning":
+                        warnings.append(f"Unrecognized preparation state: {prep.state}")
             statuses[state] += 1
             lesson_states.append(
                 {
@@ -1410,17 +1431,16 @@ async def get_path_lesson_status(
             worker_stage = str(generation.status or "unknown")
         workspace_state = workspace_state_from_layers(chunked, None)
         workflow_stage = "stale" if stale else worker_stage
+        run_views = await load_preparation_run_views(session, generation_ids=[generation.id])
         # Preparation pack_id is the status generation. Path-specific Print/Learn
         # output ids live on realizations and must not replace the prep link —
         # otherwise regenerate leaves status pointing at a superseded pack.
+        # Preparation state is projected from the preparation Run (Option D, 3A);
+        # worker_debug below is debug-only and never read for UI state.
         workspace = project_lesson_workspace(
             generation_id=generation.id,
-            generation_status=str(generation.status or "unknown"),
-            workflow_stage=worker_stage,
-            generation_error=generation.error,
-            generation_error_code=generation.error_code,
-            generation_error_type=generation.error_type,
             state=workspace_state,
+            preparation_run=run_views.get(generation.id),
             stale=stale,
             learn_realization=learn_workspace,
             print_realization=print_workspace,

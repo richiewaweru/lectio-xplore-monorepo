@@ -7,22 +7,20 @@ import json
 from collections.abc import Callable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database.models import GenerationModel, NativeRealizationModel
+from core.database.models import GenerationModel
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.states import (
     ACTIVE_STATUSES,
     DEFAULT_LEASE_SECONDS,
     LEGAL_TRANSITIONS,
     PRE_WORKER_RETRY_STATUSES,
-    PRE_WORKER_WORK_KINDS,
     WORK_KIND_POST_APPROVAL,
-    ExecutionLease,
     IllegalTransitionError,
     LeaseLostError,
     assert_legal_transition,
@@ -210,10 +208,6 @@ def _normalize_page_state(state: dict[str, Any] | None) -> dict[str, Any]:
     return state
 
 
-class _ClaimAbort(Exception):
-    """Internal: claim could not be acquired."""
-
-
 class DocumentFenceError(RuntimeError):
     """Raised when candidate/finalize fencing checks fail."""
 
@@ -322,22 +316,6 @@ class PageDocumentRepository:
         _project_native_report_status(generation)
         return state
 
-    async def require_execution_lease(
-        self,
-        *,
-        worker_id: str,
-        lease_token: int,
-    ) -> GenerationModel:
-        """Row-lock the generation and assert lease ownership in this transaction."""
-        generation = await self._lock_generation()
-        state = self._page_state_from_generation(generation)
-        self._assert_lease_on_state(
-            state,
-            worker_id=worker_id,
-            lease_token=lease_token,
-        )
-        return generation
-
     async def mutate_state(
         self,
         *,
@@ -392,11 +370,6 @@ class PageDocumentRepository:
                 f"lease token mismatch: have {execution.get('lease_token')!r}, "
                 f"want {lease_token!r}"
             )
-
-    async def assert_lease(self, *, worker_id: str, lease_token: int) -> None:
-        generation = await self._lock_generation()
-        state = self._page_state_from_generation(generation)
-        self._assert_lease_on_state(state, worker_id=worker_id, lease_token=lease_token)
 
     async def load_page_generation_state(self) -> dict[str, Any]:
         generation = await self.session.get(GenerationModel, self.generation_id)
@@ -594,115 +567,6 @@ class PageDocumentRepository:
             mutation=_mut,
         )
 
-    async def persist_native_failure(
-        self,
-        *,
-        exc: BaseException,
-        stage: str,
-        event: str = "native_failure",
-        attempt: int = 1,
-        worker_id: str | None = None,
-        lease_token: int | None = None,
-        expected: set[str] | None = None,
-    ) -> dict[str, Any]:
-        """Atomically persist a native failure across status, chunked stage, error, and event.
-
-        Ensures page_document_v2 exists, classifies the exception, and transitions to
-        failed_recoverable or failed_terminal. Clears legacy stage2_error as durable truth.
-        """
-        from print.generation.whole_lesson.failure_policy import (
-            classify_failure,
-            structured_error_from_exc,
-        )
-
-        classification = classify_failure(exc)
-        if classification.code in {"LEASE_LOST", "CANCELLED"}:
-            return await self.load_page_generation_state()
-
-        recoverable = classification.code in {
-            "TRANSPORT",
-            "TIMEOUT",
-            "RATE_LIMIT",
-            "MODEL_OUTPUT_INVALID",
-            # P12A: orphan-reaped stage-2 pipeline rows are always retryable.
-            "PIPELINE_ORPHANED",
-        }
-        target = "failed_recoverable" if recoverable else "failed_terminal"
-        error = structured_error_from_exc(
-            exc=exc,
-            stage=stage,
-            attempt=attempt,
-        )
-
-        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
-            # Ensure page document scaffold exists even before teaching plan.
-            if not state or state.get("schema_version") is None:
-                base = empty_page_document_state()
-                base.update(state or {})
-                state.clear()
-                state.update(base)
-            for key, value in empty_page_document_state().items():
-                state.setdefault(key, deepcopy(value) if isinstance(value, (dict, list)) else value)
-            if not isinstance(state.get("execution"), dict):
-                state["execution"] = empty_execution_meta()
-            if not isinstance(state.get("events"), list):
-                state["events"] = []
-
-            current = str(generation.status or "").strip() or "pending"
-            # Normalize legacy chunked-only stage2_error onto a legal source status.
-            chunked = _coerce_chunked(generation.chunked_state_json)
-            chunked_stage = str(chunked.get("stage") or "")
-            if current not in LEGAL_TRANSITIONS and chunked_stage in LEGAL_TRANSITIONS:
-                current = chunked_stage
-                generation.status = current
-            if current not in LEGAL_TRANSITIONS:
-                current = "pending"
-                generation.status = current
-            if current in {"failed_recoverable", "failed_terminal"}:
-                # An inner layer already settled this failure; keep the first
-                # durable failure rather than raising on a repeated persist.
-                return
-
-            assert_legal_transition(current, target)
-            generation.status = target
-            execution = dict(state.get("execution") or empty_execution_meta())
-            execution["heartbeat_at"] = _now()
-            execution["last_error"] = error
-            execution["attempt"] = int(execution.get("attempt") or 0) + 1
-            execution["pre_worker_retry_active"] = False
-            execution["work_kind"] = None
-            execution["worker_id"] = None
-            execution["claimed_at"] = None
-            state["execution"] = execution
-            apply_generation_error_aliases(generation, error)
-            events = list(state.get("events") or [])
-            events.append(
-                {
-                    **make_event(
-                        event,
-                        generation_id=self.generation_id,
-                        status=target,
-                    ),
-                    "at": _now(),
-                    "error": error,
-                    "stage": stage,
-                }
-            )
-            state["events"] = events[-500:]
-            # Clear legacy stage2_error keys from the outer chunked blob after write
-            # by stamping authoritative stage via _write_page_state.
-            chunked_out = _coerce_chunked(generation.chunked_state_json)
-            if chunked_out.get("stage") == "stage2_error":
-                chunked_out["stage"] = target
-            generation.chunked_state_json = chunked_out
-
-        return await self.mutate_state(
-            expected_statuses=expected,
-            worker_id=worker_id,
-            lease_token=lease_token,
-            mutation=_mut,
-        )
-
     async def write_shared_document_output(
         self,
         document: dict[str, Any],
@@ -745,103 +609,6 @@ class PageDocumentRepository:
             state["events"] = events[-500:]
 
         return await self.mutate_state(commit=False, mutation=_mut)
-
-    async def claim_pre_worker_retry(
-        self,
-        *,
-        worker_id: str,
-        lease_seconds: int = DEFAULT_LEASE_SECONDS,
-    ) -> ExecutionLease | None:
-        """Claim an unclaimed or stale pre-worker retry without forcing planning_forms."""
-        lease_box: list[ExecutionLease] = []
-
-        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
-            status = str(generation.status or "")
-            if status not in PRE_WORKER_RETRY_STATUSES:
-                raise _ClaimAbort()
-            execution = dict(state.get("execution") or empty_execution_meta())
-            work_kind = execution.get("work_kind")
-            if work_kind not in PRE_WORKER_WORK_KINDS:
-                raise _ClaimAbort()
-
-            now = datetime.now(UTC)
-            heartbeat = _parse_iso(execution.get("heartbeat_at"))
-            lease = int(execution.get("lease_seconds") or lease_seconds)
-            stale = heartbeat is None or heartbeat + timedelta(seconds=lease) < now
-            current_owner = execution.get("worker_id")
-            if current_owner is not None and not stale:
-                raise _ClaimAbort()
-
-            new_token = int(execution.get("lease_token") or 0) + 1
-            event_name = (
-                "pre_worker_retry_reclaimed"
-                if current_owner is not None
-                else "pre_worker_retry_claimed"
-            )
-            execution["worker_id"] = worker_id
-            execution["lease_token"] = new_token
-            execution["claimed_at"] = _now()
-            execution["heartbeat_at"] = _now()
-            execution["lease_seconds"] = lease_seconds
-            execution["attempt"] = int(execution.get("attempt") or 0) + 1
-            state["execution"] = execution
-            events = list(state.get("events") or [])
-            events.append(
-                {
-                    **make_event(
-                        event_name,
-                        generation_id=self.generation_id,
-                        status=status,
-                        worker_id=worker_id,
-                        lease_token=new_token,
-                    ),
-                    "at": _now(),
-                    "work_kind": work_kind,
-                }
-            )
-            state["events"] = events[-500:]
-            lease_box.append(
-                ExecutionLease(
-                    generation_id=self.generation_id,
-                    worker_id=worker_id,
-                    lease_token=new_token,
-                    stage=status,
-                )
-            )
-
-        try:
-            await self.mutate_state(mutation=_mut)
-        except _ClaimAbort:
-            await self.session.rollback()
-            return None
-        return lease_box[0] if lease_box else None
-
-    async def heartbeat(self, *, worker_id: str, lease_token: int) -> None:
-        def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
-            execution = dict(state.get("execution") or empty_execution_meta())
-            execution["heartbeat_at"] = _now()
-            state["execution"] = execution
-
-        await self.mutate_state(
-            worker_id=worker_id,
-            lease_token=lease_token,
-            mutation=_mut,
-        )
-
-    async def release_execution(self, *, worker_id: str, lease_token: int | None = None) -> None:
-        def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
-            execution = dict(state.get("execution") or empty_execution_meta())
-            if execution.get("worker_id") not in {None, worker_id}:
-                raise LeaseLostError("release rejected: worker does not own lease")
-            if lease_token is not None and int(execution.get("lease_token") or 0) != int(
-                lease_token
-            ):
-                raise LeaseLostError("release rejected: lease token mismatch")
-            execution["worker_id"] = None
-            execution["claimed_at"] = None
-            state["execution"] = execution
-
-        await self.mutate_state(mutation=_mut)
 
     async def load_block_results(self) -> dict[str, dict[str, Any]]:
         state = await self.load_page_generation_state()
@@ -1815,149 +1582,6 @@ class PageDocumentRepository:
             )
         return result
 
-    async def persist_visual_dispatch_failure(
-        self,
-        *,
-        exc: BaseException | None = None,
-        message: str | None = None,
-        failed_request_ids: list[str] | None = None,
-    ) -> dict[str, Any]:
-        """Record a retryable visual failure while remaining in awaiting_visuals.
-
-        Does not transition to failed_recoverable (which would requeue writers).
-        Marks unresolved figure assets as failed when request ids are provided or
-        when no ids are given (mark all unresolved pending/generating figures).
-        """
-        from print.generation.whole_lesson.failure_policy import structured_error_from_exc
-        from print.rendering.page_objects.document_assembly import (
-            persist_document_json,
-            reload_document,
-        )
-        from print.rendering.page_objects.visual_completion import apply_figure_asset_update
-
-        error_message = (message or (str(exc).strip() if exc else "") or "visual dispatch failed")[
-            :500
-        ]
-        if exc is not None:
-            error = structured_error_from_exc(
-                exc=exc,
-                stage="visual_generation",
-                attempt=1,
-            )
-            error["retryable"] = True
-            error["stage"] = "awaiting_visuals"
-            error["code"] = str(error.get("code") or "VISUAL_DISPATCH")
-            error["message"] = error_message
-        else:
-            error = {
-                "type": "VisualDispatchError",
-                "code": "VISUAL_DISPATCH",
-                "message": error_message,
-                "stage": "awaiting_visuals",
-                "retryable": True,
-                "repairable": False,
-                "recorded_at": _now(),
-            }
-
-        target_ids = {str(rid) for rid in (failed_request_ids or []) if rid}
-
-        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
-            current = str(generation.status or "")
-            if current != "awaiting_visuals":
-                raise IllegalTransitionError(
-                    f"visual dispatch failure requires awaiting_visuals, got {current!r}"
-                )
-
-            try:
-                document = reload_document(generation.document_json or {})
-            except Exception:  # noqa: BLE001
-                document = {}
-
-            revision = int(state.get("document_revision") or 0)
-            block_execution = dict(state.get("block_execution") or {})
-            touched = False
-
-            for section in list(document.get("sections") or []):
-                for block in list(section.get("blocks") or []):
-                    if block.get("object") != "figure":
-                        continue
-                    content = dict(block.get("content") or {})
-                    asset = dict(content.get("asset") or {})
-                    request_id = str(asset.get("request_id") or "")
-                    asset_status = str(asset.get("status") or "pending")
-                    if asset_status not in {"pending", "generating", "failed", ""}:
-                        continue
-                    if target_ids and request_id not in target_ids:
-                        continue
-                    if not request_id:
-                        continue
-                    failed_asset = {
-                        "status": "failed",
-                        "request_id": request_id,
-                        "kind": str(asset.get("kind") or "image"),
-                    }
-                    if asset.get("src"):
-                        failed_asset["src"] = asset.get("src")
-                    if asset.get("svg"):
-                        failed_asset["svg"] = asset.get("svg")
-                    document = apply_figure_asset_update(
-                        document,
-                        block_id=str(block.get("id") or ""),
-                        asset=failed_asset,
-                    )
-                    touched = True
-                    for key, outcome in list(block_execution.items()):
-                        if not isinstance(outcome, dict):
-                            continue
-                        if str(outcome.get("request_id") or "") != request_id:
-                            continue
-                        outcome_content = dict(outcome.get("content") or {})
-                        outcome_content["asset"] = failed_asset
-                        block_execution[key] = {
-                            **outcome,
-                            "status": "failed_recoverable",
-                            "content": outcome_content,
-                            "error": error,
-                        }
-
-            if touched:
-                generation.document_json = persist_document_json(
-                    generation.document_json, document
-                )
-                revision += 1
-                state["document_revision"] = revision
-                state["block_execution"] = block_execution
-
-            # Stay in awaiting_visuals — never requeue writers via failed_recoverable.
-            execution = dict(state.get("execution") or empty_execution_meta())
-            execution["last_error"] = error
-            execution["heartbeat_at"] = _now()
-            # A failed/retried visual mutation invalidates any proof for the
-            # previous document revision, even when the asset was already marked
-            # failed by a prior callback.
-            _invalidate_reload_proof(execution)
-            state["execution"] = execution
-            apply_generation_error_aliases(generation, error)
-            events = list(state.get("events") or [])
-            events.append(
-                {
-                    **make_event(
-                        "visual_dispatch_failed",
-                        generation_id=self.generation_id,
-                        status="awaiting_visuals",
-                        request_ids=sorted(target_ids) if target_ids else None,
-                    ),
-                    "at": _now(),
-                    "error": error,
-                }
-            )
-            state["events"] = events[-500:]
-
-        return await self.mutate_state(
-            expected_statuses={"awaiting_visuals"},
-            mutation=_mut,
-        )
-
     async def clear_visual_last_error(self) -> dict[str, Any]:
         """Clear execution.last_error after a successful visuals-only redispath."""
 
@@ -1975,69 +1599,4 @@ class PageDocumentRepository:
         return await self.mutate_state(
             expected_statuses={"awaiting_visuals", "ready"},
             mutation=_mut,
-        )
-
-
-async def claim_next_native_job(
-    session: AsyncSession,
-    *,
-    worker_id: str,
-    lease_seconds: int = DEFAULT_LEASE_SECONDS,
-) -> ExecutionLease | None:
-    """Claim the oldest pre-worker (preparation) retry.
-
-    Option D (4A): Print output execution moved to the shared-runtime
-    RealizationWorker; this only serves the preparation pre-worker retry path
-    until preparation moves onto Runs (package 3A).
-    """
-    pre_result = await session.execute(
-        select(GenerationModel.id)
-        .where(GenerationModel.status.in_(sorted(PRE_WORKER_RETRY_STATUSES)))
-        .order_by(GenerationModel.created_at.asc())
-        .limit(20)
-    )
-    for generation_id in list(pre_result.scalars().all()):
-        legacy_prep_link = await session.scalar(
-            select(NativeRealizationModel.id).where(
-                NativeRealizationModel.path == "print",
-                NativeRealizationModel.output_id == str(generation_id),
-                NativeRealizationModel.preparation_generation_id == str(generation_id),
-            )
-        )
-        if legacy_prep_link is not None:
-            # Old rows used the preparation itself as the Print output. Keep
-            # those records readable, but never let a worker mutate shared
-            # preparation through the new detached execution path.
-            continue
-        repo = PageDocumentRepository(session, str(generation_id))
-        state = await repo.load_page_generation_state()
-        work_kind = (state.get("execution") or {}).get("work_kind")
-        if work_kind not in PRE_WORKER_WORK_KINDS:
-            continue
-        lease = await repo.claim_pre_worker_retry(
-            worker_id=worker_id, lease_seconds=lease_seconds
-        )
-        if lease is not None:
-            return lease
-    return None
-
-
-async def persist_native_failure_for_generation(
-    generation_id: str,
-    *,
-    exc: BaseException,
-    stage: str,
-    event: str = "pre_worker_failure",
-    attempt: int = 1,
-) -> dict[str, Any]:
-    """Session-scoped helper for pre-worker native failure sync (items/teaching)."""
-    from core.database.session import async_session_factory
-
-    async with async_session_factory() as session:
-        repo = PageDocumentRepository(session, generation_id)
-        return await repo.persist_native_failure(
-            exc=exc,
-            stage=stage,
-            event=event,
-            attempt=attempt,
         )

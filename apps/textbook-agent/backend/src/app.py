@@ -15,6 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from application.unit_lesson.native_http import native_lesson_router
+from application.unit_lesson.preparation_http import router as preparation_router
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
@@ -52,7 +53,6 @@ from media.diagnostics.v3_image_pipeline_diagnostic import (
     run_grok_probe,
 )
 from media.storage.image_store import local_image_store_root
-from print.http.v3_studio.generation_writer import V3GenerationWriter
 from print.http.v3_studio.router import v3_studio_router
 from print.rendering.pdf.runtime import cleanup_stale_pdf_exports
 from resource_specs.loader import initialize_registry as initialize_resource_registry
@@ -227,32 +227,6 @@ async def lifespan(app: FastAPI):
             )
     if settings.run_migrations_on_startup:
         await asyncio.to_thread(upgrade_database)
-    try:
-        stale_generations = await V3GenerationWriter(async_session_factory).fail_stale_running()
-        if stale_generations:
-            logger.warning(
-                "Reconciled %d stale v3 generation(s) after restart",
-                stale_generations,
-            )
-    except Exception:
-        logger.exception("Stale v3 generation sweep failed at startup")
-    if settings.prep_pipeline_reaper_enabled:
-        # Phase 12A: reap Preparation/Teaching-Plan stage-2 pipeline rows
-        # orphaned by a dead process before this boot (see
-        # application.unit_lesson.native_pipeline.reap_orphaned_preparation_pipelines).
-        try:
-            from application.unit_lesson.native_pipeline import (
-                reap_orphaned_preparation_pipelines,
-            )
-
-            reaped_prep_pipelines = await reap_orphaned_preparation_pipelines()
-            if reaped_prep_pipelines:
-                logger.warning(
-                    "Reconciled %d orphaned preparation pipeline row(s) after restart",
-                    reaped_prep_pipelines,
-                )
-        except Exception:
-            logger.exception("Preparation pipeline orphan reap failed at startup")
     initialize_resource_registry()
     initialize_skeleton_catalog()
     await telemetry_monitor.start()
@@ -273,38 +247,18 @@ async def lifespan(app: FastAPI):
         },
     )
     if settings.xplore_native_worker_enabled:
+        from application.unit_lesson.preparation_worker import PreparationWorker
         from application.unit_lesson.realization_worker import RealizationWorker
         from document.shared_lesson.worker import SharedDocumentWorker
-        from print.generation.whole_lesson.worker import start_native_worker
 
-        # The Print NativeExecutionWorker only serves the preparation
-        # pre-worker retry path now (removed with package 3A).
-        await start_native_worker()
+        preparation_worker = PreparationWorker(async_session_factory)
+        await preparation_worker.start()
         shared_document_worker = SharedDocumentWorker(async_session_factory)
         await shared_document_worker.start()
         realization_worker = RealizationWorker(async_session_factory)
         await realization_worker.start()
-    if settings.prep_pipeline_reaper_enabled:
-        from application.unit_lesson.native_pipeline import (
-            start_pipeline_orphan_reaper,
-        )
-
-        await start_pipeline_orphan_reaper(
-            interval_seconds=settings.prep_pipeline_reaper_interval_seconds,
-            threshold_seconds=settings.prep_pipeline_orphan_threshold_seconds,
-        )
     yield
-    if settings.prep_pipeline_reaper_enabled:
-        from application.unit_lesson.native_pipeline import (
-            stop_pipeline_orphan_reaper,
-        )
-
-        try:
-            await stop_pipeline_orphan_reaper(drain_seconds=5.0)
-        except Exception:
-            logger.exception("Failed to stop preparation pipeline orphan reaper")
     if settings.xplore_native_worker_enabled:
-        from print.generation.whole_lesson.worker import stop_native_worker
 
         async def stop_worker(label, stop, **kwargs):
             try:
@@ -313,8 +267,8 @@ async def lifespan(app: FastAPI):
                 logger.exception("Failed to stop %s worker", label)
 
         await stop_worker("Realization", realization_worker.stop)
-        await stop_worker("Print", stop_native_worker, drain_seconds=5.0)
         await stop_worker("SharedDocument", shared_document_worker.stop)
+        await stop_worker("Preparation", preparation_worker.stop)
     try:
         await telemetry_monitor.stop()
     except Exception:
@@ -373,6 +327,7 @@ def create_app() -> FastAPI:
     app.include_router(planning_router)
     app.include_router(units_generation_router)
     app.include_router(shared_document_router)
+    app.include_router(preparation_router)
     from infra.generation_runtime.http import router as generation_runtime_router
     app.include_router(generation_runtime_router)
     # D3: /api/v1/legacy-units retired

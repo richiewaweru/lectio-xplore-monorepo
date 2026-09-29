@@ -2,9 +2,9 @@
 
 Option D (4A) moved Print output execution onto the shared generation runtime
 and deleted ``PageDocumentRepository.claim_execution``.  Several tests still
-need *a live page-document lease* to exercise the kept lease-fenced seams
-(``mutate_state`` fencing, ``heartbeat``, ``persist_native_failure``, the
-pre-worker retry path).  This helper installs one without any production path.
+need *a live page-document lease* to exercise the kept lease-fenced seam
+(``mutate_state`` fencing).  This helper installs one without any production
+path (Option D 3A also deleted ``heartbeat`` and the pre-worker retry path).
 """
 
 from __future__ import annotations
@@ -93,3 +93,16 @@ async def claim_test_execution(
         await repo.session.rollback()
         return None
     return box[0] if box else None
+
+
+async def heartbeat_test_execution(
+    repo: PageDocumentRepository, *, worker_id: str, lease_token: int
+) -> None:
+    """Lease-fenced ``heartbeat_at`` write (the retired ``repo.heartbeat``)."""
+
+    def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
+        execution = dict(state.get("execution") or empty_execution_meta())
+        execution["heartbeat_at"] = datetime.now(UTC).isoformat()
+        state["execution"] = execution
+
+    await repo.mutate_state(worker_id=worker_id, lease_token=lease_token, mutation=_mut)

@@ -209,6 +209,10 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
                 "stale": False,
                 "legacy_ambiguous": False,
                 "error": None,
+                "run_id": None,
+                "recovery_action": None,
+                "retryable": None,
+                "progress": None,
             },
             "learn": {
                 "state": "not_created",

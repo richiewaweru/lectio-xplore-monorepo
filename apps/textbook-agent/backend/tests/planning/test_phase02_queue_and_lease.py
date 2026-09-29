@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tests.planning._lease_helper import claim_test_execution
+from tests.planning._lease_helper import claim_test_execution, heartbeat_test_execution
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -204,7 +204,7 @@ async def test_wrong_token_heartbeat_rejected(db_session_factory) -> None:
         assert lease is not None
         repo = PageDocumentRepository(session, gid)
         with pytest.raises(LeaseLostError):
-            await repo.heartbeat(worker_id="owner", lease_token=999)
+            await heartbeat_test_execution(repo, worker_id="owner", lease_token=999)
         with pytest.raises(LeaseLostError):
-            await repo.heartbeat(worker_id="other", lease_token=lease.lease_token)
-        await repo.heartbeat(worker_id="owner", lease_token=lease.lease_token)
+            await heartbeat_test_execution(repo, worker_id="other", lease_token=lease.lease_token)
+        await heartbeat_test_execution(repo, worker_id="owner", lease_token=lease.lease_token)

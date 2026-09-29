@@ -60,21 +60,23 @@ def _assert_report(
 @pytest.mark.parametrize(
     ("failure", "expected_status"),
     [
-        (TimeoutError("provider timed out"), "failed_recoverable"),
-        (TypeError("invalid writer output"), "failed_terminal"),
+        ("planning_forms", "failed_recoverable"),
+        ("planning_forms", "failed_terminal"),
     ],
     ids=["recoverable", "terminal"],
 )
-async def test_persist_native_failure_projects_consistent_report_status(
+async def test_failure_transition_projects_consistent_report_status(
     db_session_factory,
-    failure: Exception,
+    failure: str,
     expected_status: str,
 ) -> None:
     async with db_session_factory() as session:
-        generation_id = await _seed_generation(session, status="planning_forms")
+        generation_id = await _seed_generation(session, status=failure)
         repo = PageDocumentRepository(session, generation_id)
 
-        await repo.persist_native_failure(exc=failure, stage="planning_forms")
+        await repo.transition(
+            expected={failure}, target=expected_status, event="native_failure"
+        )
 
         generation = await session.get(GenerationModel, generation_id)
         assert generation is not None

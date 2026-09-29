@@ -28,9 +28,6 @@ async def test_lifespan_registers_and_stops_shared_document_worker(
     monkeypatch.setattr(app_module, "initialize_skeleton_catalog", lambda: None)
     monkeypatch.setattr(app_module, "cleanup_stale_pdf_exports", lambda **_kwargs: 0)
     monkeypatch.setattr(app_module, "async_session_factory", lambda: _SessionContext())
-    monkeypatch.setattr(app_module, "V3GenerationWriter", lambda _factory: SimpleNamespace(
-        fail_stale_running=_async_result(0)
-    ))
     monkeypatch.setattr(
         app_module, "engine", SimpleNamespace(dispose=_event(events, "engine_dispose"))
     )
@@ -39,15 +36,21 @@ async def test_lifespan_registers_and_stops_shared_document_worker(
     monkeypatch.setattr(app_module.telemetry_monitor, "stop", _async_result(None))
 
     import application.unit_lesson.realization_worker as realization_worker
-    import print.generation.whole_lesson.worker as print_worker
+    import application.unit_lesson.preparation_worker as preparation_worker
     import document.shared_lesson.worker as shared_worker
 
-    monkeypatch.setattr(print_worker, "start_native_worker", _event(events, "print_start"))
-    async def stop_print(**_kwargs):
-        events.append("print_stop")
-        raise RuntimeError("simulated stop failure")
+    class PreparationWorkerStub:
+        def __init__(self, factory):
+            assert factory is not None
 
-    monkeypatch.setattr(print_worker, "stop_native_worker", stop_print)
+        async def start(self):
+            events.append("preparation_start")
+
+        async def stop(self):
+            events.append("preparation_stop")
+            raise RuntimeError("simulated stop failure")
+
+    monkeypatch.setattr(preparation_worker, "PreparationWorker", PreparationWorkerStub)
 
     class SharedWorker:
         def __init__(self, factory):
@@ -80,6 +83,8 @@ async def test_lifespan_registers_and_stops_shared_document_worker(
     assert ("shared_stop" in events) is workers_enabled
     assert ("realization_start" in events) is workers_enabled
     assert ("realization_stop" in events) is workers_enabled
+    assert ("preparation_start" in events) is workers_enabled
+    assert ("preparation_stop" in events) is workers_enabled
     if workers_enabled:
         assert events.index("shared_stop") > events.index("yield")
         assert events.index("shared_stop") < events.index("engine_dispose")

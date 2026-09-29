@@ -158,20 +158,6 @@ class BlueprintPreviewDTO(BaseModel):
     learner_context: V3LearnerContextDTO | None = None
 
 
-class V3ChunkedPlanStartRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    signals: V3SignalSummary
-    form: V3InputForm
-    variants: list[V3VariantSpecDTO] = Field(default_factory=list, min_length=0, max_length=3)
-
-
-class V3ChunkedRegenerateRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    note: str = ""
-
-
 class V3ChunkedApproveRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -449,9 +435,7 @@ __all__ = [
     "ProductionBlueprintEnvelope",
     "V3ChunkedApproveRequest",
     "V3ChunkedPlanDTO",
-    "V3ChunkedPlanStartRequest",
     "V3ChunkedPlanStateDTO",
-    "V3ChunkedRegenerateRequest",
     "V3ChunkedStatusDTO",
     "V3ComponentPlanDTO",
     "V3GenerateStartRequest",

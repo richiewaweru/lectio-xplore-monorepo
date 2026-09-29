@@ -631,8 +631,6 @@ async def test_p07_detached_print_export_failure_preserves_approval_and_ready_le
     projection = project_lesson_workspace(
         generation_id=preparation_id,
         state=source_state[PAGE_DOCUMENT_KEY],
-        generation_status=source.status,
-        workflow_stage="approved",
         learn_realization={
             "realization_id": learn_row.id,
             "path": "learn",
