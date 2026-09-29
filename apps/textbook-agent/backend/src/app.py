@@ -14,14 +14,12 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from application.builder_print.routes import router as builder_print_router
 from application.unit_lesson.native_http import native_lesson_router
 from application.unit_lesson.progress_routes import router as realization_progress_router
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
 from core.routes.prompts import router as prompts_router
-from core.routes.shares import router as shares_router
 from curriculum.planning.skeletons import initialize_skeleton_catalog
 from curriculum.routes import router as planning_router
 from document.shared_lesson.http import router as shared_document_router
@@ -370,11 +368,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(capabilities_router)
     app.include_router(builder_router)
-    app.include_router(builder_print_router)
     app.include_router(learn_release_router)
     app.include_router(learn_runtime_router)
     app.include_router(learn_analytics_router)
-    app.include_router(shares_router)
     app.include_router(profile_router)
     app.include_router(prompts_router)
     # D3: /api/v1/packs retired (non-Unit)
