@@ -240,7 +240,7 @@ class SharedDocumentWorker:
                 now=current,
                 delay_seconds=self.auto_retry_delay_seconds,
                 max_runs=self.auto_retry_max_runs_per_scan,
-                skip_run_ids=self._dispatch_failure_skip_until.keys(),
+                skip_run_ids=self._active_dispatch_skips(current),
             )
             return retried > 0
 
@@ -432,6 +432,17 @@ class SharedDocumentWorker:
                 key=lambda key: self._dispatch_failure_skip_until[key],
             )
             del self._dispatch_failure_skip_until[oldest_run_id]
+
+    def _active_dispatch_skips(self, now: datetime) -> frozenset[str]:
+        """Unexpired skips only; expired ones are dropped here too.
+
+        A failed_recoverable Run is never a dispatch candidate, so
+        ``_is_dispatch_skipped`` would never expire its entry and auto-retry
+        would skip it until the process restarts.
+        """
+        for run_id in [k for k, until in self._dispatch_failure_skip_until.items() if now >= until]:
+            del self._dispatch_failure_skip_until[run_id]
+        return frozenset(self._dispatch_failure_skip_until)
 
     def _is_dispatch_skipped(self, run_id: str, now: datetime) -> bool:
         skip_until = self._dispatch_failure_skip_until.get(run_id)

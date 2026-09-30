@@ -506,3 +506,10 @@ Do not silently invent a new architecture.
 - A/B on Convection prep (planner+reviewer, nothing persisted): off 0/3 (structural), low 3/5 (0 scenario reuse), medium 1/3. Successful runs used the second internal attempt (reviewer repair). Calls remain slow (6-12 min per planner run incl. review).
 - Tests: planning/v3_execution/print_learn/curriculum 632 passed; new prompt guard.
 - Reviewer thinking trial (2026-09-30): planner low + reviewer low passed 2/5 (vs 3/5 with reviewer medium), ~5.8 min avg per run vs ~8 min; 3/5 failures were the planner still reusing the approved pot-on-stove scenario. The reviewer at low still caught reuse, but the repair loop converged less often. Decision: keep reviewer at medium (no change).
+
+## Advisory quality gates + live proof (2026-09-30)
+- Merged QG-B `f2e56585` (document semantic QA -> `quality_flags` on the QA WorkItem output, `GET /api/v1/shared-documents/quality-flags`, Quality notes panel in Learn/Print editors) and QG-A `33f7d194` (plan validator/reviewer findings -> `teaching_flags` outside the hashed plan, Reviewer notes panel on plan page). Settings `TEACHING_PLAN_QUALITY_GATE` / `DOCUMENT_QUALITY_GATE` = advisory (default) | blocking. In advisory mode the stored semantic QA result is a PASS with findings in `quality_flags`.
+- Fixes: `ffd44656` reviewer unusable output -> retry (was terminal); concurrent Print retry test asserts the single-new-output invariant. Worker fix: expired dispatch-skip entries no longer hide failed_recoverable Runs from auto-retry until restart.
+- Verification: backend 1943 passed; frontend check 0 errors, 262 tests; guards PASS.
+- Live (Radiation `ee6873d3`, fresh): plan Run ready on attempt 1 in 3 min, 0 reviewer notes -> approve -> document: `document-qa` hit a DeepSeek transport timeout (120s), auto-retry did not fire (skip bug above; retried via scan) -> attempt 2 ready -> Learn + Print READY. Document carries 1 advisory flag (`answer_leakage`: title names radiation before the orient prediction task).
+- Noted: image visual-QC calls Anthropic and gets 400 (non-blocking; image quality out of scope).

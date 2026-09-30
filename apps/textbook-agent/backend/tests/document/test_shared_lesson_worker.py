@@ -1177,6 +1177,36 @@ async def test_eligible_provider_output_failure_is_auto_retried_after_delay(
 
 
 @pytest.mark.asyncio
+async def test_expired_dispatch_skip_does_not_block_auto_retry(db_session, monkeypatch):
+    """A once-failed dispatch must not hide a failed_recoverable Run from auto-retry forever."""
+    generation, lesson, _prov, source = await _prepared(db_session, user_id="auto-retry-expired-skip")
+    _admission, run, item = await _failed_recoverable_leaf(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="auto-retry-expired-skip",
+        owner_user_id="auto-retry-expired-skip",
+        error_class="provider_transport",
+        failed_seconds_ago=100.0,
+    )
+    _bind_source_context(monkeypatch, source)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id="worker-expired-skip",
+        auto_retry_enabled=True,
+        auto_retry_delay_seconds=20,
+    )
+    instance._dispatch_failure_skip_until[run.id] = datetime(2000, 1, 1)
+
+    assert await instance.run_one(db_session) is True
+
+    refreshed_item = await db_session.get(GenerationWorkItemModel, item.id)
+    assert refreshed_item is not None and refreshed_item.status == "queued"
+    assert run.id not in instance._dispatch_failure_skip_until
+
+
+@pytest.mark.asyncio
 async def test_eligible_failure_is_not_retried_before_delay_elapses(db_session, monkeypatch):
     generation, lesson, _prov, source = await _prepared(db_session, user_id="auto-retry-early")
     admission, run, item = await _failed_recoverable_leaf(
