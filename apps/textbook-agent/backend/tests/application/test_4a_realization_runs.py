@@ -118,6 +118,7 @@ async def test_doc_not_ready_admits_no_run_and_does_not_busy_loop(
     assert leases == 0
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
 async def test_doc_awaiting_review_projects_needs_shared_review(
     db_session: AsyncSession, db_session_factory

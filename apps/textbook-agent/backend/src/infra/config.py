@@ -285,6 +285,16 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("SHARED_DOCUMENT_MEDIA_OPTIONAL"),
     )
 
+    # Document quality gate. "advisory" (default) records semantic/quality
+    # findings as teacher-visible flags and lets the document become READY;
+    # only genuinely broken output (provider/transport errors, invalid QA
+    # output, structural deterministic failures) fails. "blocking" restores
+    # the strict behaviour: a semantic issue parks the Run for review.
+    document_quality_gate: Literal["advisory", "blocking"] = Field(
+        default="advisory",
+        validation_alias=AliasChoices("DOCUMENT_QUALITY_GATE"),
+    )
+
     # SharedDocument auto-retry: bounded, automatic re-dispatch of
     # failed_recoverable WorkItems whose recovery_action is "retry" and
     # error_class is a provider hiccup (provider_output/provider_transport).

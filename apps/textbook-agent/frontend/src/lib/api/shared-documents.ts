@@ -95,3 +95,35 @@ export function regenerateSharedDocument(runId: string): Promise<RegenerateDocum
 		{ method: 'POST' }
 	);
 }
+
+export interface QualityFlag {
+	code: string;
+	severity: 'warning';
+	source: 'semantic_qa' | 'deterministic_qa' | 'writer_warning';
+	message: string;
+	section_id: string;
+	node_ids: string[];
+	required_correction: string;
+}
+
+export interface QualityFlagsResponse {
+	run_id: string | null;
+	flags: QualityFlag[];
+}
+
+/**
+ * Non-blocking quality notes recorded by the advisory document quality gate for
+ * a Learn lesson (`editableLessonId`) or a Print/Learn output (`generationId`).
+ */
+export function getQualityFlags(
+	target: { editableLessonId: string } | { generationId: string }
+): Promise<QualityFlagsResponse> {
+	const query =
+		'editableLessonId' in target
+			? `editable_lesson_id=${encodeURIComponent(target.editableLessonId)}`
+			: `generation_id=${encodeURIComponent(target.generationId)}`;
+	return jsonRequest(
+		`/api/v1/shared-documents/quality-flags?${query}`,
+		'Could not load quality notes.'
+	);
+}

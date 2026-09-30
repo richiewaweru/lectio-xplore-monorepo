@@ -103,6 +103,7 @@ async def test_worker_gate_reports_pending_without_consuming_an_attempt(
     assert row.shared_document_state == "pending"
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
 async def test_worker_gate_reports_needs_shared_review(
     db_session: AsyncSession, db_session_factory

@@ -44,6 +44,9 @@ from infra.generation_runtime import active_work_items
 from media.generation.contracts import GeneratedVisualBlock
 
 
+pytestmark = pytest.mark.usefixtures("blocking_quality_gate")
+
+
 def _now() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 

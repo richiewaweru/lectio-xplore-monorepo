@@ -110,6 +110,7 @@ async def test_worker_reports_pending_without_consuming_an_attempt(
     assert row.realization_revision == 1
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
 async def test_worker_reports_needs_shared_review_without_authoring(
     db_session: AsyncSession, db_session_factory
@@ -184,6 +185,108 @@ async def test_worker_reports_needs_shared_review_without_authoring(
         assert row.status == "needs_shared_review"
         assert row.shared_document_state == "needs_review"
         assert row.generation_run_id is None
+
+
+@pytest.mark.asyncio
+async def test_advisory_quality_flags_let_learn_realize_and_are_readable_from_editor(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    """Advisory gate: a semantic finding no longer parks Learn; it is a flag."""
+    from types import SimpleNamespace
+
+    from document.shared_lesson.http import get_shared_document_quality_flags
+    from document.shared_lesson.worker import SharedDocumentWorker
+    from tests.application.test_p04_learn_worker import (
+        _shared_document_composer,
+        _shared_document_writer,
+        _SharedDocumentSourcebookProvider,
+    )
+
+    user_id = "p10b-advisory"
+    lesson, _plan, _source, _document = await _approved_native_preparation(
+        db_session, user_id=user_id
+    )
+    admitted = await realize_learn_from_preparation(
+        db_session,
+        preparation_generation_id=str(lesson.pack_id),
+        user_id=user_id,
+        path_lesson_id=lesson.id,
+    )
+    await db_session.commit()
+    row = await db_session.get(NativeRealizationModel, admitted["realization_id"])
+    assert row is not None
+    run_id = row.shared_document_run_id
+    assert run_id is not None
+
+    worker = SharedDocumentWorker(
+        db_session_factory,
+        worker_id="p10b-advisory-worker",
+        provider=_SharedDocumentSourcebookProvider(),
+        composer_provider=_shared_document_composer,
+        writer_provider=_shared_document_writer,
+    )
+    for _ in range(4):
+        async with db_session_factory() as session:
+            progressed = await worker.run_one(session)
+            await session.commit()
+        if not progressed:
+            break
+
+    async def _qa_issue(_request):
+        return DocumentSemanticVerdict(
+            status="issue",
+            issues=(
+                ContinuityIssue(
+                    issue_code="must_establish_uncovered",
+                    affected_section_id="orient",
+                    explanation="The section never establishes the target state.",
+                    required_correction="Add a sentence establishing the target state.",
+                ),
+            ),
+        )
+
+    outcome = await run_post_section_pipeline(
+        db_session_factory,
+        run_id=run_id,
+        owner_user_id=user_id,
+        path_lesson_id=lesson.id,
+        preparation_generation_id=str(lesson.pack_id),
+        qa_semantic_validator=_qa_issue,
+        worker_id="p10b-advisory-post-section",
+    )
+    assert outcome.state == "ready", outcome
+
+    realization_worker = RealizationWorker(db_session_factory, worker_id="p10b-advisory-learn")
+    async with db_session_factory() as tick_session:
+        assert await realization_worker.run_one(tick_session) is True
+
+    async with db_session_factory() as verify:
+        row = await verify.get(NativeRealizationModel, admitted["realization_id"])
+        assert row is not None
+        assert row.status == "ready"
+        assert row.shared_document_state == "ready"
+        output = await verify.get(GenerationModel, row.output_id)
+        assert output is not None and output.status == "completed"
+        editable = await verify.scalar(
+            select(EditableLessonModel).where(EditableLessonModel.source_generation_id == output.id)
+        )
+        assert editable is not None
+
+        for kwargs in ({"editable_lesson_id": editable.id}, {"generation_id": output.id}):
+            payload = await get_shared_document_quality_flags(
+                current_user=SimpleNamespace(id=user_id), session=verify, **kwargs
+            )
+            assert payload["run_id"] == run_id
+            assert [f["code"] for f in payload["flags"]] == ["must_establish_uncovered"]
+            assert payload["flags"][0]["section_id"] == "orient"
+            assert payload["flags"][0]["severity"] == "warning"
+
+        foreign = await get_shared_document_quality_flags(
+            editable_lesson_id=editable.id,
+            current_user=SimpleNamespace(id="someone-else"),
+            session=verify,
+        )
+        assert foreign == {"run_id": None, "flags": []}
 
 
 @pytest.mark.asyncio

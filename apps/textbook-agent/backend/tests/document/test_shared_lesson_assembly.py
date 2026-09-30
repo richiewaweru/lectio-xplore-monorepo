@@ -323,6 +323,7 @@ def test_required_media_failure_returns_blocked_draft_and_preserves_siblings() -
         result.require_ready()
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 def test_qa_issue_returns_immutable_draft_without_rewriting_sibling() -> None:
     sections = [
         _paragraph_section("section-1", "Introduction", "block-1", 0, text="TODO"),

@@ -121,6 +121,7 @@ def test_expired_running_document_qa_leaf_is_dispatchable_after_restart():
     assert not _dispatchable(SimpleNamespace(status="ready", lease_expires_at=None))
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
 async def test_dispatcher_routes_accepted_writer_warning_to_review_despite_semantic_pass(
     db_session,

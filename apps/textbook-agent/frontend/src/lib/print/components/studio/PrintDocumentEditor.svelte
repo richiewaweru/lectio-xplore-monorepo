@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api/client';
 	import { downloadGenerationPdf } from '$lib/api/realizations';
+	import QualityNotesPanel from '$lib/curriculum/lessons/QualityNotesPanel.svelte';
 	import type { LectioDocument } from '@lectio/page/contract';
 
 	let {
@@ -219,6 +220,7 @@
 </script>
 
 <div class="print-editor" data-testid="print-document-editor" data-mode={mode} data-revision={revision}>
+	<QualityNotesPanel {generationId} />
 	<div class="toolbar">
 		<button type="button" class:active={mode === 'view'} onclick={() => (mode = 'view')}>View</button>
 		<button

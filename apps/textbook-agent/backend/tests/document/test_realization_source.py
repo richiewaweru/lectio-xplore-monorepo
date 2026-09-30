@@ -201,6 +201,7 @@ async def test_load_ready_recomputes_hash_and_binds_media(
     assert result.ready.media_results == ()
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
 async def test_load_needs_review_on_semantic_issue(
     db_session, db_session_factory, monkeypatch
@@ -252,6 +253,67 @@ async def test_load_needs_review_on_semantic_issue(
     assert result.state == "needs_review"
     assert result.needs_review is not None
     assert result.needs_review.run_id == run_id
+
+
+@pytest.mark.asyncio
+async def test_advisory_semantic_issue_reaches_ready_with_flags_and_learn_print_source(
+    db_session, db_session_factory, monkeypatch
+) -> None:
+    """Advisory gate: a semantic finding is a flag; the doc is READY for Learn/Print."""
+    generation, lesson, _provenance, _source = await _prepared(db_session)
+    run = await ensure_shared_document_run(
+        db_session, owner_user_id="source-owner", path_lesson_id=lesson.id
+    )
+    run_id = run.id
+    await db_session.commit()
+
+    await _advance_semantic_worker(
+        db_session,
+        db_session_factory,
+        generation=generation,
+        lesson=lesson,
+        monkeypatch=monkeypatch,
+    )
+
+    async def qa_issue(_request):
+        return DocumentSemanticVerdict(
+            status="issue",
+            issues=(
+                ContinuityIssue(
+                    issue_code="must_establish_uncovered",
+                    affected_section_id="orient",
+                    explanation="The section never establishes root uptake.",
+                    required_correction="Add a sentence establishing root uptake.",
+                ),
+            ),
+        )
+
+    outcome = await run_post_section_pipeline(
+        db_session_factory,
+        run_id=run_id,
+        owner_user_id="source-owner",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=generation.id,
+        qa_semantic_validator=qa_issue,
+        worker_id="realization-source-advisory-worker",
+    )
+    assert outcome.state == "ready", outcome
+
+    async with db_session_factory() as verify:
+        result = await load_realization_source(
+            verify, owner_user_id="source-owner", path_lesson_id=lesson.id
+        )
+
+    assert result.state == "ready", result
+    assert result.ready is not None
+    assert result.ready.run_id == run_id
+    # The document identity is untouched by flags.
+    assert result.ready.document.content_hash == result.ready.content_hash
+    [flag] = result.ready.quality_flags
+    assert flag.code == "must_establish_uncovered"
+    assert flag.source == "semantic_qa"
+    assert flag.section_id == "orient"
+    assert flag.required_correction == "Add a sentence establishing root uptake."
 
 
 @pytest.mark.asyncio

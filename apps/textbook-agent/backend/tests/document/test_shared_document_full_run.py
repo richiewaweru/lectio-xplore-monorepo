@@ -221,6 +221,7 @@ def _unsupported_number_writer_provider(calls: list[dict]):
     return provide
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
 async def test_writer_soft_issue_routes_to_review_and_reviewer_submit_reaches_ready(
     db_session, db_session_factory, monkeypatch
