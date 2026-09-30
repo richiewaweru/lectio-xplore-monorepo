@@ -17,6 +17,7 @@ from document.shared_lesson.models import (
     SharedLessonDocument,
     build_shared_lesson_document,
 )
+from document.shared_lesson.qa_runtime import load_run_quality_flags
 from document.shared_lesson.repository import (
     SharedLessonDocumentRepositoryError,
     load_shared_lesson_document,
@@ -39,7 +40,12 @@ from document.shared_lesson.run_admission import (
     admit_shared_document_run,
 )
 from infra.auth.middleware import get_current_user
-from infra.database.models import GenerationBuildModel, GenerationRunModel
+from infra.database.models import (
+    EditableLessonModel,
+    GenerationBuildModel,
+    GenerationModel,
+    GenerationRunModel,
+)
 from infra.database.session import get_async_session
 from infra.execution.checkpoints import content_hash
 from infra.generation_runtime.http import _run_status
@@ -309,6 +315,51 @@ async def _load_review_draft_context(
     except ReviewSubmitError:
         raise _not_found() from None
     return context.run, context.path_lesson_id, context.latest, list(context.issues)
+
+
+@router.get("/quality-flags")
+async def get_shared_document_quality_flags(
+    editable_lesson_id: str | None = None,
+    generation_id: str | None = None,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    """Non-blocking quality notes for a Learn lesson or Print output.
+
+    Owner-scoped. Resolves the SharedDocument Run behind the given Learn
+    editable lesson or Print/Learn output and returns the advisory flags
+    recorded on its document QA WorkItem (empty when none, or when the item
+    predates the shared document pipeline).
+    """
+    if bool(editable_lesson_id) == bool(generation_id):
+        raise HTTPException(
+            status_code=422,
+            detail="Provide exactly one of editable_lesson_id or generation_id.",
+        )
+    run_id: str | None
+    if editable_lesson_id:
+        run_id = await session.scalar(
+            select(EditableLessonModel.shared_document_run_id).where(
+                EditableLessonModel.id == editable_lesson_id,
+                EditableLessonModel.user_id == current_user.id,
+            )
+        )
+    else:
+        run_id = await session.scalar(
+            select(GenerationModel.shared_document_run_id).where(
+                GenerationModel.id == generation_id,
+                GenerationModel.user_id == current_user.id,
+            )
+        )
+    flags = (
+        await load_run_quality_flags(session, run_id=run_id, owner_user_id=current_user.id)
+        if run_id
+        else ()
+    )
+    return {
+        "run_id": run_id,
+        "flags": [flag.model_dump(mode="json") for flag in flags],
+    }
 
 
 @router.get("/runs/{run_id}/review-draft")

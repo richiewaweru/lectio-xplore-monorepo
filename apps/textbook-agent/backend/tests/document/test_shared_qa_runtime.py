@@ -324,6 +324,7 @@ async def test_document_qa_transport_retry_and_configuration_fail_closed(db_sess
     assert config_item.status == "failed_terminal"
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
 async def test_document_qa_semantic_issue_never_becomes_ready(db_session, monkeypatch):
     source, document = _source_and_document()
@@ -543,6 +544,7 @@ async def test_document_qa_semantic_issue_never_becomes_ready(db_session, monkey
         )
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
 async def test_document_qa_synthetic_writer_issues_route_a_passing_semantic_verdict_to_review(
     db_session,

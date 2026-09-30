@@ -16,6 +16,7 @@ from document.shared_lesson.continuity import (
 )
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
+from infra.config import settings
 
 # Boundary WorkItems and final semantic QA own narrative judgments. Keep this
 # exact allowlist narrow so metadata, shape, source, and future unknown issues
@@ -34,14 +35,62 @@ _SEMANTIC_CONTINUITY_ISSUE_CODES = frozenset(
 )
 
 
+#: Explicit hard/advisory classification of every deterministic document QA
+#: issue code. "hard" means the document is structurally broken (missing or
+#: mismatched nodes, lineage, hash, contract, media): it can never be READY.
+#: "advisory" means a learner-content quality opinion that the Learn/Print
+#: adapters do not depend on: in ``document_quality_gate="advisory"`` mode it is
+#: recorded as a teacher-visible flag instead of blocking READY. A code absent
+#: from this table is treated as hard.
+DETERMINISTIC_ISSUE_CLASSIFICATION: dict[str, str] = {
+    "section_count_mismatch": "hard",
+    "document_title_mismatch": "hard",
+    "document_hash_mismatch": "hard",
+    "section_order_mismatch": "hard",
+    "unplanned_section": "hard",
+    "expected_shape_missing": "hard",
+    "section_shape_mismatch": "hard",
+    "node_id_mismatch": "hard",
+    "node_kind_mismatch": "hard",
+    "node_owner_mismatch": "hard",
+    "task_anchor_mismatch": "hard",
+    "incomplete_task_anchor": "hard",
+    "table_shape_invalid": "hard",
+    "list_item_blank": "hard",
+    "figure_alt_text_missing": "hard",
+    "section_title_missing": "hard",
+    "section_title_mismatch": "hard",
+    "source_lineage_mismatch": "hard",
+    "required_media_missing": "hard",
+    "repair_changed_section_identity": "hard",
+    "metadata_or_placeholder_leak": "advisory",
+    "internal_id_leak": "advisory",
+    "heading_hierarchy_invalid": "advisory",
+    "teaching_block_unrealized": "hard",
+    "unsupported_required_fact": "advisory",
+    # Narrative judgments already excluded from final deterministic QA (see
+    # ``_SEMANTIC_CONTINUITY_ISSUE_CODES``); listed so the table is exhaustive.
+    **{code: "advisory" for code in _SEMANTIC_CONTINUITY_ISSUE_CODES},
+}
+
+
+def is_advisory_deterministic_code(code: str) -> bool:
+    return DETERMINISTIC_ISSUE_CLASSIFICATION.get(code) == "advisory"
+
+
 class DocumentQAResult(BaseModel):
-    """The complete final QA result; READY is derived from zero issues."""
+    """The complete final QA result; READY is derived from zero blocking issues.
+
+    ``advisory_issues`` (only populated in advisory quality-gate mode) are
+    recorded quality findings that do not block READY.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     document_id: str = Field(min_length=1)
     document_revision: int = Field(ge=1)
     issues: tuple[ContinuityIssue, ...] = ()
+    advisory_issues: tuple[ContinuityIssue, ...] = ()
 
     @property
     def ready(self) -> bool:
@@ -219,10 +268,15 @@ def qa_shared_lesson_document(
             if issue.issue_code not in _SEMANTIC_CONTINUITY_ISSUE_CODES
         )
 
+    advisory: list[ContinuityIssue] = []
+    if settings.document_quality_gate == "advisory":
+        advisory = [issue for issue in issues if is_advisory_deterministic_code(issue.issue_code)]
+        issues = [issue for issue in issues if issue not in advisory]
     return DocumentQAResult(
         document_id=document.id,
         document_revision=document.revision,
         issues=tuple(issues),
+        advisory_issues=tuple(advisory),
     )
 
 
@@ -234,7 +288,9 @@ def require_ready_document(result: DocumentQAResult) -> None:
 
 __all__ = [
     "DocumentQAError",
+    "DETERMINISTIC_ISSUE_CLASSIFICATION",
     "DocumentQAResult",
+    "is_advisory_deterministic_code",
     "qa_shared_lesson_document",
     "require_ready_document",
 ]

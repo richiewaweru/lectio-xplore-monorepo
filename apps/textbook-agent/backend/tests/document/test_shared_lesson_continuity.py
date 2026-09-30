@@ -558,6 +558,7 @@ def test_final_qa_defers_boundary_narrative_checks_to_boundary_evidence() -> Non
     assert result.ready
 
 
+@pytest.mark.usefixtures("blocking_quality_gate")
 def test_final_qa_retains_hard_metadata_and_source_failures() -> None:
     section = _section(text="TODO chlorophyll captures light energy.")
     document = build_shared_lesson_document(

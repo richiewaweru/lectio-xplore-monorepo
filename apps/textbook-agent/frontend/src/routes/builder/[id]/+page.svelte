@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import { isApiError } from '$lib/api/errors';
 	import { loadBuilderLessonWithFallback } from '$lib/learn/authoring/builder/persistence/server-sync';
+	import QualityNotesPanel from '$lib/curriculum/lessons/QualityNotesPanel.svelte';
 	import DocumentEditor from '$lib/learn/document/DocumentEditor.svelte';
 	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
 	import { logout } from '$lib/shared/stores/auth';
@@ -64,6 +65,7 @@
 			<p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
 				LearnDocument v2 editor
 			</p>
+			<QualityNotesPanel editableLessonId={id} />
 			<DocumentEditor
 				document={result.document as LearnDocument}
 				lessonId={id}

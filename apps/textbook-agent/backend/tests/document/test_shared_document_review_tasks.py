@@ -22,6 +22,9 @@ from document.shared_lesson.document_semantic import DocumentSemanticVerdict
 from infra.database.models import GenerationRunModel
 
 
+pytestmark = pytest.mark.usefixtures("blocking_quality_gate")
+
+
 def _choice_task() -> dict:
     return {
         "id": "task-1",

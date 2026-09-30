@@ -43,7 +43,8 @@ from document.shared_lesson.media import (
 )
 from document.shared_lesson.media_runtime import MEDIA_STAGE
 from document.shared_lesson.models import SharedLessonDocument
-from document.shared_lesson.qa_runtime import DOCUMENT_QA_STAGE
+from document.shared_lesson.qa_runtime import DOCUMENT_QA_STAGE, quality_flags_from_work_items
+from document.shared_lesson.quality_flags import QualityFlag
 from document.shared_lesson.repository import (
     SharedLessonDocumentRepositoryError,
     load_shared_lesson_document,
@@ -100,6 +101,9 @@ class ReadyRealizationSource:
     plan_revision: int
     plan_hash: str
     media_results: tuple[FigureMediaResult | DeferredFigureMediaBinding, ...]
+    #: Advisory-gate findings recorded on the document-QA WorkItem (never part
+    #: of the document identity). Empty in blocking mode or when QA was clean.
+    quality_flags: tuple[QualityFlag, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -513,6 +517,7 @@ async def load_realization_source(
             plan_revision=document.teaching_plan_revision,
             plan_hash=document.teaching_plan_hash,
             media_results=media_results,
+            quality_flags=quality_flags_from_work_items(run.work_items),
         ),
     )
 

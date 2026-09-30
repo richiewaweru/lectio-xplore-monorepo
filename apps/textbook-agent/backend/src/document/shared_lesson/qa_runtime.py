@@ -30,8 +30,10 @@ from document.shared_lesson.document_semantic import (
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import SharedLessonDocument
 from document.shared_lesson.qa import DocumentQAResult
+from document.shared_lesson.quality_flags import QualityFlag, quality_flags_from_issues
 from document.shared_lesson.repository import save_shared_lesson_document
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from infra.config import settings
 from infra.database.models import GenerationBuildModel, GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.execution.leases import LeaseLostError
@@ -96,6 +98,10 @@ class DocumentQAWorkItemOutput(BaseModel):
     document_revision: int = Field(ge=1)
     document_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     semantic_qa: DocumentSemanticQAResult
+    #: Non-blocking findings recorded by the advisory quality gate. When
+    #: present, ``semantic_qa`` is the (issue-free) PASS the run proceeds on and
+    #: these flags carry what the reviewer reported. Always empty in blocking mode.
+    quality_flags: tuple[QualityFlag, ...] = ()
 
     @model_validator(mode="after")
     def _bind_result(self) -> DocumentQAWorkItemOutput:
@@ -119,6 +125,7 @@ class VerifiedDocumentQA(BaseModel):
     work_item_id: str = Field(min_length=1)
     output_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     semantic_qa: DocumentSemanticQAResult
+    quality_flags: tuple[QualityFlag, ...] = ()
 
     @property
     def result(self) -> DocumentSemanticQAResult:
@@ -138,6 +145,8 @@ class DocumentQAWorkItemJob:
     deterministic_qa: DocumentQAResult
     semantic_validator: DocumentSemanticValidator | None = None
     lease_seconds: int = 300
+    #: ``None`` resolves ``settings.document_quality_gate`` at execution time.
+    quality_gate: Literal["advisory", "blocking"] | None = None
     #: Typed issues synthesized from accepted writer warnings (never provider
     #: output or learner text), merged with the semantic verdict so a document
     #: with an accepted SOFT writer issue routes to review instead of READY.
@@ -578,6 +587,7 @@ async def execute_document_qa_work_item(
             deterministic=job.deterministic_qa,
             semantic_validator=job.semantic_validator,
         )
+        verdict_issues = tuple(semantic.issues)
         if job.synthetic_issues:
             # An accepted writer SOFT issue (task_answer_leaked or
             # unsupported_number) must still block automatic READY promotion
@@ -593,6 +603,16 @@ async def execute_document_qa_work_item(
                 semantic_calls=semantic.semantic_calls,
                 deterministic_skipped_semantic=semantic.deterministic_skipped_semantic,
             )
+        quality_flags: tuple[QualityFlag, ...] = ()
+        gate = job.quality_gate or settings.document_quality_gate
+        if gate == "advisory":
+            quality_flags = (
+                quality_flags_from_issues(
+                    job.deterministic_qa.advisory_issues, source="deterministic_qa"
+                )
+                + quality_flags_from_issues(verdict_issues, source="semantic_qa")
+                + quality_flags_from_issues(job.synthetic_issues, source="writer_warning")
+            )
         if not semantic.passed:
             # Only a well-formed semantic ISSUE after the deterministic gate is
             # reviewable. Persist that exact immutable candidate in this same
@@ -607,6 +627,20 @@ async def execute_document_qa_work_item(
                 or semantic.document_hash != shared_lesson_content_hash(job.document)
             ):
                 raise DocumentQAOutputError("semantic QA issue is not bound to the candidate")
+            if gate == "advisory":
+                # Advisory gate: a well-formed semantic finding is a flag, not a
+                # failure. The run proceeds on an issue-free PASS bound to the
+                # exact document; the findings live in ``quality_flags``.
+                semantic = DocumentSemanticQAResult(
+                    document_id=semantic.document_id,
+                    document_revision=semantic.document_revision,
+                    document_hash=semantic.document_hash,
+                    status="pass",
+                    issues=(),
+                    semantic_calls=semantic.semantic_calls,
+                    deterministic_skipped_semantic=semantic.deterministic_skipped_semantic,
+                )
+        if not semantic.passed:
             path_lesson_id = await job.session.scalar(
                 select(GenerationBuildModel.path_lesson_id).where(
                     GenerationBuildModel.id == run.build_id,
@@ -655,6 +689,7 @@ async def execute_document_qa_work_item(
             document_revision=job.document.revision,
             document_hash=job.document.content_hash,
             semantic_qa=semantic,
+            quality_flags=quality_flags,
         )
         await complete_work_item(
             job.session,
@@ -665,6 +700,19 @@ async def execute_document_qa_work_item(
             output_hash=content_hash(output.model_dump(mode="json")),
             now=now,
         )
+        if quality_flags:
+            await append_event(
+                job.session,
+                run_id=item.run_id,
+                work_item_id=item.id,
+                event_type="document_qa_advisory_flags",
+                safe_payload={
+                    "document_id": job.document.id,
+                    "document_revision": job.document.revision,
+                    "flag_count": len(quality_flags),
+                    "codes": sorted({flag.code for flag in quality_flags}),
+                },
+            )
         return DocumentQAOutcome(work_item_id=item.id, qa=output)
     except LeaseLostError:
         raise
@@ -782,7 +830,63 @@ async def load_verified_document_qa(
         work_item_id=item.id,
         output_hash=item.output_hash,
         semantic_qa=result,
+        quality_flags=output.quality_flags,
     )
+
+
+def quality_flags_from_work_items(
+    items: Any,
+) -> tuple[QualityFlag, ...]:
+    """Flags on the active READY document-QA leaf of already-loaded work items.
+
+    Pure and tolerant: anything that is not a hash-consistent, well-formed READY
+    QA output yields no flags (flags are advisory; they never gate anything).
+    """
+    leaves = [
+        item
+        for item in active_work_items(tuple(items))
+        if item.stage == DOCUMENT_QA_STAGE and item.status == "ready"
+    ]
+    if len(leaves) != 1:
+        return ()
+    item = leaves[0]
+    if item.output_json is None or not item.output_hash:
+        return ()
+    if content_hash(item.output_json) != item.output_hash:
+        return ()
+    try:
+        return _coerce_output(item.output_json).quality_flags
+    except DocumentQAOutputError:
+        return ()
+
+
+async def load_run_quality_flags(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    owner_user_id: str,
+) -> tuple[QualityFlag, ...]:
+    """Owner-scoped, read-only flags for one SharedDocument Run."""
+    run = await session.scalar(
+        select(GenerationRunModel).where(
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+            GenerationRunModel.run_type == "shared_document",
+        )
+    )
+    if run is None:
+        return ()
+    rows = (
+        await session.scalars(
+            select(GenerationWorkItemModel)
+            .where(
+                GenerationWorkItemModel.run_id == run.id,
+                GenerationWorkItemModel.stage == DOCUMENT_QA_STAGE,
+            )
+            .order_by(GenerationWorkItemModel.id)
+        )
+    ).all()
+    return quality_flags_from_work_items(rows)
 
 
 async def load_verified_document_qa_result(
@@ -809,6 +913,8 @@ __all__ = [
     "admit_document_qa_work_item",
     "admit_repaired_document_qa_work_item",
     "execute_document_qa_work_item",
+    "load_run_quality_flags",
     "load_verified_document_qa",
     "load_verified_document_qa_result",
+    "quality_flags_from_work_items",
 ]

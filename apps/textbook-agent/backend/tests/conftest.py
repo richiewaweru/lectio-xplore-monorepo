@@ -169,3 +169,23 @@ def _shared_document_media_optional_off(monkeypatch):
     from infra.config import settings
 
     monkeypatch.setattr(settings, "shared_document_media_optional", False)
+
+
+@pytest.fixture(autouse=True)
+def _document_quality_gate_default(monkeypatch):
+    """Pin the document quality gate to its product default (advisory).
+
+    A developer's ``backend/.env`` must not change test behaviour; tests that
+    assert the strict review-parking behaviour opt in via ``blocking_quality_gate``.
+    """
+    from infra.config import settings
+
+    monkeypatch.setattr(settings, "document_quality_gate", "advisory")
+
+
+@pytest.fixture
+def blocking_quality_gate(monkeypatch):
+    """Restore the strict ``DOCUMENT_QUALITY_GATE=blocking`` behaviour."""
+    from infra.config import settings
+
+    monkeypatch.setattr(settings, "document_quality_gate", "blocking")
