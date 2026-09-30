@@ -180,6 +180,12 @@ class Settings(BaseSettings):
             "V3_TIMEOUT_STAGE1_SECONDS",
         ),
     )
+    # "advisory": only broken output fails/retries; quality findings become
+    # teacher-visible flags. "blocking": every finding gates the plan.
+    teaching_plan_quality_gate: Literal["advisory", "blocking"] = Field(
+        default="advisory",
+        validation_alias=AliasChoices("TEACHING_PLAN_QUALITY_GATE"),
+    )
     page_form_plan_timeout_seconds: int = Field(default=120, ge=1)
     page_standard_writer_timeout_seconds: int = Field(
         default=180,

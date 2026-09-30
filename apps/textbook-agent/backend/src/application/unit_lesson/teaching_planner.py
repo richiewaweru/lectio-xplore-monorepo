@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from core.llm.runner import RetryPolicy, run_llm
@@ -58,9 +58,12 @@ from print.generation.whole_lesson.teaching_plan import (
 )
 from print.generation.whole_lesson.validation import (
     ValidationReport,
+    advisory_issue_flags,
     advisory_teaching_qc,
     allowed_teaching_evidence_refs,
     anchor_terms,
+    apply_advisory_gate,
+    plan_quality_flag,
     validate_teaching_plan,
 )
 from print.resources.selection import _form_cards
@@ -92,6 +95,8 @@ class TeachingPlanResult:
     excluded_intents: set[str]
     legality: LessonLegalitySnapshot
     semantic_review: TeachingPlanSemanticReviewResult
+    # Advisory quality flags (advisory gate only). Never part of the hashed plan.
+    flags: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _assessment_forms_for_intent(intent: str) -> set[str]:
@@ -315,6 +320,59 @@ def _unknown_learner_action_errors(plan: TeachingPlan) -> list[str]:
 
 def _normalize_whitespace(text: str) -> str:
     return " ".join(text.split())
+
+
+def _frozen_assessment_reuse_findings(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> list[tuple[str, str, str]]:
+    """Return (section_id, block_id, item_id) for each verbatim stem reuse."""
+    findings: list[tuple[str, str, str]] = []
+    stems = [
+        (item.id, _normalize_whitespace(item.stem))
+        for item in packet.approved_items
+        if item.stem.strip()
+    ]
+    if not stems:
+        return findings
+    for section in plan.sections:
+        for block in section.blocks:
+            if block.task_mode == "assessment" and block.source_question_ids:
+                continue
+            brief_normalized = _normalize_whitespace(block.brief)
+            if not brief_normalized:
+                continue
+            for item_id, stem_normalized in stems:
+                if stem_normalized and stem_normalized in brief_normalized:
+                    findings.append((section.slot_id, block.id, item_id))
+    return findings
+
+
+_FROZEN_REUSE_MESSAGE = (
+    "Use different values, numbers, or scenario for this non-assessment block."
+)
+
+
+def _frozen_assessment_reuse_flags(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> list[dict[str, Any]]:
+    return [
+        plan_quality_flag(
+            code="TEACHING_FROZEN_ITEM_REUSED",
+            source="validator",
+            message=(
+                f"block {block_id!r} brief reuses approved item {item_id!r}'s "
+                "frozen stem text verbatim."
+            ),
+            section_ids=[section_id],
+            block_ids=[block_id],
+            repair_instruction=_FROZEN_REUSE_MESSAGE,
+        )
+        for section_id, block_id, item_id in _frozen_assessment_reuse_findings(
+            plan, packet
+        )
+    ]
 
 
 def _frozen_assessment_reuse_errors(
@@ -897,7 +955,12 @@ async def run_lesson_approach_planner(
             ownership_errors.extend(_unknown_learner_action_errors(plan))
             ownership_errors.extend(_task_source_contract_errors(plan))
             ownership_errors.extend(_action_source_compatibility_errors(plan, packet))
-            ownership_errors.extend(_frozen_assessment_reuse_errors(plan, packet))
+            advisory_gate = settings.teaching_plan_quality_gate == "advisory"
+            flags: list[dict[str, Any]] = []
+            if advisory_gate:
+                flags.extend(_frozen_assessment_reuse_flags(plan, packet))
+            else:
+                ownership_errors.extend(_frozen_assessment_reuse_errors(plan, packet))
 
             validation = validate_teaching_plan(
                 plan,
@@ -909,6 +972,10 @@ async def run_lesson_approach_planner(
                     assessment_source_policy["eligible_intents"]
                 ),
             )
+            qc_findings = advisory_teaching_qc(plan)
+            if advisory_gate:
+                flags.extend(advisory_issue_flags(plan, validation, qc_findings))
+                validation = apply_advisory_gate(validation)
             semantic_review: TeachingPlanSemanticReviewResult | None = None
             if validation.ok and not ownership_errors:
                 semantic_review = await review_teaching_plan_draft(
@@ -931,15 +998,28 @@ async def run_lesson_approach_planner(
                         "TEACHING_SEMANTIC_REVIEW_INVALID",
                         "Teaching Plan semantic review is not bound to this candidate",
                     )
-                ownership_errors.extend(
-                    (
-                        f"SEMANTIC_{finding.code.upper()} "
-                        f"sections={finding.section_ids} blocks={finding.block_ids}: "
-                        f"{finding.repair_instruction}"
+                if advisory_gate:
+                    flags.extend(
+                        plan_quality_flag(
+                            code=finding.code,
+                            source="reviewer",
+                            message=finding.message,
+                            section_ids=finding.section_ids,
+                            block_ids=finding.block_ids,
+                            repair_instruction=finding.repair_instruction,
+                        )
+                        for finding in semantic_review.findings
                     )
-                    for finding in semantic_review.findings
-                )
-            qc = [finding.to_dict() for finding in advisory_teaching_qc(plan)]
+                else:
+                    ownership_errors.extend(
+                        (
+                            f"SEMANTIC_{finding.code.upper()} "
+                            f"sections={finding.section_ids} blocks={finding.block_ids}: "
+                            f"{finding.repair_instruction}"
+                        )
+                        for finding in semantic_review.findings
+                    )
+            qc = [finding.to_dict() for finding in qc_findings]
             attempts.append(
                 TeachingPlanAttempt(
                     prompt=prompt,
@@ -971,10 +1051,15 @@ async def run_lesson_approach_planner(
                     excluded_intents=excluded,
                     legality=snapshot,
                     semantic_review=semantic_review,
+                    flags=flags,
                 )
             last_error = "validation_failed"
+            # Only gating issues drive repair; in the advisory gate the
+            # non-blocking quality findings are flags, not repair work.
             repair_errors = [
-                f"{issue.code}: {issue.message}" for issue in validation.issues
+                f"{issue.code}: {issue.message}"
+                for issue in validation.issues
+                if not advisory_gate or issue.blocking
             ] + ownership_errors
             output_invalid_details = repair_errors
         except Exception as exc:

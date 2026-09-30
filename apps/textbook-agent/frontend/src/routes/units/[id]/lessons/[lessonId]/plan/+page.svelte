@@ -43,6 +43,7 @@
 	import StructuralPlanPreview from '$lib/curriculum/lessons/StructuralPlanPreview.svelte';
 	import StructuralPlanActions from '$lib/curriculum/lessons/StructuralPlanActions.svelte';
 	import TeachingPlanReview from '$lib/curriculum/lessons/TeachingPlanReview.svelte';
+	import TeachingPlanFlags from '$lib/curriculum/lessons/TeachingPlanFlags.svelte';
 	import {
 		canApproveTeachingPlan,
 		isVerifiedApprovedTeachingPlan,
@@ -492,6 +493,7 @@
 	{:else if phase === 'teaching'}
 		<section class="stage">
 			<p class="eyebrow">Teaching plan</p>
+			<TeachingPlanFlags flags={lessonApproach?.teaching_flags ?? []} />
 			<Card padding="md">
 				{#if lessonApproach?.teaching_plan}
 					<TeachingPlanReview

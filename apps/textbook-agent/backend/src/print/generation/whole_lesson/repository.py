@@ -764,6 +764,7 @@ class PageDocumentRepository:
         qc: list[dict[str, Any]],
         prompt: str | None = None,
         raw: str | None = None,
+        flags: list[dict[str, Any]] | None = None,
         stage: str = "awaiting_teaching_approval",
         worker_id: str | None = None,
         lease_token: int | None = None,
@@ -780,6 +781,7 @@ class PageDocumentRepository:
             state["teaching_plan"] = plan
             state["teaching_validation"] = validation
             state["teaching_qc"] = qc
+            state["teaching_flags"] = [dict(flag) for flag in (flags or [])]
             if prompt is not None:
                 state["teaching_prompt"] = prompt
             if raw is not None:
@@ -790,7 +792,9 @@ class PageDocumentRepository:
                 or "unhashed"
             )
             store = TeachingRevisionStore(state)
-            store.record_draft(plan, preparation_hash=preparation_hash)
+            store.record_draft(
+                plan, preparation_hash=preparation_hash, flags=flags
+            )
             review = dict(state.get("teaching_review") or {})
             review["status"] = "pending"
             review.setdefault("revision", int(review.get("revision") or 1))

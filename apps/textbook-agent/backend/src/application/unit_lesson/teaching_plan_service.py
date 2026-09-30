@@ -233,6 +233,7 @@ async def run_and_persist_teaching_plan(
         qc=result.qc,
         prompt=result.prompt,
         raw=result.raw_response,
+        flags=result.flags,
         stage="awaiting_teaching_approval",
         worker_id=worker_id,
         lease_token=lease_token,
@@ -260,6 +261,7 @@ async def run_and_persist_teaching_plan(
         "teaching_plan": result.plan.model_dump(mode="json"),
         "validation": result.validation.to_dict(),
         "qc": result.qc,
+        "flags": result.flags,
         "review": state.get("teaching_review"),
         "packet": packet.model_dump(mode="json"),
     }

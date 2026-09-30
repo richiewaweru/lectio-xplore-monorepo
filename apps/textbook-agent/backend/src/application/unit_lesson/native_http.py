@@ -66,6 +66,7 @@ async def get_lesson_approach(
         "teaching_plan": state.get("teaching_plan"),
         "teaching_validation": state.get("teaching_validation"),
         "teaching_qc": state.get("teaching_qc"),
+        "teaching_flags": state.get("teaching_flags") or [],
         "teaching_review": state.get("teaching_review"),
         "teaching_plan_identity": teaching_plan_review_identity(state),
         "lesson_packet": state.get("lesson_packet"),

@@ -29,6 +29,15 @@ from application.unit_lesson.teaching_planner import run_lesson_approach_planner
 from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 
 
+@pytest.fixture(autouse=True)
+def _blocking_quality_gate(monkeypatch):
+    """These tests pin the strict (blocking) gate; advisory is covered in
+    test_teaching_plan_quality_gate.py."""
+    from core.config import settings
+
+    monkeypatch.setattr(settings, "teaching_plan_quality_gate", "blocking")
+
+
 def _draft(*, task: bool = False) -> TeachingPlanDraftV2:
     block = {
         "intent": "explain-cause",

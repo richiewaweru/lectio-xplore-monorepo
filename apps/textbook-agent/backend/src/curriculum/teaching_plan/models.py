@@ -402,6 +402,9 @@ class TeachingRevisionRecord(BaseModel):
     # the shared-task verifier requires them when a plan owns source items.
     approved_item_snapshot: dict[str, Any] | None = None
     approved_item_snapshot_hash: str | None = None
+    # Advisory quality flags recorded with this revision. Deliberately outside
+    # ``plan`` so they never affect the approval content hash.
+    flags: list[dict[str, Any]] = Field(default_factory=list)
 
 
 def materialize_teaching_plan(

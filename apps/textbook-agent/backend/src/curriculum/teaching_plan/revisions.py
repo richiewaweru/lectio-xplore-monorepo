@@ -408,6 +408,7 @@ class TeachingRevisionStore:
         *,
         preparation_hash: str,
         revision: int | None = None,
+        flags: list[dict[str, Any]] | None = None,
     ) -> TeachingRevisionRecord:
         plan_payload = (
             plan.model_dump(mode="json") if isinstance(plan, TeachingPlan) else dict(plan)
@@ -426,6 +427,7 @@ class TeachingRevisionStore:
             content_hash=teaching_plan_content_hash(plan_payload),
             plan=plan_payload,
             created_at=_utcnow(),
+            flags=[dict(flag) for flag in (flags or [])],
         )
         revisions = [
             row
