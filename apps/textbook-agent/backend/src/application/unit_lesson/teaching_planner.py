@@ -786,6 +786,12 @@ async def run_lesson_approach_planner(
         "teaching_guidance": teaching_guidance.to_dict(),
         "slot_intent_policy": slot_intent_policy["slot_intent_policy"],
         "assessment_source_policy": assessment_source_policy,
+        # The approved checks' stems, surfaced on their own so the planner
+        # picks its running case and examples outside them up front instead
+        # of relying on the reviewer's assessment_item_reused repair.
+        "reserved_assessment_scenarios": [
+            item.stem for item in packet.approved_items if item.stem.strip()
+        ],
         "legality_catalogue_hash": slot_intent_policy["catalogue_hash"],
     }
     attempts: list[TeachingPlanAttempt] = []

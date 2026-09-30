@@ -300,6 +300,15 @@ lesson hands the learner the check's answer before they reach it. If a block
 needs to practise the same skill an approved item checks, invent new numbers
 and a new concrete scenario for it.
 
+`reserved_assessment_scenarios` repeats every approved item's stem. Before you
+write any section, read it and treat each concrete situation named there (the
+object, setting, or story, for example "a pot of water heated on a stove") as
+reserved for its check. Choose the lesson's running case, demonstrations, and
+worked or modelled examples from situations that do NOT appear in that list,
+even when a reserved one is the most familiar textbook example of the concept.
+The assessment block that binds an approved item is the only place its
+scenario may appear.
+
 `expected_evidence` and any worked answer you write in a brief or evidence
 field are for the teacher and the validator. They describe what correct
 performance looks like; they are never page content, and a brief must never

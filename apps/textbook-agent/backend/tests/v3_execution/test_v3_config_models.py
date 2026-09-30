@@ -215,7 +215,7 @@ def test_constrained_path_planner_disables_provider_reasoning(
 def test_lesson_approach_planner_enables_provider_reasoning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The shared/V2 Teaching Plan planner runs with DeepSeek thinking on."""
+    """The shared/V2 Teaching Plan planner runs with low DeepSeek thinking."""
     monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
     monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-flash")
     monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
@@ -223,7 +223,7 @@ def test_lesson_approach_planner_enables_provider_reasoning(
 
     settings = get_v3_model_settings(V2_LESSON_APPROACH_PLANNER)
     assert settings == {
-        "openai_reasoning_effort": "medium",
+        "openai_reasoning_effort": "low",
         "extra_body": {"thinking": {"type": "enabled"}},
         "max_tokens": 16000,
     }
@@ -276,9 +276,9 @@ def test_document_semantic_qa_uses_standard_slot() -> None:
 
 
 def test_thinking_enabled_capabilities_use_deepseek_reasoning() -> None:
-    """WORK PACKAGE A: these four capabilities run with DeepSeek thinking on."""
+    """WORK PACKAGE A: these capabilities run with DeepSeek thinking on."""
+    assert V3_NODE_REASONING[V2_LESSON_APPROACH_PLANNER] == "low"
     for node in (
-        V2_LESSON_APPROACH_PLANNER,
         TEACHING_PLAN_SEMANTIC_REVIEWER,
         SHARED_SECTION_WRITER,
         DOCUMENT_SEMANTIC_QA,

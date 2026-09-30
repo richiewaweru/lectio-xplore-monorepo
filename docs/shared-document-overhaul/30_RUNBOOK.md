@@ -499,3 +499,9 @@ Do not silently invent a new architecture.
 - Merged `bcaf6665` (branch `00e0dcff`): `GET /api/v1/preparations/{id}/structure`, `document_revision` on generation detail; deleted `/v3/chunked/{id}/plan|status`, `native_status.py`, `native_retry.py`, `retry_preparation_run`; `visual_quality_summary` moved to `whole_lesson/visual_quality.py`.
 - Final verification at `bcaf6665`: backend 1916 passed / 5 skipped; frontend check 0 errors, 257 tests; domain guards PASS; restarted backend `20260930-021608` smoke OK.
 - Closeout: `38_OPTION_D_CLOSEOUT.md`.
+
+## Planner quality follow-up (2026-09-30)
+- Cause: `acc9b271` (2026-09-27) set V2 planner thinking to medium -> 36k+ thinking tokens, ~200s calls, truncated JSON; `e3c378a2` added the reviewer `assessment_item_reused` rule, and the planner kept using the approved checks' textbook scenario (Convection: pot of water on a stove).
+- Fix: planner input gets `reserved_assessment_scenarios` (approved stems) + prompt paragraph to choose running case/examples outside them (prompt v2 checksum updated); planner thinking medium -> low.
+- A/B on Convection prep (planner+reviewer, nothing persisted): off 0/3 (structural), low 3/5 (0 scenario reuse), medium 1/3. Successful runs used the second internal attempt (reviewer repair). Calls remain slow (6-12 min per planner run incl. review).
+- Tests: planning/v3_execution/print_learn/curriculum 632 passed; new prompt guard.

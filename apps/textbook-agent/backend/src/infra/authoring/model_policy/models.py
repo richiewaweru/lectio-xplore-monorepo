@@ -131,7 +131,10 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     # runs DeepSeek thinking successfully in production, so the message-
     # replay failure mode documented for V2_PATH_STRUCTURAL_PLANNER/
     # V2_PATH_CHAT_EDITOR does not apply.
-    V2_LESSON_APPROACH_PLANNER: "medium",
+    # "low", not "medium": a 2026-09-30 A/B on one lesson (3-5 runs each)
+    # passed 3/5 at low, 1/3 at medium (36k+ thinking tokens, truncated JSON,
+    # 3-10 min calls), and 0/3 with thinking off (structural rule failures).
+    V2_LESSON_APPROACH_PLANNER: "low",
     V3_CONSTRUCTOR: False,
     V3_VISUAL_TOPOLOGY_PLANNER: False,
     V3_LESSON_SOURCEBOOK_WRITER: False,
