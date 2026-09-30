@@ -58,11 +58,22 @@ export type TeachingPlanIdentityView = {
 	approved_hash_verified?: boolean;
 };
 
+export type TeachingPlanFlag = {
+	code: string;
+	severity: 'warning';
+	source: 'validator' | 'reviewer';
+	message: string;
+	section_ids?: string[];
+	block_ids?: string[];
+	repair_instruction?: string;
+};
+
 export type LessonApproachView = {
 	teaching_plan?: TeachingPlanView | null;
 	teaching_review?: TeachingReviewView | null;
 	teaching_plan_identity?: TeachingPlanIdentityView | null;
 	teaching_qc?: Array<{ code?: string; message?: string }>;
+	teaching_flags?: TeachingPlanFlag[];
 };
 
 export function hasVisibleTeachingPlan(plan: TeachingPlanView | null | undefined): boolean {

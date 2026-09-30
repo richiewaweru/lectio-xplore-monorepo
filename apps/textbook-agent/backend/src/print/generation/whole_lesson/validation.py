@@ -602,3 +602,148 @@ def advisory_teaching_qc(plan: TeachingPlan) -> list[AdvisoryFinding]:
                 )
     return findings
 
+
+
+# ---------------------------------------------------------------------------
+# Quality-gate classification (advisory vs blocking)
+#
+# HARD codes describe output the downstream runtime cannot consume: unknown or
+# duplicated IDs, broken slot/position shape, assessment source binding rules
+# and task-mode contracts (sourcebook/task/composer/`approved_source.py` key off
+# these). They always retry. Every other code is a quality finding: in the
+# advisory gate it is recorded as a flag and the plan passes.
+# ---------------------------------------------------------------------------
+HARD_PLAN_ISSUE_CODES: frozenset[str] = frozenset(
+    {
+        "SLOT_ORDER",
+        "EMPTY_SECTION",
+        "POSITION",
+        "DUPLICATE_BLOCK_ID",
+        "EVIDENCE_REF",
+        "UNKNOWN_ITEM",
+        "DUPLICATE_ITEM_SOURCE",
+        "ASSESSMENT_SOURCE_REQUIRED",
+        "FORMATIVE_SOURCE_FORBIDDEN",
+        "TASK_MODE_REQUIRED",
+        "ASSESSMENT_SOURCE_INTENT",
+        "ASSESSMENT_SOURCE_MIX",
+        "MCQ_SOURCE_CARDINALITY",
+        "OPEN_RESPONSE_SOURCE_LIMIT",
+        "UNKNOWN_MISCONCEPTION",
+        "ACTION_SOURCE_INCOMPATIBLE",
+    }
+)
+ADVISORY_PLAN_ISSUE_CODES: frozenset[str] = frozenset(
+    {
+        "ANCHOR_USAGE_SLOT_MISMATCH",
+        "SECTION_BLOCK_LIMIT",
+        "LESSON_BLOCK_LIMIT",
+        "INTENT_LEGALITY",
+        "OBJECT_LEAK",
+        "BRIEF_TOO_SHORT",
+        "BRIEF_NO_ANCHOR_OR_TERM",
+        "BRIEF_GENERIC",
+        "EXCLUDED_TERM",
+        "QUESTION_CONTENT",
+        "REQUIRED_VISUAL_INTENT",
+        "MUST_ESTABLISH_UNCOVERED",
+        "LATE_BRIEF_THINNING",
+        "REPEATED_TEACHING_JOB",
+        "GENERIC_EVIDENCE",
+    }
+)
+
+
+def is_hard_plan_issue(code: str) -> bool:
+    """Unknown codes fail closed (hard) so a new rule never silently downgrades."""
+    return code not in ADVISORY_PLAN_ISSUE_CODES
+
+
+def _flag_locations(plan: TeachingPlan, path: str) -> tuple[list[str], list[str]]:
+    """Resolve a validator path to (section_ids, block_ids) where possible."""
+    match = re.match(r"^sections\.([^.\[]+)(?:\.blocks\[(\d+)\])?", path)
+    if match:
+        slot_id = match.group(1)
+        section = next((s for s in plan.sections if s.slot_id == slot_id), None)
+        if section is None:
+            return [], []
+        block_ids: list[str] = []
+        if match.group(2) is not None:
+            index = int(match.group(2))
+            if 0 <= index < len(section.blocks):
+                block_ids.append(section.blocks[index].id)
+        return [slot_id], block_ids
+    match = re.match(r"^([^.]+)\.([^.]+)$", path)
+    if match:
+        section = next((s for s in plan.sections if s.slot_id == match.group(1)), None)
+        if section is not None and any(b.id == match.group(2) for b in section.blocks):
+            return [section.slot_id], [match.group(2)]
+    return [], []
+
+
+def plan_quality_flag(
+    *,
+    code: str,
+    source: str,
+    message: str,
+    section_ids: list[str] | None = None,
+    block_ids: list[str] | None = None,
+    repair_instruction: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "code": code,
+        "severity": "warning",
+        "source": source,
+        "message": message,
+        "section_ids": list(section_ids or []),
+        "block_ids": list(block_ids or []),
+        "repair_instruction": repair_instruction or message,
+    }
+
+
+def advisory_issue_flags(
+    plan: TeachingPlan,
+    report: ValidationReport,
+    qc: list[AdvisoryFinding],
+) -> list[dict[str, Any]]:
+    """Flags for validator issues and QC findings that are advisory."""
+    flags: list[dict[str, Any]] = []
+    for issue in report.issues:
+        if is_hard_plan_issue(issue.code):
+            continue
+        sections, blocks = _flag_locations(plan, issue.path)
+        flags.append(
+            plan_quality_flag(
+                code=issue.code,
+                source="validator",
+                message=issue.message,
+                section_ids=sections,
+                block_ids=blocks,
+            )
+        )
+    for finding in qc:
+        sections, blocks = _flag_locations(plan, finding.path)
+        flags.append(
+            plan_quality_flag(
+                code=finding.code,
+                source="validator",
+                message=finding.message,
+                section_ids=sections,
+                block_ids=blocks,
+            )
+        )
+    return flags
+
+
+def apply_advisory_gate(report: ValidationReport) -> ValidationReport:
+    """Report as seen by the advisory gate: advisory issues stop blocking."""
+    issues = [
+        ValidationIssue(
+            code=issue.code,
+            message=issue.message,
+            path=issue.path,
+            blocking=issue.blocking and is_hard_plan_issue(issue.code),
+        )
+        for issue in report.issues
+    ]
+    return ValidationReport(ok=not any(i.blocking for i in issues), issues=issues)
