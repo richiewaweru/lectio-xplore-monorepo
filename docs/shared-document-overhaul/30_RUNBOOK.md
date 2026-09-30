@@ -505,3 +505,4 @@ Do not silently invent a new architecture.
 - Fix: planner input gets `reserved_assessment_scenarios` (approved stems) + prompt paragraph to choose running case/examples outside them (prompt v2 checksum updated); planner thinking medium -> low.
 - A/B on Convection prep (planner+reviewer, nothing persisted): off 0/3 (structural), low 3/5 (0 scenario reuse), medium 1/3. Successful runs used the second internal attempt (reviewer repair). Calls remain slow (6-12 min per planner run incl. review).
 - Tests: planning/v3_execution/print_learn/curriculum 632 passed; new prompt guard.
+- Reviewer thinking trial (2026-09-30): planner low + reviewer low passed 2/5 (vs 3/5 with reviewer medium), ~5.8 min avg per run vs ~8 min; 3/5 failures were the planner still reusing the approved pot-on-stove scenario. The reviewer at low still caught reuse, but the repair loop converged less often. Decision: keep reviewer at medium (no change).
