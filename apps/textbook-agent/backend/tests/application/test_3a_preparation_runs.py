@@ -854,3 +854,14 @@ def test_run_view_is_the_only_status_input() -> None:
         True,
         "retry",
     )
+
+
+def test_reviewer_output_failure_is_retryable() -> None:
+    from application.unit_lesson.preparation_worker import classify_failure
+    from curriculum.teaching_plan.semantic_review import TeachingPlanSemanticReviewError
+
+    failure = classify_failure(
+        TeachingPlanSemanticReviewError("TEACHING_SEMANTIC_REVIEW_FAILED", "reviewer failed")
+    )
+    assert failure.recovery_action == "retry"
+    assert failure.error_code == "preparation_reviewer_output_invalid"

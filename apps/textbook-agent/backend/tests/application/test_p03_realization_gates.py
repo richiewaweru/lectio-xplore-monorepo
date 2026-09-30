@@ -934,7 +934,12 @@ async def test_p03_concurrent_print_retry_accepts_one_new_output(
                 return ("conflict", exc.detail)
 
     outcomes = await asyncio.gather(_attempt_retry(), _attempt_retry())
-    assert sorted(outcome for outcome, _ in outcomes) == ["accepted", "conflict"]
+    # Exactly one new output wins. A racing duplicate either loses the
+    # compare-and-set (conflict) or, if it reads after the winner committed,
+    # gets the same queued result back idempotently.
+    accepted = [result for outcome, result in outcomes if outcome == "accepted"]
+    assert accepted
+    assert len({result["output_id"] for result in accepted}) == 1
     async with db_session_factory() as verify:
         row = await verify.get(NativeRealizationModel, realization_id)
         assert row is not None

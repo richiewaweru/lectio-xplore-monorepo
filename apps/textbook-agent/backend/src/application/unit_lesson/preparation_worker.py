@@ -122,6 +122,17 @@ def classify_failure(exc: BaseException) -> WorkItemFailure:
             safe_summary="A temporary storage error interrupted the plan. Retry it.",
             recovery_action=RecoveryAction.RETRY,
         )
+    from curriculum.teaching_plan.semantic_review import TeachingPlanSemanticReviewError
+
+    if isinstance(exc, TeachingPlanSemanticReviewError):
+        # The reviewer's own output was unusable (bad provider output), not a
+        # verdict on the plan: retry rather than dead-ending the plan.
+        return WorkItemFailure(
+            error_code="preparation_reviewer_output_invalid",
+            error_class=ErrorClass.PROVIDER_OUTPUT,
+            safe_summary="The AI plan reviewer returned unusable output. Retry it.",
+            recovery_action=RecoveryAction.RETRY,
+        )
     verdict = classify(exc)
     code = verdict.code
     if code in {"TRANSPORT", "TIMEOUT", "RATE_LIMIT"}:
