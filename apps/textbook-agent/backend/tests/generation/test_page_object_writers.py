@@ -4,7 +4,7 @@ from print.rendering.page_objects import (
     assemble_questions,
     dispatch_writer,
 )
-from v3_blueprint.planning.models import PlannedBlock
+from curriculum.planning.models import PlannedBlock
 
 
 def _block(**kwargs) -> PlannedBlock:

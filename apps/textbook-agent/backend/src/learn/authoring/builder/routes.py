@@ -35,9 +35,10 @@ from learn.authoring.builder.service import (
     ACTIVE_BUILDER_SOURCE_TYPES,
     ComponentLectioBuilderError,
     get_or_create_native_learn_builder_lesson,
+    guard_shared_document_builder_edit,
     validate_builder_document,
 )
-from learn.generation.interaction_writer import validate_interaction_contract
+from learn.interactions.contract_validation import validate_interaction_contract
 from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
 
 router = APIRouter(prefix="/api/v1/builder", tags=["builder"])
@@ -550,6 +551,10 @@ async def update_builder_lesson(
 
     model = await _owned_lesson_or_404(session, lesson_id=lesson_id, user_id=current_user.id)
     _validate_lesson_document_shape(body.document)
+    try:
+        guard_shared_document_builder_edit(model, body.document)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     if body.expected_updated_at is not None:
         expected = body.expected_updated_at

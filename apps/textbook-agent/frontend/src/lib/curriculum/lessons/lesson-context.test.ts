@@ -3,6 +3,7 @@ import type { PreparedLessonStatus } from '$lib/types/units';
 import {
 	canonicalPreparationState,
 	lessonArtifactUi,
+	preparationErrorMessage,
 	preparationIsApprovedAndFresh,
 	preparationUiState,
 	resolvePlanGenerationId,
@@ -22,6 +23,18 @@ const base = (overrides: Partial<PreparedLessonStatus> = {}): PreparedLessonStat
 });
 
 describe('canonical Unit lesson workspace mapping', () => {
+	it('offers Regenerate for failed_terminal and legacy regenerate rows, carrying run_id', () => {
+		const status = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: { state: 'failed_terminal', realization_id: 'lr', run_id: 'run-9', recovery_action: 'regenerate', error: { message: 'Created before the job update', retryable: false } },
+				print: { state: 'failed_terminal', realization_id: 'pr', stale: true, error: { recovery_action: 'reprepare' } }
+			}
+		});
+		expect(lessonArtifactUi(status, 'learn')).toMatchObject({ state: 'needs_attention', regenerable: true, retryable: false, recoveryAction: 'regenerate', runId: 'run-9' });
+		expect(lessonArtifactUi(status, 'print').regenerable).toBe(false);
+	});
+
 	it.each([
 		['not_started', 'not_prepared'],
 		['planning', 'preparing'],
@@ -121,6 +134,78 @@ describe('canonical Unit lesson workspace mapping', () => {
 		});
 	});
 
+	it('maps needs_review authoritatively from the backend state, never from output_id', () => {
+		const status = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: {
+					state: 'needs_review',
+					realization_id: 'learn-r',
+					output_id: 'learn-o',
+					shared_document_state: 'needs_review',
+					shared_document_run_id: 'run-1'
+				},
+				print: { state: 'not_created' }
+			}
+		});
+		const learn = lessonArtifactUi(status, 'learn');
+		expect(learn).toMatchObject({
+			state: 'needs_review',
+			retryable: false,
+			recoveryAction: null,
+			sharedDocumentState: 'needs_review'
+		});
+	});
+
+	it('never infers needs_review from output_id/hash alone when the backend state is something else', () => {
+		const status = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: {
+					state: 'ready',
+					realization_id: 'learn-r',
+					output_id: 'learn-o',
+					shared_document_hash: 'hash-1'
+				},
+				print: { state: 'not_created' }
+			}
+		});
+		expect(lessonArtifactUi(status, 'learn').state).toBe('ready');
+	});
+
+	it('surfaces shared_document_state alongside an otherwise-normal preparing/ready state', () => {
+		const pending = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: { state: 'running', realization_id: 'learn-r', shared_document_state: 'pending' },
+				print: { state: 'not_created' }
+			}
+		});
+		expect(lessonArtifactUi(pending, 'learn')).toMatchObject({ state: 'preparing', sharedDocumentState: 'pending' });
+
+		const stale = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: { state: 'ready', realization_id: 'learn-r', output_id: 'learn-o', shared_document_state: 'stale' },
+				print: { state: 'not_created' }
+			}
+		});
+		expect(lessonArtifactUi(stale, 'learn')).toMatchObject({ state: 'ready', sharedDocumentState: 'stale' });
+	});
+
+	it('defaults sharedDocumentState to null for pre-P10B rows and missing workspace', () => {
+		const status = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: { state: 'ready', realization_id: 'learn-r', output_id: 'learn-o' },
+				print: { state: 'not_created' }
+			}
+		});
+		expect(lessonArtifactUi(status, 'learn').sharedDocumentState).toBeNull();
+		const missing = base({ workspace: undefined });
+		expect(lessonArtifactUi(missing, 'learn').sharedDocumentState).toBeNull();
+	});
+
 	it('does not turn ready into retryable when preview fetch fails', () => {
 		const status = base({
 			workspace: {
@@ -131,5 +216,22 @@ describe('canonical Unit lesson workspace mapping', () => {
 		});
 		expect(lessonArtifactUi(status, 'print', 'preview unavailable')).toMatchObject({ state: 'ready', retryable: false, errorSummary: 'preview unavailable' });
 		expect(resolvePrintGenerationId(status)).toBe('po');
+	});
+
+	it('maps known error codes to a teacher-friendly message, falling back otherwise', () => {
+		expect(
+			preparationErrorMessage({
+				code: 'PIPELINE_ORPHANED',
+				message: 'Preparation pipeline task is no longer observable (owner_boot_id=abc, heartbeat_at=None)',
+				retryable: true
+			})
+		).toMatch(/interrupted/i);
+		expect(
+			preparationErrorMessage({ code: 'LEGACY_STAGE_RETIRED', message: 'raw internal detail' })
+		).toMatch(/no longer runs/i);
+		expect(preparationErrorMessage({ code: 'SOME_UNMAPPED_CODE', message: 'raw backend message' })).toBe(
+			'raw backend message'
+		);
+		expect(preparationErrorMessage(null)).toBe('Lesson preparation failed unexpectedly.');
 	});
 });

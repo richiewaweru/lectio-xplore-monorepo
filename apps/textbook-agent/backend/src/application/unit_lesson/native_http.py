@@ -66,6 +66,7 @@ async def get_lesson_approach(
         "teaching_plan": state.get("teaching_plan"),
         "teaching_validation": state.get("teaching_validation"),
         "teaching_qc": state.get("teaching_qc"),
+        "teaching_flags": state.get("teaching_flags") or [],
         "teaching_review": state.get("teaching_review"),
         "teaching_plan_identity": teaching_plan_review_identity(state),
         "lesson_packet": state.get("lesson_packet"),
@@ -159,7 +160,6 @@ async def post_lesson_approach_approve(
                 session,
                 preparation_generation_id=generation_id,
                 user_id=current_user.id,
-                allow_standalone=True,
             )
             await session.commit()
         except HTTPException:
@@ -246,7 +246,6 @@ async def post_realize_print(
                 preparation_generation_id=generation_id,
                 user_id=current_user.id,
                 admission_request_key=idempotency_key,
-                allow_standalone=True,
             )
             await session.commit()
         except HTTPException:
@@ -453,121 +452,3 @@ async def post_figure_visual_callback(
         "document_revision": result.document_revision,
         "idempotent": result.idempotent,
     }
-
-@native_lesson_router.post("/generations/{generation_id}/visuals/retry")
-async def post_visuals_retry(
-    generation_id: str,
-    current_user: User = Depends(get_current_user),
-) -> dict[str, Any]:
-    """Visuals-only redispath for native generations stuck in awaiting_visuals.
-
-    Never requeues writers, form planning, teaching, or item generation.
-    """
-    await _load_owned_generation(generation_id, current_user.id)
-    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from print.generation.whole_lesson.repository import PageDocumentRepository
-    from print.generation.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
-
-    async with async_session_factory() as session:
-        generation = await session.get(GenerationModel, generation_id)
-        if generation is None:
-            raise HTTPException(status_code=404, detail="Generation not found")
-        repo = PageDocumentRepository(session, generation_id)
-        chunked = dict(generation.chunked_state_json or {})
-        if not generation_is_native_whole_lesson(chunked, generation):
-            raise HTTPException(
-                status_code=409,
-                detail="visuals/retry is only available for native whole-lesson generations",
-            )
-        status = str(generation.status or "")
-        if status == "ready":
-            # Narrowly reopen only persisted QC-flagged visuals. The repository
-            # fences this transition and invalidates current revision proof.
-            try:
-                await repo.reopen_flagged_visuals()
-                generation = await session.get(GenerationModel, generation_id)
-                status = str(generation.status or "") if generation else status
-            except Exception as exc:
-                from print.generation.whole_lesson.repository import VisualCompletionStateError
-
-                if isinstance(exc, VisualCompletionStateError):
-                    raise HTTPException(status_code=409, detail=str(exc)) from exc
-                raise
-        if status != "awaiting_visuals":
-            raise HTTPException(
-                status_code=409,
-                detail=f"visuals/retry requires awaiting_visuals, got {status!r}",
-            )
-        try:
-            dispatch = await dispatch_and_patch_from_repo(
-                session=session,
-                generation_id=generation_id,
-            )
-        except Exception as exc:
-            await repo.persist_visual_dispatch_failure(exc=exc)
-            raise HTTPException(
-                status_code=502,
-                detail=f"visual redispath failed: {str(exc)[:400]}",
-            ) from exc
-        generation = await session.get(GenerationModel, generation_id)
-        terminal = str(generation.status or status) if generation else status
-        page = await repo.load_page_generation_state()
-        last_error = (page.get("execution") or {}).get("last_error")
-    return {
-        "generation_id": generation_id,
-        "status": terminal,
-        "visual_dispatch": dispatch,
-        "next_action": (
-            "retry_visuals"
-            if terminal == "awaiting_visuals"
-            and (dispatch.get("failed") or last_error)
-            else ("done" if terminal == "ready" else "wait_visuals")
-        ),
-        "error_detail": last_error if isinstance(last_error, dict) else None,
-    }
-
-@native_lesson_router.post("/generations/{generation_id}/retry-native")
-async def post_retry_native(
-    generation_id: str,
-    current_user: User = Depends(get_current_user),
-) -> JSONResponse:
-    """Accept-only native retry: durable checkpoint + worker-owned recovery.
-
-    Routes by execution.last_error.stage:
-    - item_generation → checkpoint item_generation (work_kind pre_worker_item_retry)
-    - planning_teaching → checkpoint planning_teaching (work_kind pre_worker_teaching_retry)
-    - post-approval stages → queued for worker reclaim
-    Visual failures must use /visuals/retry.
-    """
-    model = await _load_owned_generation(generation_id, current_user.id)
-    from print.generation.whole_lesson.native_retry import (
-        NativeRetryConflict,
-        accept_native_retry,
-    )
-    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from curriculum.planning.persistence import load_chunked_state
-
-    state = await load_chunked_state(generation_id)
-    if not generation_is_native_whole_lesson(state, model):
-        raise HTTPException(
-            status_code=409,
-            detail="retry-native is only available for native whole-lesson generations",
-        )
-    try:
-        result = await accept_native_retry(
-            generation_id, user_id=current_user.id
-        )
-    except NativeRetryConflict as exc:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "error_type": exc.code,
-                "message": str(exc),
-                "stage": exc.status or str(model.status or ""),
-                "retry_target": exc.target.value if exc.target else None,
-                "generation_id": generation_id,
-                **(exc.detail or {}),
-            },
-        ) from exc
-    return JSONResponse(status_code=202, content=result)
-

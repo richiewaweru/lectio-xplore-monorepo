@@ -108,6 +108,11 @@ export type V3ChunkedPlanStage =
 	| 'awaiting_teaching_approval'
 	| 'queued'
 	| 'planning_forms'
+	// P12B retired these: no worker transitions into them any more, but a
+	// pre-P11B DB row can still be parked here and native_status.py's
+	// LEGACY_STATUSES projection reports the stage literally (with
+	// next_action: "inspect_error") so the type keeps them as legacy-only,
+	// non-active values. See plan-status.ts LEGACY_STALLED_STAGES.
 	| 'writing_sections'
 	| 'writing_blocks'
 	| 'assembling'
@@ -142,41 +147,10 @@ export interface V3ChunkedPlanState {
 	requested_realization_path?: 'learn' | 'print' | null;
 }
 
-export interface V3ChunkedPlan {
+/** Structural plan preview for a preparation under structural review. */
+export interface PreparationStructure {
 	generation_id: string;
-	pack_id?: string | null;
 	structural_plan: V3StructuralPlan;
-	display_title?: string | null;
-	inferred_lesson_mode: V3SignalSummary['inferred_lesson_mode'] | null;
-	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
-	variants?: V3VariantSpec[];
-	variant_generation_ids?: Record<string, string>;
-}
-
-export interface V3ChunkedStatus {
-	generation_id: string;
-	pack_id?: string | null;
-	stage: V3ChunkedPlanStage;
-	doc_version: string | null;
-	failed_sections: string[];
-	blueprint_id: string | null;
-	execution_started: boolean;
-	next_action: string | null;
-	error?: string | null;
-	error_type?: string | null;
-	error_detail?: Record<string, unknown> | null;
-	variant_generation_ids?: Record<string, string>;
-	requested_realization_path?: 'learn' | 'print' | null;
-	document_version?: number | null;
-	document_exists?: boolean;
-	sections_total?: number;
-	sections_ready?: number;
-	sections_failed?: number;
-	blocks_total?: number;
-	blocks_ready?: number;
-	blocks_failed?: number;
-	failed_section_ids?: string[];
-	failed_block_ids?: string[];
 }
 
 export interface V3PackVariant {
@@ -296,13 +270,6 @@ export interface V3VisualQualitySummary extends V3VisualQualityFlag {
 	retryable?: boolean;
 }
 
-export interface V3VisualRetryResult {
-	generation_id: string;
-	status: string;
-	next_action?: string | null;
-	error_detail?: Record<string, unknown> | null;
-}
-
 export interface V3GenerationDetail {
 	id: string;
 	subject: string;
@@ -320,6 +287,7 @@ export interface V3GenerationDetail {
 	native_whole_lesson?: boolean;
 	document_contract_version?: number;
 	visual_quality?: V3VisualQualitySummary | V3VisualQualitySummary[] | null;
+	document_revision?: number | null;
 }
 
 export type ComponentStatus = 'pending' | 'generating' | 'ready' | 'patched' | 'failed';

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+from tests.planning._lease_helper import claim_test_execution, heartbeat_test_execution
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -10,16 +10,13 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, UserModel
-from print.generation.whole_lesson.native_status import project_native_status
 from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
-    claim_next_native_job,
     empty_page_document_state,
 )
-from print.generation.whole_lesson.service import approve_teaching_and_queue
+from application.unit_lesson.teaching_plan_service import approve_teaching_and_queue
 from print.generation.whole_lesson.states import (
     LEGAL_TRANSITIONS,
-    ExecutionLease,
     IllegalTransitionError,
     LeaseLostError,
     assert_legal_transition,
@@ -150,158 +147,6 @@ async def test_approve_queues_without_executing(db_session_factory) -> None:
         assert result2["status"] == "queued"
 
 
-@pytest.mark.asyncio
-async def test_two_workers_cannot_both_claim_queued(db_session_factory) -> None:
-    async with db_session_factory() as session:
-        gid = await _seed_native_generation(session, status="queued")
-
-    async def _claim(worker_id: str) -> ExecutionLease | None:
-        async with db_session_factory() as session:
-            return await claim_next_native_job(session, worker_id=worker_id, lease_seconds=90)
-
-    first, second = await asyncio.gather(_claim("worker-a"), _claim("worker-b"))
-    winners = [item for item in (first, second) if item is not None]
-    losers = [item for item in (first, second) if item is None]
-    assert len(winners) == 1
-    assert len(losers) == 1
-    assert winners[0].generation_id == gid
-    assert winners[0].lease_token == 1
-
-    async with db_session_factory() as session:
-        generation = await session.get(GenerationModel, gid)
-        assert generation is not None
-        assert generation.status == "planning_forms"
-        state = await PageDocumentRepository(session, gid).load_page_generation_state()
-        assert state["execution"]["worker_id"] in {"worker-a", "worker-b"}
-        assert int(state["execution"]["lease_token"]) == 1
-
-
-@pytest.mark.asyncio
-async def test_failed_recoverable_is_parked_across_concurrent_worker_polls(
-    db_session_factory,
-) -> None:
-    async with db_session_factory() as session:
-        gid = await _seed_native_generation(session, status="failed_recoverable")
-        repo = PageDocumentRepository(session, gid)
-
-        def _parked(_generation, state):
-            execution = dict(state["execution"])
-            execution.update(
-                {
-                    "worker_id": None,
-                    "lease_token": 7,
-                    "attempt": 3,
-                    "heartbeat_at": (
-                        datetime.now(UTC) - timedelta(minutes=10)
-                    ).isoformat(),
-                    "lease_seconds": 30,
-                    "last_error": {
-                        "type": "TimeoutError",
-                        "code": "TIMEOUT",
-                        "message": "form planning timed out",
-                        "stage": "planning_forms",
-                        "retryable": True,
-                    },
-                }
-            )
-            state["execution"] = execution
-
-        await repo.mutate_state(mutation=_parked)
-
-    async def _poll(worker_id: str) -> list[ExecutionLease | None]:
-        claims: list[ExecutionLease | None] = []
-        for _ in range(5):
-            async with db_session_factory() as session:
-                claims.append(
-                    await claim_next_native_job(
-                        session,
-                        worker_id=worker_id,
-                        lease_seconds=30,
-                    )
-                )
-        return claims
-
-    worker_a, worker_b = await asyncio.gather(_poll("worker-a"), _poll("worker-b"))
-    assert all(claim is None for claim in worker_a + worker_b)
-
-    async with db_session_factory() as session:
-        generation = await session.get(GenerationModel, gid)
-        assert generation is not None
-        assert generation.status == "failed_recoverable"
-        state = await PageDocumentRepository(session, gid).load_page_generation_state()
-        assert state["execution"]["lease_token"] == 7
-        assert state["execution"]["attempt"] == 3
-        assert not any(
-            event.get("event") in {"execution_claimed", "execution_reclaimed"}
-            for event in state["events"]
-        )
-        projected = project_native_status(
-            gid,
-            generation.chunked_state_json,
-            None,
-            generation_status=generation.status,
-        )
-        assert projected is not None
-        assert projected["stage"] == "failed_recoverable"
-        assert projected["next_action"] == "retry_native"
-
-
-@pytest.mark.asyncio
-async def test_stale_active_contention_one_winner(db_session_factory) -> None:
-    async with db_session_factory() as session:
-        gid = await _seed_native_generation(session, status="writing_blocks")
-        repo = PageDocumentRepository(session, gid)
-
-        def _stale(_gen, state):
-            state["execution"] = {
-                "worker_id": "old-worker",
-                "lease_token": 3,
-                "attempt": 1,
-                "claimed_at": (datetime.now(UTC) - timedelta(minutes=10)).isoformat(),
-                "heartbeat_at": (datetime.now(UTC) - timedelta(minutes=10)).isoformat(),
-                "lease_seconds": 90,
-                "last_error": None,
-            }
-            state["lesson_packet"] = {"lesson": {"objective": "Learn X"}}
-            state["teaching_plan"] = {"arc": "test", "sections": []}
-
-        await repo.mutate_state(mutation=_stale)
-
-    async def _claim(worker_id: str) -> ExecutionLease | None:
-        async with db_session_factory() as session:
-            return await claim_next_native_job(session, worker_id=worker_id, lease_seconds=90)
-
-    first, second = await asyncio.gather(_claim("reclaimer-a"), _claim("reclaimer-b"))
-    winners = [item for item in (first, second) if item is not None]
-    assert len(winners) == 1
-    assert winners[0].lease_token == 4
-    assert winners[0].stage == "writing_blocks"
-
-
-@pytest.mark.asyncio
-async def test_fresh_heartbeat_prevents_reclaim(db_session_factory) -> None:
-    async with db_session_factory() as session:
-        gid = await _seed_native_generation(session, status="writing_blocks")
-        repo = PageDocumentRepository(session, gid)
-
-        def _fresh(_gen, state):
-            state["execution"] = {
-                "worker_id": "owner",
-                "lease_token": 2,
-                "attempt": 1,
-                "claimed_at": _now_iso(),
-                "heartbeat_at": _now_iso(),
-                "lease_seconds": 90,
-                "last_error": None,
-            }
-            state["lesson_packet"] = {"lesson": {"objective": "Learn X"}}
-            state["teaching_plan"] = {"arc": "test", "sections": []}
-
-        await repo.mutate_state(mutation=_fresh)
-        claimed = await claim_next_native_job(session, worker_id="intruder", lease_seconds=90)
-        assert claimed is None
-
-
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -310,8 +155,8 @@ def _now_iso() -> str:
 async def test_stale_worker_write_rejected(db_session_factory) -> None:
     async with db_session_factory() as session:
         gid = await _seed_native_generation(session, status="queued")
-        lease_a = await PageDocumentRepository(session, gid).claim_execution(
-            worker_id="worker-a"
+        lease_a = await claim_test_execution(
+            PageDocumentRepository(session, gid), worker_id="worker-a"
         )
         assert lease_a is not None
         assert lease_a.lease_token == 1
@@ -328,7 +173,7 @@ async def test_stale_worker_write_rejected(db_session_factory) -> None:
             state["execution"] = execution
 
         await repo.mutate_state(mutation=_expire)
-        lease_b = await repo.claim_execution(worker_id="worker-b")
+        lease_b = await claim_test_execution(repo, worker_id="worker-b")
         assert lease_b is not None
         assert lease_b.lease_token == 2
 
@@ -353,13 +198,13 @@ async def test_stale_worker_write_rejected(db_session_factory) -> None:
 async def test_wrong_token_heartbeat_rejected(db_session_factory) -> None:
     async with db_session_factory() as session:
         gid = await _seed_native_generation(session, status="queued")
-        lease = await PageDocumentRepository(session, gid).claim_execution(
-            worker_id="owner"
+        lease = await claim_test_execution(
+            PageDocumentRepository(session, gid), worker_id="owner"
         )
         assert lease is not None
         repo = PageDocumentRepository(session, gid)
         with pytest.raises(LeaseLostError):
-            await repo.heartbeat(worker_id="owner", lease_token=999)
+            await heartbeat_test_execution(repo, worker_id="owner", lease_token=999)
         with pytest.raises(LeaseLostError):
-            await repo.heartbeat(worker_id="other", lease_token=lease.lease_token)
-        await repo.heartbeat(worker_id="owner", lease_token=lease.lease_token)
+            await heartbeat_test_execution(repo, worker_id="other", lease_token=lease.lease_token)
+        await heartbeat_test_execution(repo, worker_id="owner", lease_token=lease.lease_token)

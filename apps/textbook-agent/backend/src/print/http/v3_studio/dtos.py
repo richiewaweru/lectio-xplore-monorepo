@@ -158,32 +158,6 @@ class BlueprintPreviewDTO(BaseModel):
     learner_context: V3LearnerContextDTO | None = None
 
 
-class V3ChunkedPlanStartRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    signals: V3SignalSummary
-    form: V3InputForm
-    variants: list[V3VariantSpecDTO] = Field(default_factory=list, min_length=0, max_length=3)
-
-
-class V3ChunkedRegenerateRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    note: str = ""
-
-
-class V3ChunkedApproveRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    display_title: str | None = Field(default=None, max_length=120)
-
-
-class V3ChunkedRetrySectionRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    section_id: str
-
-
 class V3ChunkedPlanStateDTO(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -204,49 +178,6 @@ class V3ChunkedPlanStateDTO(BaseModel):
     variants: list[V3VariantSpecDTO] = Field(default_factory=list)
     variant_generation_ids: dict[str, str] = Field(default_factory=dict)
     requested_realization_path: str | None = None
-
-
-class V3ChunkedPlanDTO(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    generation_id: str
-    pack_id: str | None = None
-    structural_plan: dict[str, Any]
-    display_title: str | None = None
-    inferred_lesson_mode: LessonMode | None = None
-    lesson_mode_confidence: Literal["low", "high"] | None = None
-    variants: list[V3VariantSpecDTO] = Field(default_factory=list)
-    variant_generation_ids: dict[str, str] = Field(default_factory=dict)
-
-
-class V3ChunkedStatusDTO(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    generation_id: str
-    pack_id: str | None = None
-    stage: str
-    doc_version: str | None = None
-    failed_sections: list[str] = Field(default_factory=list)
-    blueprint_id: str | None = None
-    execution_started: bool = False
-    next_action: str | None = None
-    error: str | None = None
-    error_type: str | None = None
-    variant_generation_ids: dict[str, str] = Field(default_factory=dict)
-    requested_realization_path: str | None = None
-    # Native whole-lesson projection (optional; defaults keep legacy clients working).
-    document_version: int | None = None
-    document_exists: bool = False
-    sections_total: int = 0
-    sections_ready: int = 0
-    sections_failed: int = 0
-    blocks_total: int = 0
-    blocks_ready: int = 0
-    blocks_failed: int = 0
-    failed_section_ids: list[str] = Field(default_factory=list)
-    failed_block_ids: list[str] = Field(default_factory=list)
-    error_detail: dict[str, Any] | None = None
-    visual_quality: dict[str, Any] = Field(default_factory=dict)
 
 
 class V3CardMisconceptionDTO(BaseModel):
@@ -439,6 +370,7 @@ class V3GenerationDetailDTO(BaseModel):
     native_whole_lesson: bool = False
     document_contract_version: int = 1
     visual_quality: dict[str, Any] = Field(default_factory=dict)
+    document_revision: int | None = None
 
 
 class ProductionBlueprintEnvelope(BaseModel):
@@ -453,13 +385,7 @@ __all__ = [
     "AdjustBlueprintRequest",
     "BlueprintPreviewDTO",
     "ProductionBlueprintEnvelope",
-    "V3ChunkedApproveRequest",
-    "V3ChunkedPlanDTO",
-    "V3ChunkedPlanStartRequest",
     "V3ChunkedPlanStateDTO",
-    "V3ChunkedRegenerateRequest",
-    "V3ChunkedRetrySectionRequest",
-    "V3ChunkedStatusDTO",
     "V3ComponentPlanDTO",
     "V3GenerateStartRequest",
     "V3GenerateStartResponse",

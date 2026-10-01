@@ -5,7 +5,7 @@ from pydantic_ai import PromptedOutput, ToolOutput
 
 from core.config import settings
 from core.llm import ModelFamily, ModelSpec
-from v3_execution.llm_helpers import (
+from infra.authoring.structured_provider import (
     get_structured_mode,
     structured_output_for_model,
 )

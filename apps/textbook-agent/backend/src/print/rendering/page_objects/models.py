@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 if TYPE_CHECKING:
-    from print.generation.work_orders import PrintWorkOrder
     from curriculum.planning.models import PlannedBlock
 
 
@@ -28,7 +27,10 @@ class WriterContext:
     generation_id: str | None = None
     use_llm: bool = False
     section_id: str | None = None
-    print_work_order: PrintWorkOrder | None = None
+    # P11B: the ordinary Print work-order pipeline (``print.generation.work_orders``)
+    # that used to populate this field is retired; nothing sets it any more, and
+    # the type is left loose rather than reintroducing that dependency.
+    print_work_order: Any | None = None
 
 
 @dataclass

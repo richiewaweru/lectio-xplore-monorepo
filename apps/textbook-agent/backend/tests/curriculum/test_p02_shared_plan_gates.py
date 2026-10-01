@@ -45,8 +45,8 @@ from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fi
 from tests.planning.test_path_bridge import (
     _fake_structural_planner,
 )
-from v3_blueprint.planning.persistence import load_chunked_state
-from v3_blueprint.skeletons import SkeletonPreviewRequest, load_skeleton_catalog
+from curriculum.planning.persistence import load_chunked_state
+from curriculum.planning.skeletons import SkeletonPreviewRequest, load_skeleton_catalog
 
 
 @pytest.mark.asyncio
@@ -131,7 +131,7 @@ def test_p02_s02_objective_refs_scope_and_code_owned_ids() -> None:
     from application.unit_lesson.prepare import (
         _normalize_page_concept_card_payload,
     )
-    from v3_blueprint.planning.objective_ownership import (
+    from curriculum.planning.objective_ownership import (
         ObjectiveOwnership,
         ObjectiveOwnershipError,
     )
@@ -412,7 +412,7 @@ def test_p02_s06_edit_creates_revision_old_approved_readable() -> None:
 async def test_p02_print_adapts_to_curriculum_teaching_service() -> None:
     """Print binds the curriculum façade rather than owning a duplicated planner."""
     from curriculum.teaching_plan.service import bind_shared_teaching_runner
-    from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
+    from application.unit_lesson.teaching_planner import run_lesson_approach_planner
 
     called = {}
 

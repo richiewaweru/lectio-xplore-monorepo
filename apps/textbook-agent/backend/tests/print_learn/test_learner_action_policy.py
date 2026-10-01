@@ -6,7 +6,7 @@ from tests.planning.test_prompt_no_object_leak import _packet as _prompt_packet
 
 from print.generation.catalogue_projections import project_teaching_guidance
 from print.generation.whole_lesson.prompt_render import render_teaching_prompt
-from print.generation.whole_lesson.teaching_agent import (
+from application.unit_lesson.teaching_planner import (
     _missing_check_practice_action_errors,
     _task_source_contract_errors,
     _unknown_learner_action_errors,
@@ -105,6 +105,22 @@ def test_unbound_response_action_is_rejected_before_fork() -> None:
     errors = _task_source_contract_errors(plan)
     assert len(errors) == 1
     assert "TEACHING_UNBOUND_RESPONSE_ACTION" in errors[0]
+
+
+def test_unbound_response_action_is_legal_when_declared_formative() -> None:
+    plan = _plan(
+        _block(
+            task_mode="formative",
+            learner_action=LearnerActionBrief(
+                action="enter-text",
+                target="explanation",
+                purpose="articulate reasoning",
+                expected_evidence="short explanation",
+                difficulty="guided",
+            ),
+        )
+    )
+    assert _task_source_contract_errors(plan) == []
 
 
 def test_bound_source_without_action_is_rejected_before_fork() -> None:

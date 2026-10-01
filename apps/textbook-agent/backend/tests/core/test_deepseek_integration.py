@@ -6,7 +6,7 @@ from pydantic_ai import ToolOutput
 
 from core.config import settings
 from core.llm import ModelFamily, ModelSpec, build_structured_model
-from v3_execution.llm_helpers import prepare_structured_agent
+from infra.authoring.structured_provider import prepare_structured_agent
 
 
 class _SpikeModel(BaseModel):
@@ -35,8 +35,8 @@ async def test_live_deepseek_strict_typed_schema() -> None:
     from core.llm.runner import RetryPolicy, run_llm
     from pydantic_ai import Agent
 
-    from v3_execution.config import get_v3_model_settings, get_v3_slot
-    from v3_execution.config.models import V3_SIGNAL_EXTRACTOR
+    from infra.authoring.model_policy.models import get_v3_model_settings, get_v3_slot
+    from infra.authoring.model_policy.models import V3_SIGNAL_EXTRACTOR
 
     model, provider_output, structured_context, spec, _source = prepare_structured_agent(
         node_name=V3_SIGNAL_EXTRACTOR,

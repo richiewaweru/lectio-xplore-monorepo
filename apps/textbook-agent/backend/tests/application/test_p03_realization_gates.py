@@ -52,7 +52,6 @@ from curriculum.workspace_projection import project_lesson_workspace
 from print.generation.whole_lesson.repository import (
     PAGE_DOCUMENT_KEY,
     PageDocumentRepository,
-    claim_next_native_job,
     empty_page_document_state,
 )
 
@@ -106,6 +105,15 @@ async def _prepared_lesson(db_session: AsyncSession, *, user_id: str) -> PathLes
         )
     )
     lesson.pack_id = prep_id
+    db_session.add(
+        LessonProvenanceModel(
+            pack_id=prep_id,
+            path_version_id=lesson.path_version_id,
+            path_lesson_id=lesson.id,
+            objective_hash=lesson.objective_hash,
+            path_lesson_revision=lesson.revision,
+        )
+    )
     await db_session.flush()
     return lesson
 
@@ -118,11 +126,21 @@ async def _approved_native_preparation(
         teaching_plan_id=f"tp-{user_id}",
         revision=1,
         preparation_hash=f"input-{user_id}",
+        contract_version=2,
+        learner_title="How water moves through a plant",
+        starting_state=["Learner has observed a covered leaf."],
+        target_state=["Learner can trace water movement through a plant."],
         arc="Trace how water moves through a plant.",
         sections=[
             {
                 "slot_id": "orient",
                 "specific_purpose": "Connect an observation to the investigation.",
+                "display_title": "Orient",
+                "entry_state": ["Learner has observed a covered leaf."],
+                "must_establish": ["Water moves through a plant."],
+                "avoid_repeating": [],
+                "bridge_from_previous": None,
+                "exit_state": ["Learner can trace water movement through a plant."],
                 "blocks": [
                     {
                         "id": "orient-b1",
@@ -339,7 +357,7 @@ async def test_p03_r02b_print_retry_without_override_keeps_preparation_output(
 
 @pytest.mark.asyncio
 async def test_p03_detached_print_output_is_idempotent_and_failure_retry_isolated(
-    db_session: AsyncSession,
+    db_session: AsyncSession, db_session_factory, monkeypatch
 ) -> None:
     lesson, plan, source_chunked, _source_document = await _approved_native_preparation(
         db_session, user_id="p03-detached-print"
@@ -441,27 +459,42 @@ async def test_p03_detached_print_output_is_idempotent_and_failure_retry_isolate
         learn_row.teaching_plan_hash,
     )
 
-    lease = await claim_next_native_job(
-        db_session, worker_id="detached-print-worker"
-    )
-    assert lease is not None
-    assert lease.generation_id == output_id
-    await db_session.refresh(print_row)
-    assert print_row.status == "running"
+    # P11: a detached Print realization is admitted through
+    # ensure_shared_document_run and never claims a lease until that source
+    # is READY.
+    from tests.application.test_p04_learn_worker import _drive_shared_document_ready
 
-    output.document_json = {"document_version": 2, "title": "Retained failed Print snapshot"}
-    await PageDocumentRepository(db_session, output_id).persist_native_failure(
-        exc=TimeoutError("temporary provider timeout"),
-        stage="planning_forms",
-        event="worker_failure",
-        attempt=1,
-        worker_id=lease.worker_id,
-        lease_token=lease.lease_token,
-        expected={"planning_forms"},
+    await db_session.commit()
+    await _drive_shared_document_ready(
+        db_session,
+        db_session_factory,
+        owner_user_id="p03-detached-print",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=preparation_id,
     )
+
+    # Option D (4A): the RealizationWorker runs the Print Run on the shared
+    # runtime; a deterministic contract failure is a terminal work-item failure.
+    output.document_json = {"document_version": 2, "title": "Retained failed Print snapshot"}
+    await db_session.commit()
+
+    import print.generation.shared_document_execution as print_exec
+    from application.unit_lesson.realization_worker import RealizationWorker
+    from print.generation.shared_document_adapter import SharedDocumentPrintMappingError
+
+    async def _unmappable(*_args, **_kwargs):
+        raise SharedDocumentPrintMappingError("unmappable task anchor")
+
+    monkeypatch.setattr(
+        print_exec, "materialize_print_output_from_shared_document", _unmappable
+    )
+    worker = RealizationWorker(db_session_factory, worker_id="detached-print-worker")
+    async with db_session_factory() as worker_session:
+        assert await worker.run_one(worker_session) is True
     await db_session.refresh(print_row)
-    assert print_row.status == "failed_recoverable"
-    assert "timeout" in str(print_row.error_summary).lower()
+    assert print_row.status == "failed_terminal"
+    assert print_row.generation_run_id is not None
+    assert "unmappable" in str(print_row.error_summary).lower()
 
     preparation_page = source_snapshot[PAGE_DOCUMENT_KEY]
     pinned_approval_before = (
@@ -514,7 +547,7 @@ async def test_p03_detached_print_output_is_idempotent_and_failure_retry_isolate
 
 @pytest.mark.asyncio
 async def test_p07_detached_print_export_failure_preserves_approval_and_ready_learn(
-    db_session: AsyncSession,
+    db_session: AsyncSession, db_session_factory, monkeypatch
 ) -> None:
     lesson, plan, source_state, _source_document = await _approved_native_preparation(
         db_session, user_id="p07-print-export-failure"
@@ -553,26 +586,37 @@ async def test_p07_detached_print_export_failure_preserves_approval_and_ready_le
         learn_row.teaching_plan_hash,
     )
 
-    lease = await claim_next_native_job(db_session, worker_id="p07-print-renderer")
-    assert lease is not None and lease.generation_id == admitted["output_id"]
-    await PageDocumentRepository(db_session, admitted["output_id"]).persist_native_failure(
-        exc=TimeoutError("controlled PDF export timeout"),
-        stage="exporting",
-        event="print_export_failure",
-        attempt=1,
-        worker_id=lease.worker_id,
-        lease_token=lease.lease_token,
-        expected={"planning_forms"},
+    from tests.application.test_p04_learn_worker import _drive_shared_document_ready
+
+    await db_session.commit()
+    await _drive_shared_document_ready(
+        db_session,
+        db_session_factory,
+        owner_user_id="p07-print-export-failure",
+        path_lesson_id=lesson.id,
+        preparation_generation_id=preparation_id,
     )
+
+    import print.generation.shared_document_execution as print_exec
+    from application.unit_lesson.realization_worker import RealizationWorker
+    from sqlalchemy.exc import OperationalError
+
+    async def _transient(*_args, **_kwargs):
+        raise OperationalError("SELECT 1", {}, Exception("controlled storage timeout"))
+
+    monkeypatch.setattr(
+        print_exec, "materialize_print_output_from_shared_document", _transient
+    )
+    worker = RealizationWorker(db_session_factory, worker_id="p07-print-renderer")
+    async with db_session_factory() as worker_session:
+        assert await worker.run_one(worker_session) is True
 
     await db_session.refresh(print_row)
     await db_session.refresh(learn_row)
     await db_session.refresh(source)
-    failed_output = await db_session.get(GenerationModel, admitted["output_id"])
     assert print_row.status == "failed_recoverable"
     assert print_row.output_id == admitted["output_id"]
-    assert failed_output is not None and failed_output.status == "failed_recoverable"
-    assert "timeout" in str(failed_output.error).lower()
+    assert print_row.generation_run_id is not None
     assert (
         learn_row.status,
         learn_row.output_id,
@@ -587,8 +631,6 @@ async def test_p07_detached_print_export_failure_preserves_approval_and_ready_le
     projection = project_lesson_workspace(
         generation_id=preparation_id,
         state=source_state[PAGE_DOCUMENT_KEY],
-        generation_status=source.status,
-        workflow_stage="approved",
         learn_realization={
             "realization_id": learn_row.id,
             "path": "learn",
@@ -707,7 +749,9 @@ async def test_p03_ready_print_artifact_resolves_through_its_owned_output(
         )
         row = await session.get(NativeRealizationModel, admitted["realization_id"])
         assert row is not None
-        assert row.status == "ready"
+        # Realization status is projected from the Run (4A), never mirrored from
+        # the output row; the ready Print output resolves through its own id.
+        assert row.status == "queued"
         assert row.output_id == output_id
         source = await session.get(GenerationModel, preparation_id)
         assert source is not None
@@ -890,7 +934,12 @@ async def test_p03_concurrent_print_retry_accepts_one_new_output(
                 return ("conflict", exc.detail)
 
     outcomes = await asyncio.gather(_attempt_retry(), _attempt_retry())
-    assert sorted(outcome for outcome, _ in outcomes) == ["accepted", "conflict"]
+    # Exactly one new output wins. A racing duplicate either loses the
+    # compare-and-set (conflict) or, if it reads after the winner committed,
+    # gets the same queued result back idempotently.
+    accepted = [result for outcome, result in outcomes if outcome == "accepted"]
+    assert accepted
+    assert len({result["output_id"] for result in accepted}) == 1
     async with db_session_factory() as verify:
         row = await verify.get(NativeRealizationModel, realization_id)
         assert row is not None
@@ -913,10 +962,17 @@ async def test_p03_concurrent_print_retry_accepts_one_new_output(
 
 
 @pytest.mark.asyncio
-async def test_p03_standalone_studio_print_approval_creates_distinct_output(
+async def test_p03_standalone_studio_print_approval_is_retired(
     db_session_factory, monkeypatch
 ) -> None:
-    import json
+    """P11B: standalone Print (no Unit lesson) generation is retired.
+
+    Historically this route created a detached Studio output with no
+    ``NativeRealizationModel`` row (see the deleted
+    ``test_p03_standalone_studio_print_approval_creates_distinct_output``).
+    That ordinary-authoring fallback no longer exists; the same request must
+    now fail closed with a typed 409.
+    """
     from unittest.mock import AsyncMock
 
     import application.unit_lesson.native_http as native_http
@@ -982,37 +1038,34 @@ async def test_p03_standalone_studio_print_approval_creates_distinct_output(
         created_at="2026-09-23T00:00:00Z",
         updated_at="2026-09-23T00:00:00Z",
     )
-    response = await native_http.post_lesson_approach_approve(
-        source.id,
-        native_http.LessonApproachApproveRequest(
-            expected_revision=1,
-            expected_content_hash=teaching_plan_content_hash(plan),
-            teacher_note="Approved",
-        ),
-        teacher,
-        path="print",
-    )
-    payload = json.loads(response.body)
-    assert response.status_code == 202
-    assert payload["output_id"] != source.id
-    assert payload["generation_id"] == payload["output_id"]
+    with pytest.raises(HTTPException) as error:
+        await native_http.post_lesson_approach_approve(
+            source.id,
+            native_http.LessonApproachApproveRequest(
+                expected_revision=1,
+                expected_content_hash=teaching_plan_content_hash(plan),
+                teacher_note="Approved",
+            ),
+            teacher,
+            path="print",
+        )
+    assert error.value.status_code == 409
+    assert error.value.detail["code"] == "PRINT_STANDALONE_RETIRED"
+
     async with db_session_factory() as verify:
         prepared = await verify.get(GenerationModel, source.id)
-        output = await verify.get(GenerationModel, payload["output_id"])
-        assert prepared is not None and output is not None
-        assert prepared.status == "awaiting_teaching_approval"
-        assert output.status == "queued"
+        assert prepared is not None
         assert await verify.scalar(
             select(func.count()).select_from(NativeRealizationModel)
         ) == 0
-        replay = await realize_print_from_preparation(
-            verify,
-            preparation_generation_id=source.id,
-            user_id=user_id,
-            allow_standalone=True,
-        )
-        assert replay["output_id"] == payload["output_id"]
-        assert replay["realization_id"] is None
+        with pytest.raises(HTTPException) as replay_error:
+            await realize_print_from_preparation(
+                verify,
+                preparation_generation_id=source.id,
+                user_id=user_id,
+            )
+        assert replay_error.value.status_code == 409
+        assert replay_error.value.detail["code"] == "PRINT_STANDALONE_RETIRED"
 
 
 @pytest.mark.asyncio
@@ -1039,7 +1092,6 @@ async def test_p03_missing_unit_path_provenance_cannot_fall_back_to_studio(
             db_session,
             preparation_generation_id=preparation_id,
             user_id=user_id,
-            allow_standalone=True,
         )
 
     assert error.value.status_code == 409

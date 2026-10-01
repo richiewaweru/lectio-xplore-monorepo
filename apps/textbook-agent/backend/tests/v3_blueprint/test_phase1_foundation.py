@@ -5,7 +5,6 @@ from pathlib import Path
 
 from v3_blueprint.compiler import BlueprintCompiler
 from v3_blueprint.models import ProductionBlueprint
-from v3_blueprint.validators import validate_blueprint_completeness
 
 EXAMPLE_FILENAMES = [
     "amara_compound_area.json",
@@ -22,13 +21,6 @@ def _examples_dir() -> Path:
 def _load_blueprint(filename: str) -> ProductionBlueprint:
     payload = json.loads((_examples_dir() / filename).read_text(encoding="utf-8"))
     return ProductionBlueprint.model_validate(payload)
-
-
-def test_all_persona_blueprints_validate() -> None:
-    for filename in EXAMPLE_FILENAMES:
-        blueprint = _load_blueprint(filename)
-        assert blueprint.metadata.version == "3.0"
-        assert validate_blueprint_completeness(blueprint) == []
 
 
 def test_all_work_orders_compile() -> None:

@@ -1,7 +1,7 @@
 """Curriculum-owned teaching planner entrypoints.
 
 Print adapts to these helpers rather than owning a second planner. The
-provider call lives in print.generation.whole_lesson.teaching_agent and is
+provider call lives in application.unit_lesson.teaching_planner and is
 bound at composition time so curriculum never imports print product modules.
 """
 
@@ -19,7 +19,7 @@ _shared_teaching_runner: SharedTeachingRunner | None = None
 
 
 def bind_shared_teaching_runner(runner: SharedTeachingRunner) -> None:
-    """Register the Print-owned teaching planner implementation."""
+    """Register the application-owned teaching planner implementation."""
     global _shared_teaching_runner
     _shared_teaching_runner = runner
 
@@ -37,7 +37,7 @@ async def plan_shared_teaching(
     if runner is None:
         raise RuntimeError(
             "shared teaching planner is not bound; call "
-            "bind_shared_teaching_runner from the Print composition root"
+            "bind_shared_teaching_runner from the application composition root"
         )
     return await runner(
         packet,

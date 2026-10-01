@@ -152,8 +152,14 @@ class AuthoringRegistry:
 
 
 class LLMAuthoringProvider:
-    def __init__(self, *, node_name: str = "v3_block_writer_fast") -> None:
+    def __init__(
+        self,
+        *,
+        node_name: str = "v3_block_writer_fast",
+        output_type: Any = dict[str, Any],
+    ) -> None:
         self.node_name = node_name
+        self.output_type = output_type
 
     async def invoke(self, call: AuthoringProviderCall) -> Any:
         from core.llm.runner import RetryPolicy
@@ -171,7 +177,7 @@ class LLMAuthoringProvider:
                 generation_id=None,
                 system_prompt=call.prompt,
                 user_prompt="Return JSON only for the selected capability payload.",
-                output_type=dict[str, Any],
+                output_type=self.output_type,
                 repair_attempts=0,
                 retries={"output": 0},
                 structured_mode="prompted_json",

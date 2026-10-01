@@ -31,7 +31,7 @@ from print.generation.whole_lesson.native_routing import (
     generation_is_native_whole_lesson,
 )
 from print.generation.whole_lesson.repository import PAGE_DOCUMENT_KEY, VISUAL_TOPOLOGY_KEY
-from v3_blueprint.planning.persistence import load_chunked_state
+from curriculum.planning.persistence import load_chunked_state
 
 EVIDENCE_ROOT = Path(__file__).resolve().parents[4] / "docs" / "evidence" / "whole-lesson-runs"
 PROMPT_RESOURCES = Path(__file__).resolve().parents[1] / "resources"

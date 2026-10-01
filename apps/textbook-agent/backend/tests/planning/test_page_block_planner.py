@@ -12,7 +12,7 @@ from print.generation.page_blocks import (
     validate_block_plan_against_guidance,
 )
 from resource_specs.loader import load_all_specs
-from v3_blueprint.planning.models import PlannedBlock, SectionBlockPlan
+from curriculum.planning.models import PlannedBlock, SectionBlockPlan
 
 
 def test_page_document_scope_matches_conceptual_first_exposure() -> None:

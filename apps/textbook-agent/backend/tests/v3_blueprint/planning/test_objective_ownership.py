@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from v3_blueprint.planning.objective_ownership import (
+from curriculum.planning.objective_ownership import (
     ObjectiveOwnership,
     ObjectiveOwnershipError,
     hash_path_objective,

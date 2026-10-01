@@ -36,6 +36,11 @@ _OPTIONAL_LOG_FIELDS = (
     "tokens_out",
     "cost_usd",
     "retryable",
+    # Visual execution failures already attach these fields. Keep them in the
+    # JSON output so post-generation failures can be diagnosed without logging
+    # provider responses, prompts, or raw exception messages.
+    "failure_stage",
+    "original_exception_type",
 )
 
 

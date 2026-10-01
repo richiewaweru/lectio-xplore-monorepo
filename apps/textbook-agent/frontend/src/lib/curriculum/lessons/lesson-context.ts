@@ -1,13 +1,37 @@
 /** Canonical Unit lesson workspace projection helpers. */
+import { derivePathJob } from '$lib/reliability/path-job-lane';
 import type {
 	ArtifactPath,
 	ArtifactUiState,
 	LessonArtifactUi,
 	PreparedLessonStatus,
-	PreparationWorkspaceState
+	PreparationWorkspaceState,
+	WorkspaceStateError
 } from '$lib/types/units';
 
 export type LessonPrepUiState = 'not_prepared' | 'preparing' | 'awaiting_review' | 'ready' | 'needs_attention';
+
+// Backend error codes whose raw `message` is written for logs/support, not
+// for a teacher. Map the ones seen in the wild to plain language; anything
+// else falls back to the backend's message as-is.
+const FRIENDLY_ERROR_MESSAGES: Record<string, string> = {
+	// P12A: the orphan reaper marks a crashed/unobservable stage-2 pipeline
+	// task this way. Always retryable -- the raw message ("... no longer
+	// observable (owner_boot_id=...)") is debugging detail, not something a
+	// teacher should have to parse.
+	PIPELINE_ORPHANED:
+		'Lesson preparation was interrupted (its process stopped unexpectedly). It is safe to retry.',
+	LEGACY_STAGE_RETIRED:
+		'This generation is parked at a pre-P11B execution stage that no longer runs. It cannot resume automatically and needs attention.'
+};
+
+/** Prefer a known-friendly message for the error's code; fall back to the
+ * backend's own message, then a generic default. */
+export function preparationErrorMessage(error: WorkspaceStateError | null | undefined): string {
+	const code = error?.code ?? null;
+	if (code && FRIENDLY_ERROR_MESSAGES[code]) return FRIENDLY_ERROR_MESSAGES[code];
+	return error?.message ?? 'Lesson preparation failed unexpectedly.';
+}
 
 export function lessonWorkspaceHref(
 	unitId: string,
@@ -92,19 +116,25 @@ export function lessonArtifactUi(
 			path, exists: false, state: status ? 'needs_attention' : 'not_created',
 			realizationId: null, outputId: null, openHref: null,
 			errorSummary: loadError ?? (status ? 'Path status is ambiguous. Refresh the lesson workspace.' : null),
-			retryable: false, recoveryAction: status ? 'reload_lesson' : null, legacyAmbiguous: Boolean(status)
+			retryable: false, regenerable: false, runId: null, recoveryAction: status ? 'reload_lesson' : null, legacyAmbiguous: Boolean(status),
+			sharedDocumentState: null
 		};
 	}
 	const canonicalState = workspace.state;
-	const state: ArtifactUiState = canonicalState === 'queued' || canonicalState === 'running'
-		? 'preparing'
-		: canonicalState === 'ready'
-			? 'ready'
-			: canonicalState === 'failed_recoverable'
-				? 'failed'
-				: canonicalState === 'failed_terminal'
-					? 'needs_attention'
-					: 'not_created';
+	const derived = derivePathJob(workspace);
+	// `needs_review` is authoritative from the backend: a pinned SharedLessonDocument
+	// awaiting a human review decision. Never infer this from output_id/hash alone.
+	const state: ArtifactUiState = canonicalState === 'needs_review'
+		? 'needs_review'
+		: canonicalState === 'queued' || canonicalState === 'running'
+			? 'preparing'
+			: canonicalState === 'ready'
+				? 'ready'
+				: canonicalState === 'failed_recoverable'
+					? 'failed'
+					: canonicalState === 'failed_terminal'
+						? 'needs_attention'
+						: 'not_created';
 	return {
 		path,
 		exists: canonicalState !== 'not_created',
@@ -115,9 +145,14 @@ export function lessonArtifactUi(
 		// Preview-fetch failures are displayed separately and cannot turn a ready
 		// realization into a failed/retryable run.
 		errorSummary: workspace.error?.message ?? loadError ?? null,
-		retryable: canonicalState === 'failed_recoverable' && workspace.error?.retryable === true && !workspace.stale && !workspace.legacy_ambiguous,
-		recoveryAction: workspace.error?.recovery_action ?? null,
-		legacyAmbiguous: Boolean(workspace.legacy_ambiguous)
+		// needs_review never advertises a retry action: the backend has no retry
+		// endpoint for a pending human review, and offering one would be retry spam.
+		retryable: state !== 'needs_review' && canonicalState === 'failed_recoverable' && workspace.error?.retryable === true && !workspace.stale && !workspace.legacy_ambiguous,
+		regenerable: derived.action === 'regenerate' && Boolean(workspace.realization_id) && !workspace.legacy_ambiguous && !workspace.stale,
+		runId: derived.runId,
+		recoveryAction: state === 'needs_review' ? null : derived.recoveryAction,
+		legacyAmbiguous: Boolean(workspace.legacy_ambiguous),
+		sharedDocumentState: workspace.shared_document_state ?? null
 	};
 }
 

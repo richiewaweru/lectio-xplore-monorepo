@@ -44,7 +44,7 @@ async def _main() -> int:
         os.environ["V3_IMAGE_DIAGNOSTIC_ENV_FILE"] = str(env_path)
 
     from core.config import settings
-    from core.logging import configure_logging
+    from infra.logging import configure_logging
     from media.diagnostics.v3_image_pipeline_diagnostic import (
         format_report,
         run_diagnostic,

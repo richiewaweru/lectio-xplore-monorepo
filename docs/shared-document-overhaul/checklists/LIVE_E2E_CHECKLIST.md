@@ -1,0 +1,22 @@
+# Live E2E Checklist
+
+- [ ] preparation completes
+- [ ] Teaching Plan review correct
+- [ ] approved hash persisted/verified
+- [ ] SharedDocument run visible
+- [ ] bounded section parallelism
+- [ ] bounded retries
+- [ ] required media truthful
+- [ ] continuity passes
+- [ ] SharedDocument hash persisted
+- [ ] shared preview correct
+- [ ] Learn consumes same hash
+- [ ] interactions work
+- [ ] publish works
+- [ ] Print consumes same hash
+- [ ] paper tasks work
+- [ ] answer key human labels
+- [ ] PDF valid
+- [ ] refresh/reopen works
+- [ ] no metadata leakage
+- [ ] telemetry sufficient for diagnosis

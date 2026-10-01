@@ -24,10 +24,12 @@ from core.database.models import (
 from core.entities.user import User
 from infra.auth.middleware import get_current_user
 from infra.database.session import get_async_session
+from learn.authoring.builder.service import SharedDocumentLineageError
 from learn.publishing.publish_validation import (
     PublishValidationError,
     validate_publishable_lesson_document,
 )
+from learn.publishing.shared_document_publish import verify_shared_document_lineage_for_publish
 
 router = APIRouter(prefix="/api/v1/learn", tags=["learn-releases"])
 
@@ -204,6 +206,10 @@ class LearnReleaseResponse(BaseModel):
     path_lesson_id: str | None = None
     path_lesson_revision: int | None = None
     objective_hash: str | None = None
+    shared_document_run_id: str | None = None
+    shared_document_id: str | None = None
+    shared_document_revision: int | None = None
+    shared_document_hash: str | None = None
     status: str
     published_at: datetime
     document: dict[str, Any]
@@ -219,6 +225,9 @@ class LearnReleaseListItem(BaseModel):
     path_lesson_id: str | None = None
     path_lesson_revision: int | None = None
     objective_hash: str | None = None
+    shared_document_id: str | None = None
+    shared_document_revision: int | None = None
+    shared_document_hash: str | None = None
     status: str
     published_at: datetime
 
@@ -240,6 +249,10 @@ def _to_response(model: LearnReleaseModel, *, idempotent_replay: bool = False) -
         path_lesson_id=model.path_lesson_id,
         path_lesson_revision=model.path_lesson_revision,
         objective_hash=model.objective_hash,
+        shared_document_run_id=model.shared_document_run_id,
+        shared_document_id=model.shared_document_id,
+        shared_document_revision=model.shared_document_revision,
+        shared_document_hash=model.shared_document_hash,
         status=model.status,
         published_at=model.published_at,
         document=model.document_json if isinstance(model.document_json, dict) else {},
@@ -309,6 +322,16 @@ async def publish_learn_release(
     if existing is not None:
         return _to_response(existing, idempotent_replay=True)
 
+    try:
+        shared_lineage = await verify_shared_document_lineage_for_publish(
+            session, lesson=lesson, document=snapshot
+        )
+    except SharedDocumentLineageError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": exc.code, "message": str(exc)},
+        ) from exc
+
     effect_key = body.idempotency_key or idempotency_key_header
     effect = None
     if effect_key:
@@ -362,6 +385,16 @@ async def publish_learn_release(
                 path_lesson_id=path_lesson_id,
                 path_lesson_revision=path_lesson_revision,
                 objective_hash=objective_hash,
+                shared_document_run_id=(
+                    shared_lineage.run_id if shared_lineage is not None else None
+                ),
+                shared_document_id=(shared_lineage.id if shared_lineage is not None else None),
+                shared_document_revision=(
+                    shared_lineage.revision if shared_lineage is not None else None
+                ),
+                shared_document_hash=(
+                    shared_lineage.hash if shared_lineage is not None else None
+                ),
                 status="published",
                 published_at=now,
                 created_at=now,
@@ -414,6 +447,9 @@ async def list_learn_releases(
             path_lesson_id=row.path_lesson_id,
             path_lesson_revision=row.path_lesson_revision,
             objective_hash=row.objective_hash,
+            shared_document_id=row.shared_document_id,
+            shared_document_revision=row.shared_document_revision,
+            shared_document_hash=row.shared_document_hash,
             status=row.status,
             published_at=row.published_at,
         )

@@ -38,7 +38,6 @@ from print.rendering.page_objects.models import (
 from print.rendering.page_objects.prompts import build_repair_prompt, build_writer_prompt
 from print.rendering.page_objects.registry import (
     dispatch_writer,
-    dispatch_writer_async,
     write_aside,
     write_figure,
     write_list,
@@ -86,7 +85,6 @@ __all__ = [
     "build_repair_prompt",
     "build_writer_prompt",
     "dispatch_writer",
-    "dispatch_writer_async",
     "validate_answer_key_integrity",
     "validate_content",
     "write_aside",

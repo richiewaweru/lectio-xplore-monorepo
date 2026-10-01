@@ -7,14 +7,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from v3_blueprint.planning.models import (
+from curriculum.planning.models import (
     ConceptCard,
     ItemOption,
     Misconception,
     QuestionBrief,
 )
-from v3_execution.executors.item_diagnostics import classify_item_failure
-from v3_execution.executors.item_executor import (
+from curriculum.items.diagnostics import classify_item_failure
+from curriculum.items.generator import (
     ITEM_MAX_ATTEMPTS,
     ItemGenerationDraft,
     ItemGenerationResult,
@@ -102,7 +102,7 @@ def _provider_draft_with_correct_diagnoses_cleared(
 @pytest.mark.asyncio
 async def test_i01_item_success_diagnostic() -> None:
     with patch(
-        "v3_execution.executors.item_executor.run_llm",
+        "curriculum.items.generator.run_llm",
         new=AsyncMock(return_value=SimpleNamespace(output=_valid_result())),
     ):
         run = await execute_items_with_diagnostics(_card(), generation_id="gen-1")
@@ -117,7 +117,7 @@ async def test_i01_item_success_diagnostic() -> None:
 async def test_i01_item_executor_passes_explicit_timeout_policy() -> None:
     llm_call = AsyncMock(return_value=SimpleNamespace(output=_valid_result()))
     with patch(
-        "v3_execution.executors.item_executor.run_llm",
+        "curriculum.items.generator.run_llm",
         new=llm_call,
     ):
         await execute_items_with_diagnostics(_card(), generation_id="gen-1")
@@ -129,7 +129,7 @@ async def test_i01_item_executor_passes_explicit_timeout_policy() -> None:
 @pytest.mark.asyncio
 async def test_i02_item_timeout_diagnostic() -> None:
     with patch(
-        "v3_execution.executors.item_executor.run_llm",
+        "curriculum.items.generator.run_llm",
         new=AsyncMock(side_effect=TimeoutError("provider timed out")),
     ), pytest.raises(TimeoutError) as exc_info:
         await execute_items_with_diagnostics(_card(), generation_id="gen-1")
@@ -169,7 +169,7 @@ async def test_i05_failed_then_repaired_unchanged_budget() -> None:
 
     llm_call = AsyncMock(side_effect=_flaky)
     with patch(
-        "v3_execution.executors.item_executor.run_llm",
+        "curriculum.items.generator.run_llm",
         new=llm_call,
     ):
         run = await execute_items_with_diagnostics(
@@ -191,7 +191,7 @@ async def test_i06_correct_option_diagnoses_normalize_to_null() -> None:
         incorrect_diagnoses="m1",
     )
     with patch(
-        "v3_execution.executors.item_executor.run_llm",
+        "curriculum.items.generator.run_llm",
         new=AsyncMock(return_value=SimpleNamespace(output=draft)),
     ):
         run = await execute_items_with_diagnostics(_card(), generation_id="gen-1")
@@ -210,7 +210,7 @@ async def test_i07_repair_prompt_includes_validation_errors_and_allowed_ids() ->
 
     llm_call = AsyncMock(side_effect=_flaky)
     with patch(
-        "v3_execution.executors.item_executor.run_llm",
+        "curriculum.items.generator.run_llm",
         new=llm_call,
     ):
         await execute_items_with_diagnostics(_card(), generation_id="gen-1", max_attempts=2)

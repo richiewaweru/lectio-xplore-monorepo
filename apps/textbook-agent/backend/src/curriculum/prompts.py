@@ -13,7 +13,7 @@ LESSON_APPROACH_PROMPT_V1_SHA256 = (
     "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
 )
 LESSON_APPROACH_PROMPT_V2_SHA256 = (
-	"d3a47826dcaef2a38e063e149f257982b0334968482f70b2db3282ed3725bc0c"
+    "87eee1cf4f272474657538fab2b80d34a47acca584c1801f556fd85de8650c26"
 )
 
 
@@ -25,8 +25,6 @@ _PROMPT_NAMES = {
     "path-structural-planner-page-v1.txt",
     LESSON_APPROACH_PROMPT_V1,
     LESSON_APPROACH_PROMPT_V2,
-    "form-planner-v1.txt",
-    "native-capability-selector-v1.txt",
     "page-writer-common-v1.txt",
     "prose-writer-v1.txt",
     "list-writer-v1.txt",
@@ -41,8 +39,6 @@ _PROMPT_NAMES = {
 _PACKAGED_PROMPT_NAMES = {
     "path-planner.md",
     "merge-critic.md",
-    "document-composer-v1.txt",
-    "document-writer-v1.txt",
 }
 
 
@@ -106,34 +102,9 @@ def lesson_approach_planner_v1_prompt() -> str:
     return prompt_text(LESSON_APPROACH_PROMPT_V1)
 
 
-def form_planner_prompt() -> str:
-    return prompt_text("form-planner-v1.txt")
-
-
-def capability_selector_prompt() -> str:
-    return prompt_text("native-capability-selector-v1.txt")
-
-
-def interaction_selection_prompt() -> str:
-    from core.prompts import effective_prompt_text
-
-    return effective_prompt_text("interaction-selection")
-
 
 def page_writer_common_prompt() -> str:
     return prompt_text("page-writer-common-v1.txt")
-
-
-def document_composer_prompt() -> str:
-    from core.prompts import effective_prompt_text
-
-    return effective_prompt_text("document-composer")
-
-
-def document_writer_prompt() -> str:
-    from core.prompts import effective_prompt_text
-
-    return effective_prompt_text("document-writer")
 
 
 def lesson_sourcebook_writer_prompt() -> str:
@@ -152,6 +123,12 @@ def whole_lesson_coherence_reviewer_prompt() -> str:
     from core.prompts import effective_prompt_text
 
     return effective_prompt_text("whole-lesson-coherence-reviewer")
+
+
+def teaching_plan_semantic_reviewer_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("teaching-plan-semantic-reviewer")
 
 
 def targeted_lesson_repair_prompt() -> str:

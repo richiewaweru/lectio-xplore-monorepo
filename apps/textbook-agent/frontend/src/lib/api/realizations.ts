@@ -4,13 +4,6 @@ import { ensureOk } from '$lib/api/errors';
 import { apiFetch } from '$lib/api/client';
 import { authToken } from '$lib/shared/stores/auth';
 
-export type V3VisualRetryResult = {
-	retried?: number;
-	succeeded?: number;
-	failed?: number;
-	[key: string]: unknown;
-};
-
 export type V3PdfExportBody = {
 	school_name: string;
 	teacher_name: string;
@@ -57,24 +50,6 @@ export async function realizePrintFromGeneration(generationId: string): Promise<
 	);
 	await ensureOk(res, 'Could not generate the Print lesson.');
 	return res.json();
-}
-
-export async function retryNativeGeneration(generationId: string): Promise<void> {
-	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/retry-native`,
-		{ method: 'POST', headers: bearerHeaders() }
-	);
-	await ensureOk(res, 'Could not retry the failed generation stage.');
-}
-
-export async function retryNativeVisuals(generationId: string): Promise<V3VisualRetryResult | null> {
-	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/visuals/retry`,
-		{ method: 'POST', headers: bearerHeaders() }
-	);
-	await ensureOk(res, 'Could not retry failed visuals.');
-	if (res.status === 204) return null;
-	return (await res.json()) as V3VisualRetryResult;
 }
 
 export async function downloadGenerationPdf(

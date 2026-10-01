@@ -1,0 +1,730 @@
+from __future__ import annotations
+
+import pytest
+from fastapi import HTTPException
+from pydantic import ValidationError
+from sqlalchemy import select
+from types import SimpleNamespace
+
+from document.shared_lesson import http as shared_document_http
+from document.shared_lesson.document_semantic import (
+    DocumentSemanticQAResult,
+    DocumentSemanticVerdict,
+)
+from document.shared_lesson.http import (
+    ReviewDraftRevisionRequest,
+    get_shared_document_review_draft,
+    post_shared_document_review_draft_revision,
+)
+from document.shared_lesson.qa import DocumentQAResult
+from document.shared_lesson.qa_runtime import (
+    DOCUMENT_QA_ITEM_KEY,
+    DOCUMENT_QA_STAGE,
+    DocumentQAOutputError,
+    DocumentQARuntimeError,
+    DocumentQAWorkItemJob,
+    DocumentQAWorkItemOutput,
+    admit_document_qa_work_item,
+    admit_repaired_document_qa_work_item,
+    execute_document_qa_work_item,
+    load_verified_document_qa,
+)
+from document.shared_lesson.runtime import TeachingPlanSource
+from infra.database.models import (
+    ConceptModel,
+    GenerationEventModel,
+    SharedLessonDocumentModel,
+    GenerationWorkItemModel,
+    PathLessonModel,
+    PathVersionModel,
+    UnitModel,
+    UserModel,
+)
+from infra.generation_runtime import (
+    BuildAdmission,
+    InvalidWorkItemTransition,
+    RunAdmission,
+    RunType,
+    WorkItemConflict,
+    admit_run,
+    create_build,
+    retry_work_item,
+)
+
+
+def _source_and_document():
+    # Reuse the repository contract fixture so this package stays bound to the
+    # same approved plan and canonical document builders as the finalizer.
+    from test_shared_lesson_repository import _approved_source_and_document
+
+    return _approved_source_and_document()
+
+
+async def _seed_run(session, source: TeachingPlanSource, *, suffix: str = "qa"):
+    owner = f"qa-owner-{suffix}"
+    lesson = f"qa-lesson-{suffix}"
+    user = UserModel(id=owner, email=f"{owner}@example.invalid")
+    concept = ConceptModel(
+        id=f"qa-concept-{suffix}",
+        canonical_slug=f"qa.{suffix}",
+        subject="Science",
+        title="QA fixture",
+        created_by=owner,
+    )
+    unit = UnitModel(
+        id=f"qa-unit-{suffix}",
+        owner_id=owner,
+        title="QA fixture",
+        topic="QA",
+        subject="Science",
+        grade_level="Grade 7",
+        destination_objective="Validate document QA.",
+    )
+    version = PathVersionModel(
+        id=f"qa-path-{suffix}", unit_id=unit.id, version=1, source_plan_json={}
+    )
+    path_lesson = PathLessonModel(
+        id=lesson,
+        path_version_id=version.id,
+        concept_id=concept.id,
+        concept_slug=concept.canonical_slug,
+        title="QA fixture",
+        objective="Validate document QA.",
+        objective_hash="qa-objective",
+        primary_knowledge_type="conceptual",
+        position=0,
+    )
+    session.add_all([user, concept, unit, version, path_lesson])
+    await session.flush()
+    build = await create_build(session, BuildAdmission(owner_user_id=owner, path_lesson_id=lesson))
+    admitted = await admit_run(
+        session,
+        RunAdmission(
+            build_id=build.id,
+            owner_user_id=owner,
+            run_type=RunType.SHARED_DOCUMENT,
+            request_key=f"qa-request-{suffix}",
+            stage=DOCUMENT_QA_STAGE,
+            source_artifact_type="teaching_plan",
+            source_artifact_id=source.id,
+            source_revision=source.revision,
+            source_hash=source.content_hash,
+        ),
+    )
+    return owner, admitted.record.id
+
+
+def _deterministic(document, *, ready: bool = True):
+    return DocumentQAResult(
+        document_id=document.id,
+        document_revision=document.revision,
+        issues=()
+        if ready
+        else (
+            {
+                "issue_code": "bad_document",
+                "affected_section_id": document.sections[0].id,
+                "explanation": "bad",
+                "required_correction": "repair",
+            },
+        ),
+    )
+
+
+async def _pass(_request):
+    return DocumentSemanticVerdict(status="pass")
+
+
+@pytest.mark.asyncio
+async def test_document_qa_admission_is_gated_and_idempotent(db_session):
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source)
+    deterministic = _deterministic(document)
+
+    first = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=deterministic,
+    )
+    second = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=deterministic,
+    )
+    assert first.created is True
+    assert second.created is False
+    assert first.record.id == second.record.id
+    assert first.record.item_key == DOCUMENT_QA_ITEM_KEY
+
+    with pytest.raises(DocumentQARuntimeError, match="deterministic QA"):
+        await admit_document_qa_work_item(
+            db_session,
+            run_id=run_id,
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document, ready=False),
+        )
+
+
+@pytest.mark.asyncio
+async def test_document_qa_executes_one_call_and_loader_revalidates_pass(db_session):
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source, suffix="pass")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+    calls = 0
+
+    async def provider(_request):
+        nonlocal calls
+        calls += 1
+        return DocumentSemanticVerdict(status="pass")
+
+    outcome = await execute_document_qa_work_item(
+        DocumentQAWorkItemJob(
+            session=db_session,
+            work_item_id=admitted.record.id,
+            worker_id="qa-worker",
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document),
+            semantic_validator=provider,
+        )
+    )
+    assert calls == 1
+    assert outcome.qa is not None
+    verified = await load_verified_document_qa(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+    )
+    assert verified.work_item_id == admitted.record.id
+    assert verified.semantic_qa.passed
+
+
+@pytest.mark.asyncio
+async def test_document_qa_provider_output_failure_is_recoverable_and_no_fallback(db_session):
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source, suffix="malformed")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+    calls = 0
+
+    async def malformed(_request):
+        nonlocal calls
+        calls += 1
+        return {"status": "pass", "issues": ({"unexpected": True},)}
+
+    outcome = await execute_document_qa_work_item(
+        DocumentQAWorkItemJob(
+            session=db_session,
+            work_item_id=admitted.record.id,
+            worker_id="qa-worker",
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document),
+            semantic_validator=malformed,
+        )
+    )
+    assert calls == 1
+    assert outcome.qa is None
+    item = await db_session.get(GenerationWorkItemModel, admitted.record.id)
+    assert item is not None
+    assert item.status == "failed_recoverable"
+    assert item.error_class == "provider_output"
+
+
+@pytest.mark.asyncio
+async def test_document_qa_transport_retry_and_configuration_fail_closed(db_session):
+    source, document = _source_and_document()
+
+    owner, run_id = await _seed_run(db_session, source, suffix="transport")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+
+    async def transport(_request):
+        raise TimeoutError("provider timed out")
+
+    outcome = await execute_document_qa_work_item(
+        DocumentQAWorkItemJob(
+            session=db_session,
+            work_item_id=admitted.record.id,
+            worker_id="qa-worker-transport",
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document),
+            semantic_validator=transport,
+        )
+    )
+    assert outcome.error_code == "document_qa_provider_transport"
+    transport_item = await db_session.get(GenerationWorkItemModel, admitted.record.id)
+    assert transport_item is not None
+    assert transport_item.status == "failed_recoverable"
+
+    owner, run_id = await _seed_run(db_session, source, suffix="auth")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+
+    class AuthError(RuntimeError):
+        pass
+
+    async def configuration(_request):
+        raise AuthError("provider credentials unavailable")
+
+    outcome = await execute_document_qa_work_item(
+        DocumentQAWorkItemJob(
+            session=db_session,
+            work_item_id=admitted.record.id,
+            worker_id="qa-worker-auth",
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document),
+            semantic_validator=configuration,
+        )
+    )
+    assert outcome.error_code == "document_qa_configuration"
+    config_item = await db_session.get(GenerationWorkItemModel, admitted.record.id)
+    assert config_item is not None
+    assert config_item.status == "failed_terminal"
+
+
+@pytest.mark.usefixtures("blocking_quality_gate")
+@pytest.mark.asyncio
+async def test_document_qa_semantic_issue_never_becomes_ready(db_session, monkeypatch):
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source, suffix="issue")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+    qa_work_item_id = admitted.record.id
+
+    async def issue(_request):
+        return DocumentSemanticVerdict(
+            status="issue",
+            issues=(
+                {
+                    "issue_code": "unsupported_assumption",
+                    "affected_section_id": document.sections[0].id,
+                    "explanation": "The section assumes an unapproved fact.",
+                    "required_correction": "Repair the affected section input.",
+                },
+            ),
+        )
+
+    outcome = await execute_document_qa_work_item(
+        DocumentQAWorkItemJob(
+            session=db_session,
+            work_item_id=qa_work_item_id,
+            worker_id="qa-worker",
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document),
+            semantic_validator=issue,
+        )
+    )
+    assert outcome.qa is None
+    item = await db_session.get(GenerationWorkItemModel, qa_work_item_id)
+    assert item is not None
+    assert item.status == "failed_recoverable"
+    draft_row = await db_session.get(
+        SharedLessonDocumentModel, {"id": document.id, "revision": document.revision}
+    )
+    assert draft_row is not None
+    assert draft_row.status == "draft"
+    assert draft_row.content_hash == document.content_hash
+    review = await get_shared_document_review_draft(
+        run_id,
+        current_user=SimpleNamespace(id=owner),
+        session=db_session,
+    )
+    assert review["draft"] == {
+        "id": document.id,
+        "revision": document.revision,
+        "hash": document.content_hash,
+    }
+    assert review["document"] == document.model_dump(mode="json")
+    assert review["issues"][0]["issue_code"] == "unsupported_assumption"
+    revision_request = ReviewDraftRevisionRequest.model_validate(
+        {
+            "expected_revision": document.revision,
+            "expected_hash": document.content_hash,
+            "edits": [
+                {
+                    "section_id": document.sections[0].id,
+                    "node_id": document.sections[0].nodes[0].id,
+                    "field": "text",
+                    "value": "Plants use light energy to make sugars.",
+                }
+            ],
+        }
+    )
+    revised = await post_shared_document_review_draft_revision(
+        run_id,
+        revision_request,
+        current_user=SimpleNamespace(id=owner),
+        session=db_session,
+    )
+    assert revised["draft"]["revision"] == document.revision + 1
+    assert revised["document"]["sections"][0]["nodes"][0]["display"]["text"] == (
+        "Plants use light energy to make sugars."
+    )
+    assert revised["draft"]["hash"] != document.content_hash
+    original_after_edit = await db_session.get(
+        SharedLessonDocumentModel, {"id": document.id, "revision": document.revision}
+    )
+    assert original_after_edit is not None
+    assert original_after_edit.content_hash == document.content_hash
+    latest_review = await get_shared_document_review_draft(
+        run_id,
+        current_user=SimpleNamespace(id=owner),
+        session=db_session,
+    )
+    assert latest_review["draft"]["revision"] == document.revision + 1
+    assert latest_review["issues"] == review["issues"]
+
+    latest_hash = latest_review["draft"]["hash"]
+    forged_task_edit = ReviewDraftRevisionRequest.model_validate(
+        {
+            "expected_revision": latest_review["draft"]["revision"],
+            "expected_hash": latest_hash,
+            "edits": [
+                {
+                    "section_id": document.sections[0].id,
+                    "node_id": document.sections[0].nodes[0].id,
+                    "field": "callout_body",
+                    "value": "Forged field edit.",
+                }
+            ],
+        }
+    )
+    with pytest.raises(HTTPException) as forged_edit:
+        await post_shared_document_review_draft_revision(
+            run_id,
+            forged_task_edit,
+            current_user=SimpleNamespace(id=owner),
+            session=db_session,
+        )
+    assert forged_edit.value.status_code == 422
+
+    forged_request = ReviewDraftRevisionRequest.model_validate(
+        {
+            "expected_revision": latest_review["draft"]["revision"],
+            "expected_hash": latest_hash,
+            "edits": [
+                {
+                    "section_id": document.sections[0].id,
+                    "node_id": document.sections[0].nodes[0].id,
+                    "field": "text",
+                    "value": "Another valid text edit before a forged identity.",
+                }
+            ],
+        }
+    )
+    original_builder = shared_document_http.build_shared_lesson_document
+
+    def forged_builder(payload):
+        return original_builder(payload).model_copy(update={"id": "forged-document-id"})
+
+    with monkeypatch.context() as patch:
+        patch.setattr(shared_document_http, "build_shared_lesson_document", forged_builder)
+        with pytest.raises(HTTPException) as forged:
+            await post_shared_document_review_draft_revision(
+                run_id,
+                forged_request,
+                current_user=SimpleNamespace(id=owner),
+                session=db_session,
+            )
+    assert forged.value.status_code == 422
+    not_saved = await db_session.get(
+        SharedLessonDocumentModel,
+        {"id": document.id, "revision": latest_review["draft"]["revision"] + 1},
+    )
+    assert not_saved is None
+    with pytest.raises(HTTPException) as stale:
+        await post_shared_document_review_draft_revision(
+            run_id,
+            revision_request,
+            current_user=SimpleNamespace(id=owner),
+            session=db_session,
+        )
+    assert stale.value.status_code == 409
+    with pytest.raises(HTTPException) as foreign:
+        await get_shared_document_review_draft(
+            run_id,
+            current_user=SimpleNamespace(id="another-owner"),
+            session=db_session,
+        )
+    assert foreign.value.status_code == 404
+    with pytest.raises(HTTPException) as foreign_edit:
+        await post_shared_document_review_draft_revision(
+            run_id,
+            revision_request,
+            current_user=SimpleNamespace(id="another-owner"),
+            session=db_session,
+        )
+    assert foreign_edit.value.status_code == 404
+    with pytest.raises(InvalidWorkItemTransition, match="recovery action"):
+        await retry_work_item(
+            db_session,
+            work_item_id=qa_work_item_id,
+            owner_user_id=owner,
+        )
+    issue_events = list(
+        (
+            await db_session.scalars(
+                select(GenerationEventModel)
+                .where(GenerationEventModel.work_item_id == qa_work_item_id)
+                .order_by(GenerationEventModel.seq)
+            )
+        ).all()
+    )
+    assert issue_events[-1].event_type == "document_qa_semantic_issues"
+    assert issue_events[-1].safe_payload_json["issues"][0]["affected_section_id"] == "section-1"
+    repaired = document.model_copy(update={"revision": document.revision + 1})
+    replacement = await admit_repaired_document_qa_work_item(
+        db_session,
+        predecessor_work_item_id=qa_work_item_id,
+        owner_user_id=owner,
+        source=source,
+        document=repaired,
+        deterministic_qa=_deterministic(repaired),
+    )
+    assert replacement.replaces_work_item_id == qa_work_item_id
+    assert replacement.item_key.startswith(f"{DOCUMENT_QA_ITEM_KEY}:")
+    assert replacement.id != qa_work_item_id
+    with pytest.raises(DocumentQAOutputError, match="not ready"):
+        await load_verified_document_qa(
+            db_session,
+            run_id=run_id,
+            owner_user_id=owner,
+            source=source,
+            document=document,
+        )
+
+
+@pytest.mark.usefixtures("blocking_quality_gate")
+@pytest.mark.asyncio
+async def test_document_qa_synthetic_writer_issues_route_a_passing_semantic_verdict_to_review(
+    db_session,
+):
+    """An accepted writer SOFT issue (task_answer_leaked/unsupported_number) must
+    still block automatic READY even when the semantic reviewer itself passes.
+    """
+    from document.shared_lesson.continuity import ContinuityIssue
+
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source, suffix="synthetic-writer-issue")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+    qa_work_item_id = admitted.record.id
+
+    synthetic_issue = ContinuityIssue(
+        issue_code="unsupported_claim",
+        affected_section_id=document.sections[0].id,
+        affected_node_ids=(document.sections[0].nodes[0].id,),
+        explanation=(
+            "The section writer accepted this content on a bounded final repair "
+            "attempt; a reviewer must confirm or correct it."
+        ),
+        required_correction="Review and correct the affected section content.",
+    )
+
+    outcome = await execute_document_qa_work_item(
+        DocumentQAWorkItemJob(
+            session=db_session,
+            work_item_id=qa_work_item_id,
+            worker_id="qa-worker",
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document),
+            semantic_validator=_pass,
+            synthetic_issues=(synthetic_issue,),
+        )
+    )
+    # The document must NOT reach READY even though the semantic reviewer
+    # itself passed the text -- the accepted writer warning still routes to
+    # review.
+    assert outcome.qa is None
+    item = await db_session.get(GenerationWorkItemModel, qa_work_item_id)
+    assert item is not None
+    assert item.status == "failed_recoverable"
+
+    review = await get_shared_document_review_draft(
+        run_id,
+        current_user=SimpleNamespace(id=owner),
+        session=db_session,
+    )
+    assert review["issues"] == [synthetic_issue.model_dump(mode="json")]
+
+
+@pytest.mark.asyncio
+async def test_document_qa_deterministic_failure_does_not_persist_review_draft(db_session):
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source, suffix="deterministic-block")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+
+    with pytest.raises(DocumentQARuntimeError, match="passing deterministic QA"):
+        await execute_document_qa_work_item(
+            DocumentQAWorkItemJob(
+                session=db_session,
+                work_item_id=admitted.record.id,
+                worker_id="qa-hard-failure",
+                owner_user_id=owner,
+                source=source,
+                document=document,
+                deterministic_qa=_deterministic(document, ready=False),
+                semantic_validator=_pass,
+            )
+        )
+    assert await db_session.get(
+        SharedLessonDocumentModel, {"id": document.id, "revision": document.revision}
+    ) is None
+    with pytest.raises(HTTPException) as missing_draft:
+        await get_shared_document_review_draft(
+            run_id,
+            current_user=SimpleNamespace(id=owner),
+            session=db_session,
+        )
+    assert missing_draft.value.status_code == 404
+
+
+def test_review_draft_revision_request_rejects_structural_fields():
+    with pytest.raises(ValidationError):
+        ReviewDraftRevisionRequest.model_validate(
+            {
+                "expected_revision": 1,
+                "expected_hash": "0" * 64,
+                "edits": [
+                    {
+                        "section_id": "section-1",
+                        "node_id": "paragraph-1",
+                        "field": "kind",
+                        "value": "task_anchor",
+                    }
+                ],
+            }
+        )
+
+
+@pytest.mark.asyncio
+async def test_document_qa_rejects_changed_document_identity_and_tampered_output(db_session):
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source, suffix="identity")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+    changed = document.model_copy(update={"revision": document.revision + 1})
+    with pytest.raises(WorkItemConflict):
+        await admit_document_qa_work_item(
+            db_session,
+            run_id=run_id,
+            owner_user_id=owner,
+            source=source,
+            document=changed,
+            deterministic_qa=DocumentQAResult(
+                document_id=changed.id, document_revision=changed.revision
+            ),
+        )
+    await execute_document_qa_work_item(
+        DocumentQAWorkItemJob(
+            session=db_session,
+            work_item_id=admitted.record.id,
+            worker_id="qa-worker",
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document),
+            semantic_validator=_pass,
+        )
+    )
+    item = await db_session.get(GenerationWorkItemModel, admitted.record.id)
+    assert item is not None
+    item.output_json["document_hash"] = "f" * 64
+    with pytest.raises(DocumentQAOutputError, match="output hash changed"):
+        await load_verified_document_qa(
+            db_session,
+            run_id=run_id,
+            owner_user_id=owner,
+            source=source,
+            document=document,
+        )
+
+
+def test_document_qa_output_is_closed_and_bound():
+    with pytest.raises(ValidationError):
+        DocumentQAWorkItemOutput(
+            source_plan_id="plan",
+            source_plan_revision=1,
+            source_plan_hash="a" * 64,
+            document_id="doc",
+            document_revision=1,
+            document_hash="b" * 64,
+            semantic_qa=DocumentSemanticQAResult(
+                document_id="other",
+                document_revision=1,
+                document_hash="b" * 64,
+                status="pass",
+                semantic_calls=1,
+            ),
+        )

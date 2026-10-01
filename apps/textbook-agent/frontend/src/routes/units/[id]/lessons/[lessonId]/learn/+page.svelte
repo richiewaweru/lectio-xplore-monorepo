@@ -69,6 +69,13 @@
 				await loadIssues();
 				return;
 			}
+			if (currentArtifact.state === 'needs_review') {
+				document = null;
+				builderLessonId = null;
+				loadError = null;
+				await loadIssues();
+				return;
+			}
 			if (currentArtifact.state === 'failed' || currentArtifact.state === 'needs_attention') {
 				document = null;
 				builderLessonId = null;
@@ -137,8 +144,11 @@
 		if (
 			currentArtifact.state === 'failed' ||
 			currentArtifact.state === 'needs_attention' ||
-			currentArtifact.state === 'not_created'
+			currentArtifact.state === 'not_created' ||
+			currentArtifact.state === 'needs_review'
 		) {
+			// needs_review requires a human review decision, not a retry; stop
+			// polling so this never becomes an unbounded poll.
 			loadError = currentArtifact.errorSummary;
 			return false;
 		}
@@ -169,7 +179,7 @@
 	}
 
 	async function retryLearn() {
-		if (!ctx.statusFresh || !ctx.path || !ctx.lesson || !artifact.realizationId || !artifact.retryable) return;
+		if (!ctx.statusFresh || !ctx.path || !ctx.lesson || !artifact.realizationId || !(artifact.retryable || artifact.regenerable)) return;
 		busy = 'retry';
 		try {
 			await retryLessonRealization(ctx.unitId, ctx.path, ctx.lesson, artifact.realizationId);
@@ -252,17 +262,29 @@
 	{#if loading}
 		<p class="muted">Loading Learn lesson…</p>
 	{:else if activeTab === 'issues'}
-		<LessonIssuesPanel {issues} onRetry={retryLearn} allowRetry={ctx.statusFresh && artifact.retryable} />
+		<LessonIssuesPanel {issues} onRetry={retryLearn} allowRetry={ctx.statusFresh && (artifact.retryable || artifact.regenerable)} />
 	{:else if artifact.state === 'not_created'}
 		<EmptyState title="Learn not created" description="Create an interactive Learn lesson from the approved teaching plan.">
 			{#snippet actions()}<Button disabled={!ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)} busy={busy === 'create'} onclick={() => void createLearn()}>{busy === 'create' ? 'Creating…' : 'Create Learn'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
 	{:else if artifact.state === 'preparing'}
-		<EmptyState title="Learn is being created" description="This page will update when the Learn lesson is ready.">
+		<EmptyState
+			title={artifact.sharedDocumentState === 'pending' ? 'Preparing the lesson document' : 'Learn is being created'}
+			description="This page will update when the Learn lesson is ready."
+		>
 			{#snippet actions()}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
+	{:else if artifact.state === 'needs_review'}
+		<EmptyState title="This lesson needs a teacher review before Learn can be built" description="Quality checks flagged content in the prepared lesson document. Review and correct it before Learn can continue.">
+			{#snippet actions()}<a class="link" href={`/units/${encodeURIComponent(ctx.unitId)}/lessons/${encodeURIComponent(ctx.lessonId)}/review`}>Review flagged content</a><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
+		</EmptyState>
 	{:else if activeTab === 'preview'}
-		{#if document}<StudentLessonShell {document} preview />{:else}<EmptyState title="Learn needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Learn output is stale. Reprepare and review the lesson before creating another output.' : loadError || 'The Learn preview is unavailable.'}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry Learn</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
+		{#if document}
+			{#if artifact.sharedDocumentState === 'stale'}
+				<InlineError message="The lesson document has changed since this Learn lesson was built. Regenerate Learn from the current plan to pick up the latest content." hint="This preview still shows the last built version." />
+			{/if}
+			<StudentLessonShell {document} preview />
+		{:else}<EmptyState title="Learn needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Learn output is stale. Reprepare and review the lesson before creating another output.' : loadError || 'The Learn preview is unavailable.'}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry Learn</Button>{/if}{#if ctx.statusFresh && artifact.regenerable && !artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Regenerate Learn</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
 	{/if}
 </div>
 

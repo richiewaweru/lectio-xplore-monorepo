@@ -6,15 +6,20 @@ from typing import ClassVar
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     Float,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
+    PrimaryKeyConstraint,
     String,
     Text,
     UniqueConstraint,
+    event,
+    select,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -148,6 +153,12 @@ class GenerationModel(Base):
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     completed_at = Column(DateTime, nullable=True)
     last_heartbeat = Column(DateTime, nullable=True, index=True)
+    # SharedLessonDocument lineage (P10B). Stamped once a Learn output is
+    # realized from a verified shared source; NULL for every other output.
+    shared_document_run_id = Column(String, nullable=True)
+    shared_document_id = Column(String, nullable=True)
+    shared_document_revision = Column(Integer, nullable=True)
+    shared_document_hash = Column(String, nullable=True)
 
     user = relationship("UserModel", back_populates="generations")
     pack = relationship("LearningPackModel", back_populates="generations")
@@ -661,18 +672,6 @@ class LLMCallModel(Base):
     user = relationship("UserModel", back_populates="llm_calls")
 
 
-class LessonShareModel(Base):
-    """Read-only public share of a Lesson Builder document (Phase 7)."""
-
-    __tablename__ = "lesson_shares"
-
-    id = Column(String, primary_key=True)
-    document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
-    expires_at = Column(DateTime, nullable=False, index=True)
-    allow_download = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=_utcnow, nullable=False)
-
-
 class EditableLessonModel(Base):
     """Teacher-owned lesson workspace persisted for the Builder."""
 
@@ -700,6 +699,12 @@ class EditableLessonModel(Base):
     document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    # SharedLessonDocument lineage (P10B). Stamped when this Builder workspace
+    # was materialized from a verified shared source; NULL otherwise.
+    shared_document_run_id = Column(String, nullable=True)
+    shared_document_id = Column(String, nullable=True)
+    shared_document_revision = Column(Integer, nullable=True)
+    shared_document_hash = Column(String, nullable=True)
 
     user = relationship("UserModel", back_populates="editable_lessons")
 
@@ -734,6 +739,12 @@ class LearnReleaseModel(Base):
     status = Column(String, nullable=False, default="published", server_default="published")
     published_at = Column(DateTime, default=_utcnow, nullable=False)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
+    # SharedLessonDocument lineage (P10B). Populated for releases cut from a
+    # verified shared source; publish validation gains it in a later package.
+    shared_document_run_id = Column(String, nullable=True)
+    shared_document_id = Column(String, nullable=True)
+    shared_document_revision = Column(Integer, nullable=True)
+    shared_document_hash = Column(String, nullable=True)
 
     editable_lesson = relationship("EditableLessonModel")
     owner = relationship("UserModel")
@@ -1047,6 +1058,7 @@ class NativeRealizationModel(Base):
         Index("ix_native_realizations_output_id", "output_id"),
         Index("ix_native_realizations_status", "status"),
         Index("ix_native_realizations_teaching_plan_id", "teaching_plan_id"),
+        Index("ix_native_realizations_generation_run_id", "generation_run_id"),
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -1074,6 +1086,19 @@ class NativeRealizationModel(Base):
     # Caller-scoped admission key (P02 G07). NULL for legacy rows.
     admission_request_key = Column(String, nullable=True)
     admission_payload_hash = Column(String, nullable=True)
+    # SharedLessonDocument lineage (P10B). NULL until the Learn cutover pins a
+    # verified shared source. ``shared_document_state`` mirrors the closed
+    # ``RealizationState`` classification (pending/needs_review/stale/failed/
+    # ready) so status projection does not need to re-derive it.
+    shared_document_run_id = Column(String, nullable=True)
+    shared_document_id = Column(String, nullable=True)
+    shared_document_revision = Column(Integer, nullable=True)
+    shared_document_hash = Column(String, nullable=True)
+    shared_document_state = Column(String, nullable=True)
+    # Option D (4A): the learn/print generation Run executing this realization.
+    generation_run_id = Column(
+        String, ForeignKey("generation_runs.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class CallerEffectKeyModel(Base):
@@ -1099,3 +1124,334 @@ class CallerEffectKeyModel(Base):
     payload_hash = Column(String, nullable=False)
     outcome_json = Column(JSON_DOCUMENT_TYPE, nullable=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+# --- Shared Lesson Document storage (Shared Document overhaul Phase 7C) ---
+
+
+class SharedLessonDocumentModel(Base):
+    """Immutable canonical SharedLessonDocument storage envelope.
+
+    The typed aggregate remains in ``document_json``. Identity and lineage are
+    duplicated into explicit columns so trusted runtime loaders can verify a
+    source without opening the JSON first.
+    """
+
+    __tablename__ = "shared_lesson_documents"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", "revision", name="pk_shared_lesson_documents"),
+        CheckConstraint("revision >= 1", name="ck_shared_lesson_documents_revision_positive"),
+        CheckConstraint(
+            "teaching_plan_revision >= 1",
+            name="ck_shared_lesson_documents_plan_revision_positive",
+        ),
+        CheckConstraint(
+            "status IN ('draft', 'ready')",
+            name="ck_shared_lesson_documents_status",
+        ),
+        Index("ix_shared_lesson_documents_path_lesson", "path_lesson_id"),
+        Index("ix_shared_lesson_documents_content_hash", "content_hash"),
+        ForeignKeyConstraint(
+            ["path_lesson_id"], ["path_lessons.id"], ondelete="RESTRICT"
+        ),
+    )
+
+    id = Column(String, nullable=False)
+    revision = Column(Integer, nullable=False)
+    path_lesson_id = Column(String, nullable=False)
+    teaching_plan_id = Column(String, nullable=False)
+    teaching_plan_revision = Column(Integer, nullable=False)
+    teaching_plan_hash = Column(String, nullable=False)
+    content_hash = Column(String, nullable=False)
+    document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    status = Column(String, nullable=False, default="draft", server_default="draft")
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+# --- Generic generation runtime (Shared Document overhaul Phase 1A) ---
+
+
+class GenerationBuildModel(Base):
+    """Correlation record grouping artifact-producing runs for one lesson."""
+
+    __tablename__ = "generation_builds"
+    __table_args__ = (
+        Index("ix_generation_builds_owner_created", "owner_user_id", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    path_lesson_id = Column(
+        String, ForeignKey("path_lessons.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    owner_user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    owner = relationship("UserModel")
+    runs = relationship("GenerationRunModel", back_populates="build")
+
+
+class GenerationRunModel(Base):
+    """Current state for one durable artifact-producing operation."""
+
+    __tablename__ = "generation_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "run_type IN ('preparation', 'shared_document', 'learn', 'print', 'publish', 'pdf')",
+            name="ck_generation_runs_run_type",
+        ),
+        CheckConstraint(
+            "status IN ('queued', 'running', 'awaiting_review', 'ready', "
+            "'failed_recoverable', 'failed_terminal', 'cancelled')",
+            name="ck_generation_runs_status",
+        ),
+        CheckConstraint("attempt >= 1", name="ck_generation_runs_attempt_positive"),
+        CheckConstraint("source_revision >= 1", name="ck_generation_runs_source_revision_positive"),
+        CheckConstraint(
+            "output_revision IS NULL OR output_revision >= 1",
+            name="ck_generation_runs_output_revision_positive",
+        ),
+        CheckConstraint(
+            "status != 'ready' OR (output_artifact_type IS NOT NULL AND "
+            "output_artifact_id IS NOT NULL AND output_revision IS NOT NULL AND output_hash IS NOT NULL)",
+            name="ck_generation_runs_ready_has_output",
+        ),
+        UniqueConstraint(
+            "owner_user_id", "request_key", name="uq_generation_runs_request"
+        ),
+        Index("ix_generation_runs_build_created", "build_id", "created_at"),
+        Index("ix_generation_runs_owner_status_updated", "owner_user_id", "status", "updated_at"),
+        Index("ix_generation_runs_status_created", "status", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    build_id = Column(
+        String, ForeignKey("generation_builds.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    run_type = Column(String, nullable=False)
+    owner_user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String, nullable=False, default="queued", server_default="queued", index=True)
+    stage = Column(String, nullable=False)
+    attempt = Column(Integer, nullable=False, default=1, server_default="1")
+    source_artifact_type = Column(String, nullable=False)
+    source_artifact_id = Column(String, nullable=False)
+    source_revision = Column(Integer, nullable=False)
+    source_hash = Column(String, nullable=False)
+    output_artifact_type = Column(String, nullable=True)
+    output_artifact_id = Column(String, nullable=True)
+    output_revision = Column(Integer, nullable=True)
+    output_hash = Column(String, nullable=True)
+    request_key = Column(String, nullable=False)
+    error_code = Column(String, nullable=True)
+    error_class = Column(String, nullable=True)
+    error_summary = Column(Text, nullable=True)
+    recovery_action = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+    build = relationship("GenerationBuildModel", back_populates="runs")
+    owner = relationship("UserModel")
+    work_items = relationship(
+        "GenerationWorkItemModel",
+        back_populates="run",
+        order_by="GenerationWorkItemModel.item_key",
+        passive_deletes=True,
+    )
+    events = relationship(
+        "GenerationEventModel",
+        back_populates="run",
+        order_by="GenerationEventModel.seq",
+        passive_deletes=True,
+    )
+
+
+class GenerationWorkItemModel(Base):
+    """Current state of one stable, independently recoverable unit of work."""
+
+    __tablename__ = "generation_work_items"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('queued', 'running', 'ready', 'failed_recoverable', "
+            "'failed_terminal', 'cancelled')",
+            name="ck_generation_work_items_status",
+        ),
+        CheckConstraint("attempt >= 1", name="ck_generation_work_items_attempt_positive"),
+        CheckConstraint("max_attempts >= 1", name="ck_generation_work_items_max_attempts_positive"),
+        CheckConstraint("attempt <= max_attempts", name="ck_generation_work_items_attempt_lte_max"),
+        CheckConstraint(
+            "lease_token IS NULL OR lease_token >= 1",
+            name="ck_generation_work_items_lease_token_positive",
+        ),
+        CheckConstraint(
+            "status != 'ready' OR (output_json IS NOT NULL AND output_hash IS NOT NULL)",
+            name="ck_generation_work_items_ready_has_output",
+        ),
+        CheckConstraint(
+            "replaces_work_item_id IS NULL OR replaces_work_item_id != id",
+            name="ck_generation_work_items_not_self_replacing",
+        ),
+        UniqueConstraint("run_id", "item_key", name="uq_generation_work_items_run_key"),
+        UniqueConstraint(
+            "replaces_work_item_id", name="uq_generation_work_items_replacement_child"
+        ),
+        Index("ix_generation_work_items_run_status", "run_id", "status"),
+        Index("ix_generation_work_items_status_lease", "status", "lease_expires_at"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    run_id = Column(
+        String, ForeignKey("generation_runs.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    replaces_work_item_id = Column(
+        String,
+        ForeignKey("generation_work_items.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    item_key = Column(String, nullable=False)
+    stage = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="queued", server_default="queued", index=True)
+    attempt = Column(Integer, nullable=False, default=1, server_default="1")
+    max_attempts = Column(Integer, nullable=False, default=3, server_default="3")
+    input_hash = Column(String, nullable=False)
+    definition_hash = Column(String, nullable=False)
+    composition_identity = Column(String, nullable=True)
+    lease_owner = Column(String, nullable=True)
+    lease_token = Column(Integer, nullable=True)
+    lease_expires_at = Column(DateTime, nullable=True)
+    checkpoint_json = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    output_json = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    output_hash = Column(String, nullable=True)
+    error_code = Column(String, nullable=True)
+    error_class = Column(String, nullable=True)
+    error_summary = Column(Text, nullable=True)
+    recovery_action = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+    run = relationship("GenerationRunModel", back_populates="work_items")
+    events = relationship("GenerationEventModel", back_populates="work_item")
+
+
+class GenerationEventModel(Base):
+    """Append-only, sequenced runtime history; current state stays on run/item rows."""
+
+    __tablename__ = "generation_events"
+    __table_args__ = (
+        UniqueConstraint("run_id", "seq", name="uq_generation_events_run_seq"),
+        CheckConstraint("seq >= 1", name="ck_generation_events_seq_positive"),
+        CheckConstraint("attempt >= 1", name="ck_generation_events_attempt_positive"),
+        CheckConstraint(
+            "status IN ('queued', 'running', 'awaiting_review', 'ready', "
+            "'failed_recoverable', 'failed_terminal', 'cancelled')",
+            name="ck_generation_events_status",
+        ),
+        Index("ix_generation_events_run_created", "run_id", "created_at"),
+        Index("ix_generation_events_work_item", "work_item_id", "seq"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    run_id = Column(
+        String, ForeignKey("generation_runs.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    work_item_id = Column(
+        String, ForeignKey("generation_work_items.id", ondelete="RESTRICT"), nullable=True
+    )
+    seq = Column(Integer, nullable=False)
+    event_type = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    stage = Column(String, nullable=False)
+    attempt = Column(Integer, nullable=False)
+    error_code = Column(String, nullable=True)
+    safe_payload_json = Column(JSON_DOCUMENT_TYPE, nullable=False, default=dict)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    run = relationship("GenerationRunModel", back_populates="events")
+    work_item = relationship("GenerationWorkItemModel", back_populates="events")
+
+
+def _reject_shared_lesson_document_update(mapper, connection, target) -> None:
+    """Keep stored JSON and identity fixed; draft may only become ready."""
+    persisted = connection.execute(
+        select(
+            SharedLessonDocumentModel.status,
+            SharedLessonDocumentModel.id,
+            SharedLessonDocumentModel.revision,
+            SharedLessonDocumentModel.path_lesson_id,
+            SharedLessonDocumentModel.teaching_plan_id,
+            SharedLessonDocumentModel.teaching_plan_revision,
+            SharedLessonDocumentModel.teaching_plan_hash,
+            SharedLessonDocumentModel.content_hash,
+            SharedLessonDocumentModel.document_json,
+            SharedLessonDocumentModel.created_at,
+        ).where(
+            SharedLessonDocumentModel.id == target.id,
+            SharedLessonDocumentModel.revision == target.revision,
+        )
+    ).mappings().one_or_none()
+    if persisted is None:
+        return
+    if persisted["status"] == "ready":
+        raise ValueError("ready shared lesson documents are immutable")
+    immutable_fields = (
+        "id",
+        "revision",
+        "path_lesson_id",
+        "teaching_plan_id",
+        "teaching_plan_revision",
+        "teaching_plan_hash",
+        "content_hash",
+        "document_json",
+        "created_at",
+    )
+    if any(getattr(target, field) != persisted[field] for field in immutable_fields):
+        raise ValueError("stored shared lesson document identity and JSON are immutable")
+
+
+def _reject_shared_lesson_document_delete(mapper, connection, target) -> None:
+    persisted_status = connection.execute(
+        select(SharedLessonDocumentModel.status).where(
+            SharedLessonDocumentModel.id == target.id,
+            SharedLessonDocumentModel.revision == target.revision,
+        )
+    ).scalar_one_or_none()
+    if persisted_status == "ready":
+        raise ValueError("ready shared lesson documents are immutable")
+
+
+def _reject_ready_update(mapper, connection, target) -> None:
+    if not target.id:
+        return
+    table = target.__table__
+    persisted_status = connection.execute(
+        select(table.c.status).where(table.c.id == target.id)
+    ).scalar_one_or_none()
+    if persisted_status == "ready":
+        raise ValueError("ready generation outputs are immutable")
+
+
+def _reject_ready_delete(mapper, connection, target) -> None:
+    if not target.id:
+        return
+    table = target.__table__
+    persisted_status = connection.execute(
+        select(table.c.status).where(table.c.id == target.id)
+    ).scalar_one_or_none()
+    if persisted_status == "ready":
+        raise ValueError("ready generation outputs are immutable")
+
+
+def _immutable_generation_event(*_args, **_kwargs) -> None:
+    raise ValueError("generation events are append-only")
+
+
+event.listen(GenerationRunModel, "before_update", _reject_ready_update)
+event.listen(GenerationWorkItemModel, "before_update", _reject_ready_update)
+event.listen(GenerationRunModel, "before_delete", _reject_ready_delete)
+event.listen(GenerationWorkItemModel, "before_delete", _reject_ready_delete)
+event.listen(GenerationEventModel, "before_update", _immutable_generation_event)
+event.listen(GenerationEventModel, "before_delete", _immutable_generation_event)
+event.listen(SharedLessonDocumentModel, "before_update", _reject_shared_lesson_document_update)
+event.listen(SharedLessonDocumentModel, "before_delete", _reject_shared_lesson_document_delete)

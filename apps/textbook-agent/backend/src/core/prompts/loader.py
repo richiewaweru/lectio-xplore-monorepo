@@ -85,15 +85,13 @@ def hash_prompt(text: str) -> str:
 
 CLOSEOUT_PROMPT_IDS = (
     "learner-action-policy",
-    "document-composer",
-    "document-writer",
-    "interaction-selection",
-    "interaction-writer",
     "figure-authoring",
     "print-realization",
     "lesson-sourcebook-writer",
     "shared-task-writer",
+    "document-semantic-qa",
     "whole-lesson-coherence-reviewer",
+    "teaching-plan-semantic-reviewer",
     "targeted-lesson-repair",
 )
 

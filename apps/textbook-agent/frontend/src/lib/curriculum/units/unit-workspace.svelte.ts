@@ -6,11 +6,6 @@
 
 import { isApiError } from '$lib/api/errors';
 import {
-	createManagedReliabilitySubscription,
-	getReliabilityRunStatus,
-	type ManagedReliabilitySubscription
-} from '$lib/api/reliability';
-import {
 	approveUnitPath,
 	editUnitPathByChat,
 	getPreparedLessonStatus,
@@ -47,12 +42,7 @@ import {
 	type UnitOperationLane
 } from '$lib/reliability/operation-lanes';
 import type { PathJobLane } from '$lib/reliability/path-job-lane';
-import type {
-	ReliabilityAllowedAction,
-	ReliabilityConflictState,
-	ReliabilityProgressEvent,
-	ReliabilityRunStatus
-} from '$lib/types/reliability';
+import type { ReliabilityConflictState } from '$lib/types/reliability';
 import type {
 	KnowledgeType,
 	LessonMode,
@@ -73,9 +63,6 @@ export type UnitWorkspaceView = 'path' | 'schedule' | 'groups' | 'results' | 're
 export interface UnitWorkspaceDeps {
 	printJob: PathJobLane;
 	learnJob: PathJobLane;
-	/** Optional override for tests. */
-	fetchRunStatus?: typeof getReliabilityRunStatus;
-	subscribeRun?: typeof createManagedReliabilitySubscription;
 	navigate?: (href: string) => void;
 }
 
@@ -162,17 +149,11 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 		mustEstablish: string;
 		knowledgeType: KnowledgeType | '';
 	} | null>(null);
-	let runStatus = $state<ReliabilityRunStatus | null>(null);
-	let allowedActions = $state<ReadonlySet<ReliabilityAllowedAction>>(new Set());
-	let lastProgressEvent = $state<ReliabilityProgressEvent | null>(null);
-	let subscription: ManagedReliabilitySubscription | null = null;
 	let disposed = false;
 
 	const navigate = deps.navigate ?? ((href: string) => {
 		window.location.href = href;
 	});
-	const fetchRunStatus = deps.fetchRunStatus ?? getReliabilityRunStatus;
-	const subscribeRun = deps.subscribeRun ?? createManagedReliabilitySubscription;
 
 	const currentDraft = (): LessonEditorDraft => ({
 		title: editTitle,
@@ -190,7 +171,7 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 		Boolean(
 			preparation &&
 				!preparation.stale &&
-				preparation.workflow_stage === 'failed_terminal' &&
+				preparation.workspace?.preparation?.state === 'failed_terminal' &&
 				preparation.can_regenerate
 		)
 	);
@@ -213,11 +194,6 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 
 	function laneBusy(lane: UnitOperationLane): boolean {
 		return isLaneBusy(busy, lane);
-	}
-
-	function actionAllowed(action: ReliabilityAllowedAction): boolean {
-		if (allowedActions.size === 0) return true;
-		return allowedActions.has(action);
 	}
 
 	function fillEditor(lesson: PathLesson): void {
@@ -253,62 +229,9 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 		return sentences;
 	}
 
-	function applyAllowedFromStatus(status: ReliabilityRunStatus | null): void {
-		runStatus = status;
-		allowedActions = new Set(status?.allowed_actions ?? []);
-		if (status?.path === 'print') deps.printJob.applyStatus(status);
-		if (status?.path === 'learn') deps.learnJob.applyStatus(status);
-	}
-
-	function detachSubscription(): void {
-		subscription?.dispose();
-		subscription = null;
-	}
-
-	function attachSubscription(ownerId: string, runId: string, afterSequence = 0): void {
-		detachSubscription();
-		if (disposed) return;
-		subscription = subscribeRun(
-			ownerId,
-			runId,
-			{
-				onEvent(event) {
-					lastProgressEvent = event;
-					void refreshStatusPreservingDirty(runId);
-				},
-				onError() {
-					/* reconnect is explicit via reconnectSubscription */
-				}
-			},
-			{ afterSequence }
-		);
-	}
-
-	async function refreshStatusPreservingDirty(runId: string): Promise<void> {
-		try {
-			const status = await fetchRunStatus(runId);
-			if (disposed) return;
-			applyAllowedFromStatus(status);
-			if (!selected || !dirty) return;
-			const incoming = {
-				title: selected.title,
-				objective: selected.objective,
-				must_establish: selected.must_establish.join('\n'),
-				exclusions: selected.exclusions.join('\n'),
-				revision: selected.revision
-			};
-			const result = applyProgressRefreshWhileEditing({
-				dirty: true,
-				draft: currentDraft(),
-				incoming
-			});
-			if (result.preserved) {
-				// Keep local edits; baseline stays dirty relative to server.
-				return;
-			}
-		} catch {
-			/* status endpoint may be absent until P04 ships */
-		}
+	function applyJobsFromStatus(status: PreparedLessonStatus | null): void {
+		deps.printJob.applyWorkspace(status?.workspace?.print ?? null);
+		deps.learnJob.applyWorkspace(status?.workspace?.learn ?? null);
 	}
 
 	async function runLane(
@@ -418,10 +341,6 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 
 	async function planOrReplan(replan: boolean): Promise<void> {
 		if (!unit) return;
-		if (!actionAllowed('plan')) {
-			error = 'Planning is not available for the current server status.';
-			return;
-		}
 		await runLane(replan ? 'plan' : 'plan', replan ? 'Planning…' : 'Planning…', async () => {
 			path = await planUnitPath(getUnitId(), plannerInput(unit as Unit), replan, path ?? undefined);
 			unit = await getUnit(getUnitId());
@@ -433,10 +352,6 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 	async function saveLesson(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
 		if (!selected) return;
-		if (!actionAllowed('save')) {
-			error = 'Saving is not available for the current server status.';
-			return;
-		}
 		await runLane('save', 'Saving…', async () => {
 			const patched = await patchPathLesson(getUnitId(), path as UnitPath, selected, {
 				title: editTitle.trim(),
@@ -485,7 +400,7 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 		try {
 			const next = await getPreparedLessonStatus(getUnitId(), selected.id);
 			preparation = next;
-			if (!next.stale && next.workflow_stage === 'failed_terminal') {
+			if (!next.stale && next.workspace?.preparation?.state === 'failed_terminal') {
 				regenerationReason = 'The previous generation did not finish.';
 			}
 			if (wasDirty) {
@@ -494,11 +409,7 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 				editMustEstablish = draft.must_establish;
 				editExclusions = draft.exclusions;
 			}
-			const runId = next.generation_id;
-			if (runId) {
-				attachSubscription(getUnitId(), runId, 0);
-				await refreshStatusPreservingDirty(runId);
-			}
+			applyJobsFromStatus(next);
 		} catch (err) {
 			preparation = null;
 			error = err instanceof Error ? err.message : 'Could not load preparation status.';
@@ -585,14 +496,13 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 					throw err;
 				}
 			}
-			const prepared = await preparePathLesson(
+			await preparePathLesson(
 				getUnitId(),
 				path as UnitPath,
 				selected,
 				lessonMode,
 				selectedGroupIds
 			);
-			attachSubscription(getUnitId(), prepared.generation_id, 0);
 			navigate(
 				`/units/${encodeURIComponent(getUnitId())}/lessons/${encodeURIComponent(selected.id)}/plan`
 			);
@@ -606,12 +516,8 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 
 	async function regenerate(): Promise<void> {
 		if (!selected || regenerationReason.trim().length < 3) return;
-		if (!actionAllowed('regenerate')) {
-			error = 'Regenerate is not available for the current server status.';
-			return;
-		}
 		await runLane('regenerate', 'Making it again…', async () => {
-			const prepared = await regeneratePathLesson(
+			await regeneratePathLesson(
 				getUnitId(),
 				path as UnitPath,
 				selected,
@@ -619,7 +525,6 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 				regenerationReason.trim(),
 				selectedGroupIds
 			);
-			attachSubscription(getUnitId(), prepared.generation_id, 0);
 			navigate(
 				`/units/${encodeURIComponent(getUnitId())}/lessons/${encodeURIComponent(selected.id)}/plan`
 			);
@@ -681,10 +586,6 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 
 	async function approvePath(): Promise<void> {
 		if (!path) return;
-		if (!actionAllowed('approve')) {
-			error = 'Approve is not available for the current server status.';
-			return;
-		}
 		await runLane('approve', 'Locking it in…', async () => {
 			path = await approveUnitPath(getUnitId(), path as UnitPath);
 			unit = await getUnit(getUnitId());
@@ -741,14 +642,8 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 		}
 	}
 
-	function reconnectSubscription(): void {
-		if (!subscription) return;
-		subscription.reconnect(subscription.sink.lastSequence);
-	}
-
 	function dispose(): void {
 		disposed = true;
-		detachSubscription();
 	}
 
 	function canGeneratePrint(): boolean {
@@ -949,17 +844,7 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 		get canStartFresh() {
 			return canStartFresh;
 		},
-		get runStatus() {
-			return runStatus;
-		},
-		get allowedActions() {
-			return allowedActions;
-		},
-		get lastProgressEvent() {
-			return lastProgressEvent;
-		},
 		laneBusy,
-		actionAllowed,
 		canGeneratePrint,
 		canGenerateLearn,
 		selectLesson,
@@ -984,13 +869,10 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 		confirmRestore,
 		runPendingAction,
 		resolveEditConflict,
-		reconnectSubscription,
-		attachSubscription,
-		detachSubscription,
 		dispose,
 		/** Test/helpers */
 		snapshotToDraft,
-		applyAllowedFromStatus
+		applyJobsFromStatus
 	};
 }
 

@@ -14,14 +14,15 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from application.builder_print.routes import router as builder_print_router
-from application.unit_lesson.progress_routes import router as realization_progress_router
+from application.unit_lesson.native_http import native_lesson_router
+from application.unit_lesson.preparation_http import router as preparation_router
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
 from core.routes.prompts import router as prompts_router
-from core.routes.shares import router as shares_router
+from curriculum.planning.skeletons import initialize_skeleton_catalog
 from curriculum.routes import router as planning_router
+from document.shared_lesson.http import router as shared_document_router
 from infra.config import settings
 from infra.database.migrations import upgrade_database
 from infra.database.session import async_session_factory, engine
@@ -43,7 +44,6 @@ from infra.telemetry.service import telemetry_monitor
 from infra.version import VERSION
 from learn.analytics.insight_service import router as learn_analytics_router
 from learn.authoring.builder.routes import router as builder_router
-from learn.generation.fencing import fail_stale_learn_executions
 from learn.generation.units_routes import router as units_generation_router
 from learn.publishing.release_routes import router as learn_release_router
 from learn.runtime.runtime_routes import router as learn_runtime_router
@@ -53,12 +53,9 @@ from media.diagnostics.v3_image_pipeline_diagnostic import (
     run_grok_probe,
 )
 from media.storage.image_store import local_image_store_root
-from print.http.v3_studio.generation_writer import V3GenerationWriter
-from application.unit_lesson.native_http import native_lesson_router
 from print.http.v3_studio.router import v3_studio_router
 from print.rendering.pdf.runtime import cleanup_stale_pdf_exports
 from resource_specs.loader import initialize_registry as initialize_resource_registry
-from curriculum.planning.skeletons import initialize_skeleton_catalog
 
 logger = logging.getLogger("uvicorn.error")
 __version__ = VERSION
@@ -230,22 +227,6 @@ async def lifespan(app: FastAPI):
             )
     if settings.run_migrations_on_startup:
         await asyncio.to_thread(upgrade_database)
-    try:
-        stale_generations = await V3GenerationWriter(async_session_factory).fail_stale_running()
-        if stale_generations:
-            logger.warning(
-                "Reconciled %d stale v3 generation(s) after restart",
-                stale_generations,
-            )
-    except Exception:
-        logger.exception("Stale v3 generation sweep failed at startup")
-    try:
-        async with async_session_factory() as session:
-            stale_learn = await fail_stale_learn_executions(session)
-        if stale_learn:
-            logger.warning("Reconciled %d stale Learn execution(s) after restart", stale_learn)
-    except Exception:
-        logger.exception("Stale Learn execution sweep failed at startup")
     initialize_resource_registry()
     initialize_skeleton_catalog()
     await telemetry_monitor.start()
@@ -266,21 +247,35 @@ async def lifespan(app: FastAPI):
         },
     )
     if settings.xplore_native_worker_enabled:
-        from learn.generation.worker import start_learn_worker
-        from print.generation.whole_lesson.worker import start_native_worker
+        from application.unit_lesson.preparation_worker import PreparationWorker
+        from application.unit_lesson.realization_worker import RealizationWorker
+        from document.shared_lesson.worker import SharedDocumentWorker
 
-        await start_native_worker()
-        await start_learn_worker()
+        preparation_worker = PreparationWorker(async_session_factory)
+        await preparation_worker.start()
+        shared_document_worker = SharedDocumentWorker(async_session_factory)
+        await shared_document_worker.start()
+        realization_worker = RealizationWorker(async_session_factory)
+        await realization_worker.start()
     yield
     if settings.xplore_native_worker_enabled:
-        from learn.generation.worker import stop_learn_worker
-        from print.generation.whole_lesson.worker import stop_native_worker
 
-        await stop_learn_worker(drain_seconds=5.0)
-        await stop_native_worker(drain_seconds=5.0)
-    await telemetry_monitor.stop()
-    telemetry_monitor.configure()
-    await engine.dispose()
+        async def stop_worker(label, stop, **kwargs):
+            try:
+                await stop(**kwargs)
+            except Exception:
+                logger.exception("Failed to stop %s worker", label)
+
+        await stop_worker("Realization", realization_worker.stop)
+        await stop_worker("SharedDocument", shared_document_worker.stop)
+        await stop_worker("Preparation", preparation_worker.stop)
+    try:
+        await telemetry_monitor.stop()
+    except Exception:
+        logger.exception("Failed to stop telemetry monitor")
+    finally:
+        telemetry_monitor.configure()
+        await engine.dispose()
 
 
 def create_app() -> FastAPI:
@@ -320,11 +315,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(capabilities_router)
     app.include_router(builder_router)
-    app.include_router(builder_print_router)
     app.include_router(learn_release_router)
     app.include_router(learn_runtime_router)
     app.include_router(learn_analytics_router)
-    app.include_router(shares_router)
     app.include_router(profile_router)
     app.include_router(prompts_router)
     # D3: /api/v1/packs retired (non-Unit)
@@ -333,7 +326,10 @@ def create_app() -> FastAPI:
     # D3: /api/v1/skeletons* retired (non-Unit HTTP)
     app.include_router(planning_router)
     app.include_router(units_generation_router)
-    app.include_router(realization_progress_router)
+    app.include_router(shared_document_router)
+    app.include_router(preparation_router)
+    from infra.generation_runtime.http import router as generation_runtime_router
+    app.include_router(generation_runtime_router)
     # D3: /api/v1/legacy-units retired
     app.include_router(telemetry_router)
 

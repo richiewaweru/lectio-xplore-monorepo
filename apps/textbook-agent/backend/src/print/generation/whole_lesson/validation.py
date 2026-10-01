@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import itertools
 import re
 from dataclasses import dataclass, field
 from typing import Any
@@ -11,7 +10,6 @@ from curriculum.approved_items import approved_item_kind
 from curriculum.teaching_plan.compatibility import response_bearing_action
 from print.contracts.lectio_page import PAGE_OBJECT_IDS
 from print.generation.page_blocks import validate_intent_departure
-from print.generation.whole_lesson.form_plan import FormPlan
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
 from print.generation.whole_lesson.teaching_plan import TeachingPlan
 
@@ -605,215 +603,147 @@ def advisory_teaching_qc(plan: TeachingPlan) -> list[AdvisoryFinding]:
     return findings
 
 
-def validate_form_plan(
-    form_plan: FormPlan,
-    teaching_plan: TeachingPlan,
-    *,
-    candidate_map: dict[str, tuple[str, ...] | set[str]],
-    compatible_objects: dict[str, set[str]] | None = None,
-    required_visual_slots: set[str] | frozenset[str] | None = None,
-) -> ValidationReport:
-    """Validate form-owned decisions against teaching identity + legal candidates.
 
-    `candidate_map` is the single shared legality source (block_id → objects).
-    `compatible_objects` is accepted only as a legacy alias and ignored when
-    `candidate_map` is provided.
-    """
-    del compatible_objects  # ownership: candidate_map is the sole legality source
-    issues: list[ValidationIssue] = []
-    teaching_blocks = {
-        block.id: (section.slot_id, block)
-        for section in teaching_plan.sections
-        for block in section.blocks
+# ---------------------------------------------------------------------------
+# Quality-gate classification (advisory vs blocking)
+#
+# HARD codes describe output the downstream runtime cannot consume: unknown or
+# duplicated IDs, broken slot/position shape, assessment source binding rules
+# and task-mode contracts (sourcebook/task/composer/`approved_source.py` key off
+# these). They always retry. Every other code is a quality finding: in the
+# advisory gate it is recorded as a flag and the plan passes.
+# ---------------------------------------------------------------------------
+HARD_PLAN_ISSUE_CODES: frozenset[str] = frozenset(
+    {
+        "SLOT_ORDER",
+        "EMPTY_SECTION",
+        "POSITION",
+        "DUPLICATE_BLOCK_ID",
+        "EVIDENCE_REF",
+        "UNKNOWN_ITEM",
+        "DUPLICATE_ITEM_SOURCE",
+        "ASSESSMENT_SOURCE_REQUIRED",
+        "FORMATIVE_SOURCE_FORBIDDEN",
+        "TASK_MODE_REQUIRED",
+        "ASSESSMENT_SOURCE_INTENT",
+        "ASSESSMENT_SOURCE_MIX",
+        "MCQ_SOURCE_CARDINALITY",
+        "OPEN_RESPONSE_SOURCE_LIMIT",
+        "UNKNOWN_MISCONCEPTION",
+        "ACTION_SOURCE_INCOMPATIBLE",
     }
-    form_ids: list[str] = []
-    for section in form_plan.sections:
-        for index, decision in enumerate(section.forms):
-            form_ids.append(decision.block_id)
-            path = f"sections.{section.slot_id}.forms[{index}]"
-            if decision.block_id not in teaching_blocks:
-                issues.append(
-                    ValidationIssue(
-                        code="UNKNOWN_BLOCK",
-                        message=(
-                            f"form plan references unknown block {decision.block_id!r}"
-                        ),
-                        path=path,
-                    )
-                )
-                continue
-            slot_id, teaching = teaching_blocks[decision.block_id]
-            if section.slot_id != slot_id:
-                issues.append(
-                    ValidationIssue(
-                        code="SECTION_MISMATCH",
-                        message="form section does not match teaching section",
-                        path=path,
-                    )
-                )
-            if decision.object == "heading":
-                issues.append(
-                    ValidationIssue(
-                        code="HEADING_OBJECT",
-                        message="heading object is forbidden",
-                        path=path,
-                    )
-                )
-            if decision.object == "answer-key":
-                issues.append(
-                    ValidationIssue(
-                        code="ANSWER_KEY_OBJECT",
-                        message="answer-key is document-level and not selectable",
-                        path=path,
-                    )
-                )
-            if decision.block_id not in candidate_map:
-                issues.append(
-                    ValidationIssue(
-                        code="MISSING_CANDIDATE_SET",
-                        message=(
-                            f"no candidate map entry for block {decision.block_id!r}"
-                        ),
-                        path=path,
-                    )
-                )
-            else:
-                allowed = set(candidate_map[decision.block_id])
-                if not allowed:
-                    issues.append(
-                        ValidationIssue(
-                            code="NO_LEGAL_OBJECT",
-                            message=(
-                                f"block {decision.block_id!r} has an empty legal "
-                                "object candidate set"
-                            ),
-                            path=path,
-                        )
-                    )
-                elif decision.object not in allowed:
-                    issues.append(
-                        ValidationIssue(
-                            code="INCOMPATIBLE_OBJECT",
-                            message=(
-                                f"object {decision.object!r} not in legal candidates "
-                                f"for block {decision.block_id!r}"
-                            ),
-                            path=path,
-                        )
-                    )
-            # Formative response tasks are owned by SharedTaskSpec rather than
-            # approved assessment items, so their Print question treatment is
-            # valid without source_question_ids. Assessment questions retain
-            # the approved-source ownership requirement.
-            if (
-                decision.object == "questions"
-                and not teaching.source_question_ids
-                and teaching.task_mode != "formative"
-            ):
-                issues.append(
-                    ValidationIssue(
-                        code="QUESTION_IDS",
-                        message=(
-                            "questions object requires teaching source_question_ids "
-                            f"unless task_mode is formative (block={teaching.id!r}, "
-                            f"task_mode={teaching.task_mode!r})"
-                        ),
-                        path=path,
-                    )
-                )
-            if decision.placement not in {"main", "margin"}:
-                issues.append(
-                    ValidationIssue(
-                        code="PLACEMENT",
-                        message=f"illegal placement {decision.placement!r}",
-                        path=path,
-                    )
-                )
+)
+ADVISORY_PLAN_ISSUE_CODES: frozenset[str] = frozenset(
+    {
+        "ANCHOR_USAGE_SLOT_MISMATCH",
+        "SECTION_BLOCK_LIMIT",
+        "LESSON_BLOCK_LIMIT",
+        "INTENT_LEGALITY",
+        "OBJECT_LEAK",
+        "BRIEF_TOO_SHORT",
+        "BRIEF_NO_ANCHOR_OR_TERM",
+        "BRIEF_GENERIC",
+        "EXCLUDED_TERM",
+        "QUESTION_CONTENT",
+        "REQUIRED_VISUAL_INTENT",
+        "MUST_ESTABLISH_UNCOVERED",
+        "LATE_BRIEF_THINNING",
+        "REPEATED_TEACHING_JOB",
+        "GENERIC_EVIDENCE",
+    }
+)
 
-    if set(form_ids) != set(teaching_blocks):
-        issues.append(
-            ValidationIssue(
-                code="BLOCK_SET",
-                message="form plan must map exactly the teaching blocks",
-                path="sections",
+
+def is_hard_plan_issue(code: str) -> bool:
+    """Unknown codes fail closed (hard) so a new rule never silently downgrades."""
+    return code not in ADVISORY_PLAN_ISSUE_CODES
+
+
+def _flag_locations(plan: TeachingPlan, path: str) -> tuple[list[str], list[str]]:
+    """Resolve a validator path to (section_ids, block_ids) where possible."""
+    match = re.match(r"^sections\.([^.\[]+)(?:\.blocks\[(\d+)\])?", path)
+    if match:
+        slot_id = match.group(1)
+        section = next((s for s in plan.sections if s.slot_id == slot_id), None)
+        if section is None:
+            return [], []
+        block_ids: list[str] = []
+        if match.group(2) is not None:
+            index = int(match.group(2))
+            if 0 <= index < len(section.blocks):
+                block_ids.append(section.blocks[index].id)
+        return [slot_id], block_ids
+    match = re.match(r"^([^.]+)\.([^.]+)$", path)
+    if match:
+        section = next((s for s in plan.sections if s.slot_id == match.group(1)), None)
+        if section is not None and any(b.id == match.group(2) for b in section.blocks):
+            return [section.slot_id], [match.group(2)]
+    return [], []
+
+
+def plan_quality_flag(
+    *,
+    code: str,
+    source: str,
+    message: str,
+    section_ids: list[str] | None = None,
+    block_ids: list[str] | None = None,
+    repair_instruction: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "code": code,
+        "severity": "warning",
+        "source": source,
+        "message": message,
+        "section_ids": list(section_ids or []),
+        "block_ids": list(block_ids or []),
+        "repair_instruction": repair_instruction or message,
+    }
+
+
+def advisory_issue_flags(
+    plan: TeachingPlan,
+    report: ValidationReport,
+    qc: list[AdvisoryFinding],
+) -> list[dict[str, Any]]:
+    """Flags for validator issues and QC findings that are advisory."""
+    flags: list[dict[str, Any]] = []
+    for issue in report.issues:
+        if is_hard_plan_issue(issue.code):
+            continue
+        sections, blocks = _flag_locations(plan, issue.path)
+        flags.append(
+            plan_quality_flag(
+                code=issue.code,
+                source="validator",
+                message=issue.message,
+                section_ids=sections,
+                block_ids=blocks,
             )
         )
-    if len(form_ids) != len(set(form_ids)):
-        issues.append(
-            ValidationIssue(
-                code="DUPLICATE_FORM_BLOCK",
-                message="form plan has duplicate block ids",
-                path="sections",
+    for finding in qc:
+        sections, blocks = _flag_locations(plan, finding.path)
+        flags.append(
+            plan_quality_flag(
+                code=finding.code,
+                source="validator",
+                message=finding.message,
+                section_ids=sections,
+                block_ids=blocks,
             )
         )
-
-    for slot_id in sorted(required_visual_slots or ()):
-        decisions = [
-            decision
-            for section in form_plan.sections
-            if section.slot_id == slot_id
-            for decision in section.forms
-        ]
-        if not any(decision.object == "figure" for decision in decisions):
-            issues.append(
-                ValidationIssue(
-                    code="REQUIRED_VISUAL_FORM",
-                    message=(
-                        f"required visual slot {slot_id!r} must select at least one "
-                        "figure decision"
-                    ),
-                    path=f"sections.{slot_id}",
-                )
-            )
-
-    blocking = [issue for issue in issues if issue.blocking]
-    return ValidationReport(ok=not blocking, issues=issues)
+    return flags
 
 
-def advisory_form_qc(form_plan: FormPlan) -> list[AdvisoryFinding]:
-    findings: list[AdvisoryFinding] = []
-    objects = [
-        decision.object
-        for section in form_plan.sections
-        for decision in section.forms
+def apply_advisory_gate(report: ValidationReport) -> ValidationReport:
+    """Report as seen by the advisory gate: advisory issues stop blocking."""
+    issues = [
+        ValidationIssue(
+            code=issue.code,
+            message=issue.message,
+            path=issue.path,
+            blocking=issue.blocking and is_hard_plan_issue(issue.code),
+        )
+        for issue in report.issues
     ]
-    for index in range(len(objects) - 2):
-        if (
-            objects[index] == objects[index + 1] == objects[index + 2]
-            and objects[index] != "questions"
-        ):
-            findings.append(
-                AdvisoryFinding(
-                    code="FORM_STREAK",
-                    message=f"object {objects[index]!r} selected three consecutive times",
-                )
-            )
-            break
-    if objects:
-        from collections import Counter
-
-        counts = Counter(obj for obj in objects if obj != "questions")
-        if counts:
-            top_obj, top_count = counts.most_common(1)[0]
-            if top_count / max(1, len(objects)) > 0.6:
-                findings.append(
-                    AdvisoryFinding(
-                        code="FORM_DOMINANCE",
-                        message=(
-                            f"object {top_obj!r} dominates form plan "
-                            f"({top_count}/{len(objects)})"
-                        ),
-                    )
-                )
-    figure_idxs = [i for i, obj in enumerate(objects) if obj == "figure"]
-    if len(figure_idxs) > 2:
-        findings.append(
-            AdvisoryFinding(code="FIGURE_OVERUSE", message="more than two figure blocks")
-        )
-    for a, b in itertools.pairwise(figure_idxs):
-        if b == a + 1:
-            findings.append(
-                AdvisoryFinding(code="FIGURE_OVERUSE", message="consecutive figure blocks")
-            )
-            break
-    return findings
+    return ValidationReport(ok=not any(i.blocking for i in issues), issues=issues)

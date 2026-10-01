@@ -31,14 +31,19 @@ V2_COMPONENT_SELECTOR = "v2_component_selector"
 V2_PATH_STRUCTURAL_PLANNER = "v2_path_structural_planner"
 V2_PATH_CHAT_EDITOR = "v2_path_chat_editor"
 V2_LESSON_APPROACH_PLANNER = "v2_lesson_approach_planner"
-V2_FORM_PLANNER = "v2_form_planner"
-NATIVE_CAPABILITY_SELECTOR = "native_capability_selector"
 V3_CONSTRUCTOR = "v3_constructor"
 V3_VISUAL_TOPOLOGY_PLANNER = "v3_visual_topology_planner"
 V3_LESSON_SOURCEBOOK_WRITER = "v3_lesson_sourcebook_writer"
 V3_SHARED_TASK_WRITER = "v3_shared_task_writer"
 V3_WHOLE_LESSON_COHERENCE_REVIEWER = "v3_whole_lesson_coherence_reviewer"
+TEACHING_PLAN_SEMANTIC_REVIEWER = "teaching_plan_semantic_reviewer"
+SECTION_COMPOSER = "section_composer"
+SHARED_SECTION_WRITER = "shared_section_writer"
+BOUNDARY_CONTINUITY_VALIDATOR = "boundary_continuity_validator"
+DOCUMENT_SEMANTIC_QA = "document_semantic_qa"
 V3_TARGETED_LESSON_REPAIR = "v3_targeted_lesson_repair"
+SHARED_SOURCEBOOK_AUTHORING = "shared_sourcebook_authoring"
+SHARED_TASK_AUTHORING = "shared_task_authoring"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
@@ -63,14 +68,24 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V2_PATH_STRUCTURAL_PLANNER: ModelSlot.STANDARD,
     V2_PATH_CHAT_EDITOR: ModelSlot.STANDARD,
     V2_LESSON_APPROACH_PLANNER: ModelSlot.STANDARD,
-    V2_FORM_PLANNER: ModelSlot.FAST,
-    NATIVE_CAPABILITY_SELECTOR: ModelSlot.FAST,
     V3_CONSTRUCTOR: ModelSlot.FAST,
     V3_VISUAL_TOPOLOGY_PLANNER: ModelSlot.STANDARD,
     V3_LESSON_SOURCEBOOK_WRITER: ModelSlot.STANDARD,
     V3_SHARED_TASK_WRITER: ModelSlot.FAST,
     V3_WHOLE_LESSON_COHERENCE_REVIEWER: ModelSlot.STANDARD,
+    TEACHING_PLAN_SEMANTIC_REVIEWER: ModelSlot.STANDARD,
+    SECTION_COMPOSER: ModelSlot.STANDARD,
+    SHARED_SECTION_WRITER: ModelSlot.STANDARD,
+    BOUNDARY_CONTINUITY_VALIDATOR: ModelSlot.STANDARD,
+    # STANDARD (not FAST): the expanded semantic checks (misconception
+    # resolution, answer leakage, assessment/example duplication, factual
+    # accuracy) plus DeepSeek thinking need more budget than the FAST slot's
+    # 8k-token ceiling. STANDARD's 16k ceiling already accommodates DeepSeek
+    # reasoning output for other STANDARD-slot nodes below.
+    DOCUMENT_SEMANTIC_QA: ModelSlot.STANDARD,
     V3_TARGETED_LESSON_REPAIR: ModelSlot.FAST,
+    SHARED_SOURCEBOOK_AUTHORING: ModelSlot.STANDARD,
+    SHARED_TASK_AUTHORING: ModelSlot.STANDARD,
 }
 
 V3ReasoningLevel = Literal["low", "medium", "high"]
@@ -107,17 +122,38 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     # provider reasoning.
     V2_PATH_STRUCTURAL_PLANNER: False,
     V2_PATH_CHAT_EDITOR: False,
-    # The teaching-plan schema and validation provide the correctness guard;
-    # provider reasoning adds latency without improving the persisted contract.
-    V2_LESSON_APPROACH_PLANNER: False,
-    V2_FORM_PLANNER: False,
-    NATIVE_CAPABILITY_SELECTOR: False,
+    # Whole-lesson Teaching Plan authoring (the shared/V2 path). Unlike the
+    # constrained JSON planners above, this node's output quality is the
+    # persisted Teaching Plan's continuity contract itself (must_establish,
+    # bridges, exit states); DeepSeek thinking is enabled here for quality,
+    # not latency. It runs through the same single-call, no-output-retry
+    # path (``NO_OUTPUT_RETRY``) as ``V3_STAGE1_PLANNER``, which already
+    # runs DeepSeek thinking successfully in production, so the message-
+    # replay failure mode documented for V2_PATH_STRUCTURAL_PLANNER/
+    # V2_PATH_CHAT_EDITOR does not apply.
+    # "low", not "medium": a 2026-09-30 A/B on one lesson (3-5 runs each)
+    # passed 3/5 at low, 1/3 at medium (36k+ thinking tokens, truncated JSON,
+    # 3-10 min calls), and 0/3 with thinking off (structural rule failures).
+    V2_LESSON_APPROACH_PLANNER: "low",
     V3_CONSTRUCTOR: False,
     V3_VISUAL_TOPOLOGY_PLANNER: False,
     V3_LESSON_SOURCEBOOK_WRITER: False,
     V3_SHARED_TASK_WRITER: False,
     V3_WHOLE_LESSON_COHERENCE_REVIEWER: False,
+    # Semantic review, prose writing, and whole-document QA benefit from
+    # DeepSeek thinking: each is a single-call, no-output-retry structured
+    # node (``NO_OUTPUT_RETRY`` / ``repair_attempts=0``) that never replays
+    # a prior assistant turn, so the reasoning-only empty-content replay
+    # failure documented for V2_PATH_STRUCTURAL_PLANNER/V2_PATH_CHAT_EDITOR
+    # does not apply here.
+    TEACHING_PLAN_SEMANTIC_REVIEWER: "medium",
+    SECTION_COMPOSER: False,
+    SHARED_SECTION_WRITER: "medium",
+    BOUNDARY_CONTINUITY_VALIDATOR: False,
+    DOCUMENT_SEMANTIC_QA: "medium",
     V3_TARGETED_LESSON_REPAIR: False,
+    SHARED_SOURCEBOOK_AUTHORING: False,
+    SHARED_TASK_AUTHORING: False,
 }
 
 V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
@@ -217,8 +253,7 @@ def _env_override_node(node_name: str, *, base: ModelSpec) -> ModelSpec | None:
 def get_v3_slot(node_name: str) -> ModelSlot:
     if node_name not in V3_NODE_SLOTS:
         raise ValueError(
-            f"Unknown v3 node '{node_name}'. "
-            f"Expected one of: {', '.join(sorted(V3_NODE_SLOTS))}"
+            f"Unknown v3 node '{node_name}'. Expected one of: {', '.join(sorted(V3_NODE_SLOTS))}"
         )
     return V3_NODE_SLOTS[node_name]
 
@@ -243,10 +278,7 @@ def get_v3_model_settings(
         V3_NODE_REASONING.get(node_name, False),
     )
 
-    if (
-        spec.family == ModelFamily.OPENAI_COMPATIBLE
-        and spec.model_name.startswith("deepseek-")
-    ):
+    if spec.family == ModelFamily.OPENAI_COMPATIBLE and spec.model_name.startswith("deepseek-"):
         if isinstance(reasoning, str):
             settings["openai_reasoning_effort"] = reasoning
             settings["extra_body"] = {"thinking": {"type": "enabled"}}
@@ -285,8 +317,7 @@ def _reasoning_from_env(
     if value in {"low", "medium", "high"}:
         return value  # type: ignore[return-value]
     raise ValueError(
-        f"Invalid reasoning policy '{raw}' for {node_name}; "
-        "expected false, low, medium, or high"
+        f"Invalid reasoning policy '{raw}' for {node_name}; expected false, low, medium, or high"
     )
 
 
@@ -326,9 +357,14 @@ def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
 
 
 __all__ = [
-    "NATIVE_CAPABILITY_SELECTOR",
+    "BOUNDARY_CONTINUITY_VALIDATOR",
+    "DOCUMENT_SEMANTIC_QA",
+    "SECTION_COMPOSER",
+    "SHARED_SECTION_WRITER",
+    "SHARED_SOURCEBOOK_AUTHORING",
+    "SHARED_TASK_AUTHORING",
+    "TEACHING_PLAN_SEMANTIC_REVIEWER",
     "V2_COMPONENT_SELECTOR",
-    "V2_FORM_PLANNER",
     "V2_LESSON_APPROACH_PLANNER",
     "V2_MERGE_CRITIC",
     "V2_PATH_CHAT_EDITOR",

@@ -11,6 +11,11 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.unit_lesson.realization_projection import is_legacy_realization
+from application.unit_lesson.realization_retry import (
+    retry_allowed,
+    retry_failed_run_in_place,
+)
 from application.unit_lesson.realizations import (
     RealizationPayloadConflictError,
     to_identity,
@@ -30,9 +35,11 @@ from curriculum.teaching_plan.consumers import (
     TeachingRevisionUnavailableError,
     accept_approved_teaching_revision,
 )
-from infra.authoring import AuthoringProvider
-from learn.generation.fencing import LEARN_EXECUTION_KEY, empty_learn_execution_meta
-from learn.generation.native_execution import produce_learn_from_approved_teaching
+from document.shared_lesson.realization_source import (
+    RealizationAttemptsExhausted,
+    RealizationSourceNotFound,
+    ensure_shared_document_run,
+)
 from learn.generation.native_production import teaching_plan_content_hash
 from print.generation.whole_lesson.repository import PageDocumentRepository
 from curriculum.planning.persistence import load_chunked_state
@@ -210,7 +217,6 @@ async def _ensure_queued_output(
             "teaching_plan_id": realization.teaching_plan_id,
             "teaching_plan_revision": realization.teaching_plan_revision,
             "teaching_plan_hash": realization.teaching_plan_hash,
-            LEARN_EXECUTION_KEY: empty_learn_execution_meta(),
         },
     )
     try:
@@ -335,6 +341,39 @@ async def realize_learn_from_preparation(
                 "recovery_action": "reprepare",
             },
         )
+    try:
+        shared_run = await ensure_shared_document_run(
+            session, owner_user_id=user_id, path_lesson_id=lesson.id
+        )
+    except RealizationSourceNotFound as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_SOURCE_UNAVAILABLE",
+                "message": str(exc),
+                "recovery_action": "reprepare",
+            },
+        ) from exc
+    except RealizationAttemptsExhausted as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_ATTEMPTS_EXHAUSTED",
+                "message": str(exc),
+                "recovery_action": "reprepare",
+            },
+        ) from exc
+    if realization.shared_document_run_id and realization.shared_document_run_id != shared_run.id:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_RUN_CONFLICT",
+                "message": "This Learn realization is already pinned to a different "
+                "SharedLessonDocument run.",
+            },
+        )
+    realization.shared_document_run_id = shared_run.id
+    await session.flush()
     output = await _ensure_queued_output(
         session,
         realization=realization,
@@ -370,97 +409,6 @@ async def realize_learn_from_preparation(
         return _result_for(realization, replayed=True, workspace_href=workspace_href)
     return _result_for(
         realization, replayed=not created, workspace_href=workspace_href
-    )
-
-
-async def execute_learn_realization(
-    session: AsyncSession,
-    *,
-    realization: NativeRealizationModel,
-    worker_id: str,
-    provider: AuthoringProvider | None = None,
-) -> dict[str, Any]:
-    """Run one already-admitted queued Learn realization under its output lease."""
-    generation_id = str(realization.preparation_generation_id or "")
-    source_before_lock = await session.get(GenerationModel, generation_id)
-    if source_before_lock is None:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "LEARN_PREPARATION_MISSING", "recovery_action": "reprepare"},
-        )
-    source = await _load_preparation_for_update(
-        session,
-        preparation_generation_id=generation_id,
-        user_id=str(source_before_lock.user_id),
-    )
-    await _resolve_path_lesson(
-        session,
-        preparation_generation_id=generation_id,
-        user_id=str(source.user_id),
-        path_lesson_id=realization.path_lesson_id,
-    )
-    claim_result = await session.execute(
-        update(NativeRealizationModel)
-        .where(
-            NativeRealizationModel.id == realization.id,
-            NativeRealizationModel.path == "learn",
-            NativeRealizationModel.status == "queued",
-        )
-        .values(status="running")
-        .execution_options(synchronize_session=False)
-    )
-    if claim_result.rowcount != 1:
-        return {"status": "already_claimed"}
-    # Keep the compare-and-set uncommitted until the output lease is installed.
-    # A process crash before then rolls it back and leaves the durable row queued.
-    realization_result = await session.execute(
-        select(NativeRealizationModel)
-        .where(NativeRealizationModel.id == realization.id)
-        .execution_options(populate_existing=True)
-    )
-    realization = realization_result.scalar_one_or_none()
-    if realization is None:
-        raise HTTPException(status_code=404, detail="Learn realization not found")
-    source_state = await _load_page_state(session, source)
-    plan = _verified_plan(source_state, revision=int(realization.teaching_plan_revision))
-    plan_hash = teaching_plan_content_hash(plan)
-    if (
-        plan_hash != realization.teaching_plan_hash
-        or str(plan.teaching_plan_id or "") != realization.teaching_plan_id
-    ):
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "LEARN_APPROVED_IDENTITY_MISMATCH", "recovery_action": "reprepare"},
-        )
-    output = await session.get(GenerationModel, str(realization.output_id or ""))
-    if output is None or output.user_id != source.user_id:
-        raise HTTPException(status_code=409, detail={"code": "LEARN_OUTPUT_OWNER_MISMATCH"})
-    output_state = dict(output.chunked_state_json or {})
-    pinned = (
-        output_state.get("native_learn") is True
-        and output_state.get("preparation_generation_id") == generation_id
-        and output_state.get("teaching_plan_id") == realization.teaching_plan_id
-        and int(output_state.get("teaching_plan_revision") or 0)
-        == int(realization.teaching_plan_revision)
-        and output_state.get("teaching_plan_hash") == realization.teaching_plan_hash
-    )
-    if not pinned:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "LEARN_OUTPUT_IDENTITY_MISMATCH", "recovery_action": "reprepare"},
-        )
-    return await produce_learn_from_approved_teaching(
-        session,
-        teaching_plan=plan,
-        user_id=str(source.user_id),
-        path_lesson_id=realization.path_lesson_id,
-        preparation_generation_id=generation_id,
-        pack_id=None,
-        title=str(plan.arc or "Learn lesson"),
-        subject=str(source.subject or "science"),
-        worker_id=worker_id,
-        provider=provider,
-        admitted_realization=realization,
     )
 
 
@@ -508,9 +456,9 @@ async def retry_learn_realization(
         raise HTTPException(status_code=404, detail="Learn realization not found")
     if lesson.id != row.path_lesson_id or row.preparation_generation_id != preparation_id:
         raise HTTPException(status_code=404, detail="Learn realization not found")
-    if row.status in {"queued", "running"}:
+    if row.status in {"queued", "running"} and not is_legacy_realization(row):
         return _result_for(row, replayed=True, workspace_href=workspace_href)
-    if row.status != "failed_recoverable":
+    if not retry_allowed(row):
         raise HTTPException(
             status_code=409,
             detail={
@@ -519,6 +467,12 @@ async def retry_learn_realization(
                 "recovery_action": "reprepare" if row.status in {"stale", "read_only"} else None,
             },
         )
+    # A failed_recoverable Run is retried in place (bounded by the runtime
+    # attempt budget). Anything else (terminal/cancelled Run, no Run, document
+    # failure, legacy row) falls through to a new revision + new Run.
+    if await retry_failed_run_in_place(session, row=row, owner_user_id=user_id):
+        return _result_for(row, replayed=False, workspace_href=workspace_href)
+    prior_status = str(row.status)
     state = await _load_page_state(session, source)
     plan = _verified_plan(state, revision=int(row.teaching_plan_revision))
     plan_hash = teaching_plan_content_hash(plan)
@@ -540,7 +494,7 @@ async def retry_learn_realization(
                 NativeRealizationModel.id == realization_id,
                 NativeRealizationModel.path == "learn",
                 NativeRealizationModel.preparation_generation_id == preparation_id,
-                NativeRealizationModel.status == "failed_recoverable",
+                NativeRealizationModel.status == prior_status,
                 NativeRealizationModel.output_id == row.output_id,
                 NativeRealizationModel.realization_revision == row.realization_revision,
                 NativeRealizationModel.teaching_plan_id == row.teaching_plan_id,
@@ -552,6 +506,7 @@ async def retry_learn_realization(
                 output_id=output_id,
                 status="queued",
                 error_summary=None,
+                generation_run_id=None,
             )
         )
     except OperationalError as exc:
@@ -596,7 +551,6 @@ async def retry_learn_realization(
             "teaching_plan_id": row.teaching_plan_id,
             "teaching_plan_revision": row.teaching_plan_revision,
             "teaching_plan_hash": row.teaching_plan_hash,
-            LEARN_EXECUTION_KEY: empty_learn_execution_meta(),
         },
     )
     session.add(output)
@@ -605,7 +559,6 @@ async def retry_learn_realization(
 
 
 __all__ = [
-    "execute_learn_realization",
     "realize_learn_from_preparation",
     "retry_learn_realization",
 ]

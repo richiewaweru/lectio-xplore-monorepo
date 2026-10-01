@@ -9,14 +9,14 @@ import pytest
 
 from resource_specs.candidates import assemble_slot_guidance, resolve_block_candidates
 from resource_specs.loader import get_spec, load_all_specs
-from v3_blueprint.planning.models import (
+from curriculum.planning.models import (
     PlannedBlock,
     SectionBlockPlan,
     SectionPlan,
     StructuralPlan,
     adapt_legacy_structural_plan,
 )
-from v3_blueprint.skeletons import load_skeleton_catalog
+from curriculum.planning.skeletons import load_skeleton_catalog
 
 BACKEND = Path(__file__).resolve().parents[2]
 CONTRACTS = BACKEND / "contracts" / "lectio-page"

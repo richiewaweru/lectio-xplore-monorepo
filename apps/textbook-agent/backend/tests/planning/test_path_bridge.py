@@ -34,8 +34,8 @@ from curriculum.path_models import (
 from curriculum.schedule import write_groups
 from curriculum.service import approve_path, create_unit, persist_path_plan
 from curriculum.shapes import decide_shape_deviation, request_shape_deviation
-from v3_blueprint.planning.objective_ownership import hash_path_objective
-from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
+from curriculum.planning.objective_ownership import hash_path_objective
+from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
 
 
 @pytest.mark.asyncio
@@ -100,7 +100,7 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
     from types import SimpleNamespace
 
     from application.unit_lesson.prepare import _normalize_page_concept_card_payload
-    from v3_blueprint.planning.models import ConceptCard
+    from curriculum.planning.models import ConceptCard
 
     lesson = SimpleNamespace(
         concept_id="c-1",
@@ -158,7 +158,7 @@ def test_normalize_page_concept_card_payload_drops_empty_misconceptions():
     from types import SimpleNamespace
 
     from application.unit_lesson.prepare import _normalize_page_concept_card_payload
-    from v3_blueprint.planning.models import ConceptCard
+    from curriculum.planning.models import ConceptCard
 
     lesson = SimpleNamespace(
         concept_id="c-1",
@@ -216,6 +216,85 @@ def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> 
     )
 
     assert [section.visual_required for section in plan.sections] == [False, True, False]
+
+
+def test_bridge_preserves_complete_unicode_source_anchor() -> None:
+    from types import SimpleNamespace
+
+    from application.unit_lesson.prepare import _build_structural_plan
+
+    anchor = (
+        "The Lion & the Mouse — the lion spares the mouse, and later the mouse "
+        "gnaws through the hunter's net to free the lion; the kindness is repaid."
+    )
+    generated = PathStructuralPagePlan.model_validate(
+        {
+            "anchor": {"description": anchor, "source": "new"},
+            "cards": [{"title": "Inference in The Lion & the Mouse"}],
+            "sections": [
+                {"title": slot.title(), "transition_note": None if i == 0 else "follows"}
+                for i, slot in enumerate(["orient", "model", "check"])
+            ],
+        }
+    )
+    lesson = SimpleNamespace(
+        concept_id="c-lion-mouse",
+        objective="State an inference about cooperation in The Lion & the Mouse.",
+        title="The Lion & the Mouse",
+    )
+
+    plan = _build_structural_plan(
+        generated=generated,
+        lesson=lesson,
+        lesson_mode="first_exposure",
+        prior_knowledge=[],
+        slot_roles=["orient", "model", "check"],
+        slot_instance_ids=["orient", "model", "check"],
+        selected_components={},
+        shared_preparation=True,
+        visual_required_by_instance={},
+    )
+
+    assert len(anchor) > 100
+    assert plan.anchor.example == anchor
+    assert "—" in plan.anchor.example
+    assert "hunter's net" in plan.anchor.example
+
+
+def test_bridge_rejects_corrupted_source_anchor() -> None:
+    from types import SimpleNamespace
+
+    from application.unit_lesson.contracts import PathPreparationBlocked
+    from application.unit_lesson.prepare import _build_structural_plan
+
+    generated = PathStructuralPagePlan.model_validate(
+        {
+            "anchor": {"description": "The Lion & the Mouse\ufffd", "source": "new"},
+            "cards": [{"title": "Inference"}],
+            "sections": [
+                {"title": slot.title(), "transition_note": None if i == 0 else "follows"}
+                for i, slot in enumerate(["orient", "model", "check"])
+            ],
+        }
+    )
+    lesson = SimpleNamespace(
+        concept_id="c-corrupt",
+        objective="State an inference about cooperation.",
+        title="The Lion & the Mouse",
+    )
+
+    with pytest.raises(PathPreparationBlocked, match="corrupted anchor"):
+        _build_structural_plan(
+            generated=generated,
+            lesson=lesson,
+            lesson_mode="first_exposure",
+            prior_knowledge=[],
+            slot_roles=["orient", "model", "check"],
+            slot_instance_ids=["orient", "model", "check"],
+            selected_components={},
+            shared_preparation=True,
+            visual_required_by_instance={},
+        )
 
 
 def test_native_page_plan_bridge_stamps_fixed_identities() -> None:
@@ -278,7 +357,7 @@ def test_normalize_page_concept_card_payload_forces_approved_objective(raw_overr
     from types import SimpleNamespace
 
     from application.unit_lesson.prepare import _normalize_page_concept_card_payload
-    from v3_blueprint.planning.models import ConceptCard
+    from curriculum.planning.models import ConceptCard
 
     lesson = SimpleNamespace(
         concept_id="c-owned",
@@ -303,7 +382,7 @@ def test_normalize_page_concept_card_payload_forces_approved_objective(raw_overr
 def test_length_limits_are_advisory_not_enforced():
     """Character limits on planner contracts are advisory: long compound
     objectives / titles must not fail generation."""
-    from v3_blueprint.planning.models import AnchorSpec, LessonIntent
+    from curriculum.planning.models import AnchorSpec, LessonIntent
 
     long_objective = (
         "Explain why plants need light to make food: light provides the energy that "
@@ -414,7 +493,8 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
         for section in structural_plan.sections
     )
     assert all(len(section.title) <= 80 for section in structural_plan.sections)
-    assert len(structural_plan.anchor.example) <= 100
+    # Source anchors are preserved whole (67c10889), not truncated to 100.
+    assert structural_plan.anchor.example
     assert response.objective_hash == hash_path_objective(lesson.objective)
     provenance = await db_session.get(LessonProvenanceModel, response.generation_id)
     assert provenance is not None

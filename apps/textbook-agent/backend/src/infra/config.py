@@ -180,6 +180,12 @@ class Settings(BaseSettings):
             "V3_TIMEOUT_STAGE1_SECONDS",
         ),
     )
+    # "advisory": only broken output fails/retries; quality findings become
+    # teacher-visible flags. "blocking": every finding gates the plan.
+    teaching_plan_quality_gate: Literal["advisory", "blocking"] = Field(
+        default="advisory",
+        validation_alias=AliasChoices("TEACHING_PLAN_QUALITY_GATE"),
+    )
     page_form_plan_timeout_seconds: int = Field(default=120, ge=1)
     page_standard_writer_timeout_seconds: int = Field(
         default=180,
@@ -276,6 +282,40 @@ class Settings(BaseSettings):
     pdf_usable_page_height_px: int = Field(default=970, gt=0)
     pdf_temp_retention_seconds: int = Field(default=3600, ge=60)
 
+    # SharedDocument media (local-only, default-OFF quality switch). When
+    # enabled, a figure media provider/output failure defers the figure
+    # instead of blocking the Run from reaching READY. Never for
+    # production-like environments; see _validate_production_like_runtime.
+    shared_document_media_optional: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("SHARED_DOCUMENT_MEDIA_OPTIONAL"),
+    )
+
+    # Document quality gate. "advisory" (default) records semantic/quality
+    # findings as teacher-visible flags and lets the document become READY;
+    # only genuinely broken output (provider/transport errors, invalid QA
+    # output, structural deterministic failures) fails. "blocking" restores
+    # the strict behaviour: a semantic issue parks the Run for review.
+    document_quality_gate: Literal["advisory", "blocking"] = Field(
+        default="advisory",
+        validation_alias=AliasChoices("DOCUMENT_QUALITY_GATE"),
+    )
+
+    # SharedDocument auto-retry: bounded, automatic re-dispatch of
+    # failed_recoverable WorkItems whose recovery_action is "retry" and
+    # error_class is a provider hiccup (provider_output/provider_transport).
+    # Never widens the existing per-item max_attempts cap; review/none
+    # recovery actions and non-provider error classes are never auto-retried.
+    shared_document_auto_retry_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("SHARED_DOCUMENT_AUTO_RETRY_ENABLED"),
+    )
+    shared_document_auto_retry_delay_seconds: int = Field(
+        default=20,
+        ge=0,
+        validation_alias=AliasChoices("SHARED_DOCUMENT_AUTO_RETRY_DELAY_SECONDS"),
+    )
+
     @field_validator("app_env", mode="before")
     @classmethod
     def _normalize_app_env(cls, value: str | None) -> str:
@@ -311,6 +351,11 @@ class Settings(BaseSettings):
             errors.append("GOOGLE_CLIENT_ID must be configured")
         if self.pdf_export_enabled and _has_local_only_host(self.pdf_render_base_url):
             errors.append("PDF_RENDER_BASE_URL must not point to a localhost-only origin")
+        if self.shared_document_media_optional:
+            errors.append(
+                "SHARED_DOCUMENT_MEDIA_OPTIONAL must not be enabled in a production-like "
+                "environment; it is a local-only development switch"
+            )
 
         if errors:
             raise ValueError(

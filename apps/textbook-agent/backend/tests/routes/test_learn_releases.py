@@ -13,7 +13,7 @@ from core.database.models import LearnReleaseModel, UserModel
 from core.entities.user import User
 from infra.auth.middleware import get_current_user
 from infra.database.session import get_async_session
-from learn.release_routes import document_hash
+from learn.publishing.release_routes import document_hash
 
 
 def _now() -> datetime:
@@ -247,7 +247,7 @@ async def test_unit_path_publish_requires_and_stores_provenance(db_session_facto
 @pytest.mark.asyncio
 async def test_preview_has_no_attempt_write_surface():
     """Preview is draft-lesson shell only; attempts require a LearningInstance route."""
-    from learn.runtime_routes import router as runtime_router
+    from learn.runtime.runtime_routes import router as runtime_router
 
     attempt_paths = [
         getattr(route, "path", "")
@@ -256,3 +256,118 @@ async def test_preview_has_no_attempt_write_surface():
     ]
     assert any("/instances/{instance_id}/attempts" in p for p in attempt_paths)
     assert not any("lessons" in p and "attempt" in p for p in attempt_paths)
+
+
+# ---------------------------------------------------------------------------
+# P10C: publish-time SharedLessonDocument lineage verification
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_publish_stamps_shared_document_lineage(db_session_factory):
+    from tests.print_learn._p10c_fixtures import seed_ready_shared_document_lesson
+
+    # _seed_user (autouse) already inserted USER; the fixture only needs the id.
+    seeded = await seed_ready_shared_document_lesson(
+        db_session_factory, owner_id=USER.id, suffix="stamp"
+    )
+
+    async with await _client() as client:
+        pub = await client.post(
+            f"/api/v1/learn/lessons/{seeded['lesson_id']}/releases", json={}
+        )
+        assert pub.status_code == 201, pub.text
+        body = pub.json()
+        assert body["shared_document_id"] == seeded["document_id"]
+        assert body["shared_document_revision"] == seeded["revision"]
+        assert body["shared_document_hash"] == seeded["content_hash"]
+        assert body["shared_document_run_id"] == "p10c-run-stamp"
+
+        # Idempotent re-publish (identical draft hash) replays the same release.
+        again = await client.post(
+            f"/api/v1/learn/lessons/{seeded['lesson_id']}/releases", json={}
+        )
+        assert again.status_code == 201, again.text
+        assert again.json()["id"] == body["id"]
+        assert again.json()["idempotent_replay"] is True
+
+    async with db_session_factory() as session:
+        rows = (
+            await session.execute(
+                select(LearnReleaseModel).where(
+                    LearnReleaseModel.editable_lesson_id == seeded["lesson_id"]
+                )
+            )
+        ).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].shared_document_id == seeded["document_id"]
+
+
+@pytest.mark.asyncio
+async def test_publish_rejects_stale_shared_document_hash(db_session_factory):
+    from sqlalchemy import update as _sa_update
+    from infra.database.models import SharedLessonDocumentModel
+    from tests.print_learn._p10c_fixtures import seed_ready_shared_document_lesson
+
+    seeded = await seed_ready_shared_document_lesson(
+        db_session_factory, owner_id=USER.id, suffix="stale-hash"
+    )
+
+    async with db_session_factory() as session:
+        await session.execute(
+            _sa_update(SharedLessonDocumentModel)
+            .where(
+                SharedLessonDocumentModel.id == seeded["document_id"],
+                SharedLessonDocumentModel.revision == seeded["revision"],
+            )
+            .values(content_hash="f" * 64)
+        )
+        await session.commit()
+
+    async with await _client() as client:
+        pub = await client.post(
+            f"/api/v1/learn/lessons/{seeded['lesson_id']}/releases", json={}
+        )
+        assert pub.status_code == 422, pub.text
+        assert pub.json()["detail"]["code"] == "SHARED_DOCUMENT_LINEAGE_MISMATCH"
+
+    async with db_session_factory() as session:
+        rows = (
+            await session.execute(
+                select(LearnReleaseModel).where(
+                    LearnReleaseModel.editable_lesson_id == seeded["lesson_id"]
+                )
+            )
+        ).scalars().all()
+        assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_publish_rejects_forked_ordinary_edit(db_session_factory):
+    from core.database.models import EditableLessonModel
+    from tests.print_learn._p10c_fixtures import seed_ready_shared_document_lesson
+
+    seeded = await seed_ready_shared_document_lesson(
+        db_session_factory, owner_id=USER.id, suffix="forked"
+    )
+
+    # Simulate ordinary content that slipped past the Builder save-time guard
+    # (e.g. a direct data fix) by mutating the stored paragraph node directly.
+    async with db_session_factory() as session:
+        lesson = await session.get(EditableLessonModel, seeded["lesson_id"])
+        assert lesson is not None
+        document = dict(lesson.document_json)
+        nodes = [dict(node) for node in document["nodes"]]
+        for node in nodes:
+            if node.get("id") == "paragraph-1":
+                node["text"] = "A forked, un-authored sentence."
+        document["nodes"] = nodes
+        lesson.document_json = document
+        await session.commit()
+
+    async with await _client() as client:
+        pub = await client.post(
+            f"/api/v1/learn/lessons/{seeded['lesson_id']}/releases", json={}
+        )
+        assert pub.status_code == 422, pub.text
+        assert pub.json()["detail"]["code"] == "SHARED_DOCUMENT_ORDINARY_EDIT_BLOCKED"

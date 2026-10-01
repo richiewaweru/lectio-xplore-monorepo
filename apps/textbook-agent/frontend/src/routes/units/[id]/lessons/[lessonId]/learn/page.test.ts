@@ -17,23 +17,30 @@ vi.mock('$lib/learn/student/StudentLessonShell.svelte', async () => ({ default: 
 
 import LearnPage from './+page.svelte';
 
-function status(state: 'not_started' | 'planning' | 'approved' = 'planning') {
+function status(
+	state: 'not_started' | 'planning' | 'approved' = 'planning',
+	learn: Record<string, unknown> = { state: 'not_created' }
+) {
 	return {
 		path_lesson_id: 'lesson-1', lesson_revision: 1, generation_id: 'debug-prep',
 		generation_status: 'ready', workflow_stage: 'ready', objective_hash: 'hash', stale: false,
 		can_prepare: false, can_regenerate: false,
 		workspace: {
 			preparation: { state, generation_id: 'prep-1', approved_snapshot_verified: state === 'approved' },
-			learn: { state: 'not_created' }, print: { state: 'not_created' }
+			learn, print: { state: 'not_created' }
 		}
 	};
 }
 
-function context(state: 'not_started' | 'planning' | 'approved' = 'planning', statusFresh = true) {
+function context(
+	state: 'not_started' | 'planning' | 'approved' = 'planning',
+	statusFresh = true,
+	learn?: Record<string, unknown>
+) {
 	return {
 		unitId: 'unit-1', lessonId: 'lesson-1', unit: null,
 		path: { status: 'approved' }, lesson: { title: 'Plant water', objective: 'Explain water movement' },
-		preparation: status(state), statusFresh, statusError: null,
+		preparation: status(state, learn), statusFresh, statusError: null,
 		refreshPreparation: vi.fn(async () => {}), setPreparation: vi.fn()
 	};
 }
@@ -63,5 +70,41 @@ describe('Unit Learn workspace canonical actions', () => {
 		render(LearnPage, { context: new Map([['lessonWorkspace', context('approved', false)]]) });
 		const create = await screen.findByRole('button', { name: 'Create Learn' });
 		expect((create as HTMLButtonElement).disabled).toBe(true);
+	});
+
+	it('shows a review-needed state with no retry action when the backend reports needs_review', async () => {
+		render(LearnPage, {
+			context: new Map([['lessonWorkspace', context('approved', true, { state: 'needs_review', shared_document_state: 'needs_review' })]])
+		});
+		await screen.findByText('This lesson needs a teacher review before Learn can be built');
+		expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+	});
+
+	it('shows document-preparation progress while the shared document is pending', async () => {
+		render(LearnPage, {
+			context: new Map([['lessonWorkspace', context('approved', true, { state: 'running', realization_id: 'learn-r', shared_document_state: 'pending' })]])
+		});
+		await screen.findByText('Preparing the lesson document');
+	});
+
+	it('prompts to regenerate when a ready Learn artifact has a stale shared document', async () => {
+		mocks.getBuilderLesson.mockResolvedValue({
+			document: { version: 2, id: 'doc-1', title: 'Lesson', subject: 'science', source: 'native', nodes: [], created_at: '', updated_at: '' }
+		});
+		render(LearnPage, {
+			context: new Map([
+				[
+					'lessonWorkspace',
+					context('approved', true, {
+						state: 'ready',
+						realization_id: 'learn-r',
+						output_id: 'learn-o',
+						open_href: '/builder/learn-o',
+						shared_document_state: 'stale'
+					})
+				]
+			])
+		});
+		await screen.findByText(/has changed since this Learn lesson was built/);
 	});
 });

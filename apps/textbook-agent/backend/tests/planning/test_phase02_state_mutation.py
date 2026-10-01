@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from tests.planning._lease_helper import claim_test_execution, heartbeat_test_execution
 import asyncio
 import uuid
 
@@ -35,12 +36,12 @@ async def _seed(db_session_factory) -> tuple[str, str, int]:
         )
         await session.commit()
         repo = PageDocumentRepository(session, gid)
-        lease = await repo.claim_execution(worker_id="mut-worker")
+        lease = await claim_test_execution(repo, worker_id="mut-worker")
         assert lease is not None
         await repo.transition(
             expected={"planning_forms"},
-            target="writing_blocks",
-            event="writing_blocks_started",
+            target="assembling",
+            event="assembling_started",
             worker_id=lease.worker_id,
             lease_token=lease.lease_token,
         )
@@ -55,7 +56,7 @@ async def test_heartbeat_and_block_outcome_do_not_clobber(db_session_factory) ->
         async with db_session_factory() as session:
             repo = PageDocumentRepository(session, gid)
             for _ in range(8):
-                await repo.heartbeat(worker_id=worker_id, lease_token=token)
+                await heartbeat_test_execution(repo, worker_id=worker_id, lease_token=token)
 
     async def _blocks() -> None:
         async with db_session_factory() as session:

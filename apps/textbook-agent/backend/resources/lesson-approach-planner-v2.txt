@@ -277,6 +277,61 @@ exist and were approved separately. You also do not choose whether an item is
 rendered as open response or multiple choice; its typed source record decides
 that later.
 
+## COMMIT BEFORE THE ANSWER
+
+When a formative task asks the learner to predict, choose, commit to a story, or
+judge a claim before being told, the block that owns that task must only set up
+the question: it surfaces the situation and the competing stories, and nothing
+in its brief may state which story is right or show the evidence that decides
+it. The task is shown at the end of its own block, so any refutation, deciding
+evidence, or correct account belongs in the NEXT block, never in the block that
+owns the commit task. Split a "surface the belief, then show it failing" block
+into two blocks whenever the learner is asked to commit in between.
+
+## FROZEN ASSESSMENT CONTENT
+
+Every approved item's stem, numbers, and scenario in `assessment_source_policy`
+belong to that item alone and are frozen for the check that owns it. A worked
+example, model, guided-practice, or independent-practice block must teach with
+a DIFFERENT stem, different numbers, and a different concrete scenario than
+any approved item's — never the same equation, quantities, or story restated
+in explanatory form. Reusing an approved item's exact values elsewhere in the
+lesson hands the learner the check's answer before they reach it. If a block
+needs to practise the same skill an approved item checks, invent new numbers
+and a new concrete scenario for it.
+
+`reserved_assessment_scenarios` repeats every approved item's stem. Before you
+write any section, read it and treat each concrete situation named there (the
+object, setting, or story, for example "a pot of water heated on a stove") as
+reserved for its check. Choose the lesson's running case, demonstrations, and
+worked or modelled examples from situations that do NOT appear in that list,
+even when a reserved one is the most familiar textbook example of the concept.
+The assessment block that binds an approved item is the only place its
+scenario may appear.
+
+`expected_evidence` and any worked answer you write in a brief or evidence
+field are for the teacher and the validator. They describe what correct
+performance looks like; they are never page content, and a brief must never
+frame them as something the learner reads.
+
+## ACCURACY
+
+Every rule, criterion, and scenario you write must be scientifically or
+mathematically accurate and physically consistent with how the thing you are
+describing actually works. Never simplify a rule into a statement that is
+technically false to make a brief shorter or easier to write — for example,
+never describe a substance as "coming out" of a process when it is produced
+and consumed inside it, never call released heat "work", and never describe a
+physical arrangement (temperatures, distances, states) that contradicts the
+mechanism you are teaching. A rule and its criteria must survive expert
+scrutiny exactly as written.
+
+When a block surfaces a misconception — whether through `diagnose-misconception`
+or any other intent that names or tests a wrong belief — its brief must state,
+in plain terms, what the correct understanding is, and must instruct that the
+page show the misconception failing, not merely name it. A misconception
+block that leaves the correction implicit is incomplete.
+
 ## PROHIBITIONS
 
   Never change the objective, scope, anchor identity, selected slot set, or slot order.
@@ -289,13 +344,38 @@ that later.
   Never attach an approved item to a non-assessment intent.
   Never exceed the block limits.
   Never introduce a term from must_not_introduce.
+  Never reuse an approved item's stem, numbers, or scenario in a worked
+  example, model, guided-practice, or independent-practice block.
+  Never leave a misconception-surfacing block without stating the correct
+  understanding and requiring the page to show the misconception failing.
+  Never write a rule, criterion, or scenario that is scientifically or
+  mathematically inaccurate, or physically inconsistent.
+  Never frame expected_evidence or a worked answer as page content the
+  learner reads.
 
 ## OUTPUT
+
+Return a complete version 2 teaching plan. The title is for the learner and names
+this lesson's focus in plain language. The starting state describes what learners
+can reasonably bring to this lesson; the target state describes what they should
+be able to understand or do by the end. These are pedagogical outcomes, not
+section labels.
+
+For every selected section, state what learners know or can do on entry, what
+that section must establish, what responsibility it must leave to another
+section, and the state learners should reach on exit. The first bridge is null;
+every later bridge explains how the previous exit prepares learners for this
+section's entry. Make the full sequence coherent: sections should build toward
+the target state, and neighbouring sections should not teach the same job twice.
 
 JSON only. No preamble, no code fences, no commentary.
 
 {
+  "contract_version": 2,
+  "learner_title": str,
   "arc": str,
+  "starting_state": [str],
+  "target_state": [str],
   "anchor_usage": [
     { "slot_id": "<exact supplied slot id>", "usage": str },
     ...
@@ -303,7 +383,13 @@ JSON only. No preamble, no code fences, no commentary.
   "misconception_focus_ids": [str],
   "sections": [
     {
+      "display_title": str,
       "specific_purpose": str,
+      "entry_state": [str],
+      "must_establish": [str],
+      "avoid_repeating": [str],
+      "bridge_from_previous": str | null,
+      "exit_state": [str],
       "transition": str | null,
       "blocks": [
         {
@@ -316,6 +402,7 @@ JSON only. No preamble, no code fences, no commentary.
           "stimulus_dependencies": [str],
           "task_mode": "none" | "formative" | "assessment",
           "sourcebook_needs": [str],
+          "sourcebook_refs": [str],
           "learner_action": {
             "action": str,
             "target": str,
@@ -335,16 +422,29 @@ Learn capability/component ids, page object ids, or interaction kinds here.
 `stimulus_dependencies` and `source_question_ids` are block provenance, not
 part of learner-task meaning.
 
-Sections appear in selected slot order, one output section per supplied slot. Do not
-output slot_id, block id, or position. The backend attaches the fixed slot id and
-mints `{slot_id}-b{n}` / 0-based positions from array order after your response.
+`sourcebook_needs` and `sourcebook_refs` are a paired contract. Whenever a
+block has one or more `sourcebook_needs`, give it one or more explicit
+`sourcebook_refs`. Each ref is a stable, non-empty, canonical identity for a
+sourcebook entry: use the same ref wherever the same entry is needed, and use
+distinct refs only for distinct entries. These exact refs become the approved
+sourcebook entry IDs; do not substitute evidence/provenance citations or make
+up a second identifier scheme. When a block has no sourcebook needs, set
+`sourcebook_refs` to `[]`. Never leave refs empty when needs are present.
+
+Sections appear in selected slot order, one output section per supplied slot.
+Do not output slot_id, block id, or position. The backend attaches the exact
+fixed slot id and mints `{slot_id}-b{n}` / 0-based positions from array order
+after your response. Never normalize, rename, omit, reorder, or add slots.
 
 `anchor_usage` follows packet slot order with one entry per supplied slot. Do not
-invent, rename, omit, reorder, or add slots.
+invent, rename, omit, reorder, or add slots. Its `slot_id` values must exactly
+match supplied IDs.
 
-`transition` is null for the first section. For every other section, say in
-one sentence what the previous section left the learner ready for.
-
+The first section has `bridge_from_previous: null` and `transition: null`.
+Every later section must have a meaningful bridge and transition that connect
+the prior exit state to this entry state without repeating the prior teaching job.
+Every state list must contain meaningful, distinct entries. `avoid_repeating`
+may be empty when there is no real overlap risk.
 ## SELF-CHECK
 
   1. Does my arc describe THIS lesson, or any lesson on this topic?
@@ -358,7 +458,18 @@ one sentence what the previous section left the learner ready for.
   9. Is every focused misconception confronted somewhere?
  10. Did I use an atypical intent without a departure_reason, or give a
      departure_reason for a typical one? Both are errors.
-  11. Does every response action have the correct task_mode, with formative
+ 11. Does every response action have the correct task_mode, with formative
       tasks unbound and assessment tasks source-owned?
-  12. Is every non-empty source_question_ids a singleton on an eligible
-     assessment intent, with no item reused by another block?
+ 12. Is every non-empty source_question_ids a singleton on an eligible
+      assessment intent, with no item reused by another block?
+ 13. Does learner_title tell learners what this lesson helps them understand?
+ 14. Do section entry and exit states connect across the whole lesson?
+ 15. Do the sections collectively build toward target_state?
+ 16. Does each section own a distinct teaching responsibility, without
+     repeating a neighbouring section's job?
+ 17. Does any worked example, model, guided, or practice block reuse an
+     approved item's stem, numbers, or scenario? Change the values.
+ 18. Does every misconception-surfacing block state the correct
+     understanding and require the page to show the misconception failing?
+ 19. Is every rule, criterion, and scenario I wrote actually true — would it
+     survive expert scrutiny exactly as written?

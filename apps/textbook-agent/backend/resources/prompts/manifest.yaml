@@ -74,30 +74,6 @@ prompts:
     editable: false
     version: 1
 
-  - id: document-composer
-    file: document-composer.md
-    stage_label: Chooses document forms
-    editable: false
-    version: 1
-
-  - id: document-writer
-    file: document-writer.md
-    stage_label: Writes ordinary lesson content
-    editable: false
-    version: 1
-
-  - id: interaction-selection
-    file: interaction-selection.md
-    stage_label: Chooses Learn interaction form
-    editable: false
-    version: 1
-
-  - id: interaction-writer
-    file: interaction-writer.md
-    stage_label: Writes learner interactions
-    editable: false
-    version: 1
-
   - id: figure-authoring
     file: figure-authoring.md
     stage_label: Designs lesson figures
@@ -122,11 +98,41 @@ prompts:
     editable: false
     version: 1
 
+  - id: section-composer
+    file: section-composer.md
+    stage_label: Composes shared lesson section structure
+    editable: false
+    version: 1
+
+  - id: shared-section-writer
+    file: shared-section-writer.md
+    stage_label: Writes shared lesson section content
+    editable: false
+    version: 1
+
+  - id: boundary-continuity-validator
+    file: boundary-continuity-validator.md
+    stage_label: Validates shared lesson section continuity
+    editable: false
+    version: 1
+
+  - id: document-semantic-qa
+    file: document-semantic-qa.md
+    stage_label: Reviews assembled shared lesson meaning
+    editable: false
+    version: 1
+
   - id: whole-lesson-coherence-reviewer
     file: whole-lesson-coherence-reviewer.md
     stage_label: Reviews whole-lesson coherence
     editable: false
     version: 1
+
+  - id: teaching-plan-semantic-reviewer
+    file: teaching-plan-semantic-reviewer.md
+    stage_label: Reviews Teaching Plan progression
+    editable: false
+    version: 2
 
   - id: targeted-lesson-repair
     file: targeted-lesson-repair.md

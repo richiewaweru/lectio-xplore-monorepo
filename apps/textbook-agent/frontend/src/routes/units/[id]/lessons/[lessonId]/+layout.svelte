@@ -40,7 +40,7 @@
 	function artifactTone(state: typeof learnArtifact.state): 'neutral' | 'ready' | 'attention' | 'info' {
 		if (state === 'ready') return 'ready';
 		if (state === 'needs_attention' || state === 'failed') return 'attention';
-		if (state === 'preparing') return 'info';
+		if (state === 'preparing' || state === 'needs_review') return 'info';
 		return 'neutral';
 	}
 

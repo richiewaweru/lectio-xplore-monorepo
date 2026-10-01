@@ -24,7 +24,6 @@ from curriculum.models import (
 )
 from curriculum.planner_diagnostics import log_planner_attempt_failed
 from curriculum.prompts import (
-    capability_selector_prompt,
     component_selector_prompt,
     constructor_prompt,
     lesson_sourcebook_writer_prompt,
@@ -44,11 +43,9 @@ from curriculum.validation import (
     normalize_path_plan_draft,
     validate_canonical_path_plan,
 )
-from infra.authoring.capability_selector import CapabilitySelection
 from infra.config import settings
 from infra.llm.runner import RetryPolicy, run_llm
 from infra.authoring.model_policy import (
-    NATIVE_CAPABILITY_SELECTOR,
     V2_COMPONENT_SELECTOR,
     V2_PATH_CHAT_EDITOR,
     V2_PATH_PLANNER,
@@ -362,39 +359,6 @@ async def run_component_selector(
         caller="v2_component_selector",
         output_type=ComponentSelection,
         system_prompt=component_selector_prompt(),
-        user_payload=context,
-        trace_id=trace_id,
-    )
-
-
-async def run_capability_selector(
-    context: dict[str, Any],
-    *,
-    trace_id: str | None = None,
-) -> CapabilitySelection:
-    return await _run_structured(
-        node=NATIVE_CAPABILITY_SELECTOR,
-        caller="native_capability_selector",
-        output_type=CapabilitySelection,
-        system_prompt=capability_selector_prompt(),
-        user_payload=context,
-        trace_id=trace_id,
-    )
-
-
-async def run_interaction_selection(
-    context: dict[str, Any],
-    *,
-    trace_id: str | None = None,
-) -> CapabilitySelection:
-    """Pick among legal Learn interaction candidates using interaction-selection.md."""
-    from curriculum.prompts import interaction_selection_prompt
-
-    return await _run_structured(
-        node=NATIVE_CAPABILITY_SELECTOR,
-        caller="interaction_selection",
-        output_type=CapabilitySelection,
-        system_prompt=interaction_selection_prompt(),
         user_payload=context,
         trace_id=trace_id,
     )

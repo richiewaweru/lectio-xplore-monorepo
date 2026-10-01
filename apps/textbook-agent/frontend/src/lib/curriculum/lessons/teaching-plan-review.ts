@@ -22,13 +22,23 @@ export type TeachingPlanBlockView = {
 export type TeachingPlanView = {
 	teaching_plan_id?: string | null;
 	revision?: number | null;
+	contract_version?: 1 | 2;
 	arc: string;
+	learner_title?: string | null;
+	starting_state?: string[] | null;
+	target_state?: string[] | null;
 	anchor_usage?: Array<{ slot_id: string; usage: string }>;
 	misconception_focus_ids?: string[];
 	sections?: Array<{
 		slot_id: string;
 		specific_purpose?: string;
 		transition?: string | null;
+		display_title?: string | null;
+		entry_state?: string[] | null;
+		must_establish?: string[] | null;
+		avoid_repeating?: string[] | null;
+		bridge_from_previous?: string | null;
+		exit_state?: string[] | null;
 		blocks?: TeachingPlanBlockView[];
 	}>;
 };
@@ -48,19 +58,65 @@ export type TeachingPlanIdentityView = {
 	approved_hash_verified?: boolean;
 };
 
+export type TeachingPlanFlag = {
+	code: string;
+	severity: 'warning';
+	source: 'validator' | 'reviewer';
+	message: string;
+	section_ids?: string[];
+	block_ids?: string[];
+	repair_instruction?: string;
+};
+
 export type LessonApproachView = {
 	teaching_plan?: TeachingPlanView | null;
 	teaching_review?: TeachingReviewView | null;
 	teaching_plan_identity?: TeachingPlanIdentityView | null;
 	teaching_qc?: Array<{ code?: string; message?: string }>;
+	teaching_flags?: TeachingPlanFlag[];
 };
 
 export function hasVisibleTeachingPlan(plan: TeachingPlanView | null | undefined): boolean {
 	if (!plan || !plan.arc?.trim()) return false;
-	return Boolean(
+	const hasVisibleBlocks = Boolean(
 		plan.sections?.some((section) =>
 			section.blocks?.some((block) => Boolean(block.brief?.trim() && block.evidence?.trim()))
 		)
+	);
+	if (!hasVisibleBlocks) return false;
+	if (plan.contract_version !== 2) return true;
+	if (
+		!plan.learner_title?.trim() ||
+		!hasMeaningfulState(plan.starting_state) ||
+		!hasMeaningfulState(plan.target_state) ||
+		!plan.sections?.length
+	) return false;
+	return plan.sections.every((section, index) => {
+		const hasCompleteBlocks = Boolean(
+			section.blocks?.length &&
+			section.blocks.every((block) => block.brief?.trim() && block.evidence?.trim())
+		);
+		return Boolean(
+			section.slot_id?.trim() &&
+			hasCompleteBlocks &&
+			section.display_title?.trim() &&
+			hasMeaningfulState(section.entry_state) &&
+			hasMeaningfulState(section.must_establish) &&
+			Array.isArray(section.avoid_repeating) &&
+			section.avoid_repeating.every((item) => typeof item === 'string' && item.trim()) &&
+			hasMeaningfulState(section.exit_state) &&
+			(index === 0
+				? section.bridge_from_previous == null
+				: Boolean(section.bridge_from_previous?.trim()))
+		);
+	});
+}
+
+function hasMeaningfulState(value: string[] | null | undefined): boolean {
+	return Boolean(
+		Array.isArray(value) &&
+		value.length &&
+		value.every((item) => typeof item === 'string' && item.trim())
 	);
 }
 

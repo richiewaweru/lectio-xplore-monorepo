@@ -8,12 +8,21 @@ from curriculum.lesson_review import (
 )
 from curriculum.lesson_sourcebook import LessonSourcebook, SourcebookEntry, build_content_bindings
 from curriculum.models import FlowChoice
-from curriculum.shared_tasks import build_shared_task_registry, validate_shared_tasks
+from curriculum.shared_tasks import (
+    build_shared_task_registry,
+    finalize_shared_tasks,
+    validate_shared_tasks,
+)
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import TeachingPlan
 
 
-def _plan(*, task_mode: str = "formative", source_ids: list[str] | None = None) -> TeachingPlan:
+def _plan(
+    *,
+    task_mode: str = "formative",
+    source_ids: list[str] | None = None,
+    action: str = "enter-number",
+) -> TeachingPlan:
     return TeachingPlan.model_validate(
         {
             "arc": "Use canonical slope points",
@@ -33,7 +42,7 @@ def _plan(*, task_mode: str = "formative", source_ids: list[str] | None = None) 
                             "task_mode": task_mode,
                             "source_question_ids": source_ids or [],
                             "learner_action": {
-                                "action": "enter-number",
+                                "action": action,
                                 "target": "slope",
                                 "purpose": "practice slope",
                                 "expected_evidence": "4",
@@ -92,12 +101,12 @@ def test_formative_task_needs_no_approved_source_and_binds_once() -> None:
 
 
 def test_incomplete_choice_contract_is_not_reusable() -> None:
-    plan = _plan()
+    plan = _plan(action="select-one")
     task = build_shared_task_registry(plan)[0].model_copy(
-        update={"response": {"type": "select-one"}}
+        update={"response": {"type": "single_choice"}}
     )
-    errors = validate_shared_tasks(plan, [task])
-    assert any("at least two options" in error for error in errors)
+    with pytest.raises(ValueError, match="at least two options"):
+        finalize_shared_tasks(plan, [task])
 
 
 def test_assessment_task_requires_source() -> None:

@@ -1,7 +1,4 @@
 from datetime import UTC, datetime
-from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -630,9 +627,7 @@ class TestBuilderLessonRoutes:
         )
         assert saved_doc["blocks"]["fib-1"]["content"]["segments"][1]["answer"] == "4"
 
-    async def test_print_document_and_export_pdf_enforce_ownership(
-        self, _install_dependency_overrides
-    ):
+    async def test_print_document_enforces_ownership(self, _install_dependency_overrides):
         async with await _client() as client:
             created = await client.post(
                 "/api/v1/builder/lessons",
@@ -648,118 +643,4 @@ class TestBuilderLessonRoutes:
                 params={"audience": "student"},
             )
 
-            denied_export = await client.post(
-                f"/api/v1/builder/lessons/{lesson_id}/export/pdf",
-                json={"audience": "student"},
-            )
-
         assert denied_print.status_code == 404
-        assert denied_export.status_code == 404
-
-    async def test_print_preflight_enforces_ownership(self, _install_dependency_overrides):
-        async with await _client() as client:
-            created = await client.post(
-                "/api/v1/builder/lessons",
-                json={"source_type": "manual", "document": _minimal_lesson()},
-            )
-            assert created.status_code == 201
-            lesson_id = created.json()["id"]
-
-            _install_dependency_overrides["user"] = USER_B
-            denied = await client.post(
-                f"/api/v1/builder/lessons/{lesson_id}/print-preflight",
-                json={"audience": "student"},
-            )
-
-        assert denied.status_code == 404
-
-    async def test_print_preflight_returns_playwright_report(self):
-        async with await _client() as client:
-            created = await client.post(
-                "/api/v1/builder/lessons",
-                json={"source_type": "manual", "document": _minimal_lesson()},
-            )
-            assert created.status_code == 201
-            lesson_id = created.json()["id"]
-
-            captured: dict[str, object] = {}
-
-            async def fake_preflight(**kwargs):
-                captured.update(kwargs)
-                return {
-                    "print_layout_report": {
-                        "page_count_estimate": 4,
-                        "images_loaded": "3",
-                        "images_failed": "2",
-                        "images_timed_out": "1",
-                        "print_contract_coverage": {"declared": 5, "total": 6},
-                        "oversized_blocks": [
-                            {"type": "atomic", "block": "practice-stack", "height": 1200}
-                        ],
-                    }
-                }
-
-            with patch(
-                "application.builder_print.routes.render_generation_print_preflight", side_effect=fake_preflight
-            ):
-                response = await client.post(
-                    f"/api/v1/builder/lessons/{lesson_id}/print-preflight",
-                    json={"audience": "student"},
-                )
-
-        assert response.status_code == 200
-        body = response.json()
-        assert body["page_count_estimate"] == 4
-        assert body["images"] == {"loaded": 3, "failed": 2, "timed_out": 1}
-        assert body["print_contract_coverage"] == {"declared": 5, "total": 6}
-        assert body["oversized_blocks"] == [
-            {"type": "atomic", "block": "practice-stack", "height": 1200}
-        ]
-        assert "Block practice-stack is taller than one A4 page." in body["warnings"]
-        assert "2 images failed to load." in body["warnings"]
-        assert "1 images timed out while loading." in body["warnings"]
-        assert captured["render_path"] == f"/builder/print/{lesson_id}?audience=student"
-
-    async def test_export_pdf_uses_builder_print_route_and_audience(self, tmp_path: Path):
-        async with await _client() as client:
-            created = await client.post(
-                "/api/v1/builder/lessons",
-                json={"source_type": "manual", "document": _minimal_lesson()},
-            )
-            assert created.status_code == 201
-            lesson_id = created.json()["id"]
-
-            exported_pdf = tmp_path / "builder.pdf"
-            exported_pdf.write_bytes(b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF")
-
-            captured: dict[str, object] = {}
-
-            async def fake_export_generation_pdf(**kwargs):
-                captured.update(kwargs)
-                return SimpleNamespace(
-                    pdf_path=exported_pdf,
-                    filename="builder-student.pdf",
-                    file_size_bytes=exported_pdf.stat().st_size,
-                    page_count=3,
-                    generation_time_ms=420,
-                    cleanup_paths=[],
-                    print_page_debug=None,
-                )
-
-            with patch(
-                "application.builder_print.routes.export_generation_pdf", side_effect=fake_export_generation_pdf
-            ):
-                response = await client.post(
-                    f"/api/v1/builder/lessons/{lesson_id}/export/pdf",
-                    json={"audience": "student"},
-                )
-
-        assert response.status_code == 200
-        assert response.headers["content-type"] == "application/pdf"
-        assert response.headers["x-page-count"] == "3"
-        assert response.headers["x-file-size"] == str(exported_pdf.stat().st_size)
-        assert response.headers["x-generation-time-ms"] == "420"
-
-        assert captured["render_path"] == f"/builder/print/{lesson_id}?audience=student"
-        request_body = captured["request"]
-        assert getattr(request_body, "include_answers", None) is False

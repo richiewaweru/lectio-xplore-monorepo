@@ -8,7 +8,7 @@ from typing import Any
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 
-from .models import SharedTaskSpec
+from .models import ACTION_RESPONSE_TYPES, PASSIVE_ACTION_MEANINGS, SharedTaskSpec
 
 
 def teaching_plan_hash(plan: TeachingPlan) -> str:
@@ -17,23 +17,23 @@ def teaching_plan_hash(plan: TeachingPlan) -> str:
 
 
 def _response_contract(action: str) -> tuple[str, dict[str, Any], dict[str, Any]]:
-    mapping = {
-        "select-one": "single_choice",
-        "select-many": "multiple_choice",
-        "complete-missing-values": "missing_values",
-        "classify-items": "classification",
-        "match-pairs": "matching",
-        "order-items": "ordered_items",
-        "reconstruct-order": "ordered_items",
-        "enter-number": "number",
-        "enter-text": "text",
-    }
-    response_type = mapping.get(action)
+    response_type = ACTION_RESPONSE_TYPES.get(action)  # type: ignore[arg-type]
     if response_type is None:
         raise ValueError(f"no response contract for learner action {action!r}")
     response: dict[str, Any] = {"type": response_type}
     evaluation: dict[str, Any] = {"type": "rubric", "criteria": []}
     return response_type, response, evaluation
+
+
+def learner_action_meaning(action: str) -> tuple[str, str] | None:
+    """Return the closed response type or explicit passive meaning for an action."""
+    response_type = ACTION_RESPONSE_TYPES.get(action)  # type: ignore[arg-type]
+    if response_type is not None:
+        return "response", response_type
+    passive_meaning = PASSIVE_ACTION_MEANINGS.get(action)  # type: ignore[arg-type]
+    if passive_meaning is not None:
+        return "passive", passive_meaning
+    return None
 
 
 def shared_task_for_block(
@@ -98,10 +98,15 @@ def build_shared_task_registry(
             if block.learner_action is None:
                 continue
             action = str(block.learner_action.action)
-            if action in {"compare-without-response", "read-explanation"}:
+            if action in PASSIVE_ACTION_MEANINGS:
                 continue
             tasks.append(shared_task_for_block(plan, block, approved_items=approved_items))
     return tasks
 
 
-__all__ = ["build_shared_task_registry", "shared_task_for_block", "teaching_plan_hash"]
+__all__ = [
+    "build_shared_task_registry",
+    "learner_action_meaning",
+    "shared_task_for_block",
+    "teaching_plan_hash",
+]

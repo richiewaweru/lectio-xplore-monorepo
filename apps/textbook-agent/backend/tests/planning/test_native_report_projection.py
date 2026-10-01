@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from tests.planning._lease_helper import claim_test_execution
 import uuid
 
 import pytest
@@ -59,21 +60,23 @@ def _assert_report(
 @pytest.mark.parametrize(
     ("failure", "expected_status"),
     [
-        (TimeoutError("provider timed out"), "failed_recoverable"),
-        (TypeError("invalid writer output"), "failed_terminal"),
+        ("planning_forms", "failed_recoverable"),
+        ("planning_forms", "failed_terminal"),
     ],
     ids=["recoverable", "terminal"],
 )
-async def test_persist_native_failure_projects_consistent_report_status(
+async def test_failure_transition_projects_consistent_report_status(
     db_session_factory,
-    failure: Exception,
+    failure: str,
     expected_status: str,
 ) -> None:
     async with db_session_factory() as session:
-        generation_id = await _seed_generation(session, status="planning_forms")
+        generation_id = await _seed_generation(session, status=failure)
         repo = PageDocumentRepository(session, generation_id)
 
-        await repo.persist_native_failure(exc=failure, stage="planning_forms")
+        await repo.transition(
+            expected={failure}, target=expected_status, event="native_failure"
+        )
 
         generation = await session.get(GenerationModel, generation_id)
         assert generation is not None
@@ -105,7 +108,7 @@ async def test_retry_reset_and_claim_project_running_status(db_session_factory) 
             process_status="running",
         )
 
-        lease = await repo.claim_execution(worker_id="report-projection-worker")
+        lease = await claim_test_execution(repo, worker_id="report-projection-worker")
 
         assert lease is not None
         assert lease.stage == "planning_forms"
@@ -127,8 +130,6 @@ async def test_retry_reset_and_claim_project_running_status(db_session_factory) 
         "awaiting_teaching_approval",
         "queued",
         "planning_forms",
-        "writing_sections",
-        "writing_blocks",
         "assembling",
         "awaiting_visuals",
     ],
@@ -150,6 +151,29 @@ async def test_active_native_stages_project_running(
             native_stage=native_stage,
             process_status="running",
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("legacy_stage", ["writing_sections", "writing_blocks"])
+async def test_legacy_writing_stages_no_longer_project_running(
+    db_session_factory,
+    legacy_stage: str,
+) -> None:
+    """P12B: no code sets writing_sections/writing_blocks any more, and the
+    worker never reclaims a row parked there (ACTIVE_STATUSES dropped both).
+    A pre-P11B DB row stuck in one of these must not be falsely reported as
+    still running — it never will be again."""
+    async with db_session_factory() as session:
+        generation_id = await _seed_generation(session, status=legacy_stage)
+        repo = PageDocumentRepository(session, generation_id)
+
+        await repo.mutate_state(mutation=lambda _generation, _state: None)
+
+        generation = await session.get(GenerationModel, generation_id)
+        assert generation is not None
+        report = dict(generation.report_json or {})
+        assert report["native_stage"] == legacy_stage
+        assert report["process_status"] != "running"
 
 
 @pytest.mark.asyncio

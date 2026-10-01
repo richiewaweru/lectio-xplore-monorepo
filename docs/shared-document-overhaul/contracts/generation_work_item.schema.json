@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GenerationWorkItem",
+  "type": "object",
+  "required": [
+    "id",
+    "run_id",
+    "item_key",
+    "stage",
+    "status",
+    "attempt",
+    "input_hash",
+    "definition_hash"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "item_key": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+        "ready",
+        "failed_recoverable",
+        "failed_terminal",
+        "cancelled"
+      ]
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_attempts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "input_hash": {
+      "type": "string"
+    },
+    "definition_hash": {
+      "type": "string"
+    },
+    "composition_identity": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "lease_owner": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "lease_token": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "output_hash": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "error_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

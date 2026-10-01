@@ -226,7 +226,7 @@ export interface PreparedLessonStatus {
 	worker_debug?: Record<string, unknown>;
 }
 
-export type PreparationWorkspaceState = 'not_started' | 'planning' | 'awaiting_review' | 'approved' | 'failed_recoverable' | 'failed_terminal';
+export type PreparationWorkspaceState = 'not_started' | 'planning' | 'awaiting_review' | 'approved' | 'failed_recoverable' | 'failed_terminal' | 'legacy_unsupported';
 export type ReviewKind = 'structural' | 'teaching_plan';
 
 export interface PreparationWorkspaceStatus {
@@ -240,6 +240,19 @@ export interface PreparationWorkspaceStatus {
 	stale?: boolean;
 	legacy_ambiguous?: boolean;
 	error?: WorkspaceStateError | null;
+	/** Preparation Run backing plan generation (Option D). */
+	run_id?: string | null;
+	recovery_action?: 'retry' | 'review' | 'regenerate' | 'none' | null;
+	retryable?: boolean | null;
+	progress?: PreparationProgress | null;
+}
+
+export interface PreparationProgress {
+	items_total: number;
+	items_ready: number;
+	items_failed: number;
+	teaching_plan: 'not_started' | 'queued' | 'running' | 'ready' | 'failed';
+	failed_work_item_ids: string[];
 }
 
 export interface WorkspaceStateError {
@@ -254,18 +267,37 @@ export interface WorkspaceStateError {
 	recovery_action?: string | null;
 }
 
+/**
+ * P10B/P10D: the pinned SharedLessonDocument's own lifecycle, distinct from
+ * the Learn realization's execution status. `needs_review` also appears as
+ * the top-level `state` (see below) because Learn authoring cannot proceed
+ * at all until a human reviews the pinned document; the other values are
+ * additive context alongside an otherwise-normal realization state (e.g. a
+ * `ready` Learn artifact whose source document has since gone `stale`).
+ */
+export type SharedDocumentState = 'pending' | 'needs_review' | 'ready' | 'stale' | 'failed';
+
 export interface ArtifactWorkspaceStatus {
-	state: 'not_created' | 'queued' | 'running' | 'ready' | 'failed_recoverable' | 'failed_terminal';
+	state: 'not_created' | 'queued' | 'running' | 'ready' | 'failed_recoverable' | 'failed_terminal' | 'needs_review';
 	realization_id?: string | null;
 	output_id?: string | null;
 	open_href?: string | null;
 	stale?: boolean;
 	legacy_ambiguous?: boolean;
 	error?: WorkspaceStateError | null;
+	shared_document_state?: SharedDocumentState | null;
+	shared_document_run_id?: string | null;
+	/** Generation Run backing this Learn/Print job (projected by the backend). */
+	run_id?: string | null;
+	/** Closed vocabulary: retry / review / regenerate / none. */
+	recovery_action?: string | null;
+	shared_document_id?: string | null;
+	shared_document_revision?: number | null;
+	shared_document_hash?: string | null;
 }
 
 export type ArtifactPath = 'learn' | 'print';
-export type ArtifactUiState = 'not_created' | 'preparing' | 'ready' | 'needs_attention' | 'failed';
+export type ArtifactUiState = 'not_created' | 'preparing' | 'ready' | 'needs_attention' | 'failed' | 'needs_review';
 
 export interface LessonArtifactUi {
 	path: ArtifactPath;
@@ -276,8 +308,13 @@ export interface LessonArtifactUi {
 	openHref: string | null;
 	errorSummary: string | null;
 	retryable: boolean;
+	/** failed_terminal (incl. legacy rows): offer Regenerate via the realization retry route. */
+	regenerable: boolean;
+	runId: string | null;
 	recoveryAction: string | null;
 	legacyAmbiguous: boolean;
+	/** Null when the backend carries no SharedLessonDocument identity yet (pre-P10B rows). */
+	sharedDocumentState: SharedDocumentState | null;
 }
 
 export type LessonIssueSeverity = 'info' | 'warning' | 'error';

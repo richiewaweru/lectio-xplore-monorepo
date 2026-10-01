@@ -4,21 +4,24 @@ import pytest
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from core.llm import ModelFamily, ModelSlot, ModelSpec, build_model
-from v3_execution.config.models import (
-    V2_FORM_PLANNER,
+from infra.authoring.model_policy.models import (
+    BOUNDARY_CONTINUITY_VALIDATOR,
+    DOCUMENT_SEMANTIC_QA,
+    SECTION_COMPOSER,
+    SHARED_SECTION_WRITER,
+    TEACHING_PLAN_SEMANTIC_REVIEWER,
     V2_LESSON_APPROACH_PLANNER,
+    V2_PATH_CHAT_EDITOR,
     V2_PATH_PLANNER,
     V2_PATH_STRUCTURAL_PLANNER,
-    V3_ANSWER_KEY_GENERATOR,
-    V3_ANSWER_KEY_GENERATOR_HEAVY,
     V3_NODE_REASONING,
     V3_PROPOSE_INTENT,
+    SHARED_TASK_AUTHORING,
     V3_VISUAL_QC,
     get_v3_model_settings,
     get_v3_slot,
     get_v3_spec,
 )
-from v3_execution.models import AnswerKeyExecutorWorkOrder, AnswerKeyPlanSpec, WriterQuestion
 
 
 def test_v3_slot_mapping() -> None:
@@ -28,6 +31,7 @@ def test_v3_slot_mapping() -> None:
     assert get_v3_slot("v3_answer_key_generator") == ModelSlot.FAST
     assert get_v3_slot("v3_answer_key_generator_heavy") == ModelSlot.STANDARD
     assert get_v3_slot(V3_PROPOSE_INTENT) == ModelSlot.STANDARD
+    assert get_v3_slot(SHARED_TASK_AUTHORING) == ModelSlot.STANDARD
 
 
 def test_get_v3_spec_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -120,13 +124,12 @@ def test_get_v3_model_settings_adds_deepseek_reasoning_for_standard_nodes(
 
 
 def test_constrained_planner_nodes_disable_provider_reasoning() -> None:
-    """The structural and form planners must not run with DeepSeek thinking on.
+    """The structural planner must not run with DeepSeek thinking on.
 
     Thinking mode returns reasoning-only assistant messages with empty content.
     Replaying one is what produced the observed HTTP 400 "Invalid assistant
     message: content or tool_calls must be set" at planning_forms.
     """
-    assert V3_NODE_REASONING[V2_FORM_PLANNER] is False
     assert V3_NODE_REASONING[V2_PATH_STRUCTURAL_PLANNER] is False
 
 
@@ -179,29 +182,51 @@ def test_constrained_planner_nodes_send_no_thinking_payload(
     monkeypatch.setenv("V3_FAST_MODEL_NAME", "deepseek-flash")
     monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-flash")
 
-    for node in (V2_FORM_PLANNER, V2_PATH_STRUCTURAL_PLANNER):
+    for node in (V2_PATH_STRUCTURAL_PLANNER,):
         settings = get_v3_model_settings(node)
         assert settings == {
             "extra_body": {"thinking": {"type": "disabled"}},
-            "max_tokens": 8000 if node == V2_FORM_PLANNER else 16000,
+            "max_tokens": 16000,
         }, node
         assert "openai_reasoning_effort" not in settings
         assert settings["extra_body"] == {"thinking": {"type": "disabled"}}
 
 
-def test_planning_nodes_disable_provider_reasoning(
+def test_constrained_path_planner_disables_provider_reasoning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """DeepSeek planning calls must not enter the slow reasoning path."""
+    """V2_PATH_PLANNER's constrained JSON route must not enter DeepSeek thinking.
+
+    This is the node that previously held the UI in planning for minutes with
+    thinking enabled (see the V3_NODE_REASONING comment). It is distinct from
+    V2_LESSON_APPROACH_PLANNER (the shared/V2 Teaching Plan planner), which is
+    intentionally enabled for thinking below.
+    """
     monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
     monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-flash")
     monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
     monkeypatch.setenv("V3_STANDARD_API_KEY_ENV", "DEEPSEEK_API_KEY")
 
-    for node in (V2_PATH_PLANNER, V2_LESSON_APPROACH_PLANNER):
-        settings = get_v3_model_settings(node)
-        assert "openai_reasoning_effort" not in settings, node
-        assert settings["extra_body"] == {"thinking": {"type": "disabled"}}, node
+    settings = get_v3_model_settings(V2_PATH_PLANNER)
+    assert "openai_reasoning_effort" not in settings
+    assert settings["extra_body"] == {"thinking": {"type": "disabled"}}
+
+
+def test_lesson_approach_planner_enables_provider_reasoning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The shared/V2 Teaching Plan planner runs with low DeepSeek thinking."""
+    monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-flash")
+    monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("V3_STANDARD_API_KEY_ENV", "DEEPSEEK_API_KEY")
+
+    settings = get_v3_model_settings(V2_LESSON_APPROACH_PLANNER)
+    assert settings == {
+        "openai_reasoning_effort": "low",
+        "extra_body": {"thinking": {"type": "enabled"}},
+        "max_tokens": 16000,
+    }
 
 
 def test_get_v3_model_settings_preserves_thinking_when_base_sets_extra_body(
@@ -244,6 +269,52 @@ def test_get_v3_model_settings_applies_safety_backstop_when_no_max_tokens(
     )
 
     assert settings["max_tokens"] == 16000
+
+
+def test_document_semantic_qa_uses_standard_slot() -> None:
+    assert get_v3_slot(DOCUMENT_SEMANTIC_QA) == ModelSlot.STANDARD
+
+
+def test_thinking_enabled_capabilities_use_deepseek_reasoning() -> None:
+    """WORK PACKAGE A: these capabilities run with DeepSeek thinking on."""
+    assert V3_NODE_REASONING[V2_LESSON_APPROACH_PLANNER] == "low"
+    for node in (
+        TEACHING_PLAN_SEMANTIC_REVIEWER,
+        SHARED_SECTION_WRITER,
+        DOCUMENT_SEMANTIC_QA,
+    ):
+        assert V3_NODE_REASONING[node] == "medium", node
+
+
+def test_thinking_unchanged_capabilities_stay_disabled() -> None:
+    """Composer, shared task/sourcebook authoring, and boundary validation
+    are explicitly excluded from WORK PACKAGE A and must stay unchanged."""
+    for node in (
+        SECTION_COMPOSER,
+        SHARED_TASK_AUTHORING,
+        BOUNDARY_CONTINUITY_VALIDATOR,
+        V2_PATH_PLANNER,
+        V2_PATH_STRUCTURAL_PLANNER,
+        V2_PATH_CHAT_EDITOR,
+    ):
+        assert V3_NODE_REASONING[node] is False, node
+
+
+def test_get_v3_model_settings_enables_deepseek_reasoning_for_document_semantic_qa(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-flash")
+    monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("V3_STANDARD_API_KEY_ENV", "DEEPSEEK_API_KEY")
+
+    settings = get_v3_model_settings(DOCUMENT_SEMANTIC_QA)
+
+    assert settings == {
+        "openai_reasoning_effort": "medium",
+        "extra_body": {"thinking": {"type": "enabled"}},
+        "max_tokens": 16000,
+    }
 
 
 def test_build_model_sets_reasoning_content_profile_for_deepseek() -> None:

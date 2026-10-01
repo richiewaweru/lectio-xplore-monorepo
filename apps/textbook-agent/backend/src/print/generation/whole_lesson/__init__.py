@@ -1,12 +1,5 @@
 """Whole-lesson native planning package (v1.1)."""
 
-from print.generation.whole_lesson.form_plan import (
-    FormDecision,
-    FormPlan,
-    FormPlanBlock,
-    FormPlanSection,
-    coerce_form_plan,
-)
 from print.generation.whole_lesson.legality import (
     LessonLegalitySnapshot,
     build_lesson_legality_snapshot,
@@ -14,12 +7,6 @@ from print.generation.whole_lesson.legality import (
     validate_legality_snapshot,
 )
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
-from print.generation.whole_lesson.resolved_block_plan import (
-    ResolvedBlockPlan,
-    ResolvedLessonPlan,
-    ResolvedSectionPlan,
-    resolve_block_plans,
-)
 from print.generation.whole_lesson.teaching_plan import (
     TeachingPlan,
     TeachingPlanBlock,
@@ -31,15 +18,8 @@ from print.generation.whole_lesson.teaching_plan import (
 )
 
 __all__ = [
-    "FormDecision",
-    "FormPlan",
-    "FormPlanBlock",
-    "FormPlanSection",
     "ImmutableLessonPacket",
     "LessonLegalitySnapshot",
-    "ResolvedBlockPlan",
-    "ResolvedLessonPlan",
-    "ResolvedSectionPlan",
     "TeachingPlan",
     "TeachingPlanBlock",
     "TeachingPlanDraft",
@@ -47,9 +27,7 @@ __all__ = [
     "TeachingPlanDraftSection",
     "TeachingPlanSection",
     "build_lesson_legality_snapshot",
-    "coerce_form_plan",
     "materialize_teaching_plan",
     "project_slot_intent_policy",
-    "resolve_block_plans",
     "validate_legality_snapshot",
 ]

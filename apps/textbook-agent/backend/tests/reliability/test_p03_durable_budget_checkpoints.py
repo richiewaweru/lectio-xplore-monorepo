@@ -6,19 +6,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database.models import GenerationModel, UserModel
-from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, TeachingPlanSection
-from document.composer import DocumentComposerError, compose_document_plan
-from document.writer import DocumentWriterError, write_document_primitive
 from infra.authoring import (
     AuthoringDefinition,
     AuthoringEngine,
     AuthoringEngineError,
     AuthoringProviderCall,
     AuthoringRequest,
-    AuthoringTransportError,
 )
 from infra.authoring.engine import AuthoringRegistry
 from infra.execution.call_budget import (
@@ -34,16 +28,6 @@ from infra.execution.checkpoints import (
 from infra.execution.error_policy import classify_provider_error, honor_retry_after
 from infra.execution.leases import ResumeDecision
 from infra.execution.resource_limits import ResourceLimitError, ResourceLimits
-from learn.generation.fencing import (
-    LearnCancelledError,
-    LearnFenceError,
-    assert_learn_commit_allowed,
-    cancel_learn_execution,
-    claim_learn_execution,
-    commit_learn_checkpoint,
-    empty_learn_execution_meta,
-    write_learn_execution,
-)
 
 
 class FakeProvider:
@@ -113,28 +97,6 @@ def _request(work_order_id: str = "wi-p03") -> AuthoringRequest:
         teaching_revision=1,
         source_identities=("b1",),
         mode="generate",
-    )
-
-
-def _plan() -> TeachingPlan:
-    return TeachingPlan(
-        arc="P03",
-        teaching_plan_id="tp-p03",
-        revision=1,
-        sections=[
-            TeachingPlanSection(
-                slot_id="s1",
-                blocks=[
-                    TeachingPlanBlock(
-                        id="b1",
-                        position=0,
-                        intent="explain",
-                        brief="Explain why leaves need light.",
-                        evidence="Learner names light as energy source.",
-                    )
-                ],
-            )
-        ],
     )
 
 
@@ -250,89 +212,6 @@ async def test_g09_g11_crash_injection_before_after_commit() -> None:
     assert provider3.dispatches == prior_dispatches
 
 
-@pytest.mark.asyncio
-async def test_g10_selective_recovery_skips_ready_sibling() -> None:
-    store = CheckpointStore()
-    ledger = CallBudgetLedger()
-    compat_a = CheckpointCompatibility(1, content_hash("a"), "def", composition_identity="a")
-    compat_b = CheckpointCompatibility(1, content_hash("b"), "def", composition_identity="b")
-    store.commit("node:a", payload={"id": "a", "text": "done"}, compatibility=compat_a)
-    store.begin("node:b", compatibility=compat_b)
-
-    assert store.decide_resume("node:a", compatibility=compat_a) == ResumeDecision.SKIP_READY
-    assert store.decide_resume("node:b", compatibility=compat_b) == ResumeDecision.RETRY_ABANDONED
-
-    provider = FakeProvider({"kind": "paragraph", "text": "only b"})
-    node = await write_document_primitive(
-        kind="paragraph",
-        brief="Write about leaf light.",
-        teaching_block={"id": "b", "brief": "Write about leaf light."},
-        lesson_context={"teaching_plan_revision": 1},
-        provider=provider,
-        work_order_id="b",
-        budget_ledger=ledger,
-        checkpoint_store=store,
-        node_id="node-b",
-    )
-    assert node["text"] == "only b"
-    assert provider.dispatches == 1
-    # Sibling A unchanged.
-    ready_a = store.get("node:a")
-    assert ready_a is not None
-    assert ready_a.payload == {"id": "a", "text": "done"}
-
-
-@pytest.mark.asyncio
-async def test_document_quality_failure_repairs_in_engine_and_only_then_commits() -> None:
-    brief = "Explain why leaves need light."
-    provider = FakeProvider(
-        {"kind": "paragraph", "text": brief},
-        {"kind": "paragraph", "text": "Light supplies energy for photosynthesis."},
-    )
-    ledger = CallBudgetLedger()
-    store = CheckpointStore()
-    node = await write_document_primitive(
-        kind="paragraph",
-        brief=brief,
-        teaching_block={"id": "quality-block", "brief": brief},
-        provider=provider,
-        work_order_id="node-quality-repair",
-        budget_ledger=ledger,
-        checkpoint_store=store,
-    )
-
-    assert node["text"] == "Light supplies energy for photosynthesis."
-    assert [call.is_repair for call in provider.calls] == [False, True]
-    budget = ledger.get_or_create("node-quality-repair")
-    assert budget.consumed == budget.dispatched_count == 2
-    checkpoint = store.get("node:node-quality-repair")
-    assert checkpoint is not None and checkpoint.status == "ready"
-
-
-@pytest.mark.asyncio
-async def test_document_quality_repair_exhaustion_never_commits_ready_checkpoint() -> None:
-    brief = "Explain why leaves need light."
-    provider = FakeProvider(
-        {"kind": "paragraph", "text": brief},
-        {"kind": "paragraph", "text": brief},
-        {"kind": "paragraph", "text": brief},
-    )
-    store = CheckpointStore()
-    with pytest.raises(DocumentWriterError) as caught:
-        await write_document_primitive(
-            kind="paragraph",
-            brief=brief,
-            teaching_block={"id": "quality-block", "brief": brief},
-            provider=provider,
-            work_order_id="node-quality-exhausted",
-            checkpoint_store=store,
-        )
-    assert caught.value.code == "REPAIR_EXHAUSTED"
-    assert len(provider.calls) == 3
-    checkpoint = store.get("node:node-quality-exhausted")
-    assert checkpoint is not None and checkpoint.status != "ready"
-
-
 def test_g10_media_assembly_export_selective_recovery() -> None:
     from infra.execution.checkpoints import selective_recovery_keys
 
@@ -416,7 +295,7 @@ def test_g14_resource_limits_concurrency_and_cost() -> None:
 
 
 @pytest.mark.asyncio
-async def test_g15_incompatible_checkpoint_and_budgeted_heuristic_fallback() -> None:
+async def test_g15_incompatible_checkpoint_is_rejected() -> None:
     store = CheckpointStore()
     compat = CheckpointCompatibility(1, "in", "def", schema_version=1)
     store.commit("composition:x", payload={"composition_mode": "llm"}, compatibility=compat)
@@ -425,153 +304,3 @@ async def test_g15_incompatible_checkpoint_and_budgeted_heuristic_fallback() -> 
             "composition:x",
             compatibility=CheckpointCompatibility(1, "in", "def", schema_version=2),
         )
-
-    ledger = CallBudgetLedger()
-    invalid_semantic = {
-        "nodes": [
-            {
-                "id": "unknown-node",
-                "teaching_block_id": "unknown-block",
-                "kind": "paragraph",
-                "reason": "unknown block is a semantic defect",
-            }
-        ]
-    }
-    provider = FakeProvider(invalid_semantic, invalid_semantic)
-    plan = await compose_document_plan(
-        _plan(),
-        path="learn",
-        provider=provider,
-        allow_heuristic_fallback=True,
-        work_order_id="compose-fallback",
-        budget_ledger=ledger,
-        checkpoint_store=store,
-    )
-    assert plan.composition_mode == "heuristic_fallback"
-    resumed = ledger.get_or_create("compose-fallback")
-    assert resumed.fallback_declared is True
-    assert resumed.consumed == 3
-    assert provider.dispatches == 2
-
-    # Exhausted budget is visible and never converted into another fallback.
-    with pytest.raises(DocumentComposerError) as caught:
-        await compose_document_plan(
-            _plan(),
-            path="learn",
-            provider=FakeProvider(AuthoringTransportError("still down")),
-            allow_heuristic_fallback=True,
-            work_order_id="compose-fallback",
-            budget_ledger=ledger,
-        )
-    assert caught.value.code == "BUDGET_EXHAUSTED"
-
-
-@pytest.mark.asyncio
-async def test_composer_transport_and_missing_provider_never_use_quality_fallback() -> None:
-    ledger = CallBudgetLedger()
-    provider = FakeProvider(AuthoringTransportError("composer down"))
-    with pytest.raises(DocumentComposerError) as caught:
-        await compose_document_plan(
-            _plan(),
-            path="learn",
-            provider=provider,
-            allow_heuristic_fallback=True,
-            work_order_id="compose-transport",
-            budget_ledger=ledger,
-        )
-    assert caught.value.code == "PROVIDER_TRANSPORT_EXHAUSTED"
-    budget = ledger.get_or_create("compose-transport")
-    assert budget.consumed == 1
-    assert budget.fallback_declared is False
-
-    with pytest.raises(DocumentComposerError) as missing:
-        await compose_document_plan(
-            _plan(),
-            path="learn",
-            provider=None,
-            allow_heuristic_fallback=True,
-            work_order_id="compose-no-provider",
-            budget_ledger=ledger,
-        )
-    assert missing.value.code == "NO_PROVIDER"
-    assert ledger.get_or_create("compose-no-provider").consumed == 0
-
-
-@pytest.mark.asyncio
-async def test_g13_learn_fencing_expired_and_cancel(db_session: AsyncSession) -> None:
-    user = UserModel(id="u-p03", email="u-p03@example.invalid", name="p03")
-    db_session.add(user)
-    gid = "learn-fence-1"
-    generation = GenerationModel(
-        id=gid,
-        user_id=user.id,
-        subject="science",
-        context="fence",
-        status="queued",
-        requested_template_id="lesson",
-        requested_preset_id="standard",
-        created_at=datetime.now(UTC).replace(tzinfo=None),
-        chunked_state_json={"learn_execution": empty_learn_execution_meta()},
-    )
-    db_session.add(generation)
-    await db_session.flush()
-
-    lease = await claim_learn_execution(db_session, generation_id=gid, worker_id="w1")
-    assert lease is not None
-
-    # Competing worker cannot claim while lease is fresh.
-    assert await claim_learn_execution(db_session, generation_id=gid, worker_id="w2") is None
-
-    # Expire heartbeat → reclaim.
-    generation = await db_session.get(GenerationModel, gid)
-    assert generation is not None
-    execution = empty_learn_execution_meta()
-    execution.update(
-        {
-            "worker_id": "w1",
-            "lease_token": lease.lease_token,
-            "heartbeat_at": (datetime.now(UTC) - timedelta(seconds=500)).isoformat().replace(
-                "+00:00", "Z"
-            ),
-            "lease_seconds": 90,
-            "status": "running",
-        }
-    )
-    write_learn_execution(generation, execution)
-    await db_session.flush()
-
-    with pytest.raises(LearnFenceError):
-        assert_learn_commit_allowed(
-            execution, worker_id="w1", lease_token=lease.lease_token
-        )
-
-    lease2 = await claim_learn_execution(db_session, generation_id=gid, worker_id="w2")
-    assert lease2 is not None and lease2.worker_id == "w2"
-
-    await commit_learn_checkpoint(
-        db_session,
-        generation_id=gid,
-        worker_id="w2",
-        lease_token=lease2.lease_token,
-        checkpoint_key="composition",
-        checkpoint_payload={"content_hash": "abc", "payload": {"ok": True}},
-    )
-    # Stale w1 cannot commit after reclaim.
-    with pytest.raises(LearnFenceError):
-        await commit_learn_checkpoint(
-            db_session,
-            generation_id=gid,
-            worker_id="w1",
-            lease_token=lease.lease_token,
-            checkpoint_key="composition",
-            checkpoint_payload={"content_hash": "evil", "payload": {"ok": False}},
-        )
-
-    await cancel_learn_execution(db_session, generation_id=gid)
-    with pytest.raises(LearnCancelledError):
-        assert_learn_commit_allowed(
-            empty_learn_execution_meta() | {"cancelled": True, "status": "cancelled"},
-            worker_id="w2",
-            lease_token=lease2.lease_token,
-        )
-    assert await claim_learn_execution(db_session, generation_id=gid, worker_id="w3") is None

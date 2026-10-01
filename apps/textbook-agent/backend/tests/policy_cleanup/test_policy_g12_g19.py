@@ -1,8 +1,6 @@
-"""Policy cleanup v4 — G12 repair/resume and G19 dual-path policy identity."""
+"""Policy cleanup v4 - G19 dual-path policy identity."""
 
 from __future__ import annotations
-
-from typing import Any
 
 import pytest
 from tests.remaining_fixes.r04_fixtures import (
@@ -12,81 +10,6 @@ from tests.remaining_fixes.r04_fixtures import (
     r04_client,
     seed_r04_user,
 )
-
-from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, TeachingPlanSection
-from infra.authoring import AuthoringEngine, AuthoringProviderCall
-from learn.generation.authoring_adapter import (
-    build_learn_authoring_registry,
-    run_learn_authoring,
-)
-from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
-from learn.generation.work_orders import compile_learn_work_orders
-
-EVAP_FACT = (
-    "Evaporation changes liquid water into water vapour and can occur below boiling point."
-)
-
-
-class RepairThenOkProvider:
-    def __init__(self) -> None:
-        self.calls = 0
-        self.prompts: list[str] = []
-
-    async def invoke(self, call: AuthoringProviderCall) -> dict[str, Any]:
-        self.calls += 1
-        self.prompts.append(call.prompt)
-        if self.calls == 1:
-            return {"body": "", "emphasis": []}  # invalid → repair
-        return {
-            "body": "Evaporation turns liquid water into vapour.",
-            "emphasis": ["evaporation"],
-        }
-
-
-@pytest.mark.asyncio
-async def test_g12_repair_preserves_policy_in_prompt() -> None:
-    plan = TeachingPlan(
-        arc="Explain evaporation",
-        teaching_plan_id="tp-g12",
-        revision=1,
-        sections=[
-            TeachingPlanSection(
-                slot_id="explain",
-                blocks=[
-                    TeachingPlanBlock(
-                        id="b1",
-                        position=0,
-                        intent="explain",
-                        brief="Explain evaporation.",
-                        evidence="Learner explains.",
-                    )
-                ],
-            )
-        ],
-    )
-    snapshot = LearnSelectionSnapshot(
-        teaching_plan_id=plan.teaching_plan_id,
-        teaching_plan_revision=1,
-        teaching_plan_hash="h",
-        native_policy_hash="p",
-        package_contract_hash="c",
-        decisions=[LearnSelectionDecision(block_id="b1", content_id="explanation-block")],
-    ).seal()
-    order = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)[0]
-    provider = RepairThenOkProvider()
-    engine = AuthoringEngine(registry=build_learn_authoring_registry(), provider=provider)
-    result = await run_learn_authoring(
-        order,
-        engine=engine,
-        provider=provider,
-        lesson_context={"objective": "Explain evaporation"},
-        allowed_facts=[EVAP_FACT],
-        requested_knowledge_policy="supplied_preferred",
-    )
-    assert result.provenance.policy["effective_knowledge_policy"] == "supplied_preferred"
-    assert any("resolved_policy" in p or "KNOWLEDGE POLICY" in p for p in provider.prompts)
-    # Provider cannot alter trusted mode — policy remains code-owned
-    assert result.provenance.policy["policy_version"] == "1.0.0"
 
 
 @pytest.mark.asyncio

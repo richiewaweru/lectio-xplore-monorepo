@@ -29,7 +29,23 @@ from print.generation.native_production import (
 )
 
 
-def _plan(*, arc: str = "Explain water movement") -> TeachingPlan:
+def _plan(
+    *,
+    arc: str = "Explain water movement",
+    sourcebook_needs: list[str] | None = None,
+    sourcebook_refs: list[str] | None = None,
+) -> TeachingPlan:
+    block = {
+        "id": "orient-b1",
+        "position": 0,
+        "intent": "orient",
+        "brief": "Describe what the learner sees.",
+        "evidence": "A relevant observation.",
+    }
+    if sourcebook_needs is not None:
+        block["sourcebook_needs"] = sourcebook_needs
+    if sourcebook_refs is not None:
+        block["sourcebook_refs"] = sourcebook_refs
     return TeachingPlan(
         teaching_plan_id="plan-identity-1",
         revision=1,
@@ -42,15 +58,7 @@ def _plan(*, arc: str = "Explain water movement") -> TeachingPlan:
                 "slot_id": "orient",
                 "specific_purpose": "Connect the observation to the question.",
                 "transition": "Now trace the water.",
-                "blocks": [
-                    {
-                        "id": "orient-b1",
-                        "position": 0,
-                        "intent": "orient",
-                        "brief": "Describe what the learner sees.",
-                        "evidence": "A relevant observation.",
-                    }
-                ],
+                "blocks": [block],
             }
         ],
     )
@@ -151,6 +159,40 @@ def test_approval_rejects_same_revision_replacement_and_persists_snapshot_digest
     assert approved.content_hash == expected_hash
     assert approved.approval_hash_binding == "submitted"
     assert teaching_plan_content_hash(approved.plan) == expected_hash
+
+
+def test_approval_rejects_sourcebook_needs_without_explicit_refs() -> None:
+    state: dict = {}
+    store = TeachingRevisionStore(state)
+    plan = _plan(sourcebook_needs=["a worked example"], sourcebook_refs=[])
+    store.record_draft(plan, preparation_hash="upstream-input-hash", revision=1)
+
+    with pytest.raises(
+        TeachingRevisionConflictError,
+        match="sourcebook needs require approved sourcebook refs",
+    ):
+        store.approve(expected_revision=1, expected_content_hash=teaching_plan_content_hash(plan))
+
+    assert store.get_revision(1).status == "pending"
+    assert state["teaching_review"]["status"] == "pending"
+
+
+@pytest.mark.parametrize(
+    ("needs", "refs"),
+    [([], []), (["a worked example"], ["worked-example-1"])],
+)
+def test_approval_accepts_need_free_or_explicitly_referenced_sourcebook(needs, refs) -> None:
+    state: dict = {}
+    store = TeachingRevisionStore(state)
+    plan = _plan(sourcebook_needs=needs, sourcebook_refs=refs)
+    store.record_draft(plan, preparation_hash="upstream-input-hash", revision=1)
+
+    approved = store.approve(
+        expected_revision=1,
+        expected_content_hash=teaching_plan_content_hash(plan),
+    )
+
+    assert approved.status == "approved"
 
 
 def test_print_and_learn_pin_same_approved_snapshot_hash() -> None:

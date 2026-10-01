@@ -28,3 +28,27 @@ for match-pairs include non-empty pairs; for order-items or reconstruct-order
 include non-empty items and the correct order. A response that contains only
 `{"type": ...}` is invalid.
 
+## Feedback shape
+
+When you include `feedback`, it MUST follow the shape for the task's response
+type. Never omit a required key, never attach feedback for a wrong answer to
+the correct option, and never leave a feedback string blank.
+
+- select-one / select-many:
+  `{"correct": "<why the correct option is right>", "by_option": {"<wrong option id>": "<why this wrong option is wrong>", ...}}`.
+  `by_option` MUST have exactly one entry for every option that is NOT a
+  correct key, and MUST NOT have an entry for a correct option. Never key
+  feedback directly by option id at the top level of `feedback`.
+- enter-text / complete-missing-values:
+  `{"correct": "<why the accepted answer is right>", "incorrect": "<what to
+  reconsider>"}`.
+- classify-items:
+  `{"rule": "<the classification rule the learner should apply>",
+  "common_errors": {"<item>": "<why this item belongs where it does>", ...}}`.
+  Every `common_errors` key MUST be one of the task's classified items.
+- teacher_review evaluations (open-ended judgment calls): feedback may be
+  omitted (`null`).
+
+Do not invent additional top-level feedback keys beyond `correct`,
+`incorrect`, and `by_option`. Every feedback string must be non-empty.
+

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GenerationRun",
+  "type": "object",
+  "required": [
+    "id",
+    "build_id",
+    "run_type",
+    "status",
+    "stage",
+    "source_artifact_id",
+    "source_revision",
+    "source_hash"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "build_id": {
+      "type": "string"
+    },
+    "run_type": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+        "awaiting_review",
+        "ready",
+        "failed_recoverable",
+        "failed_terminal",
+        "cancelled"
+      ]
+    },
+    "stage": {
+      "type": "string"
+    },
+    "source_artifact_id": {
+      "type": "string"
+    },
+    "source_revision": {
+      "type": "integer"
+    },
+    "source_hash": {
+      "type": "string"
+    },
+    "output_artifact_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "output_revision": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "output_hash": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}
