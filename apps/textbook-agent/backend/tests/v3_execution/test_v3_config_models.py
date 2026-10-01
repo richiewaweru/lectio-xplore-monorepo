@@ -278,10 +278,10 @@ def test_document_semantic_qa_uses_standard_slot() -> None:
 def test_thinking_enabled_capabilities_use_deepseek_reasoning() -> None:
     """WORK PACKAGE A: these capabilities run with DeepSeek thinking on."""
     assert V3_NODE_REASONING[V2_LESSON_APPROACH_PLANNER] == "low"
+    assert V3_NODE_REASONING[DOCUMENT_SEMANTIC_QA] == "low"
     for node in (
         TEACHING_PLAN_SEMANTIC_REVIEWER,
         SHARED_SECTION_WRITER,
-        DOCUMENT_SEMANTIC_QA,
     ):
         assert V3_NODE_REASONING[node] == "medium", node
 
@@ -311,7 +311,7 @@ def test_get_v3_model_settings_enables_deepseek_reasoning_for_document_semantic_
     settings = get_v3_model_settings(DOCUMENT_SEMANTIC_QA)
 
     assert settings == {
-        "openai_reasoning_effort": "medium",
+        "openai_reasoning_effort": "low",
         "extra_body": {"thinking": {"type": "enabled"}},
         "max_tokens": 16000,
     }

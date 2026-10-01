@@ -316,7 +316,7 @@ def test_document_semantic_qa_uses_standard_slot() -> None:
 def test_document_semantic_qa_runs_with_deepseek_thinking_enabled() -> None:
     from infra.authoring.model_policy import V3_NODE_REASONING
 
-    assert V3_NODE_REASONING[DOCUMENT_SEMANTIC_QA] == "medium"
+    assert V3_NODE_REASONING[DOCUMENT_SEMANTIC_QA] == "low"
 
 
 def test_document_semantic_qa_payload_includes_task_evaluation_and_plan_sections() -> None:

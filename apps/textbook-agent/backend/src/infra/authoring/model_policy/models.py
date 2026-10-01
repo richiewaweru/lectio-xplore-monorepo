@@ -150,7 +150,10 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     SECTION_COMPOSER: False,
     SHARED_SECTION_WRITER: "medium",
     BOUNDARY_CONTINUITY_VALIDATOR: False,
-    DOCUMENT_SEMANTIC_QA: "medium",
+    # "low", not "medium": its findings are advisory notes for the teacher, and
+    # at medium a live run spent ~6 min (one timeout + retry) on this one call
+    # while the whole document was written in under a minute (2026-10-01).
+    DOCUMENT_SEMANTIC_QA: "low",
     V3_TARGETED_LESSON_REPAIR: False,
     SHARED_SOURCEBOOK_AUTHORING: False,
     SHARED_TASK_AUTHORING: False,

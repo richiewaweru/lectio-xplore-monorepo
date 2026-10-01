@@ -923,6 +923,10 @@ async def test_transient_dispatch_failure_backs_off_without_terminalizing(
     await db_session.refresh(still_active)
     assert still_active.status != "failed_terminal"
     assert still_active.error_code is None
+    # A transient blip backs off briefly, not for the 5-minute poison window.
+    skip_until = instance._dispatch_failure_skip_until[run_a_id]
+    remaining = skip_until - datetime.now(UTC).replace(tzinfo=None)
+    assert remaining <= timedelta(seconds=instance._TRANSIENT_DISPATCH_BACKOFF_SECONDS + 1)
 
     # Second iteration: Run B (a fresh Run queued at sourcebook_generation)
     # must now be dispatched -- it must not have starved behind Run A.

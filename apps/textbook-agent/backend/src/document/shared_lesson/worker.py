@@ -140,6 +140,9 @@ class SharedDocumentWorker:
     # cannot starve other queued Runs even when terminalization itself
     # fails (e.g. a concurrent transition raced us).
     _DISPATCH_FAILURE_BACKOFF_SECONDS = 300
+    # A database/transport blip is not a poisoned Run: retry it soon
+    # instead of idling the lesson for the full poison backoff.
+    _TRANSIENT_DISPATCH_BACKOFF_SECONDS = 15
     _DISPATCH_FAILURE_SKIP_MAX_ENTRIES = 256
 
     def __init__(
@@ -416,7 +419,9 @@ class SharedDocumentWorker:
             await self._handle_unexpected_dispatch_failure(session, candidate, exc, current)
             return True
 
-    def _mark_dispatch_failure(self, run_id: str, now: datetime) -> None:
+    def _mark_dispatch_failure(
+        self, run_id: str, now: datetime, *, seconds: int | None = None
+    ) -> None:
         """Record that ``run_id`` just raised an unexpected dispatch failure.
 
         The Run is skipped by ``_find_candidate`` for a bounded backoff
@@ -424,7 +429,7 @@ class SharedDocumentWorker:
         that keeps raising cannot starve other queued Runs.
         """
         self._dispatch_failure_skip_until[run_id] = now + timedelta(
-            seconds=self._DISPATCH_FAILURE_BACKOFF_SECONDS
+            seconds=self._DISPATCH_FAILURE_BACKOFF_SECONDS if seconds is None else seconds
         )
         if len(self._dispatch_failure_skip_until) > self._DISPATCH_FAILURE_SKIP_MAX_ENTRIES:
             oldest_run_id = min(
@@ -473,9 +478,11 @@ class SharedDocumentWorker:
             "SharedDocument Run %s dispatch raised an unexpected exception; terminalizing",
             run_id,
         )
-        self._mark_dispatch_failure(run_id, now)
         await session.rollback()
         if isinstance(exc, _TRANSIENT_DISPATCH_ERRORS):
+            self._mark_dispatch_failure(
+                run_id, now, seconds=self._TRANSIENT_DISPATCH_BACKOFF_SECONDS
+            )
             # Database/transport blips are not programming errors: back off and
             # let a later iteration retry this Run instead of terminalizing it.
             LOGGER.warning(
@@ -484,6 +491,7 @@ class SharedDocumentWorker:
                 type(exc).__name__,
             )
             return
+        self._mark_dispatch_failure(run_id, now)
         try:
             await fail_run_terminal(
                 session,
