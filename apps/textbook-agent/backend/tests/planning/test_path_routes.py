@@ -229,6 +229,7 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
                 "shared_document_hash": None,
                 "run_id": None,
                 "recovery_action": None,
+                "progress": None,
             },
             "print": {
                 "state": "not_created",
@@ -245,6 +246,7 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
                 "shared_document_hash": None,
                 "run_id": None,
                 "recovery_action": None,
+                "progress": None,
             },
             "legacy_ambiguities": [],
         },
