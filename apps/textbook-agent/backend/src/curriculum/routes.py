@@ -40,6 +40,8 @@ from core.capabilities import require_xplore_v2
 from core.database.models import (
     EditableLessonModel,
     GenerationModel,
+    GenerationRunModel,
+    GenerationWorkItemModel,
     LessonProvenanceModel,
     PathLessonModel,
     PathLessonPrerequisiteModel,
@@ -53,6 +55,7 @@ from curriculum.agents import (
     run_path_planner,
     run_plan_chat_edit,
 )
+from curriculum.lesson_progress import ProgressItem, project_artifact_progress
 from curriculum.lesson_review import collect_lesson_issues
 from curriculum.models import (
     ConstructorReadbackRequest,
@@ -328,6 +331,60 @@ def _raise_http(exc: Exception) -> None:
     raise exc
 
 
+_PROGRESS_SKIP_STATUSES = {"ready", "published", "completed", "stale", "read_only"}
+
+
+async def _attach_progress(
+    session: AsyncSession,
+    path: Literal["learn", "print"],
+    row: object | None,
+    identity: dict[str, object] | None,
+) -> dict[str, object] | None:
+    """Add stage progress to a realization dict: one batched query per path."""
+    if row is None or str(getattr(row, "status", "")) in _PROGRESS_SKIP_STATUSES:
+        return identity
+    shared_run_id = getattr(row, "shared_document_run_id", None)
+    realize_run_id = getattr(row, "generation_run_id", None)
+    run_ids = [rid for rid in (shared_run_id, realize_run_id) if rid]
+    if not run_ids:
+        return identity
+    runs = {
+        run.id: run
+        for run in await session.scalars(
+            select(GenerationRunModel).where(GenerationRunModel.id.in_(run_ids))
+        )
+    }
+    items = await session.execute(
+        select(
+            GenerationWorkItemModel.run_id,
+            GenerationWorkItemModel.item_key,
+            GenerationWorkItemModel.stage,
+            GenerationWorkItemModel.status,
+        )
+        .where(GenerationWorkItemModel.run_id.in_(run_ids))
+        .order_by(GenerationWorkItemModel.created_at)
+    )
+    by_run: dict[str, list[ProgressItem]] = {}
+    for run_id, item_key, stage, item_status in items:
+        by_run.setdefault(run_id, []).append(ProgressItem(item_key, stage, item_status))
+    shared = runs.get(shared_run_id) if shared_run_id else None
+    realize = runs.get(realize_run_id) if realize_run_id else None
+    progress = project_artifact_progress(
+        path=path,
+        shared_run_status=shared.status if shared else None,
+        shared_items=by_run.get(shared_run_id, []) if shared else [],
+        shared_started_at=(shared.started_at or shared.created_at) if shared else None,
+        realize_run_status=realize.status if realize else None,
+        realize_items=by_run.get(realize_run_id, []) if realize else [],
+        realize_started_at=(realize.started_at or realize.created_at) if realize else None,
+    )
+    if progress is None:
+        return identity
+    merged = dict(identity or {})
+    merged["progress"] = progress.model_dump(mode="json")
+    return merged
+
+
 async def _realization_status_fields(
     session: AsyncSession, *, path_lesson_id: str
 ) -> tuple[
@@ -370,6 +427,9 @@ async def _realization_status_fields(
     legacy_ambiguous = any(
         str(getattr(row, "variant_id", "")) == "legacy-ambiguous" for row in rows
     )
+    learn_id_dict = await _attach_progress(session, "learn", learn_row, learn_id_dict)
+    print_id_dict = print_id.model_dump(mode="json") if print_id else None
+    print_id_dict = await _attach_progress(session, "print", print_row, print_id_dict)
     return (
         {
         "realizations": dtos,
@@ -382,7 +442,7 @@ async def _realization_status_fields(
         "learn_open_href": learn_open_href,
         },
         learn_id_dict if learn_row is not None else None,
-        print_id.model_dump(mode="json") if print_id else None,
+        print_id_dict,
         legacy_ambiguous,
     )
 

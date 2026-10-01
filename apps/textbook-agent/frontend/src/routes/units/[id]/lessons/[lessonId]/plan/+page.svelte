@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, onDestroy, untrack } from 'svelte';
+	import { createSerializedPoll, LESSON_STATUS_POLL_MS, LESSON_STATUS_POLL_OPTIONS } from '$lib/curriculum/lessons/serialized-poll';
 	import { goto } from '$app/navigation';
 	import {
 		getUnitGroups,
@@ -65,7 +66,7 @@
 
 	const ctx = getContext<Ctx>('lessonWorkspace');
 
-	const POLL_MS = 2000;
+	const POLL_MS = LESSON_STATUS_POLL_MS;
 
 	let busy = $state<string | null>(null);
 	let error = $state<string | null>(null);
@@ -136,15 +137,27 @@
 	}
 
 	// Poll lesson-status only, and only while the preparation Run is planning.
+	// Keyed on a boolean (not the `prep` object, whose identity changes on every
+	// refresh) so the poller is created once per planning stretch, and serialized
+	// so a slow status response never stacks requests.
+	const planPolling = $derived(isPlanPollingState(prep?.state));
 	$effect(() => {
-		if (!isPlanPollingState(prep?.state)) return;
-		const timer = setInterval(() => {
-			ctx.refreshPreparation().catch((err) => {
-				error = `Lesson status could not be refreshed: ${friendly(err)}`;
-				clearInterval(timer);
-			});
-		}, POLL_MS);
-		return () => clearInterval(timer);
+		if (!planPolling) return;
+		const poll = createSerializedPoll(
+			async () => {
+				try {
+					await ctx.refreshPreparation();
+				} catch (err) {
+					error = `Lesson status could not be refreshed: ${friendly(err)}`;
+					return false;
+				}
+				return true;
+			},
+			POLL_MS,
+			LESSON_STATUS_POLL_OPTIONS
+		);
+		poll.start();
+		return () => poll.stop();
 	});
 
 	// Load review/approval detail for the current canonical state.

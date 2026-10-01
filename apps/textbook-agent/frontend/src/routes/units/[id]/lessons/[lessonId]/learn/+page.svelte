@@ -10,7 +10,8 @@
 	import type { LessonIssue, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Button, Dialog, InlineError, EmptyState, Badge, Tabs } from '$lib/ui';
 	import { lessonArtifactUi, lessonWorkspaceHref, resolveBuilderLessonId, preparationIsApprovedAndFresh } from '$lib/curriculum/lessons/lesson-context';
-	import { createSerializedPoll } from '$lib/curriculum/lessons/serialized-poll';
+	import { createSerializedPoll, LESSON_STATUS_POLL_MS, LESSON_STATUS_POLL_OPTIONS } from '$lib/curriculum/lessons/serialized-poll';
+	import LessonProgressPanel from '$lib/curriculum/lessons/LessonProgressPanel.svelte';
 	import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte';
 
 	type Ctx = {
@@ -153,7 +154,7 @@
 			return false;
 		}
 		return true;
-	}, 1500);
+	}, LESSON_STATUS_POLL_MS, LESSON_STATUS_POLL_OPTIONS);
 
 	function stopStatusPoll(): void {
 		statusPoll.stop();
@@ -268,12 +269,11 @@
 			{#snippet actions()}<Button disabled={!ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)} busy={busy === 'create'} onclick={() => void createLearn()}>{busy === 'create' ? 'Creating…' : 'Create Learn'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
 	{:else if artifact.state === 'preparing'}
-		<EmptyState
-			title={artifact.sharedDocumentState === 'pending' ? 'Preparing the lesson document' : 'Learn is being created'}
-			description="This page will update when the Learn lesson is ready."
-		>
-			{#snippet actions()}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
-		</EmptyState>
+		<LessonProgressPanel
+			progress={ctx.preparation?.workspace?.learn.progress ?? null}
+			fallbackTitle={artifact.sharedDocumentState === 'pending' ? 'Preparing the lesson document' : 'Learn is being created'}
+		/>
+		<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>
 	{:else if artifact.state === 'needs_review'}
 		<EmptyState title="This lesson needs a teacher review before Learn can be built" description="Quality checks flagged content in the prepared lesson document. Review and correct it before Learn can continue.">
 			{#snippet actions()}<a class="link" href={`/units/${encodeURIComponent(ctx.unitId)}/lessons/${encodeURIComponent(ctx.lessonId)}/review`}>Review flagged content</a><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}

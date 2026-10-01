@@ -277,6 +277,22 @@ export interface WorkspaceStateError {
  */
 export type SharedDocumentState = 'pending' | 'needs_review' | 'ready' | 'stale' | 'failed';
 
+export interface ArtifactProgressStep {
+	key: string;
+	label: string;
+	status: 'pending' | 'active' | 'done' | 'failed';
+	done?: number | null;
+	total?: number | null;
+}
+
+/** Stage progress of the Runs building a Learn/Print artifact (null when no Run). */
+export interface ArtifactProgress {
+	steps: ArtifactProgressStep[];
+	current_label?: string | null;
+	/** ISO start of the build, for an elapsed timer. */
+	started_at?: string | null;
+}
+
 export interface ArtifactWorkspaceStatus {
 	state: 'not_created' | 'queued' | 'running' | 'ready' | 'failed_recoverable' | 'failed_terminal' | 'needs_review';
 	realization_id?: string | null;
@@ -294,6 +310,7 @@ export interface ArtifactWorkspaceStatus {
 	shared_document_id?: string | null;
 	shared_document_revision?: number | null;
 	shared_document_hash?: string | null;
+	progress?: ArtifactProgress | null;
 }
 
 export type ArtifactPath = 'learn' | 'print';

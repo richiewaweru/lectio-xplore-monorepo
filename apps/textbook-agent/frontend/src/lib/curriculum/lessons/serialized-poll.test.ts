@@ -66,4 +66,67 @@ describe('createSerializedPoll', () => {
 		await vi.advanceTimersByTimeAsync(50);
 		expect(work).toHaveBeenCalledTimes(3);
 	});
+
+	it('backs off after the threshold; a second start() adds no second timer', async () => {
+		vi.useFakeTimers();
+		let calls = 0;
+		const poll = createSerializedPoll(
+			async () => {
+				calls += 1;
+				return true;
+			},
+			2000,
+			{ slowAfterMs: 30_000, slowIntervalMs: 5000 }
+		);
+		poll.start();
+		poll.start();
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(calls).toBe(15);
+		const before = calls;
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(calls - before).toBeLessThanOrEqual(7);
+		poll.stop();
+		const after = calls;
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(calls).toBe(after);
+	});
+
+	it('skips work while paused (hidden tab) but keeps its timer', async () => {
+		vi.useFakeTimers();
+		let paused = true;
+		let calls = 0;
+		const poll = createSerializedPoll(
+			async () => {
+				calls += 1;
+				return true;
+			},
+			1000,
+			{ pauseWhen: () => paused }
+		);
+		poll.start();
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(calls).toBe(0);
+		paused = false;
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(calls).toBe(1);
+		poll.stop();
+	});
+
+	it('restarts after stop while a run is in flight', async () => {
+		vi.useFakeTimers();
+		let release: (() => void) | undefined;
+		let calls = 0;
+		const poll = createSerializedPoll(() => {
+			calls += 1;
+			return new Promise<boolean>((resolve) => (release = () => resolve(true)));
+		}, 10);
+		poll.start();
+		await vi.advanceTimersByTimeAsync(10);
+		poll.stop();
+		poll.start();
+		release?.();
+		await vi.advanceTimersByTimeAsync(10);
+		expect(calls).toBe(2);
+		poll.stop();
+	});
 });

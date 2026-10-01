@@ -8,6 +8,8 @@ import { getContext, onDestroy, onMount } from 'svelte';
 	import type { LectioDocument } from '@lectio/page/contract';
 	import type { LessonIssue, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Button, Dialog, InlineError, EmptyState, Tabs } from '$lib/ui';
+	import LessonProgressPanel from '$lib/curriculum/lessons/LessonProgressPanel.svelte';
+	import { createSerializedPoll, LESSON_STATUS_POLL_MS, LESSON_STATUS_POLL_OPTIONS } from '$lib/curriculum/lessons/serialized-poll';
 import { lessonArtifactUi, lessonWorkspaceHref, resolvePrintGenerationId, preparationIsApprovedAndFresh } from '$lib/curriculum/lessons/lesson-context';
 import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte';
 
@@ -36,20 +38,10 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	let teacherName = $state('');
 	let includeAnswers = $state(true);
 	let edition = $state<'teacher' | 'student'>('teacher');
-	let pollTimer: ReturnType<typeof setTimeout> | null = null;
-	let pollAttempts = 0;
-	const MAX_PRINT_POLL_ATTEMPTS = 60;
 	const artifact = $derived(lessonArtifactUi(ctx.preparation, 'print', error));
 
 	function selectTab(id: string): void {
 		if (id === 'preview' || id === 'issues') activeTab = id;
-	}
-
-	function stopPolling(): void {
-		if (pollTimer !== null) {
-			clearTimeout(pollTimer);
-			pollTimer = null;
-		}
 	}
 
 	function printIsActive(): boolean {
@@ -57,33 +49,32 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 		return state === 'queued' || state === 'running';
 	}
 
-	function schedulePoll(): void {
-		if (pollTimer !== null || pageDocumentV2 || !printIsActive()) return;
-		if (pollAttempts >= MAX_PRINT_POLL_ATTEMPTS) {
-			error = 'Print is still being prepared. Refresh to check its progress.';
-			return;
-		}
-		pollTimer = setTimeout(() => {
-			pollTimer = null;
-			void pollPrint();
-		}, 2000);
-	}
-
-	async function pollPrint(): Promise<void> {
-		pollAttempts += 1;
+	// One serialized poller per page; stops on terminal states and on destroy.
+	let pollFailures = 0;
+	const printPoll = createSerializedPoll(async () => {
 		try {
 			await ctx.refreshPreparation();
+			pollFailures = 0;
 			generationId = resolvePrintGenerationId(ctx.preparation);
 			if (generationId) {
 				await loadDoc(generationId);
-				stopPolling();
 				error = null;
-				return;
+				return false;
 			}
 		} catch {
-			// Keep the concise loading state while the durable status is active.
+			// Tolerate a few transient failures, then stop instead of polling forever.
+			if (++pollFailures >= 5) return false;
 		}
-		schedulePoll();
+		return printIsActive() && !pageDocumentV2;
+	}, LESSON_STATUS_POLL_MS, LESSON_STATUS_POLL_OPTIONS);
+
+	function stopPolling(): void {
+		printPoll.stop();
+	}
+
+	function schedulePoll(): void {
+		if (pageDocumentV2 || !printIsActive()) return;
+		printPoll.start();
 	}
 
 	async function loadIssues(): Promise<void> {
@@ -104,7 +95,6 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 
 	async function resolve() {
 		stopPolling();
-		pollAttempts = 0;
 		loading = true;
 		error = null;
 		pageDocumentV2 = null;
@@ -117,7 +107,6 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 			}
 			await loadIssues();
 			if (!pageDocumentV2 && printIsActive()) {
-				error = 'Print is still being prepared.';
 				schedulePoll();
 			}
 		} catch (err) {
@@ -185,6 +174,8 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 		<LessonIssuesPanel {issues} onRetry={retryPrint} allowRetry={ctx.statusFresh && (artifact.retryable || artifact.regenerable)} />
 	{:else if artifact.state === 'not_created'}
 		<EmptyState title="Print not created" description="Create a printable booklet from the approved teaching plan.">{#snippet actions()}<Button disabled={!ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)} busy={busy === 'create'} onclick={() => void createPrint()}>{busy === 'create' ? 'Creating…' : 'Create Print'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>
+	{:else if artifact.state === 'preparing'}
+		<LessonProgressPanel progress={ctx.preparation?.workspace?.print.progress ?? null} fallbackTitle="Print is being created" />
 	{:else if artifact.state === 'needs_review'}
 		<EmptyState title="This lesson needs a teacher review before Print can be built" description="Quality checks flagged content in the prepared lesson document. Review and correct it before Print can continue.">
 			{#snippet actions()}<a class="link" href={`/units/${encodeURIComponent(ctx.unitId)}/lessons/${encodeURIComponent(ctx.lessonId)}/review`}>Review flagged content</a><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}

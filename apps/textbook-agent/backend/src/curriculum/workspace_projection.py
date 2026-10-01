@@ -436,6 +436,7 @@ def _artifact_projection(
         "shared_document_hash": realization.get("shared_document_hash"),
         "run_id": realization.get("run_id"),
         "recovery_action": realization.get("recovery_action"),
+        "progress": realization.get("progress"),
     }
     if status == "needs_shared_review":
         return ArtifactWorkspaceDTO(

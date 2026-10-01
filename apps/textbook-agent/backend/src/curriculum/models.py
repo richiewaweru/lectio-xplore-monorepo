@@ -405,6 +405,22 @@ class PreparationWorkspaceDTO(StrictModel):
     progress: PreparationProgressDTO | None = None
 
 
+class ArtifactProgressStepDTO(StrictModel):
+    key: str
+    label: str
+    status: Literal["pending", "active", "done", "failed"]
+    done: int | None = None
+    total: int | None = None
+
+
+class ArtifactProgressDTO(StrictModel):
+    """Ordered stage progress of the Runs that build a Learn/Print artifact."""
+
+    steps: list[ArtifactProgressStepDTO] = Field(default_factory=list)
+    current_label: str | None = None
+    started_at: str | None = None
+
+
 class ArtifactWorkspaceDTO(StrictModel):
     state: Literal[
         "not_created",
@@ -428,6 +444,7 @@ class ArtifactWorkspaceDTO(StrictModel):
     shared_document_hash: str | None = None
     run_id: str | None = None
     recovery_action: str | None = None
+    progress: ArtifactProgressDTO | None = None
 
 
 class LessonWorkspaceStateDTO(StrictModel):
