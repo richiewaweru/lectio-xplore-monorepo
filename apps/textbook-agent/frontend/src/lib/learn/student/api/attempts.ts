@@ -1,4 +1,4 @@
-import { apiFetch } from '$lib/api/client';
+import { learnerFetch } from '$lib/learn/student/api/learner-fetch';
 import { ensureOk } from '$lib/api/errors';
 
 export type AttemptSubmitRequest = {
@@ -36,22 +36,13 @@ export type StoredAttempt = {
 	created_at?: string | null;
 };
 
-function learnerHeaders(extra: Record<string, string> = {}): Record<string, string> {
-	const headers: Record<string, string> = { ...extra };
-	if (typeof localStorage !== 'undefined') {
-		const token = localStorage.getItem('x-learner-session');
-		if (token) headers['X-Learner-Session'] = token;
-	}
-	return headers;
-}
-
 export async function submitInstanceAttempt(
 	instanceId: string,
 	body: AttemptSubmitRequest
 ): Promise<AttemptSubmitResponse> {
-	const response = await apiFetch(`/api/v1/learn/instances/${instanceId}/attempts`, {
+	const response = await learnerFetch(`/api/v1/learn/instances/${instanceId}/attempts`, {
 		method: 'POST',
-		headers: learnerHeaders({ 'Content-Type': 'application/json' }),
+		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(body)
 	});
 	await ensureOk(response);

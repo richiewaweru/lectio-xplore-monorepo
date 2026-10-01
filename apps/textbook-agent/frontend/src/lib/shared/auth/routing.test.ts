@@ -49,6 +49,7 @@ describe('auth routing helpers', () => {
 	it('resolves the root route to the correct post-bootstrap destination', () => {
 		expect(resolveShellRedirect(null, '/')).toBe('/login');
 		expect(resolveShellRedirect(null, '/join')).toBeNull();
+		expect(resolveShellRedirect(null, '/join/abc123')).toBeNull();
 		expect(resolveShellRedirect(null, '/learn/home/abc')).toBeNull();
 		expect(resolveShellRedirect(baseUser, '/')).toBe('/onboarding');
 		expect(resolveShellRedirect({ ...baseUser, has_profile: true }, '/')).toBe('/units');

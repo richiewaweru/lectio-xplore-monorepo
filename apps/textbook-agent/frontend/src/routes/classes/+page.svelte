@@ -61,7 +61,7 @@
 {#if classes.length === 0}
 	<EmptyState
 		title="No classes yet"
-		description="Create a class, share the invite code with students at /join, then assign published lessons."
+		description="Create a class, share the join link with students, then assign published lessons."
 	>
 		{#snippet actions()}
 			<Button onclick={() => (createOpen = true)}>Create class</Button>

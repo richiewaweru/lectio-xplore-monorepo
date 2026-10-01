@@ -154,15 +154,63 @@ async def _optional_learner_guard(
         )
 
 
+def _require_actor(current_user: User | None, x_learner_session: str | None) -> None:
+    """Learner-runtime routes accept a learner session token or a teacher JWT."""
+    if not x_learner_session and current_user is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+
+async def _authorize_instance_actor(
+    session: AsyncSession,
+    *,
+    instance: LearningInstanceModel,
+    current_user: User | None,
+    x_learner_session: str | None,
+) -> None:
+    """A present learner token is always enforced (own data only); else a teacher JWT."""
+    _require_actor(current_user, x_learner_session)
+    await assert_instance_access(
+        session,
+        instance=instance,
+        token=x_learner_session,
+        require_session=bool(x_learner_session),
+    )
+
+
 @router.post("/sessions")
 async def api_create_session(
     body: CreateSessionBody,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
-    """Opaque learner session via invite code or learner id (no email)."""
-    row = await create_learner_session(
-        session, learner_id=body.learner_id, invite_code=body.invite_code
-    )
+    """Teacher-only: mint a learner session for a learner the teacher owns or teaches.
+
+    Students join via ``/classes/join``; this endpoint must never be anonymous.
+    """
+    learner: LearnerIdentityModel | None = None
+    if body.learner_id:
+        learner = await session.get(LearnerIdentityModel, body.learner_id)
+    elif body.invite_code:
+        learner = await session.scalar(
+            select(LearnerIdentityModel).where(
+                LearnerIdentityModel.invite_code == body.invite_code
+            )
+        )
+    if learner is None:
+        raise HTTPException(status_code=404, detail="Learner not found")
+    if learner.created_by_teacher_id != current_user.id:
+        in_class = await session.scalar(
+            select(LearnClassMembershipModel.id)
+            .join(LearnClassModel, LearnClassModel.id == LearnClassMembershipModel.class_id)
+            .where(
+                LearnClassMembershipModel.learner_id == learner.id,
+                LearnClassModel.teacher_id == current_user.id,
+            )
+            .limit(1)
+        )
+        if in_class is None:
+            raise HTTPException(status_code=404, detail="Learner not found")
+    row = await create_learner_session(session, learner_id=learner.id)
     await session.commit()
     return {"token": row.token, "learner_id": row.learner_id, "session_id": row.id}
 
@@ -183,10 +231,11 @@ async def api_create_learner(
 @router.post("/instances")
 async def api_start_instance(
     body: StartInstanceBody,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
+    _require_actor(current_user, x_learner_session)
     release = await session.get(LearnReleaseModel, body.learn_release_id)
     if release is None:
         raise HTTPException(status_code=404, detail="LearnRelease not found")
@@ -196,6 +245,27 @@ async def api_start_instance(
     await _optional_learner_guard(
         session, learner_id=body.learner_id, x_learner_session=x_learner_session
     )
+    if current_user is None:
+        # Anonymous learner: may only start releases they were assigned.
+        assigned = await session.scalar(
+            select(LearnAssignmentRecipientModel.id)
+            .join(
+                LearnAssignmentModel,
+                LearnAssignmentModel.id == LearnAssignmentRecipientModel.assignment_id,
+            )
+            .where(
+                LearnAssignmentRecipientModel.learner_id == body.learner_id,
+                LearnAssignmentModel.learn_release_id == body.learn_release_id,
+                *(
+                    [LearnAssignmentModel.id == body.assignment_id]
+                    if body.assignment_id
+                    else []
+                ),
+            )
+            .limit(1)
+        )
+        if assigned is None:
+            raise HTTPException(status_code=403, detail="Release is not assigned to this learner")
     instance = await start_learning_instance(
         session,
         learner_id=body.learner_id,
@@ -216,17 +286,19 @@ async def api_start_instance(
 async def api_submit_attempt(
     instance_id: str,
     body: SubmitAttemptBody,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
-    _ = current_user
     _reject_client_score_claims(body)
     instance = await session.get(LearningInstanceModel, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="LearningInstance not found")
-    await assert_instance_access(
-        session, instance=instance, token=x_learner_session, require_session=False
+    await _authorize_instance_actor(
+        session,
+        instance=instance,
+        current_user=current_user,
+        x_learner_session=x_learner_session,
     )
     attempt, evaluation, _created = await submit_attempt(
         session,
@@ -269,17 +341,19 @@ async def api_submit_attempt(
 async def api_passive_section_complete(
     instance_id: str,
     body: PassiveCompleteBody,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
     """Mark a passive/content section visited without inventing graded attempts."""
-    _ = current_user
     instance = await session.get(LearningInstanceModel, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="LearningInstance not found")
-    await assert_instance_access(
-        session, instance=instance, token=x_learner_session, require_session=False
+    await _authorize_instance_actor(
+        session,
+        instance=instance,
+        current_user=current_user,
+        x_learner_session=x_learner_session,
     )
     progress = await mark_section_passive_complete(
         session, learning_instance_id=instance_id, section_id=body.section_id
@@ -303,10 +377,11 @@ async def api_get_instance(
     instance = await session.get(LearningInstanceModel, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="LearningInstance not found")
-    if not x_learner_session and current_user is None:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    await assert_instance_access(
-        session, instance=instance, token=x_learner_session, require_session=bool(x_learner_session)
+    await _authorize_instance_actor(
+        session,
+        instance=instance,
+        current_user=current_user,
+        x_learner_session=x_learner_session,
     )
     progress = await session.scalar(
         select(LessonProgressModel).where(
@@ -369,16 +444,18 @@ async def api_get_instance(
 async def api_resume_section(
     instance_id: str,
     body: ResumeSectionBody,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
-    _ = current_user
     instance = await session.get(LearningInstanceModel, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="LearningInstance not found")
-    await assert_instance_access(
-        session, instance=instance, token=x_learner_session, require_session=False
+    await _authorize_instance_actor(
+        session,
+        instance=instance,
+        current_user=current_user,
+        x_learner_session=x_learner_session,
     )
     updated = await set_current_section(
         session, learning_instance_id=instance_id, section_id=body.section_id
@@ -400,15 +477,18 @@ async def api_resume_section(
 @router.post("/instances/{instance_id}/complete")
 async def api_complete_instance(
     instance_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
     instance = await session.get(LearningInstanceModel, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="LearningInstance not found")
-    await _optional_learner_guard(
-        session, learner_id=instance.learner_id, x_learner_session=x_learner_session
+    await _authorize_instance_actor(
+        session,
+        instance=instance,
+        current_user=current_user,
+        x_learner_session=x_learner_session,
     )
     completed = await complete_instance(session, instance_id)
     if completed.assignment_id:

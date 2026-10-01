@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { apiFetch } from '$lib/api/client';
+	import { learnerFetch } from '$lib/learn/student/api/learner-fetch';
 	import { ensureOk } from '$lib/api/errors';
 	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
 	import {
@@ -26,10 +26,7 @@
 
 	async function refreshInstance() {
 		if (!instanceId) return;
-		const headers: Record<string, string> = {};
-		const token = localStorage.getItem('x-learner-session');
-		if (token) headers['X-Learner-Session'] = token;
-		const response = await apiFetch(`/api/v1/learn/instances/${instanceId}`, { headers });
+		const response = await learnerFetch(`/api/v1/learn/instances/${instanceId}`);
 		await ensureOk(response);
 		const instance = await response.json();
 		status = instance.status;
@@ -45,12 +42,7 @@
 		if (!browser || !instanceId) return;
 		try {
 			const instance = await refreshInstance();
-			const headers: Record<string, string> = {};
-			const token = localStorage.getItem('x-learner-session');
-			if (token) headers['X-Learner-Session'] = token;
-			const releaseResp = await apiFetch(`/api/v1/learn/releases/${instance.learn_release_id}`, {
-				headers
-			});
+			const releaseResp = await learnerFetch(`/api/v1/learn/releases/${instance.learn_release_id}`);
 			await ensureOk(releaseResp);
 			const release = await releaseResp.json();
 			const payload = release.document;
@@ -95,12 +87,8 @@
 		completing = true;
 		error = null;
 		try {
-			const token = localStorage.getItem('x-learner-session');
-			const headers: Record<string, string> = {};
-			if (token) headers['X-Learner-Session'] = token;
-			const response = await apiFetch(`/api/v1/learn/instances/${instanceId}/complete`, {
-				method: 'POST',
-				headers
+			const response = await learnerFetch(`/api/v1/learn/instances/${instanceId}/complete`, {
+				method: 'POST'
 			});
 			await ensureOk(response, 'Could not complete the lesson.');
 			await refreshInstance();
@@ -113,12 +101,9 @@
 
 	async function markSectionVisited(sectionId: string) {
 		if (!instanceId) return;
-		const token = localStorage.getItem('x-learner-session');
-		const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-		if (token) headers['X-Learner-Session'] = token;
-		const response = await apiFetch(`/api/v1/learn/instances/${instanceId}/sections/complete`, {
+		const response = await learnerFetch(`/api/v1/learn/instances/${instanceId}/sections/complete`, {
 			method: 'POST',
-			headers,
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ section_id: sectionId })
 		});
 		await ensureOk(response, 'Could not save section progress.');

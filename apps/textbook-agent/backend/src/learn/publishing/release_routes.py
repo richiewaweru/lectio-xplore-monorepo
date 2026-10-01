@@ -22,7 +22,7 @@ from core.database.models import (
     PathLessonModel,
 )
 from core.entities.user import User
-from infra.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user, get_optional_user
 from infra.database.session import get_async_session
 from learn.authoring.builder.service import SharedDocumentLineageError
 from learn.publishing.publish_validation import (
@@ -460,16 +460,39 @@ async def list_learn_releases(
 @router.get("/releases/{release_id}", response_model=LearnReleaseResponse)
 async def get_learn_release(
     release_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_async_session),
+    x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> LearnReleaseResponse:
-    result = await session.execute(
-        select(LearnReleaseModel).where(
-            LearnReleaseModel.id == release_id,
-            LearnReleaseModel.owner_user_id == current_user.id,
+    if current_user is None and not x_learner_session:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if current_user is not None:
+        owned = await session.scalar(
+            select(LearnReleaseModel).where(
+                LearnReleaseModel.id == release_id,
+                LearnReleaseModel.owner_user_id == current_user.id,
+            )
         )
-    )
-    release = result.scalar_one_or_none()
-    if release is None:
-        raise HTTPException(status_code=404, detail="LearnRelease not found")
-    return _to_response(release)
+        if owned is not None:
+            return _to_response(owned)
+    if x_learner_session:
+        # Learner (no account): readable only when the learner has an instance of it.
+        from learn.runtime_models import LearningInstanceModel
+        from learn.runtime_service import resolve_learner_session
+
+        learner_session = await resolve_learner_session(session, x_learner_session)
+        if learner_session is None:
+            raise HTTPException(status_code=401, detail="Learner session required")
+        has_instance = await session.scalar(
+            select(LearningInstanceModel.id)
+            .where(
+                LearningInstanceModel.learner_id == learner_session.learner_id,
+                LearningInstanceModel.learn_release_id == release_id,
+            )
+            .limit(1)
+        )
+        if has_instance is not None:
+            release = await session.get(LearnReleaseModel, release_id)
+            if release is not None:
+                return _to_response(release)
+    raise HTTPException(status_code=404, detail="LearnRelease not found")

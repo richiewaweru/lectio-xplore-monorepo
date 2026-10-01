@@ -22,8 +22,25 @@
 	let insight = $state<any>(null);
 	let newLearner = $state('');
 	let busy = $state(false);
+	let copied = $state(false);
+	let copyFailed = $state(false);
 
 	const classId = $derived(page.params.classId);
+	const joinUrl = $derived(
+		detail && browser ? `${location.origin}/join/${encodeURIComponent(detail.invite_code)}` : ''
+	);
+
+	async function copyJoinLink() {
+		copyFailed = false;
+		try {
+			await navigator.clipboard.writeText(joinUrl);
+			copied = true;
+			setTimeout(() => (copied = false), 2000);
+		} catch {
+			copyFailed = true;
+			document.querySelector<HTMLInputElement>('.share input')?.select();
+		}
+	}
 
 	async function load() {
 		if (!classId) return;
@@ -75,7 +92,7 @@
 {:else if error && !detail}
 	<InlineError message={error} />
 {:else if detail}
-	<PageHeader title={detail.name} description={`Invite code ${detail.invite_code} · students join at /join`}>
+	<PageHeader title={detail.name} description={`Invite code ${detail.invite_code}`}>
 		{#snippet breadcrumb()}
 			<a href="/classes">Classes</a>
 			<span>/</span>
@@ -85,6 +102,17 @@
 			<Badge tone="info">Invite {detail?.invite_code ?? ''}</Badge>
 		{/snippet}
 	</PageHeader>
+
+	<section class="share">
+		<span class="share-label">Student join link</span>
+		<div class="share-row">
+			<input readonly value={joinUrl} aria-label="Student join link" onfocus={(e) => e.currentTarget.select()} />
+			<Button variant="secondary" onclick={copyJoinLink}>{copied ? 'Copied' : 'Copy link'}</Button>
+		</div>
+		<p class="hint">
+			{copyFailed ? 'Copy blocked by the browser. The link is selected, press Ctrl+C.' : 'Students open this link, enter their name, and land on their lessons. No account needed.'}
+		</p>
+	</section>
 
 	<Tabs
 		active={tab}
@@ -180,6 +208,21 @@
 		padding: var(--space-5);
 		display: grid;
 		gap: var(--space-3);
+	}
+	.share {
+		display: grid;
+		gap: 0.5rem;
+		margin-bottom: var(--space-4);
+	}
+	.share-label {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--ink-2);
+	}
+	.share-row {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
 	}
 	.row-form {
 		display: flex;

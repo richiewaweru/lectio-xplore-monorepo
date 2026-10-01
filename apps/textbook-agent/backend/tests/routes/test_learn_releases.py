@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app import app
 from core.database.models import LearnReleaseModel, UserModel
 from core.entities.user import User
-from infra.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user, get_optional_user
 from infra.database.session import get_async_session
 from learn.publishing.release_routes import document_hash
 
@@ -74,6 +74,7 @@ def _install_dependency_overrides(db_session_factory):
 
     app.dependency_overrides.clear()
     app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_optional_user] = override_current_user
     app.dependency_overrides[get_async_session] = override_session
     yield
     app.dependency_overrides.clear()

@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { apiFetch } from '$lib/api/client';
+	import { learnerFetch } from '$lib/learn/student/api/learner-fetch';
 	import { ensureOk } from '$lib/api/errors';
 
 	interface HomeInstance {
@@ -31,10 +31,7 @@
 	onMount(async () => {
 		if (!browser || !learnerId) return;
 		try {
-			const headers: Record<string, string> = {};
-			const token = localStorage.getItem('x-learner-session');
-			if (token) headers['X-Learner-Session'] = token;
-			const response = await apiFetch(`/api/v1/learn/learners/${learnerId}/home`, { headers });
+			const response = await learnerFetch(`/api/v1/learn/learners/${learnerId}/home`);
 			await ensureOk(response);
 			const body = await response.json();
 			displayName = body.display_name;
