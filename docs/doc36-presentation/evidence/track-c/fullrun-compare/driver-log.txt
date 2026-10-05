@@ -1,0 +1,5 @@
+[21:55:11] resume unit 1bc74518-cd5a-4fb8-bba7-ad088ecbced4 lesson de9bfb9f-f1a9-4cc5-b28d-bce71f8c4a86 title=Complementary relationship between photosynthesis and respiration
+[21:55:11] resume generation f8099d04-fd37-4fa1-9616-40fc689e2957
+[21:55:11] stage awaiting_teaching_approval/awaiting_review
+[21:55:11] teaching approve 200 {"generation_id":"f8099d04-fd37-4fa1-9616-40fc689e2957","status":"teaching_approved","path":"learn","queued":false,"next":"generate_learn","teaching_plan_identity":{"revision":2,"pending_content_hash":null,"pending_hash_verified":false,"approved_revision":1,"approved_content_hash":"8cdad1d7dde6ae5e1
+[21:55:12] generate-learn 202 after 1s

@@ -1,0 +1,191 @@
+{
+  "id": "167b29e2-9af4-44c8-8ab2-b1f612896bf3",
+  "unit_id": "28164ffa-d703-466c-9aa2-ef4bbe30bff0",
+  "version": 1,
+  "revision": 2,
+  "status": "approved",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": "2026-10-05T18:19:54.773440",
+  "created_at": "2026-10-05T18:19:54.430249",
+  "lessons": [
+    {
+      "id": "1c9ebbc5-1b95-4d12-95da-5acf74f6a21c",
+      "concept_id": "80fea0a4-71d9-42dc-beb5-74300cabb375",
+      "concept_slug": "science.plants.make.their.own.food",
+      "title": "Plants make their own food",
+      "objective": "Explain that green plants make their own food rather than taking in ready-made food from the soil, using evidence from what plants need and where they grow.",
+      "objective_hash": "013833d9006f98b38758a4e34e41d7683f3ab3feb6f836a8b48b1b0470d492e9",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "plants do not eat food the way animals do",
+        "plants need light to grow and stay healthy",
+        "a plant kept in the dark loses health and colour, showing it cannot grow without light",
+        "the soil supplies water and minerals, not the plant's food"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "ee236c81-e2b5-47c9-8358-4e1cf4f8a110",
+      "concept_id": "4417db9a-1490-4df3-ab60-8f6ada02b239",
+      "concept_slug": "science.the.inputs.plants.need.to.make.food",
+      "title": "The inputs plants need to make food",
+      "objective": "Identify and explain the three inputs a plant uses to make its food \u2014 light, water and carbon dioxide \u2014 and state where each comes from.",
+      "objective_hash": "3782d9336567f0de0c86b87c3ee25f2190495d8b9d47b4fb631f5511ec9e0e1d",
+      "prerequisites": [
+        "1c9ebbc5-1b95-4d12-95da-5acf74f6a21c"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "light energy is taken in by the leaves from sunlight",
+        "water is taken in by the roots from the soil and carried up the stem to the leaves",
+        "carbon dioxide is taken in from the air by the leaves",
+        "all three inputs must be present for the plant to make food"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "18ce950d-0336-41b9-9bb2-0b19ce5c6c89",
+      "concept_id": "0230d5a1-3121-4024-8093-e77ba26f4c4d",
+      "concept_slug": "science.the.leaf.as.the.food.making.site",
+      "title": "The leaf as the food-making site",
+      "objective": "Explain why the leaf is the main site of food-making by linking leaf features to capturing light and taking in carbon dioxide.",
+      "objective_hash": "a050c8dcdd4558c59fc76807ba328314796d7ea33526474792cf0930ee0b21af",
+      "prerequisites": [
+        "ee236c81-e2b5-47c9-8358-4e1cf4f8a110"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "leaves are broad and flat to catch light",
+        "leaves are green and this colour is linked to trapping light energy",
+        "leaves have openings that let carbon dioxide in and oxygen out",
+        "water arriving at the leaf is joined with carbon dioxide using light energy"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "de494c43-ad90-4601-8592-3f759c7fa3f0",
+      "concept_id": "58f0b824-7e45-4b66-b9a4-bf6da136a20f",
+      "concept_slug": "science.what.the.plant.makes.food.and.oxygen",
+      "title": "What the plant makes: food and oxygen",
+      "objective": "Describe the outputs of food-making \u2014 a sugar the plant uses as food and oxygen released into the air \u2014 and distinguish them from the inputs.",
+      "objective_hash": "33ab5c7f52427ed84c96c1a5775bd28c36143f5cb3c00846dc7b985e40603487",
+      "prerequisites": [
+        "18ce950d-0336-41b9-9bb2-0b19ce5c6c89"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "the plant makes a sugar (glucose) that serves as its food",
+        "oxygen is given off during food-making",
+        "inputs (light, water, carbon dioxide) are different from outputs (sugar, oxygen)",
+        "the sugar made contains stored energy that came from light"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "73f7f657-b87b-43f3-96b0-dd0bc7065780",
+      "concept_id": "d346f70f-fbe0-4cc5-95a2-2505e1540d25",
+      "concept_slug": "science.light.water.and.carbon.dioxide.make.the.food.the.plant.needs.to.grow",
+      "title": "Light, water and carbon dioxide make the food the plant needs to grow",
+      "objective": "Explain, in a complete sequence, how a plant uses light, water and carbon dioxide to make the food it needs to grow and store energy for later use.",
+      "objective_hash": "ab9e0900dbfe30aed4f7373adeb46aebb58320db2c85c05890caa63536870cb4",
+      "prerequisites": [
+        "de494c43-ad90-4601-8592-3f759c7fa3f0"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "the process name photosynthesis means 'making food with light'",
+        "water and carbon dioxide are combined using light energy to make sugar",
+        "oxygen is released as a by-product",
+        "the sugar is used by the plant for growth and may be stored",
+        "removing any one input (light, water or carbon dioxide) stops or slows food-making and so slows growth"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 4,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa"
+    },
+    {
+      "id": "8960ac4b-ddd3-478e-aac9-1fdef644bee2",
+      "concept_id": "95b65d0e-1d96-4bb2-aaa5-f5b859667c04",
+      "concept_slug": "science.testing.the.inputs.predicting.and.explaining.plant.growth",
+      "title": "Testing the inputs: predicting and explaining plant growth",
+      "objective": "Use the photosynthesis model to predict and justify how a plant will grow when one input (light, water or carbon dioxide) is limited, and evaluate evidence from such tests.",
+      "objective_hash": "d3fa96859818b8aa03c3d98b57a82c0aec69c9019aaff30bd350dd4037d1139b",
+      "prerequisites": [
+        "73f7f657-b87b-43f3-96b0-dd0bc7065780"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "predicting growth outcomes when one input is missing or reduced",
+        "justifying predictions by referring to the plant's food-making",
+        "interpreting simple observations of plants kept with and without light, water or carbon dioxide",
+        "weighing whether the evidence supports the claim that plants make their own food"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "evaluative",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 5,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": "7f074a60-7999-4681-afc0-b71815fca146"
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "path_lesson_id": "73f7f657-b87b-43f3-96b0-dd0bc7065780",
+  "lesson_revision": 1,
+  "generation_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa",
+  "generation_status": "awaiting_review",
+  "workflow_stage": "awaiting_review",
+  "objective_hash": "ab9e0900dbfe30aed4f7373adeb46aebb58320db2c85c05890caa63536870cb4",
+  "stale": false,
+  "can_prepare": false,
+  "can_regenerate": true,
+  "realizations": [],
+  "print_realization_id": null,
+  "learn_realization_id": null,
+  "builder_id": null,
+  "print_output_id": null,
+  "learn_output_id": null,
+  "print_open_href": null,
+  "learn_open_href": null,
+  "workspace": {
+    "preparation": {
+      "state": "failed_recoverable",
+      "review_kind": null,
+      "generation_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa",
+      "teaching_plan_id": null,
+      "approved_revision": null,
+      "approved_content_hash": null,
+      "approved_snapshot_verified": false,
+      "stale": false,
+      "legacy_ambiguous": false,
+      "error": {
+        "code": "preparation_reviewer_output_invalid",
+        "error_type": "preparation_run",
+        "failure_class": null,
+        "message": "The AI plan reviewer returned unusable output. Retry it.",
+        "retryable": true,
+        "stage": "preparation",
+        "work_item_id": "a3099cb6-71de-4ccb-84ee-2838a5406c67",
+        "attempt": null,
+        "recovery_action": "retry"
+      },
+      "run_id": "6fc04863-0f91-408b-a6ac-912c24dd55e7",
+      "recovery_action": "retry",
+      "retryable": true,
+      "progress": {
+        "items_total": 1,
+        "items_ready": 1,
+        "items_failed": 0,
+        "teaching_plan": "failed",
+        "failed_work_item_ids": [
+          "a3099cb6-71de-4ccb-84ee-2838a5406c67"
+        ]
+      }
+    },
+    "learn": {
+      "state": "not_created",
+      "realization_id": null,
+      "output_id": null,
+      "open_href": null,
+      "stale": false,
+      "legacy_ambiguous": false,
+      "error": null,
+      "shared_document_state": null,
+      "shared_document_run_id": null,
+      "shared_document_id": null,
+      "shared_document_revision": null,
+      "shared_document_hash": null,
+      "run_id": null,
+      "recovery_action": null,
+      "progress": null
+    },
+    "print": {
+      "state": "not_created",
+      "realization_id": null,
+      "output_id": null,
+      "open_href": null,
+      "stale": false,
+      "legacy_ambiguous": false,
+      "error": null,
+      "shared_document_state": null,
+      "shared_document_run_id": null,
+      "shared_document_id": null,
+      "shared_document_revision": null,
+      "shared_document_hash": null,
+      "run_id": null,
+      "recovery_action": null,
+      "progress": null
+    },
+    "legacy_ambiguities": []
+  },
+  "worker_debug": {
+    "debug_only": true,
+    "generation_status": "awaiting_review",
+    "workflow_stage": "awaiting_review"
+  }
+}

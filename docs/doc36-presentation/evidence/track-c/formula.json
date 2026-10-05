@@ -1,0 +1,358 @@
+{
+  "lesson": "formula",
+  "run_id": "doc36-track-c-formula-6908e512395d",
+  "job_id": "doc36-track-c-formula-6908e512395d-composer-writer",
+  "document_id": "doc36:doc36-track-c-formula-6908e512395d:revision:1",
+  "plan": {
+    "slot_id": "formula",
+    "specific_purpose": "Use the area formula to calculate a rectangle area from its side lengths.",
+    "transition": null,
+    "blocks": [
+      {
+        "id": "b0",
+        "position": 0,
+        "intent": "explain the formula inputs and outputs",
+        "brief": "Name the area formula and each quantity.",
+        "evidence_refs": [],
+        "evidence": "The area of a rectangle equals length multiplied by width.",
+        "departure_reason": null,
+        "source_question_ids": [],
+        "task_mode": "none",
+        "sourcebook_needs": [],
+        "sourcebook_refs": [],
+        "stimulus_dependencies": [],
+        "learner_action": null
+      },
+      {
+        "id": "b1",
+        "position": 1,
+        "intent": "explain the worked example calculation",
+        "brief": "Walk through a worked example without hiding the learner step.",
+        "evidence_refs": [],
+        "evidence": "An 8 m by 3 m rectangle has area 24 square metres.",
+        "departure_reason": null,
+        "source_question_ids": [],
+        "task_mode": "none",
+        "sourcebook_needs": [],
+        "sourcebook_refs": [],
+        "stimulus_dependencies": [],
+        "learner_action": null
+      }
+    ],
+    "display_title": "Area of a rectangle",
+    "entry_state": [
+      "Learner can use the stated vocabulary"
+    ],
+    "must_establish": [
+      "Use the area formula to calculate a rectangle area from its side lengths."
+    ],
+    "avoid_repeating": [
+      "Do not restate the entry state"
+    ],
+    "bridge_from_previous": null,
+    "exit_state": [
+      "Use the area formula to calculate a rectangle area from its side lengths."
+    ]
+  },
+  "sources": [
+    {
+      "id": "src-formula",
+      "kind": "approved_fact",
+      "text": "The area of a rectangle equals length multiplied by width; an 8 m by 3 m rectangle has area 24 square metres."
+    }
+  ],
+  "provider_calls": [
+    {
+      "stage": "composer",
+      "request": {
+        "section": {
+          "slot_id": "formula",
+          "specific_purpose": "Use the area formula to calculate a rectangle area from its side lengths.",
+          "transition": null,
+          "blocks": [
+            {
+              "id": "b0",
+              "position": 0,
+              "intent": "explain the formula inputs and outputs",
+              "brief": "Name the area formula and each quantity.",
+              "evidence_refs": [],
+              "evidence": "The area of a rectangle equals length multiplied by width.",
+              "departure_reason": null,
+              "source_question_ids": [],
+              "task_mode": "none",
+              "sourcebook_needs": [],
+              "sourcebook_refs": [],
+              "stimulus_dependencies": [],
+              "learner_action": null
+            },
+            {
+              "id": "b1",
+              "position": 1,
+              "intent": "explain the worked example calculation",
+              "brief": "Walk through a worked example without hiding the learner step.",
+              "evidence_refs": [],
+              "evidence": "An 8 m by 3 m rectangle has area 24 square metres.",
+              "departure_reason": null,
+              "source_question_ids": [],
+              "task_mode": "none",
+              "sourcebook_needs": [],
+              "sourcebook_refs": [],
+              "stimulus_dependencies": [],
+              "learner_action": null
+            }
+          ],
+          "display_title": "Area of a rectangle",
+          "entry_state": [
+            "Learner can use the stated vocabulary"
+          ],
+          "must_establish": [
+            "Use the area formula to calculate a rectangle area from its side lengths."
+          ],
+          "avoid_repeating": [
+            "Do not restate the entry state"
+          ],
+          "bridge_from_previous": null,
+          "exit_state": [
+            "Use the area formula to calculate a rectangle area from its side lengths."
+          ]
+        },
+        "shaping_targets": {
+          "paragraph_words_max": 60,
+          "key_idea_words_max": 25,
+          "note_words_max": 50,
+          "misconception_words_max": {
+            "belief": 30,
+            "evidence": 45,
+            "conclusion": 30
+          },
+          "list_item_words_max": 30,
+          "table_cell_words_max": 12,
+          "equation_inputs_target_max": 4,
+          "equation_outputs_target_max": 3,
+          "compare_items_target_max": 3,
+          "prose_section_words_target": [
+            150,
+            280
+          ]
+        },
+        "inline_vocabulary": {
+          "strong": "**text**",
+          "emphasis": "*text*",
+          "subscript": "~text~",
+          "superscript": "^text^",
+          "paragraph_break": "\\n\\n"
+        },
+        "tasks": [],
+        "repair_errors": []
+      },
+      "response": {
+        "items": [
+          {
+            "teaching_block_id": "b0",
+            "kind": "equation",
+            "semantic_role": "explanation"
+          },
+          {
+            "teaching_block_id": "b1",
+            "kind": "paragraph",
+            "semantic_role": "worked_example"
+          }
+        ]
+      },
+      "status": "success",
+      "duration_seconds": 1.528
+    },
+    {
+      "stage": "writer",
+      "request": {
+        "section_contract": {
+          "display_title": "Area of a rectangle",
+          "entry_state": [
+            "Learner can use the stated vocabulary"
+          ],
+          "must_establish": [
+            "Use the area formula to calculate a rectangle area from its side lengths."
+          ],
+          "avoid_repeating": [
+            "Do not restate the entry state"
+          ],
+          "bridge_from_previous": null,
+          "exit_state": [
+            "Use the area formula to calculate a rectangle area from its side lengths."
+          ],
+          "specific_purpose": "Use the area formula to calculate a rectangle area from its side lengths.",
+          "blocks": [
+            {
+              "id": "b0",
+              "intent": "explain the formula inputs and outputs",
+              "brief": "Name the area formula and each quantity.",
+              "evidence": "The area of a rectangle equals length multiplied by width.",
+              "visual": null
+            },
+            {
+              "id": "b1",
+              "intent": "explain the worked example calculation",
+              "brief": "Walk through a worked example without hiding the learner step.",
+              "evidence": "An 8 m by 3 m rectangle has area 24 square metres.",
+              "visual": null
+            }
+          ]
+        },
+        "composition_plan": [
+          {
+            "id": "shared-node-240485b6ce392347255e",
+            "kind": "equation",
+            "teaching_block_id": "b0",
+            "semantic_role": "explanation",
+            "task_spec_id": null
+          },
+          {
+            "id": "shared-node-3147ef18c10edb684e89",
+            "kind": "paragraph",
+            "teaching_block_id": "b1",
+            "semantic_role": "worked_example",
+            "task_spec_id": null
+          }
+        ],
+        "shaping_targets": {
+          "paragraph_words_max": 60,
+          "key_idea_words_max": 25,
+          "note_words_max": 50,
+          "misconception_words_max": {
+            "belief": 30,
+            "evidence": 45,
+            "conclusion": 30
+          },
+          "list_item_words_max": 30,
+          "table_cell_words_max": 12,
+          "equation_inputs_target_max": 4,
+          "equation_outputs_target_max": 3,
+          "compare_items_target_max": 3,
+          "prose_section_words_target": [
+            150,
+            280
+          ]
+        },
+        "inline_vocabulary": {
+          "strong": "**text**",
+          "emphasis": "*text*",
+          "subscript": "~text~",
+          "superscript": "^text^",
+          "paragraph_break": "\\n\\n"
+        },
+        "sources": [
+          {
+            "id": "src-formula",
+            "kind": "approved_fact",
+            "text": "The area of a rectangle equals length multiplied by width; an 8 m by 3 m rectangle has area 24 square metres."
+          }
+        ],
+        "task_summaries": [],
+        "hidden_answer_context_do_not_reveal": [],
+        "repair": null
+      },
+      "response": {
+        "nodes": [
+          {
+            "id": "shared-node-240485b6ce392347255e",
+            "teaching_block_id": "b0",
+            "kind": "equation",
+            "display": {
+              "label": "Area of a rectangle",
+              "inputs": [
+                "length",
+                "width"
+              ],
+              "outputs": [
+                "area"
+              ]
+            },
+            "accessibility": {
+              "description": "The area of a rectangle equals its length multiplied by its width."
+            }
+          },
+          {
+            "id": "shared-node-3147ef18c10edb684e89",
+            "teaching_block_id": "b1",
+            "kind": "paragraph",
+            "display": {
+              "text": "An 8 m by 3 m rectangle has an **area** of 8 × 3 = 24 square metres. Multiplying the length by the width gives the result in square metres."
+            },
+            "accessibility": {
+              "description": "A worked example showing that an 8 metre by 3 metre rectangle has an area of 24 square metres."
+            }
+          }
+        ]
+      },
+      "status": "success",
+      "duration_seconds": 10.942
+    }
+  ],
+  "advisory_records": [
+    {
+      "code": "shape_missing",
+      "path": "section/key_idea"
+    }
+  ],
+  "status": "writer_success",
+  "composition": {
+    "section_slot_id": "formula",
+    "items": [
+      {
+        "id": "shared-node-240485b6ce392347255e",
+        "kind": "equation",
+        "teaching_block_id": "b0",
+        "semantic_role": "explanation",
+        "task_spec_id": null
+      },
+      {
+        "id": "shared-node-3147ef18c10edb684e89",
+        "kind": "paragraph",
+        "teaching_block_id": "b1",
+        "semantic_role": "worked_example",
+        "task_spec_id": null
+      }
+    ]
+  },
+  "document": {
+    "section_slot_id": "formula",
+    "title": "Area of a rectangle",
+    "nodes": [
+      {
+        "id": "shared-node-240485b6ce392347255e",
+        "teaching_block_id": "b0",
+        "kind": "equation",
+        "display": {
+          "label": "Area of a rectangle",
+          "inputs": [
+            "length",
+            "width"
+          ],
+          "outputs": [
+            "area"
+          ]
+        },
+        "accessibility": {
+          "description": "The area of a rectangle equals its length multiplied by its width."
+        }
+      },
+      {
+        "id": "shared-node-3147ef18c10edb684e89",
+        "teaching_block_id": "b1",
+        "kind": "paragraph",
+        "display": {
+          "text": "An 8 m by 3 m rectangle has an **area** of 8 × 3 = 24 square metres. Multiplying the length by the width gives the result in square metres."
+        },
+        "accessibility": {
+          "description": "A worked example showing that an 8 metre by 3 metre rectangle has an area of 24 square metres."
+        }
+      }
+    ],
+    "warnings": [
+      [
+        "shape_missing",
+        "section/key_idea"
+      ]
+    ]
+  }
+}

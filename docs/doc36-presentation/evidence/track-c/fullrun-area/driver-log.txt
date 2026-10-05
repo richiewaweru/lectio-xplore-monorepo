@@ -1,0 +1,5 @@
+[21:55:11] resume unit 81ad36fb-fc06-44f6-8315-d8f4fe378ff9 lesson ba3c800c-f367-4056-8eaf-d1b9b1c4f495 title=Area of compound shapes
+[21:55:11] resume generation 77754f15-82b2-4934-b00a-22781415beb1
+[21:55:11] stage awaiting_teaching_approval/awaiting_review
+[21:55:11] teaching approve 200 {"generation_id":"77754f15-82b2-4934-b00a-22781415beb1","status":"teaching_approved","path":"learn","queued":false,"next":"generate_learn","teaching_plan_identity":{"revision":2,"pending_content_hash":null,"pending_hash_verified":false,"approved_revision":1,"approved_content_hash":"6935cbe91c8cc35cf
+[21:55:12] generate-learn 202 after 1s

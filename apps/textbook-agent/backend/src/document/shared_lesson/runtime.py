@@ -375,7 +375,7 @@ async def _record_composition_style_warnings(
     work_item_id: str,
     warnings: Sequence[tuple[str, str]],
 ) -> None:
-    """Persist a safe, bounded event for auto-fixed SOFT composition issues.
+    """Persist a safe, bounded event for advisory composition shape issues.
 
     Mirrors ``_record_execution_failure``'s diagnostic shape: only fixed
     composer issue codes and sanitized structural paths, bounded the same
@@ -407,7 +407,7 @@ async def _record_writer_style_warnings(
     work_item_id: str,
     warnings: Sequence[tuple[str, str]],
 ) -> None:
-    """Persist a safe, bounded event for SOFT writer issues accepted on the final attempt.
+    """Persist a safe, bounded event for advisory writer shape issues.
 
     Mirrors ``_record_composition_style_warnings``'s diagnostic shape: only
     accepted writer issue codes and sanitized structural paths, bounded the

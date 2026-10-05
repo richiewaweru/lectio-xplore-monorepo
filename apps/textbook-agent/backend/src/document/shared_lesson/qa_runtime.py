@@ -62,6 +62,25 @@ DOCUMENT_QA_STAGE = "document_qa"
 DOCUMENT_QA_ITEM_KEY = "document-qa"
 DOCUMENT_QA_DEFINITION = "shared-document-qa:v1"
 
+# Semantic reviewers may report these presentation-target findings directly.
+# They are retained as teacher-visible flags and never gate READY, even when
+# the configured semantic gate is blocking. Identity, schema, leakage, and
+# task-correctness findings remain actionable QA issues.
+SEMANTIC_ADVISORY_SHAPE_ISSUE_CODES = frozenset(
+    {
+        "length_over_target",
+        "shape_missing",
+        "list_item_not_parallel",
+        "paragraph_run_exceeded",
+        "block_exceeds_node_limit",
+        "section_exceeds_node_limit",
+        "section_exceeds_callout_limit",
+        "heading_missing_subsection_cue",
+        "kind_missing_semantic_cue",
+        "callout_missing_cautionary_cue",
+    }
+)
+
 
 class DocumentQARuntimeError(ValueError):
     """The durable document QA boundary received an unsafe request."""
@@ -98,9 +117,9 @@ class DocumentQAWorkItemOutput(BaseModel):
     document_revision: int = Field(ge=1)
     document_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     semantic_qa: DocumentSemanticQAResult
-    #: Non-blocking findings recorded by the advisory quality gate. When
-    #: present, ``semantic_qa`` is the (issue-free) PASS the run proceeds on and
-    #: these flags carry what the reviewer reported. Always empty in blocking mode.
+    #: Non-blocking findings from deterministic, semantic-shape, composer, and
+    #: writer advisory checks. When present, ``semantic_qa`` is the issue-free
+    #: PASS the run proceeds on and these flags carry what the reviewer reported.
     quality_flags: tuple[QualityFlag, ...] = ()
 
     @model_validator(mode="after")
@@ -154,6 +173,9 @@ class DocumentQAWorkItemJob:
     #: replacement dispatch never does, since the reviewer's edit -- not the
     #: original writer warning -- is what semantic QA must judge next.
     synthetic_issues: tuple[ContinuityIssue, ...] = ()
+    #: Shape findings from composer/writer are recorded as teacher-visible
+    #: quality flags only. They never enter semantic review or block READY.
+    advisory_issues: tuple[ContinuityIssue, ...] = ()
 
 
 class DocumentQAOutcome(BaseModel):
@@ -588,6 +610,11 @@ async def execute_document_qa_work_item(
             semantic_validator=job.semantic_validator,
         )
         verdict_issues = tuple(semantic.issues)
+        semantic_shape_issues = tuple(
+            issue
+            for issue in verdict_issues
+            if issue.issue_code in SEMANTIC_ADVISORY_SHAPE_ISSUE_CODES
+        )
         if job.synthetic_issues:
             # An accepted writer SOFT issue (task_answer_leaked or
             # unsupported_number) must still block automatic READY promotion
@@ -603,8 +630,20 @@ async def execute_document_qa_work_item(
                 semantic_calls=semantic.semantic_calls,
                 deterministic_skipped_semantic=semantic.deterministic_skipped_semantic,
             )
+        combined_issues = tuple(semantic.issues)
+        combined_actionable_issues = tuple(
+            issue
+            for issue in combined_issues
+            if issue.issue_code not in SEMANTIC_ADVISORY_SHAPE_ISSUE_CODES
+        )
         quality_flags: tuple[QualityFlag, ...] = ()
         gate = job.quality_gate or settings.document_quality_gate
+        advisory_writer_flags = quality_flags_from_issues(
+            job.advisory_issues, source="writer_warning"
+        )
+        quality_flags = advisory_writer_flags + quality_flags_from_issues(
+            semantic_shape_issues, source="semantic_qa"
+        )
         if gate == "advisory":
             quality_flags = (
                 quality_flags_from_issues(
@@ -612,6 +651,29 @@ async def execute_document_qa_work_item(
                 )
                 + quality_flags_from_issues(verdict_issues, source="semantic_qa")
                 + quality_flags_from_issues(job.synthetic_issues, source="writer_warning")
+                + advisory_writer_flags
+            )
+        if semantic_shape_issues and not combined_actionable_issues:
+            # Presentation-target findings from a semantic reviewer are
+            # advisory under both gate modes; preserve them in flags above.
+            semantic = DocumentSemanticQAResult(
+                document_id=semantic.document_id,
+                document_revision=semantic.document_revision,
+                document_hash=semantic.document_hash,
+                status="pass",
+                issues=(),
+                semantic_calls=semantic.semantic_calls,
+                deterministic_skipped_semantic=semantic.deterministic_skipped_semantic,
+            )
+        elif semantic_shape_issues and combined_actionable_issues:
+            semantic = DocumentSemanticQAResult(
+                document_id=semantic.document_id,
+                document_revision=semantic.document_revision,
+                document_hash=semantic.document_hash,
+                status="issue",
+                issues=combined_actionable_issues,
+                semantic_calls=semantic.semantic_calls,
+                deterministic_skipped_semantic=semantic.deterministic_skipped_semantic,
             )
         if not semantic.passed:
             # Only a well-formed semantic ISSUE after the deterministic gate is

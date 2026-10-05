@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-10-05",
+  "count": 3,
+  "lessons": [
+    {
+      "lesson": "photosynthesis",
+      "status": "writer_success",
+      "calls": 2,
+      "advisory_count": 0,
+      "composer_error": null,
+      "writer_error": null
+    },
+    {
+      "lesson": "formula",
+      "status": "writer_success",
+      "calls": 2,
+      "advisory_count": 1,
+      "composer_error": null,
+      "writer_error": null
+    },
+    {
+      "lesson": "comparison",
+      "status": "writer_success",
+      "calls": 2,
+      "advisory_count": 0,
+      "composer_error": null,
+      "writer_error": null
+    }
+  ]
+}

@@ -1,0 +1,599 @@
+{
+  "version": 2,
+  "id": "fullrun:photosynthesis",
+  "title": "How a plant makes its own food from light, water and air",
+  "subject": "Science",
+  "source": "shared_document",
+  "source_generation_id": null,
+  "nodes": [
+    {
+      "id": "shared-node-8db81c2aad956244b743",
+      "teaching_block_id": "orient-b1",
+      "kind": "paragraph",
+      "text": "**Two plants grown side by side, differing in one thing only, show us what that one thing does.**\n\nBoth plants were the same kind and the same size, planted in the same soil in the same sort of pot. They were watered the same amount on the same days. One stood on a sunny windowsill; the other sat in a dark cupboard.\n\nAfter two weeks the windowsill plant was green and taller. The cupboard plant was pale and limp, and had produced no new growth. The cupboard plant had the same soil and the same water, so what was the light doing for the windowsill plant?"
+    },
+    {
+      "id": "shared-node-d057556ea171afe6f65b",
+      "teaching_block_id": "orient-b2",
+      "kind": "list",
+      "ordered": false,
+      "items": [
+        "**Water** reaches the plant through its **roots**, which take it in from the soil; the stem then carries it up to the leaves.",
+        "**Carbon dioxide** reaches the leaves from the air around the plant, passing in through small **openings** in the leaf surface.",
+        "**Light energy** reaches the leaves from the sun, and the leaves **absorb** it.",
+        "A plant needs all three — water, carbon dioxide and light — and it fails to grow well when any one of them is missing."
+      ]
+    },
+    {
+      "id": "shared-task-anchor-7cb468d182fda7b2e968",
+      "kind": "interaction",
+      "interaction_type": "match-pairs",
+      "teaching_block_id": "orient-b2",
+      "prompt": "Match each thing a plant takes in to the way it reaches the plant.",
+      "config": {
+        "pairs": [
+          {
+            "left": "water",
+            "right": "taken in by the roots from the soil and carried up the stem to the leaves"
+          },
+          {
+            "left": "carbon dioxide",
+            "right": "taken in from the air through openings in the leaves"
+          },
+          {
+            "left": "light energy",
+            "right": "absorbed by the leaves from sunlight"
+          }
+        ]
+      },
+      "feedback": {
+        "correct": "Correct: water comes up from the roots, carbon dioxide enters through openings in the leaves, and light energy is absorbed by the leaves. All three reach the leaf.",
+        "incorrect": "Check the route for each input: water is taken in by the roots from the soil and carried up the stem; carbon dioxide enters from the air through openings in the leaves; light energy from the sun is absorbed by the leaves."
+      },
+      "assessment_mode": "practice",
+      "attempt_policy": {
+        "max_attempts": null,
+        "show_feedback_after_submit": true,
+        "allow_retry_after_correct": true
+      },
+      "completion": {
+        "type": "submitted"
+      },
+      "role": "practice",
+      "display_prompt": "Draw a line from each input to how it reaches the plant.",
+      "option_notes": null,
+      "contract": {
+        "id": "shared-task-anchor-7cb468d182fda7b2e968",
+        "kind": "match-pairs",
+        "prompt": "Match each thing a plant takes in to the way it reaches the plant.",
+        "config": {
+          "pairs": [
+            {
+              "left": "water",
+              "right": "taken in by the roots from the soil and carried up the stem to the leaves"
+            },
+            {
+              "left": "carbon dioxide",
+              "right": "taken in from the air through openings in the leaves"
+            },
+            {
+              "left": "light energy",
+              "right": "absorbed by the leaves from sunlight"
+            }
+          ]
+        },
+        "feedback": {
+          "correct": "Correct: water comes up from the roots, carbon dioxide enters through openings in the leaves, and light energy is absorbed by the leaves. All three reach the leaf.",
+          "incorrect": "Check the route for each input: water is taken in by the roots from the soil and carried up the stem; carbon dioxide enters from the air through openings in the leaves; light energy from the sun is absorbed by the leaves."
+        },
+        "assessment_mode": "practice",
+        "attempt_policy": {
+          "max_attempts": null,
+          "show_feedback_after_submit": true,
+          "allow_retry_after_correct": true
+        },
+        "completion": {
+          "type": "submitted"
+        },
+        "ai_config_rule": "config-only",
+        "teaching_block_id": "orient-b2",
+        "shared_task": {
+          "id": "task-orient-b2",
+          "action": "match-pairs",
+          "mode": "formative",
+          "purpose": "confirm the route of each input so the leaf can be used as the place where all three come together",
+          "prompt": "Match each thing a plant takes in to the way it reaches the plant.",
+          "difficulty": "guided",
+          "expected_evidence": "water matched to roots taking it from the soil and the stem carrying it to the leaves; carbon dioxide matched to leaf openings taking it from the air; light energy matched to the leaves absorbing it from sunlight",
+          "response": {
+            "type": "matching",
+            "pairs": [
+              {
+                "left": "water",
+                "right": "taken in by the roots from the soil and carried up the stem to the leaves"
+              },
+              {
+                "left": "carbon dioxide",
+                "right": "taken in from the air through openings in the leaves"
+              },
+              {
+                "left": "light energy",
+                "right": "absorbed by the leaves from sunlight"
+              }
+            ]
+          },
+          "evaluation": {
+            "type": "mapping",
+            "pairs": [
+              {
+                "left": "water",
+                "right": "taken in by the roots from the soil and carried up the stem to the leaves"
+              },
+              {
+                "left": "carbon dioxide",
+                "right": "taken in from the air through openings in the leaves"
+              },
+              {
+                "left": "light energy",
+                "right": "absorbed by the leaves from sunlight"
+              }
+            ]
+          },
+          "sourcebook_refs": [],
+          "approved_source_ids": [],
+          "teaching_plan_id": "29721f01-7bad-4c18-9d38-290819f85711",
+          "teaching_plan_revision": 1,
+          "teaching_plan_hash": "cde52d8ec7bf4653d3543faf0841b1dee401d14ed411d441942cb7321a074a2f",
+          "role": "practice",
+          "display_prompt": "Draw a line from each input to how it reaches the plant."
+        },
+        "source_document": {
+          "id": "shared-document:96113be7-b9a6-45b4-8516-09b719c7bd6c:revision:1",
+          "revision": 1,
+          "content_hash": "e86357d7ce88633e0776cd1f852c7841aa9b0759e4aa0921c3bd4688ce52b6a1"
+        },
+        "role": "practice",
+        "display_prompt": "Draw a line from each input to how it reaches the plant."
+      }
+    },
+    {
+      "id": "shared-node-d9d97386f81d2e598927",
+      "teaching_block_id": "explain-b1",
+      "kind": "callout",
+      "tone": "important",
+      "title": "",
+      "body": "**Inside the leaf, light energy joins water and carbon dioxide to make sugar, the plant's food, and oxygen is released.**",
+      "variant": "key_idea",
+      "aside": "The plant builds this food itself, inside its leaves."
+    },
+    {
+      "id": "shared-figure-node-cd0d85c7876b5990ede5",
+      "teaching_block_id": "explain-b1",
+      "kind": "figure",
+      "asset_id": null,
+      "caption": "Light energy arriving at the leaf, water arriving at the leaf and carbon dioxide arriving at the leaf meet at the same place — the leaf. There, light energy, water and carbon dioxide joined inside the leaf to make food (sugar), and oxygen released as the food is made. The energy now held in the food (sugar) is the light energy the leaf took in.",
+      "alt": ""
+    },
+    {
+      "id": "shared-node-6fb7d5bb3b22e04c9a2b",
+      "teaching_block_id": "explain-b2",
+      "kind": "paragraph",
+      "text": "The **sugar** made in the leaf does not stay there. It is carried to the parts that are growing — new leaves, stem and roots — and used there to build new plant material, which is why the plant gets bigger. Some of the sugar is not used straight away but is stored, holding the light energy the leaf captured.\n\nThe windowsill plant was doing just this: making food in its leaves, using it to grow and storing some. The cupboard plant sits in darkness; its leaf receives no light energy, so it builds no new food at all."
+    },
+    {
+      "id": "shared-node-c6b5d1f1b4ccefa3da57",
+      "teaching_block_id": "confront-b1",
+      "kind": "callout",
+      "tone": "warning",
+      "title": "“Light just keeps the plant warm”",
+      "variant": "misconception",
+      "belief": "The light coming through the window only warms the plant. It is that warmth that keeps a plant healthy, and a warm sunny windowsill is why my plant grows so well.",
+      "evidence": "The cupboard plant sat in the same room, so it was no colder than the windowsill plant — only darker. If warmth were what mattered, it would have thrived. Instead it built no new food and did not grow.",
+      "conclusion": "Light is an energy input the leaf uses to make food; the energy stored in the sugar is light energy, not warmth. Warmth without light gives the plant no energy to make food."
+    },
+    {
+      "id": "shared-node-2184881ac796004269cb",
+      "teaching_block_id": "confront-b2",
+      "kind": "callout",
+      "tone": "warning",
+      "title": "“The soil is the plant’s food”",
+      "variant": "misconception",
+      "belief": "The plant's food comes ready-made from the soil. The soil feeds it, and the water I pour on is part of that food.",
+      "evidence": "The cupboard plant had exactly the same soil and exactly the same water as the windowsill plant. If soil and water were its food, it should have grown just as well — and it did not.",
+      "conclusion": "The soil supplies water and minerals only, not food. The plant makes its own food in the leaf from water and carbon dioxide using light energy, so nothing is taken ready-made from the soil."
+    },
+    {
+      "id": "shared-node-4f2ac0bbd1093a40395b",
+      "teaching_block_id": "contrast-b1",
+      "kind": "list",
+      "ordered": true,
+      "items": [
+        "Start with **light energy** — is the leaf in a bright place, or is the plant somewhere dark?",
+        "Then check **water** — is water reaching the leaf from the soil, or has the soil been dry for days?",
+        "Then check **carbon dioxide** — can air reach the leaf openings, or is the leaf coated so air cannot get in?"
+      ]
+    },
+    {
+      "id": "shared-task-anchor-be51521b23581d0c80da",
+      "kind": "interaction",
+      "interaction_type": "classify",
+      "teaching_block_id": "contrast-b1",
+      "prompt": "Plant A is on a bright windowsill with clean leaves and is watered regularly. Plant B sits in the same bright place and is watered the same, but its leaves have been coated so that air cannot reach the leaf openings. Plant C has clean leaves in the same bright place, but its soil has been left dry for over a week.\n\nFor each plant, decide whether its leaf can make food, then place it in the correct category.",
+      "config": {
+        "items": [
+          "Plant A",
+          "Plant B",
+          "Plant C"
+        ],
+        "categories": [
+          {
+            "id": "leaf can make food",
+            "label": "leaf can make food"
+          },
+          {
+            "id": "leaf cannot make food",
+            "label": "leaf cannot make food"
+          }
+        ],
+        "pairs": [
+          {
+            "left": "Plant A",
+            "right": "leaf can make food"
+          },
+          {
+            "left": "Plant B",
+            "right": "leaf cannot make food"
+          },
+          {
+            "left": "Plant C",
+            "right": "leaf cannot make food"
+          }
+        ]
+      },
+      "feedback": {
+        "correct": "Plant A has all three inputs reaching its leaf, so it can make food. Plant B cannot, because carbon dioxide cannot reach the leaf through the coated leaves. Plant C cannot, because no water reaches the leaf.",
+        "incorrect": "Check which inputs reach each leaf. Plant B has light energy and water but no carbon dioxide reaching the leaf; Plant C has light energy and carbon dioxide but no water reaching the leaf. With one input missing, the leaf cannot make food."
+      },
+      "assessment_mode": "practice",
+      "attempt_policy": {
+        "max_attempts": null,
+        "show_feedback_after_submit": true,
+        "allow_retry_after_correct": true
+      },
+      "completion": {
+        "type": "submitted"
+      },
+      "role": "practice",
+      "display_prompt": "Sort each plant by whether its leaf can make food, and note the input that is missing.",
+      "option_notes": null,
+      "contract": {
+        "id": "shared-task-anchor-be51521b23581d0c80da",
+        "kind": "classify",
+        "prompt": "Plant A is on a bright windowsill with clean leaves and is watered regularly. Plant B sits in the same bright place and is watered the same, but its leaves have been coated so that air cannot reach the leaf openings. Plant C has clean leaves in the same bright place, but its soil has been left dry for over a week.\n\nFor each plant, decide whether its leaf can make food, then place it in the correct category.",
+        "config": {
+          "items": [
+            "Plant A",
+            "Plant B",
+            "Plant C"
+          ],
+          "categories": [
+            {
+              "id": "leaf can make food",
+              "label": "leaf can make food"
+            },
+            {
+              "id": "leaf cannot make food",
+              "label": "leaf cannot make food"
+            }
+          ],
+          "pairs": [
+            {
+              "left": "Plant A",
+              "right": "leaf can make food"
+            },
+            {
+              "left": "Plant B",
+              "right": "leaf cannot make food"
+            },
+            {
+              "left": "Plant C",
+              "right": "leaf cannot make food"
+            }
+          ]
+        },
+        "feedback": {
+          "correct": "Plant A has all three inputs reaching its leaf, so it can make food. Plant B cannot, because carbon dioxide cannot reach the leaf through the coated leaves. Plant C cannot, because no water reaches the leaf.",
+          "incorrect": "Check which inputs reach each leaf. Plant B has light energy and water but no carbon dioxide reaching the leaf; Plant C has light energy and carbon dioxide but no water reaching the leaf. With one input missing, the leaf cannot make food."
+        },
+        "assessment_mode": "practice",
+        "attempt_policy": {
+          "max_attempts": null,
+          "show_feedback_after_submit": true,
+          "allow_retry_after_correct": true
+        },
+        "completion": {
+          "type": "submitted"
+        },
+        "ai_config_rule": "config-only",
+        "teaching_block_id": "contrast-b1",
+        "shared_task": {
+          "id": "task-contrast-b1",
+          "action": "classify-items",
+          "mode": "formative",
+          "purpose": "expose whether the learner treats the three inputs as independent, so that two of the three seems sufficient",
+          "prompt": "Plant A is on a bright windowsill with clean leaves and is watered regularly. Plant B sits in the same bright place and is watered the same, but its leaves have been coated so that air cannot reach the leaf openings. Plant C has clean leaves in the same bright place, but its soil has been left dry for over a week.\n\nFor each plant, decide whether its leaf can make food, then place it in the correct category.",
+          "difficulty": "guided",
+          "expected_evidence": "Plant A can make food because all three inputs reach the leaf; Plant B cannot, because carbon dioxide cannot reach the leaf; Plant C cannot, because no water reaches the leaf",
+          "response": {
+            "type": "classification",
+            "items": [
+              "Plant A",
+              "Plant B",
+              "Plant C"
+            ],
+            "categories": [
+              "leaf can make food",
+              "leaf cannot make food"
+            ],
+            "correct_placements": {
+              "Plant A": "leaf can make food",
+              "Plant B": "leaf cannot make food",
+              "Plant C": "leaf cannot make food"
+            }
+          },
+          "evaluation": {
+            "type": "mapping",
+            "correct_placements": {
+              "Plant A": "leaf can make food",
+              "Plant B": "leaf cannot make food",
+              "Plant C": "leaf cannot make food"
+            }
+          },
+          "sourcebook_refs": [],
+          "approved_source_ids": [],
+          "teaching_plan_id": "29721f01-7bad-4c18-9d38-290819f85711",
+          "teaching_plan_revision": 1,
+          "teaching_plan_hash": "cde52d8ec7bf4653d3543faf0841b1dee401d14ed411d441942cb7321a074a2f",
+          "role": "practice",
+          "display_prompt": "Sort each plant by whether its leaf can make food, and note the input that is missing."
+        },
+        "source_document": {
+          "id": "shared-document:96113be7-b9a6-45b4-8516-09b719c7bd6c:revision:1",
+          "revision": 1,
+          "content_hash": "e86357d7ce88633e0776cd1f852c7841aa9b0759e4aa0921c3bd4688ce52b6a1"
+        },
+        "role": "practice",
+        "display_prompt": "Sort each plant by whether its leaf can make food, and note the input that is missing."
+      }
+    },
+    {
+      "id": "shared-node-170803cb20fd9db04404",
+      "teaching_block_id": "contrast-b2",
+      "kind": "callout",
+      "tone": "warning",
+      "title": "Two out of three is not enough",
+      "variant": "misconception",
+      "belief": "As long as light and one other input reach the leaf, it can keep making food — the third input only matters if the other two run short.",
+      "evidence": "Keep light energy and one other input reaching the leaf, and stop only the third — block the leaf openings so carbon dioxide cannot enter, or withhold water. If the inputs worked independently, food-making would continue.",
+      "conclusion": "Water, carbon dioxide and light energy are not alternatives: the leaf needs all three at the same time, and if any one is missing, no food is made.",
+      "aside": "A plant that loses an input does not stop at once. New food is no longer made, so it lives on what it made earlier and stored, fading over days rather than halting on the spot."
+    },
+    {
+      "id": "shared-node-3d3352f8a062a92f362f",
+      "teaching_block_id": "check-b1",
+      "kind": "paragraph",
+      "text": "A farmer grows tomato plants in a greenhouse. The plants get plenty of water and carbon dioxide, yet the greenhouse roof blocks almost all of the sunlight.\n\nThink back to the account you built of what a leaf must have before it can make food. Predict what will most likely happen to the plants' growth, then choose the explanation that fits best."
+    },
+    {
+      "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+      "kind": "interaction",
+      "interaction_type": "choice",
+      "teaching_block_id": "check-b1",
+      "prompt": "A farmer grows tomato plants in a greenhouse and supplies them with plenty of water and carbon dioxide, but the greenhouse roof blocks almost all sunlight. Predict what will most likely happen to the plants' growth, and explain why.",
+      "config": {
+        "options": [
+          {
+            "id": "a",
+            "text": "Growth will be poor because the plants cannot use water and carbon dioxide to make food without light energy from the sun."
+          },
+          {
+            "id": "b",
+            "text": "Growth will be normal because the plants get enough water and carbon dioxide, which are the two things they need to make food."
+          },
+          {
+            "id": "c",
+            "text": "Growth will be normal because the plants can absorb ready-made food from the soil as long as water is present."
+          },
+          {
+            "id": "d",
+            "text": "Growth will be poor only if the greenhouse also becomes too cool, since light mainly matters for warmth."
+          }
+        ],
+        "correct_option_id": "a"
+      },
+      "feedback": {
+        "correct": "Light energy is needed for the leaf to join water and carbon dioxide into food. With the roof blocking almost all sunlight, the plants cannot make food, so growth is poor even though water and carbon dioxide are supplied.",
+        "incorrect": "Water and carbon dioxide alone are not enough. The leaf also needs light energy to make food, so with almost no sunlight the plants cannot make food and growth will be poor. The soil does not supply ready-made food, and light is not just a source of warmth."
+      },
+      "assessment_mode": "graded",
+      "attempt_policy": {
+        "max_attempts": null,
+        "show_feedback_after_submit": true,
+        "allow_retry_after_correct": true
+      },
+      "completion": {
+        "type": "submitted"
+      },
+      "role": "check",
+      "display_prompt": "A farmer grows tomato plants in a greenhouse and supplies them with plenty of water and carbon dioxide, but the greenhouse roof blocks almost all sunlight. Predict what will most likely happen to the plants' growth, and explain why.",
+      "option_notes": {
+        "a": "Correct: light energy is needed for the leaf to join water and carbon dioxide into food, so with almost no sunlight no food is made and growth is poor.",
+        "b": "This treats water and carbon dioxide as sufficient, ignoring that the leaf also needs light energy to make food.",
+        "c": "This treats the soil as supplying ready-made food, but the soil supplies water and minerals, not food.",
+        "d": "This treats light as only a source of warmth, but the cupboard plant was not cold and still built no new food."
+      },
+      "contract": {
+        "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+        "kind": "choice",
+        "prompt": "A farmer grows tomato plants in a greenhouse and supplies them with plenty of water and carbon dioxide, but the greenhouse roof blocks almost all sunlight. Predict what will most likely happen to the plants' growth, and explain why.",
+        "config": {
+          "options": [
+            {
+              "id": "a",
+              "text": "Growth will be poor because the plants cannot use water and carbon dioxide to make food without light energy from the sun."
+            },
+            {
+              "id": "b",
+              "text": "Growth will be normal because the plants get enough water and carbon dioxide, which are the two things they need to make food."
+            },
+            {
+              "id": "c",
+              "text": "Growth will be normal because the plants can absorb ready-made food from the soil as long as water is present."
+            },
+            {
+              "id": "d",
+              "text": "Growth will be poor only if the greenhouse also becomes too cool, since light mainly matters for warmth."
+            }
+          ],
+          "correct_option_id": "a"
+        },
+        "feedback": {
+          "correct": "Light energy is needed for the leaf to join water and carbon dioxide into food. With the roof blocking almost all sunlight, the plants cannot make food, so growth is poor even though water and carbon dioxide are supplied.",
+          "incorrect": "Water and carbon dioxide alone are not enough. The leaf also needs light energy to make food, so with almost no sunlight the plants cannot make food and growth will be poor. The soil does not supply ready-made food, and light is not just a source of warmth."
+        },
+        "assessment_mode": "graded",
+        "attempt_policy": {
+          "max_attempts": null,
+          "show_feedback_after_submit": true,
+          "allow_retry_after_correct": true
+        },
+        "completion": {
+          "type": "submitted"
+        },
+        "ai_config_rule": "config-only",
+        "teaching_block_id": "check-b1",
+        "shared_task": {
+          "id": "task-check-b1",
+          "action": "select-one",
+          "mode": "assessment",
+          "purpose": "read whether the learner applies the full account, that light is needed for the leaf to make food, on an unfamiliar case",
+          "prompt": "A farmer grows tomato plants in a greenhouse and supplies them with plenty of water and carbon dioxide, but the greenhouse roof blocks almost all sunlight. Predict what will most likely happen to the plants' growth, and explain why.",
+          "difficulty": "independent",
+          "expected_evidence": "a choice that says the plants cannot make food without light, so growth stops and the plants decline even though water and carbon dioxide are supplied",
+          "response": {
+            "type": "single_choice",
+            "options": [
+              {
+                "id": "a",
+                "text": "Growth will be poor because the plants cannot use water and carbon dioxide to make food without light energy from the sun."
+              },
+              {
+                "id": "b",
+                "text": "Growth will be normal because the plants get enough water and carbon dioxide, which are the two things they need to make food."
+              },
+              {
+                "id": "c",
+                "text": "Growth will be normal because the plants can absorb ready-made food from the soil as long as water is present."
+              },
+              {
+                "id": "d",
+                "text": "Growth will be poor only if the greenhouse also becomes too cool, since light mainly matters for warmth."
+              }
+            ]
+          },
+          "evaluation": {
+            "type": "exact_match",
+            "correct_option_id": "a"
+          },
+          "sourcebook_refs": [],
+          "approved_source_ids": [
+            "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25.i2"
+          ],
+          "teaching_plan_id": "29721f01-7bad-4c18-9d38-290819f85711",
+          "teaching_plan_revision": 1,
+          "teaching_plan_hash": "cde52d8ec7bf4653d3543faf0841b1dee401d14ed411d441942cb7321a074a2f",
+          "role": "check",
+          "display_prompt": "A farmer grows tomato plants in a greenhouse and supplies them with plenty of water and carbon dioxide, but the greenhouse roof blocks almost all sunlight. Predict what will most likely happen to the plants' growth, and explain why.",
+          "option_notes": {
+            "a": "Correct: light energy is needed for the leaf to join water and carbon dioxide into food, so with almost no sunlight no food is made and growth is poor.",
+            "b": "This treats water and carbon dioxide as sufficient, ignoring that the leaf also needs light energy to make food.",
+            "c": "This treats the soil as supplying ready-made food, but the soil supplies water and minerals, not food.",
+            "d": "This treats light as only a source of warmth, but the cupboard plant was not cold and still built no new food."
+          }
+        },
+        "source_document": {
+          "id": "shared-document:96113be7-b9a6-45b4-8516-09b719c7bd6c:revision:1",
+          "revision": 1,
+          "content_hash": "e86357d7ce88633e0776cd1f852c7841aa9b0759e4aa0921c3bd4688ce52b6a1"
+        },
+        "role": "check",
+        "display_prompt": "A farmer grows tomato plants in a greenhouse and supplies them with plenty of water and carbon dioxide, but the greenhouse roof blocks almost all sunlight. Predict what will most likely happen to the plants' growth, and explain why.",
+        "option_notes": {
+          "a": "Correct: light energy is needed for the leaf to join water and carbon dioxide into food, so with almost no sunlight no food is made and growth is poor.",
+          "b": "This treats water and carbon dioxide as sufficient, ignoring that the leaf also needs light energy to make food.",
+          "c": "This treats the soil as supplying ready-made food, but the soil supplies water and minerals, not food.",
+          "d": "This treats light as only a source of warmth, but the cupboard plant was not cold and still built no new food."
+        }
+      }
+    }
+  ],
+  "sections": [
+    {
+      "id": "orient",
+      "title": "Two plants, one difference",
+      "position": 0,
+      "transition": null,
+      "node_ids": [
+        "shared-node-8db81c2aad956244b743",
+        "shared-node-d057556ea171afe6f65b",
+        "shared-task-anchor-7cb468d182fda7b2e968"
+      ]
+    },
+    {
+      "id": "explain",
+      "title": "What the leaf does with the light",
+      "position": 1,
+      "transition": null,
+      "node_ids": [
+        "shared-node-d9d97386f81d2e598927",
+        "shared-figure-node-cd0d85c7876b5990ede5",
+        "shared-node-6fb7d5bb3b22e04c9a2b"
+      ]
+    },
+    {
+      "id": "confront",
+      "title": "Two tempting explanations that fail the cupboard plant",
+      "position": 2,
+      "transition": null,
+      "node_ids": [
+        "shared-node-c6b5d1f1b4ccefa3da57",
+        "shared-node-2184881ac796004269cb"
+      ]
+    },
+    {
+      "id": "contrast",
+      "title": "Take one input away",
+      "position": 3,
+      "transition": null,
+      "node_ids": [
+        "shared-node-4f2ac0bbd1093a40395b",
+        "shared-task-anchor-be51521b23581d0c80da",
+        "shared-node-170803cb20fd9db04404"
+      ]
+    },
+    {
+      "id": "check",
+      "title": "Check: the greenhouse with no sun",
+      "position": 4,
+      "transition": null,
+      "node_ids": [
+        "shared-node-3d3352f8a062a92f362f",
+        "shared-task-anchor-6e75dcdbcc26c575163c"
+      ]
+    }
+  ],
+  "created_at": "2026-10-05T19:10:45.398914+00:00",
+  "updated_at": "2026-10-05T19:10:45.398914+00:00",
+  "teaching_plan_id": "29721f01-7bad-4c18-9d38-290819f85711",
+  "teaching_plan_revision": 1
+}

@@ -201,6 +201,7 @@ async def _load_post_section_inputs(
             accepted.compositions,
             accepted.sections,
             accepted.section_warnings,
+            accepted.composition_warnings,
         )
 
 
@@ -340,20 +341,35 @@ async def run_post_section_pipeline(
             owner_user_id=owner_user_id,
             stage="document_qa",
         )
-        (
-            run,
-            source,
-            tasks,
-            compositions_raw,
-            sections_raw,
-            section_warnings,
-        ) = await _load_post_section_inputs(
+        loaded_inputs = await _load_post_section_inputs(
             session_factory,
             run_id=run_id,
             owner_user_id=owner_user_id,
             path_lesson_id=path_lesson_id,
             preparation_generation_id=preparation_generation_id,
         )
+        # Keep compatibility with test and extension loaders written before
+        # composition advisory persistence was added.
+        if len(loaded_inputs) == 6:
+            (
+                run,
+                source,
+                tasks,
+                compositions_raw,
+                sections_raw,
+                section_warnings,
+            ) = loaded_inputs
+            composition_warnings = {}
+        else:
+            (
+                run,
+                source,
+                tasks,
+                compositions_raw,
+                sections_raw,
+                section_warnings,
+                composition_warnings,
+            ) = loaded_inputs
         compositions = {item.section_slot_id: item for item in compositions_raw}
         sections = {item.id: item for item in sections_raw}
         document_id = f"shared-document:{run.id}:revision:1"
@@ -427,7 +443,12 @@ async def run_post_section_pipeline(
                 document_revision=1,
                 created_at=created_at,
                 provenance=draft.document.provenance,
-                writer_warnings=section_warnings,
+                writer_warnings={
+                    section_id: tuple(section_warnings.get(section_id, ()))
+                    + tuple(composition_warnings.get(section_id, ()))
+                    for section_id in compositions
+                    if section_warnings.get(section_id) or composition_warnings.get(section_id)
+                },
                 required_media_by_section=required_media,
                 media_results=media_results,
                 semantic_validator=qa_semantic_validator,

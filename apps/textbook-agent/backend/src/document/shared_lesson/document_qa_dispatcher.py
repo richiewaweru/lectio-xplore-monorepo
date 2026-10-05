@@ -139,6 +139,20 @@ _WRITER_WARNING_ISSUE_CODES = {
     "task_answer_leaked": "answer_leakage",
     "unsupported_number": "unsupported_claim",
 }
+_WRITER_ADVISORY_CODES = frozenset(
+    {
+        "length_over_target",
+        "shape_missing",
+        "list_item_not_parallel",
+        "paragraph_run_exceeded",
+        "block_exceeds_node_limit",
+        "section_exceeds_node_limit",
+        "section_exceeds_callout_limit",
+        "heading_missing_subsection_cue",
+        "kind_missing_semantic_cue",
+        "callout_missing_cautionary_cue",
+    }
+)
 _WRITER_WARNING_NODE_PATH = re.compile(r"^nodes\[(\d+)\]")
 
 
@@ -182,6 +196,8 @@ def _synthetic_writer_issues(
             continue
         composition = compositions.get(section_id)
         for code, path in warnings:
+            if code in _WRITER_ADVISORY_CODES:
+                continue
             issue_code = _WRITER_WARNING_ISSUE_CODES.get(code)
             if issue_code is None:
                 raise SharedDocumentQADispatchError(
@@ -198,6 +214,34 @@ def _synthetic_writer_issues(
                         "repair attempt; a reviewer must confirm or correct it."
                     ),
                     required_correction="Review and correct the affected section content.",
+                )
+            )
+    return tuple(issues)
+
+
+def _advisory_writer_issues(
+    writer_warnings: Mapping[str, Sequence[tuple[str, str]]],
+    compositions: Mapping[str, SectionCompositionPlan],
+) -> tuple[ContinuityIssue, ...]:
+    """Project shape warnings into quality flags without gating READY."""
+    issues: list[ContinuityIssue] = []
+    for section_id, warnings in writer_warnings.items():
+        composition = compositions.get(section_id)
+        for code, path in warnings:
+            if code not in _WRITER_ADVISORY_CODES:
+                continue
+            node_id = _writer_warning_node_id(path, composition)
+            issues.append(
+                ContinuityIssue(
+                    issue_code=code,
+                    affected_section_id=section_id,
+                    affected_node_ids=(node_id,) if node_id else (),
+                    explanation=(
+                        f"Advisory shape check {code} at {path}; all written content was preserved."
+                    ),
+                    required_correction=(
+                        f"Review advisory shape check {code} at {path} if a future revision is needed."
+                    ),
                 )
             )
     return tuple(issues)
@@ -494,6 +538,7 @@ async def dispatch_shared_document_qa(
         await admission_session.commit()
 
     synthetic_issues = _synthetic_writer_issues(writer_warnings or {}, composition_by_section)
+    advisory_issues = _advisory_writer_issues(writer_warnings or {}, composition_by_section)
     if _dispatchable(admitted.record):
         async with session_factory() as execution_session:
             outcome: DocumentQAOutcome = await execute_document_qa_work_item(
@@ -507,6 +552,7 @@ async def dispatch_shared_document_qa(
                     deterministic_qa=assembly.qa,
                     semantic_validator=semantic_validator,
                     synthetic_issues=synthetic_issues,
+                    advisory_issues=advisory_issues,
                 )
             )
             await execution_session.commit()

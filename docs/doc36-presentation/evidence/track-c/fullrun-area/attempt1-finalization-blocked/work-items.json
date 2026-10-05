@@ -1,0 +1,3247 @@
+[
+  {
+    "id": "1c2e5681-e4a4-4a76-b26a-316be7b2b7c1",
+    "run_id": "7423ca1c-8f12-4c54-95ed-77ba6c16eebe",
+    "replaces_work_item_id": "None",
+    "item_key": "items:77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a",
+    "stage": "item_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "832d4d8c3769664917879d5650978f9b408de19cc5dcb21f243b28ae0b7735b7",
+    "definition_hash": "8c65c0150c6770565b63e94bcfefb1766c0eda79e6073ef68493cf4212409e02",
+    "composition_identity": "None",
+    "lease_owner": "preparation-40af1371-fa10-4f8d-bdf2-403e23bbac91",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 18:49:13.250441",
+    "checkpoint_json": null,
+    "output_json": {
+      "card_id": "77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a",
+      "pack_id": "77754f15-82b2-4934-b00a-22781415beb1",
+      "skipped": false,
+      "needs_review": false,
+      "unmapped_options": 0,
+      "generated_item_count": 5,
+      "missing_misconceptions": []
+    },
+    "output_hash": "94d1ff2640d82942b31d21d435a20cd17a51e8a99fda9a4bb388436d6414aa23",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:39:04.881457",
+    "started_at": "2026-10-05 18:44:07.014304",
+    "updated_at": "2026-10-05 18:44:07.014304",
+    "completed_at": "2026-10-05 18:44:07.014304"
+  },
+  {
+    "id": "65562a4e-7e0f-4a74-833a-c90f40181821",
+    "run_id": "7423ca1c-8f12-4c54-95ed-77ba6c16eebe",
+    "replaces_work_item_id": "None",
+    "item_key": "teaching_plan",
+    "stage": "planning_teaching",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "4312bc644f20f932541dc54f83e28ad933ca8e71d256c17097bef4f955c11ac0",
+    "definition_hash": "ecf98472bbfb43f5ba074c4ad6ff70347810f6d6cf03e0dc9b78c9d24205334b",
+    "composition_identity": "None",
+    "lease_owner": "preparation-40af1371-fa10-4f8d-bdf2-403e23bbac91",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 18:55:57.824926",
+    "checkpoint_json": null,
+    "output_json": {
+      "revision": 1,
+      "content_hash": "231ea9f65e57ab4a74c9c1c0d4e0e080077e5af4568a6be04ee31c89a09776b9",
+      "teaching_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07"
+    },
+    "output_hash": "6670724f505251c57bc5dabb093fdbb4981405f3551cd40867b7b512c2b1ddf0",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:44:13.530435",
+    "started_at": "2026-10-05 18:47:36.740147",
+    "updated_at": "2026-10-05 18:47:36.740147",
+    "completed_at": "2026-10-05 18:47:36.740147"
+  },
+  {
+    "id": "d3fc00a7-0cfd-4611-bd69-64627597660d",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "sourcebook",
+    "stage": "sourcebook_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "f8a6ef9914f62192fc91aac41a527d351e13066480ca54a84a607067cdded0a5",
+    "definition_hash": "9f8a2473665575044f56408fbf48d24a11e1c934e51d1ed4acdeb8d4ccb57202",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:34.715240",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_sourcebook",
+        "input_hash": "f8a6ef9914f62192fc91aac41a527d351e13066480ca54a84a607067cdded0a5",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "definition_hash": "9f8a2473665575044f56408fbf48d24a11e1c934e51d1ed4acdeb8d4ccb57202",
+        "source_revision": 1,
+        "source_artifact_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "source_artifact_type": "teaching_plan"
+      },
+      "payload_hash": "743e136ae1d9bc3afac1a75c934716148a6f70007f0d4a85e23906a918906aa6",
+      "compatibility": {
+        "input_hash": "f8a6ef9914f62192fc91aac41a527d351e13066480ca54a84a607067cdded0a5",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "9f8a2473665575044f56408fbf48d24a11e1c934e51d1ed4acdeb8d4ccb57202",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "entries": [],
+      "teaching_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+      "teaching_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+      "teaching_plan_revision": 1
+    },
+    "output_hash": "64956f9c4a235f94afaa416562afbb9d8bab74791fc3cdfc324fd1c1c12e613a",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:12.738489",
+    "started_at": "2026-10-05 18:56:34.715240",
+    "updated_at": "2026-10-05 18:56:34.715240",
+    "completed_at": "2026-10-05 18:56:34.715240"
+  },
+  {
+    "id": "411b7933-9b95-44be-befc-2a8269f53343",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "shared_tasks",
+    "stage": "shared_task_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "9cff707aa2d96fc536b739a84c24ad44ada15eef3b0985a687795208f639b304",
+    "definition_hash": "21ef551089510dbb3d2830456c7c3039f0e624b9bab52b911d9bea187455009b",
+    "composition_identity": "64956f9c4a235f94afaa416562afbb9d8bab74791fc3cdfc324fd1c1c12e613a",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:35.820191",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_tasks",
+        "input_hash": "9cff707aa2d96fc536b739a84c24ad44ada15eef3b0985a687795208f639b304",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "definition_hash": "21ef551089510dbb3d2830456c7c3039f0e624b9bab52b911d9bea187455009b",
+        "source_revision": 1,
+        "source_artifact_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "composition_identity": "64956f9c4a235f94afaa416562afbb9d8bab74791fc3cdfc324fd1c1c12e613a",
+        "source_artifact_type": "teaching_plan",
+        "sourcebook_output_hash": "64956f9c4a235f94afaa416562afbb9d8bab74791fc3cdfc324fd1c1c12e613a",
+        "approved_item_snapshot_hash": "a1ec3e3ea73b91354ba3d113c9687192b9c0bfabd7b2b2e3e515b9d335bba4e0"
+      },
+      "payload_hash": "70b3229b510db836499d92f9e98fa60d6eda749221966a4104d1c6908a6b942e",
+      "compatibility": {
+        "input_hash": "9cff707aa2d96fc536b739a84c24ad44ada15eef3b0985a687795208f639b304",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "21ef551089510dbb3d2830456c7c3039f0e624b9bab52b911d9bea187455009b",
+        "source_revision": 1,
+        "composition_identity": "64956f9c4a235f94afaa416562afbb9d8bab74791fc3cdfc324fd1c1c12e613a"
+      }
+    },
+    "output_json": [
+      {
+        "id": "task-recall-b1",
+        "mode": "formative",
+        "role": "practice",
+        "action": "select-one",
+        "prompt": "A rectangle is 6 m long and 4 m wide. What is its area?",
+        "purpose": "surface whether the rectangle rule and the square-unit convention are still available before the compound case is built on them",
+        "feedback": {
+          "b": "10 m is 6 + 4, which is a perimeter-like sum, not an area. Area is length \u00d7 width.",
+          "c": "The multiplication is right, but 24 m is a length. Area counts unit squares, so the label must be square metres.",
+          "d": "The multiplication is right, but a bare number does not say what was counted. Area needs the square-unit label, so 24 m\u00b2.",
+          "correct": "Correct. Length \u00d7 width = 6 \u00d7 4 = 24, and because area counts unit squares, the answer is written as 24 m\u00b2."
+        },
+        "response": {
+          "type": "single_choice",
+          "options": [
+            {
+              "id": "a",
+              "text": "24 m\u00b2"
+            },
+            {
+              "id": "b",
+              "text": "10 m"
+            },
+            {
+              "id": "c",
+              "text": "24 m"
+            },
+            {
+              "id": "d",
+              "text": "24"
+            }
+          ]
+        },
+        "difficulty": "guided",
+        "evaluation": {
+          "type": "exact_match",
+          "correct_option_id": "a"
+        },
+        "option_notes": {
+          "a": "Correct: 6 \u00d7 4 = 24 with the square-unit label.",
+          "b": "Adds the length and width instead of multiplying.",
+          "c": "Correct product but missing square units.",
+          "d": "Correct product but no unit at all."
+        },
+        "sourcebook_refs": [],
+        "teaching_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "expected_evidence": "the learner selects 24 m\u00b2 rather than 10 m, 24 m, or 24 without a unit",
+        "teaching_block_id": "recall-b1",
+        "teaching_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "approved_source_ids": [],
+        "teaching_plan_revision": 1
+      },
+      {
+        "id": "task-guided-b1",
+        "mode": "formative",
+        "role": "practice",
+        "action": "complete-missing-values",
+        "prompt": "A stage floor is made from two rectangles joined along an edge, with no shared region: a main rectangle 12 m by 5 m and an extension rectangle 2 m by 6 m. The split is shown. The two parts do not overlap and together they cover the whole stage floor. Work out the area of each part and then the area of the whole stage floor. Fill in the three missing values with square-unit labels.",
+        "purpose": "rehearse the summing method with the split still supplied, so the learner reads the dimensions, multiplies and adds while the decomposition is scaffolded",
+        "feedback": {
+          "correct": "Correct. Main rectangle: 12 \u00d7 5 = 60 m\u00b2. Extension: 2 \u00d7 6 = 12 m\u00b2. Whole stage floor: 60 + 12 = 72 m\u00b2.",
+          "incorrect": "Check each part: multiply its length by its width, and label the result in square metres. The main rectangle is 12 m \u00d7 5 m = 60 m\u00b2, the extension is 2 m \u00d7 6 m = 12 m\u00b2, and the whole stage floor is 60 m\u00b2 + 12 m\u00b2 = 72 m\u00b2."
+        },
+        "response": {
+          "type": "missing_values",
+          "values": [
+            "60 m\u00b2",
+            "12 m\u00b2",
+            "72 m\u00b2"
+          ]
+        },
+        "difficulty": "guided",
+        "evaluation": {
+          "type": "accepted_answers",
+          "accepted_answers": [
+            "60 m\u00b2",
+            "12 m\u00b2",
+            "72 m\u00b2"
+          ]
+        },
+        "display_prompt": "Area of the main rectangle: ___  Area of the extension rectangle: ___  Area of the whole stage floor: ___",
+        "sourcebook_refs": [],
+        "teaching_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "expected_evidence": "60 m\u00b2 and 12 m\u00b2 for the two parts and 72 m\u00b2 for the whole stage floor",
+        "teaching_block_id": "guided-b1",
+        "teaching_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "approved_source_ids": [],
+        "teaching_plan_revision": 1
+      },
+      {
+        "id": "task-check-b1",
+        "mode": "assessment",
+        "role": "check",
+        "action": "select-one",
+        "prompt": "A compound shape is formed by joining a 7 cm by 2 cm rectangle and a 3 cm by 4 cm rectangle along an edge with no overlap. Which method gives the area?",
+        "purpose": "measure whether the sum-of-parts method is available without the split being supplied",
+        "feedback": {
+          "b": "The overall length times overall width counts any region inside the enclosing rectangle that is not part of the shape, so it overcounts. Add the two rectangles' areas instead.",
+          "c": "The two rectangles meet along an edge with no overlap, so no region is shared. Overlapping parts would double count, but these parts do not overlap.",
+          "d": "Area counts unit squares, so the total must carry the square unit, for example 26 cm\u00b2.",
+          "correct": "Correct. The two rectangles share only an edge and together cover the shape, so the area is the sum of the parts: 7 \u00d7 2 = 14 and 3 \u00d7 4 = 12, giving 14 + 12 = 26 cm\u00b2."
+        },
+        "response": {
+          "type": "single_choice",
+          "options": [
+            {
+              "id": "a",
+              "text": "Sum the areas of the two edge-joined rectangles"
+            },
+            {
+              "id": "b",
+              "text": "Multiply the overall length by the overall width of the joined shape"
+            },
+            {
+              "id": "c",
+              "text": "Count any shared edge region twice when adding the two rectangles"
+            },
+            {
+              "id": "d",
+              "text": "Report the total as 26 square units without naming the unit"
+            }
+          ]
+        },
+        "difficulty": "independent",
+        "evaluation": {
+          "type": "choice_keys",
+          "correct_keys": [
+            "a"
+          ]
+        },
+        "option_notes": {
+          "a": "Correct method: sum the two rectangles' areas.",
+          "b": "Multiply-all-sides error: counts region inside the enclosing rectangle that is not part of the shape.",
+          "c": "Overlap-double-count error: assumes a shared region exists when it does not.",
+          "d": "Forgets square units: reports a bare number."
+        },
+        "sourcebook_refs": [],
+        "teaching_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "expected_evidence": "the learner selects the calculation that adds the two rectangles' areas",
+        "teaching_block_id": "check-b1",
+        "teaching_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "approved_source_ids": [
+          "77754f15-82b2-4934-b00a-22781415beb1:77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a.i3"
+        ],
+        "teaching_plan_revision": 1
+      }
+    ],
+    "output_hash": "7163add9ad70bce4c647aeafa3e34bdd2e03b03d87863c4b91f223d8cde50177",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:35.541161",
+    "started_at": "2026-10-05 18:56:35.820191",
+    "updated_at": "2026-10-05 18:56:35.820191",
+    "completed_at": "2026-10-05 18:56:35.820191"
+  },
+  {
+    "id": "fedc65b1-73df-4e74-b7b7-52583ac51dd6",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:check",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "c2ff7788ab538aebac1a03869c134f9b9b2f70b554ab360797cd909cebd8bdaa",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:48.812750",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-de29f59a1337f2019e9c",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "evidence",
+            "teaching_block_id": "check-b1"
+          },
+          {
+            "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+            "kind": "task_anchor",
+            "task_spec_id": "task-check-b1",
+            "semantic_role": null,
+            "teaching_block_id": "check-b1"
+          }
+        ],
+        "section_slot_id": "check"
+      },
+      "payload_hash": "32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958",
+      "compatibility": {
+        "input_hash": "c2ff7788ab538aebac1a03869c134f9b9b2f70b554ab360797cd909cebd8bdaa",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-de29f59a1337f2019e9c",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "evidence",
+          "teaching_block_id": "check-b1"
+        },
+        {
+          "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+          "kind": "task_anchor",
+          "task_spec_id": "task-check-b1",
+          "semantic_role": null,
+          "teaching_block_id": "check-b1"
+        }
+      ],
+      "section_slot_id": "check"
+    },
+    "output_hash": "32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:43.112603",
+    "started_at": "2026-10-05 18:56:48.812750",
+    "updated_at": "2026-10-05 18:56:50.028246",
+    "completed_at": "2026-10-05 18:56:50.028246"
+  },
+  {
+    "id": "e4552a45-98c6-4bc8-985d-0d3ea9054e4c",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:orient",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "5161b0e3219aa551550be8b8a31743ba5dee3ad71302a6339f16bbac591ce58e",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:43.139136",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-8db81c2aad956244b743",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "bridge",
+            "teaching_block_id": "orient-b1"
+          },
+          {
+            "id": "shared-figure-node-c636a419002a7fcd3257",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "orient-b1"
+          }
+        ],
+        "section_slot_id": "orient"
+      },
+      "payload_hash": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d",
+      "compatibility": {
+        "input_hash": "5161b0e3219aa551550be8b8a31743ba5dee3ad71302a6339f16bbac591ce58e",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-8db81c2aad956244b743",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "bridge",
+          "teaching_block_id": "orient-b1"
+        },
+        {
+          "id": "shared-figure-node-c636a419002a7fcd3257",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "orient-b1"
+        }
+      ],
+      "section_slot_id": "orient"
+    },
+    "output_hash": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:43.022760",
+    "started_at": "2026-10-05 18:56:43.139136",
+    "updated_at": "2026-10-05 18:56:44.013685",
+    "completed_at": "2026-10-05 18:56:44.013685"
+  },
+  {
+    "id": "66b7e523-2051-41e0-995d-2f30aa00bf52",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:recall",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "e73f95f112f50f18ebf1b17a7af48cc2914357f58cd6015e05096652b17ff505",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:44.151186",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-535426f3b1bdd1d05faa",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "explanation",
+            "teaching_block_id": "recall-b1"
+          },
+          {
+            "id": "shared-task-anchor-0a3ce646ad894a99d29e",
+            "kind": "task_anchor",
+            "task_spec_id": "task-recall-b1",
+            "semantic_role": null,
+            "teaching_block_id": "recall-b1"
+          },
+          {
+            "id": "shared-node-3d1f43d6f7a8924ee17b",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "explanation",
+            "teaching_block_id": "recall-b2"
+          }
+        ],
+        "section_slot_id": "recall"
+      },
+      "payload_hash": "d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6",
+      "compatibility": {
+        "input_hash": "e73f95f112f50f18ebf1b17a7af48cc2914357f58cd6015e05096652b17ff505",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-535426f3b1bdd1d05faa",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "explanation",
+          "teaching_block_id": "recall-b1"
+        },
+        {
+          "id": "shared-task-anchor-0a3ce646ad894a99d29e",
+          "kind": "task_anchor",
+          "task_spec_id": "task-recall-b1",
+          "semantic_role": null,
+          "teaching_block_id": "recall-b1"
+        },
+        {
+          "id": "shared-node-3d1f43d6f7a8924ee17b",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "explanation",
+          "teaching_block_id": "recall-b2"
+        }
+      ],
+      "section_slot_id": "recall"
+    },
+    "output_hash": "d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:43.043862",
+    "started_at": "2026-10-05 18:56:44.151186",
+    "updated_at": "2026-10-05 18:56:45.300997",
+    "completed_at": "2026-10-05 18:56:45.300997"
+  },
+  {
+    "id": "aa8b0ab4-a87d-4d30-8cb6-cf23168aa7ec",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:model",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "ec8c16376ea88a5de343761224cc9316f1b8176962c05df3879b2a56524e821e",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:45.485584",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-13309311b76feee40819",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "worked_example",
+            "teaching_block_id": "model-b1"
+          },
+          {
+            "id": "shared-figure-node-4cc4e4238af60b67a68e",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "model-b1"
+          },
+          {
+            "id": "shared-node-69a854eefac33031fcb8",
+            "kind": "equation",
+            "task_spec_id": null,
+            "semantic_role": "worked_example",
+            "teaching_block_id": "model-b2"
+          },
+          {
+            "id": "shared-figure-node-9a0066d1f6d753fc6a52",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "model-b2"
+          },
+          {
+            "id": "shared-node-4b0075f9e3b578f05616",
+            "kind": "callout",
+            "task_spec_id": null,
+            "semantic_role": "misconception",
+            "teaching_block_id": "model-b3"
+          },
+          {
+            "id": "shared-figure-node-9a40914d3a6a2e70804b",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "model-b3"
+          }
+        ],
+        "warnings": [
+          [
+            "kind_missing_semantic_cue",
+            "choices[1].kind"
+          ]
+        ],
+        "section_slot_id": "model"
+      },
+      "payload_hash": "97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8",
+      "compatibility": {
+        "input_hash": "ec8c16376ea88a5de343761224cc9316f1b8176962c05df3879b2a56524e821e",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-13309311b76feee40819",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "worked_example",
+          "teaching_block_id": "model-b1"
+        },
+        {
+          "id": "shared-figure-node-4cc4e4238af60b67a68e",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "model-b1"
+        },
+        {
+          "id": "shared-node-69a854eefac33031fcb8",
+          "kind": "equation",
+          "task_spec_id": null,
+          "semantic_role": "worked_example",
+          "teaching_block_id": "model-b2"
+        },
+        {
+          "id": "shared-figure-node-9a0066d1f6d753fc6a52",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "model-b2"
+        },
+        {
+          "id": "shared-node-4b0075f9e3b578f05616",
+          "kind": "callout",
+          "task_spec_id": null,
+          "semantic_role": "misconception",
+          "teaching_block_id": "model-b3"
+        },
+        {
+          "id": "shared-figure-node-9a40914d3a6a2e70804b",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "model-b3"
+        }
+      ],
+      "warnings": [
+        [
+          "kind_missing_semantic_cue",
+          "choices[1].kind"
+        ]
+      ],
+      "section_slot_id": "model"
+    },
+    "output_hash": "97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:43.069271",
+    "started_at": "2026-10-05 18:56:45.485584",
+    "updated_at": "2026-10-05 18:56:47.020319",
+    "completed_at": "2026-10-05 18:56:47.020319"
+  },
+  {
+    "id": "75b9832d-1212-4372-b8da-36de03e75023",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:guided",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "c95355be53a4e5e081b65693b011c08f458299cc2e2a1051397002de807f9466",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:47.179702",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-1232bbdb937783c0bb2d",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "worked_example",
+            "teaching_block_id": "guided-b1"
+          },
+          {
+            "id": "shared-figure-node-d7977957a2b47d068947",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "guided-b1"
+          },
+          {
+            "id": "shared-task-anchor-84ac7107e1dec931de20",
+            "kind": "task_anchor",
+            "task_spec_id": "task-guided-b1",
+            "semantic_role": null,
+            "teaching_block_id": "guided-b1"
+          },
+          {
+            "id": "shared-node-c20685274e41da91ead3",
+            "kind": "callout",
+            "task_spec_id": null,
+            "semantic_role": "misconception",
+            "teaching_block_id": "guided-b2"
+          },
+          {
+            "id": "shared-figure-node-12bb5adaaaa78ed0a4d2",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "guided-b2"
+          },
+          {
+            "id": "shared-node-98918b2efa72f643b511",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "misconception",
+            "teaching_block_id": "guided-b3"
+          }
+        ],
+        "section_slot_id": "guided"
+      },
+      "payload_hash": "778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0",
+      "compatibility": {
+        "input_hash": "c95355be53a4e5e081b65693b011c08f458299cc2e2a1051397002de807f9466",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-1232bbdb937783c0bb2d",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "worked_example",
+          "teaching_block_id": "guided-b1"
+        },
+        {
+          "id": "shared-figure-node-d7977957a2b47d068947",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "guided-b1"
+        },
+        {
+          "id": "shared-task-anchor-84ac7107e1dec931de20",
+          "kind": "task_anchor",
+          "task_spec_id": "task-guided-b1",
+          "semantic_role": null,
+          "teaching_block_id": "guided-b1"
+        },
+        {
+          "id": "shared-node-c20685274e41da91ead3",
+          "kind": "callout",
+          "task_spec_id": null,
+          "semantic_role": "misconception",
+          "teaching_block_id": "guided-b2"
+        },
+        {
+          "id": "shared-figure-node-12bb5adaaaa78ed0a4d2",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "guided-b2"
+        },
+        {
+          "id": "shared-node-98918b2efa72f643b511",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "misconception",
+          "teaching_block_id": "guided-b3"
+        }
+      ],
+      "section_slot_id": "guided"
+    },
+    "output_hash": "778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:43.090652",
+    "started_at": "2026-10-05 18:56:47.179702",
+    "updated_at": "2026-10-05 18:56:48.606044",
+    "completed_at": "2026-10-05 18:56:48.606044"
+  },
+  {
+    "id": "cfa9bb1b-ba09-40cf-870d-dac4491bfcea",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "write:recall",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "796670e0e4c9200467ad134728f888bcf29138fcc00bb269e0e1e8c1c31da42b",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:02.164895",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-535426f3b1bdd1d05faa",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "explanation",
+              "teaching_block_id": "recall-b1"
+            },
+            {
+              "id": "shared-task-anchor-0a3ce646ad894a99d29e",
+              "kind": "task_anchor",
+              "task_spec_id": "task-recall-b1",
+              "semantic_role": null,
+              "teaching_block_id": "recall-b1"
+            },
+            {
+              "id": "shared-node-3d1f43d6f7a8924ee17b",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "explanation",
+              "teaching_block_id": "recall-b2"
+            }
+          ],
+          "section_slot_id": "recall"
+        },
+        "composition_identity": "d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6"
+      },
+      "payload_hash": "2ac3272689f87d58d91d41d240631c51936ef6cb2d877e5406a6926e81cb2740",
+      "compatibility": {
+        "input_hash": "796670e0e4c9200467ad134728f888bcf29138fcc00bb269e0e1e8c1c31da42b",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-535426f3b1bdd1d05faa",
+          "kind": "paragraph",
+          "display": {
+            "text": "**The area of a rectangle is its length multiplied by its width, and the result counts unit squares, so it is reported in square units.**\n\nMultiplying two lengths gives a count of unit squares, not a length, so the label must be square units. A bare number, or a number labelled in metres, does not name an area."
+          },
+          "accessibility": {
+            "description": "Recalls that the area of a rectangle is length multiplied by width, and that the result counts unit squares, so it carries a square-unit label rather than a length or a bare number."
+          },
+          "teaching_block_id": "recall-b1"
+        },
+        {
+          "id": "shared-task-anchor-0a3ce646ad894a99d29e",
+          "kind": "task_anchor",
+          "role": null,
+          "task_spec_id": "task-recall-b1",
+          "teaching_block_id": "recall-b1"
+        },
+        {
+          "id": "shared-node-3d1f43d6f7a8924ee17b",
+          "kind": "paragraph",
+          "display": {
+            "text": "However a shape is split into rectangles, the parts must not overlap and together they must cover the shape exactly. Overlapping parts would count the shared region more than once, so the total would be too large. Gaps would leave part of the shape uncounted, so the total would be too small. Only such a split counts every region exactly once."
+          },
+          "accessibility": {
+            "description": "States the requirement a split must satisfy: the parts do not overlap and together cover the shape exactly, so every region is counted once, and explains that overlap or gaps would distort the total."
+          },
+          "teaching_block_id": "recall-b2"
+        }
+      ],
+      "title": "What we already know about rectangles",
+      "warnings": [
+        [
+          "length_over_target",
+          "nodes[1].text/61/60"
+        ],
+        [
+          "shape_missing",
+          "section/key_idea"
+        ]
+      ],
+      "section_slot_id": "recall"
+    },
+    "output_hash": "858c51efd60b240f4f59b014f1e1435b09eb5e0ac01cfe70c016cedd61068fa3",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:50.388961",
+    "started_at": "2026-10-05 18:57:02.164895",
+    "updated_at": "2026-10-05 18:57:28.506908",
+    "completed_at": "2026-10-05 18:57:28.506908"
+  },
+  {
+    "id": "c4b5d2ff-aaef-4bbc-8c06-253360fff3ee",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "write:orient",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "1fef5cf700960915daa443aa1d88623356858be2834bd93c93af48f9377eb937",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:02.156831",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-8db81c2aad956244b743",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "bridge",
+              "teaching_block_id": "orient-b1"
+            },
+            {
+              "id": "shared-figure-node-c636a419002a7fcd3257",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "orient-b1"
+            }
+          ],
+          "section_slot_id": "orient"
+        },
+        "composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+      },
+      "payload_hash": "c30b4bc645e32c74d62827b1e3f08743aa1c16bd51fdb1ff75f62c34c1104d00",
+      "compatibility": {
+        "input_hash": "1fef5cf700960915daa443aa1d88623356858be2834bd93c93af48f9377eb937",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-8db81c2aad956244b743",
+          "kind": "paragraph",
+          "display": {
+            "text": "**An L-shaped floor built from two rectangles has no single length and width that describe it.** In the plan, the top edge is 8 m, the top rectangle's depth is 3 m, the overall left edge is 7 m, and the lower rectangle's width is 5 m. The bottom-right corner of the outline is not part of the floor, so the 8 m and 7 m edges are not the sides of one rectangle. Notice the two rectangular parts that make the floor."
+          },
+          "accessibility": {
+            "description": "A paragraph introducing an L-shaped floor plan made from two rectangles, with labels for the top edge, top rectangle depth, overall left edge, and lower rectangle width."
+          },
+          "teaching_block_id": "orient-b1"
+        },
+        {
+          "id": "shared-figure-node-c636a419002a7fcd3257",
+          "kind": "figure",
+          "display": {
+            "caption": "An L-shaped floor plan made from two rectangles, with the top edge labelled 8 m, the depth of the top rectangle labelled 3 m, the overall left vertical edge labelled 7 m, and the lower rectangle's width labelled 5 m. The bottom-right corner of the enclosing outline that is not part of the floor is marked.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "orient-b1"
+        }
+      ],
+      "title": "A room that is not one rectangle",
+      "warnings": [
+        [
+          "length_over_target",
+          "nodes[0].text/83/60"
+        ]
+      ],
+      "section_slot_id": "orient"
+    },
+    "output_hash": "df0ad40da077e0ad9b5ef9088b3bfc17ecbe72e9f8698bbf706a7da179a96622",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:50.357335",
+    "started_at": "2026-10-05 18:57:02.156831",
+    "updated_at": "2026-10-05 18:57:12.203493",
+    "completed_at": "2026-10-05 18:57:12.203493"
+  },
+  {
+    "id": "27d121b3-591e-47a4-a1cf-7438068ae165",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "write:model",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "0b3a4375958e09e0eea54f52277efe06acdfcc6b41c0be14a4d081fa87595533",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:02.172970",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-13309311b76feee40819",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "worked_example",
+              "teaching_block_id": "model-b1"
+            },
+            {
+              "id": "shared-figure-node-4cc4e4238af60b67a68e",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "model-b1"
+            },
+            {
+              "id": "shared-node-69a854eefac33031fcb8",
+              "kind": "equation",
+              "task_spec_id": null,
+              "semantic_role": "worked_example",
+              "teaching_block_id": "model-b2"
+            },
+            {
+              "id": "shared-figure-node-9a0066d1f6d753fc6a52",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "model-b2"
+            },
+            {
+              "id": "shared-node-4b0075f9e3b578f05616",
+              "kind": "callout",
+              "task_spec_id": null,
+              "semantic_role": "misconception",
+              "teaching_block_id": "model-b3"
+            },
+            {
+              "id": "shared-figure-node-9a40914d3a6a2e70804b",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "model-b3"
+            }
+          ],
+          "warnings": [
+            [
+              "kind_missing_semantic_cue",
+              "choices[1].kind"
+            ]
+          ],
+          "section_slot_id": "model"
+        },
+        "composition_identity": "97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8"
+      },
+      "payload_hash": "d9183f1da436563e2bb499bee7f4fff305e62ce7dec66aa89be90bb330dc48d6",
+      "compatibility": {
+        "input_hash": "0b3a4375958e09e0eea54f52277efe06acdfcc6b41c0be14a4d081fa87595533",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-13309311b76feee40819",
+          "kind": "paragraph",
+          "display": {
+            "text": "**Splitting a shape into parts that do not overlap and adding their areas gives the whole area.**\n\nA single straight cut, drawn across the floor plan, separates it into two rectangles: a top strip and a lower rectangle. The top strip runs the full 8 m across and is 3 m deep. The lower rectangle is 5 m wide, and its depth is not labelled: it is whatever remains of the 7 m left edge below the top strip, so 7 m \u2212 3 m = 4 m.\n\nThe cut is valid because the two parts share only the cut line and together cover the whole floor, with nothing counted twice and no part left out."
+          },
+          "accessibility": {
+            "description": "Describes the single cut that splits the floor plan into a top strip and a lower rectangle, and shows how the unlabelled 4 m depth comes from the remaining part of the 7 m left edge."
+          },
+          "teaching_block_id": "model-b1"
+        },
+        {
+          "id": "shared-figure-node-4cc4e4238af60b67a68e",
+          "kind": "figure",
+          "display": {
+            "caption": "The L-shaped floor plan with a single cut that separates it into two rectangles: the top rectangle running 8 m across and 3 m deep, and the lower rectangle 5 m wide, with the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "model-b1"
+        },
+        {
+          "id": "shared-node-69a854eefac33031fcb8",
+          "kind": "equation",
+          "display": {
+            "label": "Area of the floor = area of the top rectangle + area of the lower rectangle",
+            "inputs": [
+              "8 m \u00d7 3 m",
+              "5 m \u00d7 4 m"
+            ],
+            "outputs": [
+              "24 m^2^ + 20 m^2^ = 44 m^2^"
+            ],
+            "condition": "the two parts share only the cut line and cover the whole floor"
+          },
+          "accessibility": {
+            "description": "Equation stating that the top rectangle's 8 m by 3 m gives 24 m^2^ and the lower rectangle's 5 m by 4 m gives 20 m^2^, and that adding the two part-areas gives the floor's area of 44 m^2^."
+          },
+          "teaching_block_id": "model-b2"
+        },
+        {
+          "id": "shared-figure-node-9a0066d1f6d753fc6a52",
+          "kind": "figure",
+          "display": {
+            "caption": "The floor plan split into the top rectangle and the lower rectangle, with the top rectangle carrying 24 m^2^ from 8 m \u00d7 3 m and the lower rectangle carrying 20 m^2^ from 5 m \u00d7 4 m, and the two part-areas added to give the whole floor, 44 m^2^.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "model-b2"
+        },
+        {
+          "id": "shared-node-4b0075f9e3b578f05616",
+          "kind": "callout",
+          "display": {
+            "tone": "warning",
+            "title": "Overall length times overall width",
+            "belief": "I multiply the overall length by the overall width, so the floor's area is 8 m \u00d7 7 m = 56 m^2^.",
+            "variant": "misconception",
+            "evidence": "Drawing the 8 m by 7 m rectangle around the floor gives 56 m^2^, but the floor is only 44 m^2^; the difference 56 m^2^ \u2212 44 m^2^ = 12 m^2^ is exactly the 3 m by 4 m bottom-right region, which the floor never occupies.",
+            "conclusion": "The floor is exactly the two rectangles, so its area is 24 m^2^ + 20 m^2^ = 44 m^2^; the enclosing rectangle counts a region that is not part of the floor."
+          },
+          "accessibility": {
+            "description": "Misconception callout: the belief that multiplying the overall 8 m by 7 m gives the floor's area, the enclosing-rectangle test that shows the extra 12 m^2^ lying outside the floor, and the correct understanding that the two part-areas are added instead."
+          },
+          "teaching_block_id": "model-b3"
+        },
+        {
+          "id": "shared-figure-node-9a40914d3a6a2e70804b",
+          "kind": "figure",
+          "display": {
+            "caption": "The L-shaped floor plan with the enclosing 8 m by 7 m rectangle drawn around the floor, its 3 m by 4 m bottom-right region shaded as not part of the floor, and 56 m^2^ compared with the correct 44 m^2^.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "model-b3"
+        }
+      ],
+      "title": "Splitting the floor plan and adding the parts",
+      "warnings": [
+        [
+          "length_over_target",
+          "nodes[0].text/116/60"
+        ],
+        [
+          "length_over_target",
+          "nodes[4].evidence/46/45"
+        ],
+        [
+          "length_over_target",
+          "nodes[4].conclusion/32/30"
+        ]
+      ],
+      "section_slot_id": "model"
+    },
+    "output_hash": "3fa5919fcd5229c3e2286ca29b890d7fb1cc59d76e2b1976021b5477f1ede1c8",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:50.415936",
+    "started_at": "2026-10-05 18:57:02.172970",
+    "updated_at": "2026-10-05 18:57:21.290135",
+    "completed_at": "2026-10-05 18:57:21.290135"
+  },
+  {
+    "id": "c816ad23-d5a0-464b-a19a-cad037b79417",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "write:guided",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "8bba61a9bc316e8a22a991fa1877674b433201ee4d4febc0b0af09f56dcbf179",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:02.180897",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-1232bbdb937783c0bb2d",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "worked_example",
+              "teaching_block_id": "guided-b1"
+            },
+            {
+              "id": "shared-figure-node-d7977957a2b47d068947",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "guided-b1"
+            },
+            {
+              "id": "shared-task-anchor-84ac7107e1dec931de20",
+              "kind": "task_anchor",
+              "task_spec_id": "task-guided-b1",
+              "semantic_role": null,
+              "teaching_block_id": "guided-b1"
+            },
+            {
+              "id": "shared-node-c20685274e41da91ead3",
+              "kind": "callout",
+              "task_spec_id": null,
+              "semantic_role": "misconception",
+              "teaching_block_id": "guided-b2"
+            },
+            {
+              "id": "shared-figure-node-12bb5adaaaa78ed0a4d2",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "guided-b2"
+            },
+            {
+              "id": "shared-node-98918b2efa72f643b511",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "misconception",
+              "teaching_block_id": "guided-b3"
+            }
+          ],
+          "section_slot_id": "guided"
+        },
+        "composition_identity": "778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0"
+      },
+      "payload_hash": "ae3a949e33b45b96fe0c0dff9fde8565bc87815ffca284527983a16c248f4d79",
+      "compatibility": {
+        "input_hash": "8bba61a9bc316e8a22a991fa1877674b433201ee4d4febc0b0af09f56dcbf179",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-1232bbdb937783c0bb2d",
+          "kind": "paragraph",
+          "display": {
+            "text": "**A compound shape's area is the sum of the areas of its non-overlapping parts.** The stage floor is a compound shape: a main rectangle 12 m by 5 m joined along an edge to an extension rectangle 2 m by 6 m.\n\nThe split is drawn for you, and the two parts share no region. Read each part's dimensions, multiply to find its area, then add the two areas. Before you finish, ask yourself two questions: do the two parts overlap, and does any part of the stage floor go uncovered?"
+          },
+          "accessibility": {
+            "description": "Introduces the stage floor as a compound shape made of a 12 m by 5 m main rectangle and a 2 m by 6 m extension rectangle, with the split supplied and two checking questions."
+          },
+          "teaching_block_id": "guided-b1"
+        },
+        {
+          "id": "shared-figure-node-d7977957a2b47d068947",
+          "kind": "figure",
+          "display": {
+            "caption": "The compound stage floor shown as two rectangles joined along an edge: the main rectangle labelled 12 m by 5 m and the extension rectangle labelled 2 m by 6 m, with the join between the two rectangles showing no shared region.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "guided-b1"
+        },
+        {
+          "id": "shared-task-anchor-84ac7107e1dec931de20",
+          "kind": "task_anchor",
+          "role": null,
+          "task_spec_id": "task-guided-b1",
+          "teaching_block_id": "guided-b1"
+        },
+        {
+          "id": "shared-node-c20685274e41da91ead3",
+          "kind": "callout",
+          "display": {
+            "tone": "warning",
+            "title": "Any split will do",
+            "belief": "I can split a shape any way I like and just add the part-areas together, because the parts are still pieces of the same shape.",
+            "variant": "misconception",
+            "evidence": "On the floor plan, a 5 m by 7 m column gives 35 m^2^ and an 8 m by 3 m strip gives 24 m^2^. They share the 5 m by 3 m top-left region, so 35 + 24 = 59 m^2^ counts that 15 m^2^ twice and overshoots the 44 m^2^ floor by 15 m^2^.",
+            "conclusion": "The parts of a split must not overlap: every region of the shape has to be counted exactly once, so an overlapping split gives a total that is too large."
+          },
+          "accessibility": {
+            "description": "Misconception callout: a split whose parts overlap cannot simply be added, because the shared 5 m by 3 m region gets counted twice and the total of 59 m^2^ overshoots the 44 m^2^ floor."
+          },
+          "teaching_block_id": "guided-b2"
+        },
+        {
+          "id": "shared-figure-node-12bb5adaaaa78ed0a4d2",
+          "kind": "figure",
+          "display": {
+            "caption": "The floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts; the 5 m by 3 m region where those two parts overlap is marked as the region counted twice, and the resulting 35 m^2^ + 24 m^2^ = 59 m^2^ compared with the correct 44 m^2^.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "guided-b2"
+        },
+        {
+          "id": "shared-node-98918b2efa72f643b511",
+          "kind": "paragraph",
+          "display": {
+            "text": "**Area is a count of unit squares, so every area answer carries square units.** The floor's area is written 44 m^2^, not a bare 44.\n\nA bare number does not say what was counted: 44 on its own could just as well be the length of a room's edge in metres. Writing m^2^ says the number counts square metres of surface, and the totals you reach on the stage floor need that same label."
+          },
+          "accessibility": {
+            "description": "Emphasises that area is a count of unit squares, so answers such as the floor's 44 m^2^ must carry square units; a bare number could be a length instead."
+          },
+          "teaching_block_id": "guided-b3"
+        }
+      ],
+      "title": "Your turn, with the split supplied",
+      "warnings": [
+        [
+          "length_over_target",
+          "nodes[0].text/91/60"
+        ],
+        [
+          "length_over_target",
+          "nodes[2].evidence/56/45"
+        ],
+        [
+          "length_over_target",
+          "nodes[4].text/74/60"
+        ],
+        [
+          "shape_missing",
+          "section/subheading"
+        ]
+      ],
+      "section_slot_id": "guided"
+    },
+    "output_hash": "0905dbe92d3bd030e3e3ac58dd9cb08219dd3cb10a2c8b3bf32b02ce2d718c33",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:50.442500",
+    "started_at": "2026-10-05 18:57:02.180897",
+    "updated_at": "2026-10-05 18:57:17.559029",
+    "completed_at": "2026-10-05 18:57:17.559029"
+  },
+  {
+    "id": "d33641c2-a1bd-4a77-a5ca-9f1fb05fcb9e",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "boundary:model->guided",
+    "stage": "continuity_validation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "9b26e7262dd4996d301c1d701cc5a1392e6bf9644aa5509cbbc1cbd45d5d5adc",
+    "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+    "composition_identity": "{\"next\":\"778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0\",\"previous\":\"97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8\"}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:boundary",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:20.208055",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_lesson_boundary",
+        "work": {
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "next_section_id": "guided",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "previous_section_id": "model",
+          "source_plan_revision": 1,
+          "next_section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+          "next_composition_identity": "778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0",
+          "previous_section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+          "previous_composition_identity": "97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8"
+        }
+      },
+      "payload_hash": "84fec93a08bd655a23dcafdc9422ef784e9e4c28bdce13b799646e1b084427bd",
+      "compatibility": {
+        "input_hash": "9b26e7262dd4996d301c1d701cc5a1392e6bf9644aa5509cbbc1cbd45d5d5adc",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+        "source_revision": 1,
+        "composition_identity": "{\"next\":\"778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0\",\"previous\":\"97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8\"}"
+      }
+    },
+    "output_json": {
+      "kind": "shared_lesson_boundary_result",
+      "work": {
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "next_section_id": "guided",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "previous_section_id": "model",
+        "source_plan_revision": 1,
+        "next_section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+        "next_composition_identity": "778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0",
+        "previous_section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+        "previous_composition_identity": "97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8"
+      },
+      "status": "pass",
+      "next_section": {
+        "id": "guided",
+        "nodes": [
+          {
+            "id": "shared-node-1232bbdb937783c0bb2d",
+            "kind": "paragraph",
+            "display": {
+              "text": "**A compound shape's area is the sum of the areas of its non-overlapping parts.** The stage floor is a compound shape: a main rectangle 12 m by 5 m joined along an edge to an extension rectangle 2 m by 6 m.\n\nThe split is drawn for you, and the two parts share no region. Read each part's dimensions, multiply to find its area, then add the two areas. Before you finish, ask yourself two questions: do the two parts overlap, and does any part of the stage floor go uncovered?"
+            },
+            "accessibility": {
+              "description": "Introduces the stage floor as a compound shape made of a 12 m by 5 m main rectangle and a 2 m by 6 m extension rectangle, with the split supplied and two checking questions."
+            },
+            "teaching_block_id": "guided-b1"
+          },
+          {
+            "id": "shared-figure-node-d7977957a2b47d068947",
+            "kind": "figure",
+            "display": {
+              "caption": "The compound stage floor shown as two rectangles joined along an edge: the main rectangle labelled 12 m by 5 m and the extension rectangle labelled 2 m by 6 m, with the join between the two rectangles showing no shared region.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "guided-b1"
+          },
+          {
+            "id": "shared-task-anchor-84ac7107e1dec931de20",
+            "kind": "task_anchor",
+            "role": null,
+            "task_spec_id": "task-guided-b1",
+            "teaching_block_id": "guided-b1"
+          },
+          {
+            "id": "shared-node-c20685274e41da91ead3",
+            "kind": "callout",
+            "display": {
+              "tone": "warning",
+              "title": "Any split will do",
+              "belief": "I can split a shape any way I like and just add the part-areas together, because the parts are still pieces of the same shape.",
+              "variant": "misconception",
+              "evidence": "On the floor plan, a 5 m by 7 m column gives 35 m^2^ and an 8 m by 3 m strip gives 24 m^2^. They share the 5 m by 3 m top-left region, so 35 + 24 = 59 m^2^ counts that 15 m^2^ twice and overshoots the 44 m^2^ floor by 15 m^2^.",
+              "conclusion": "The parts of a split must not overlap: every region of the shape has to be counted exactly once, so an overlapping split gives a total that is too large."
+            },
+            "accessibility": {
+              "description": "Misconception callout: a split whose parts overlap cannot simply be added, because the shared 5 m by 3 m region gets counted twice and the total of 59 m^2^ overshoots the 44 m^2^ floor."
+            },
+            "teaching_block_id": "guided-b2"
+          },
+          {
+            "id": "shared-figure-node-12bb5adaaaa78ed0a4d2",
+            "kind": "figure",
+            "display": {
+              "caption": "The floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts; the 5 m by 3 m region where those two parts overlap is marked as the region counted twice, and the resulting 35 m^2^ + 24 m^2^ = 59 m^2^ compared with the correct 44 m^2^.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "guided-b2"
+          },
+          {
+            "id": "shared-node-98918b2efa72f643b511",
+            "kind": "paragraph",
+            "display": {
+              "text": "**Area is a count of unit squares, so every area answer carries square units.** The floor's area is written 44 m^2^, not a bare 44.\n\nA bare number does not say what was counted: 44 on its own could just as well be the length of a room's edge in metres. Writing m^2^ says the number counts square metres of surface, and the totals you reach on the stage floor need that same label."
+            },
+            "accessibility": {
+              "description": "Emphasises that area is a count of unit squares, so answers such as the floor's 44 m^2^ must carry square units; a bare number could be a length instead."
+            },
+            "teaching_block_id": "guided-b3"
+          }
+        ],
+        "title": "Your turn, with the split supplied",
+        "position": 3,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      },
+      "semantic_calls": 1,
+      "previous_section": {
+        "id": "model",
+        "nodes": [
+          {
+            "id": "shared-node-13309311b76feee40819",
+            "kind": "paragraph",
+            "display": {
+              "text": "**Splitting a shape into parts that do not overlap and adding their areas gives the whole area.**\n\nA single straight cut, drawn across the floor plan, separates it into two rectangles: a top strip and a lower rectangle. The top strip runs the full 8 m across and is 3 m deep. The lower rectangle is 5 m wide, and its depth is not labelled: it is whatever remains of the 7 m left edge below the top strip, so 7 m \u2212 3 m = 4 m.\n\nThe cut is valid because the two parts share only the cut line and together cover the whole floor, with nothing counted twice and no part left out."
+            },
+            "accessibility": {
+              "description": "Describes the single cut that splits the floor plan into a top strip and a lower rectangle, and shows how the unlabelled 4 m depth comes from the remaining part of the 7 m left edge."
+            },
+            "teaching_block_id": "model-b1"
+          },
+          {
+            "id": "shared-figure-node-4cc4e4238af60b67a68e",
+            "kind": "figure",
+            "display": {
+              "caption": "The L-shaped floor plan with a single cut that separates it into two rectangles: the top rectangle running 8 m across and 3 m deep, and the lower rectangle 5 m wide, with the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "model-b1"
+          },
+          {
+            "id": "shared-node-69a854eefac33031fcb8",
+            "kind": "equation",
+            "display": {
+              "label": "Area of the floor = area of the top rectangle + area of the lower rectangle",
+              "inputs": [
+                "8 m \u00d7 3 m",
+                "5 m \u00d7 4 m"
+              ],
+              "outputs": [
+                "24 m^2^ + 20 m^2^ = 44 m^2^"
+              ],
+              "condition": "the two parts share only the cut line and cover the whole floor"
+            },
+            "accessibility": {
+              "description": "Equation stating that the top rectangle's 8 m by 3 m gives 24 m^2^ and the lower rectangle's 5 m by 4 m gives 20 m^2^, and that adding the two part-areas gives the floor's area of 44 m^2^."
+            },
+            "teaching_block_id": "model-b2"
+          },
+          {
+            "id": "shared-figure-node-9a0066d1f6d753fc6a52",
+            "kind": "figure",
+            "display": {
+              "caption": "The floor plan split into the top rectangle and the lower rectangle, with the top rectangle carrying 24 m^2^ from 8 m \u00d7 3 m and the lower rectangle carrying 20 m^2^ from 5 m \u00d7 4 m, and the two part-areas added to give the whole floor, 44 m^2^.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "model-b2"
+          },
+          {
+            "id": "shared-node-4b0075f9e3b578f05616",
+            "kind": "callout",
+            "display": {
+              "tone": "warning",
+              "title": "Overall length times overall width",
+              "belief": "I multiply the overall length by the overall width, so the floor's area is 8 m \u00d7 7 m = 56 m^2^.",
+              "variant": "misconception",
+              "evidence": "Drawing the 8 m by 7 m rectangle around the floor gives 56 m^2^, but the floor is only 44 m^2^; the difference 56 m^2^ \u2212 44 m^2^ = 12 m^2^ is exactly the 3 m by 4 m bottom-right region, which the floor never occupies.",
+              "conclusion": "The floor is exactly the two rectangles, so its area is 24 m^2^ + 20 m^2^ = 44 m^2^; the enclosing rectangle counts a region that is not part of the floor."
+            },
+            "accessibility": {
+              "description": "Misconception callout: the belief that multiplying the overall 8 m by 7 m gives the floor's area, the enclosing-rectangle test that shows the extra 12 m^2^ lying outside the floor, and the correct understanding that the two part-areas are added instead."
+            },
+            "teaching_block_id": "model-b3"
+          },
+          {
+            "id": "shared-figure-node-9a40914d3a6a2e70804b",
+            "kind": "figure",
+            "display": {
+              "caption": "The L-shaped floor plan with the enclosing 8 m by 7 m rectangle drawn around the floor, its 3 m by 4 m bottom-right region shaded as not part of the floor, and 56 m^2^ compared with the correct 44 m^2^.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "model-b3"
+          }
+        ],
+        "title": "Splitting the floor plan and adding the parts",
+        "position": 2,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      }
+    },
+    "output_hash": "a95b4ef5db3df9d9599c25ab26fd0ee8c94ddaa5972f53227d40b7dc9a47edb3",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:57:59.335421",
+    "started_at": "2026-10-05 18:58:20.208055",
+    "updated_at": "2026-10-05 18:58:21.582481",
+    "completed_at": "2026-10-05 18:58:21.582481"
+  },
+  {
+    "id": "a92a2ad3-23c6-435b-9763-0f845bef05bd",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "write:check",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "2",
+    "max_attempts": "3",
+    "input_hash": "bd704b05243fe8a45e0c403cc649235b019ef786ebbe002bbf9a37bd934e2ef1",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "3",
+    "lease_expires_at": "2026-10-05 19:03:48.697436",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-de29f59a1337f2019e9c",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "evidence",
+              "teaching_block_id": "check-b1"
+            },
+            {
+              "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+              "kind": "task_anchor",
+              "task_spec_id": "task-check-b1",
+              "semantic_role": null,
+              "teaching_block_id": "check-b1"
+            }
+          ],
+          "section_slot_id": "check"
+        },
+        "composition_identity": "32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958"
+      },
+      "payload_hash": "722f6f71180d83cd1f33829f324ce78b25c8f32e43509e85796b1d81d4c9fad5",
+      "compatibility": {
+        "input_hash": "bd704b05243fe8a45e0c403cc649235b019ef786ebbe002bbf9a37bd934e2ef1",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-de29f59a1337f2019e9c",
+          "kind": "paragraph",
+          "display": {
+            "text": "**This check asks you to choose a method, not to carry it out step by step.**\n\nThe shape you will meet is made from two rectangles joined along an edge with no overlap. No split is drawn for you and no prompt is supplied alongside it, so the options are all you have to read.\n\nDecide which calculation would give the area of the whole shape, and select it. Your choice alone shows whether the method is available without support, so nothing needs working out on paper here."
+          },
+          "accessibility": {
+            "description": "Short introduction to a diagnostic item. It explains that the learner will see a compound shape made of two rectangles joined along an edge with no overlap, that no split or prompt is given, and that the learner should select the calculation that gives the area of the whole shape. The method itself is not explained and no part-areas are provided."
+          },
+          "teaching_block_id": "check-b1"
+        },
+        {
+          "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+          "kind": "task_anchor",
+          "role": null,
+          "task_spec_id": "task-check-b1",
+          "teaching_block_id": "check-b1"
+        }
+      ],
+      "title": "Check: choosing the calculation",
+      "warnings": [
+        [
+          "length_over_target",
+          "nodes[0].text/88/60"
+        ]
+      ],
+      "section_slot_id": "check"
+    },
+    "output_hash": "00fc6a0277c208ba3f12454337dbea81dddf7e4a70a62569b5a90c2193fc3b25",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:56:50.473037",
+    "started_at": "2026-10-05 18:56:56.272820",
+    "updated_at": "2026-10-05 18:57:55.818527",
+    "completed_at": "2026-10-05 18:57:55.818527"
+  },
+  {
+    "id": "55e15e97-1277-4688-840b-adc029363e9a",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "boundary:guided->check",
+    "stage": "continuity_validation",
+    "status": "ready",
+    "attempt": "2",
+    "max_attempts": "3",
+    "input_hash": "2770d139b489eade1258037cfcdee623486394c2e6f0e4334f1730681dc8cb23",
+    "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+    "composition_identity": "{\"next\":\"32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958\",\"previous\":\"778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0\"}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:boundary",
+    "lease_token": "3",
+    "lease_expires_at": "2026-10-05 19:03:27.984967",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_lesson_boundary",
+        "work": {
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "next_section_id": "check",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "previous_section_id": "guided",
+          "source_plan_revision": 1,
+          "next_section_output_hash": "3d62e84d7604fbd64c444b699f9c1ee56503646227073b3692d4f135c57e20ca",
+          "next_composition_identity": "32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958",
+          "previous_section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+          "previous_composition_identity": "778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0"
+        }
+      },
+      "payload_hash": "be77031fa589c54e534b819e973eb5a5d4efd9d39ec4af0e47837112141a9652",
+      "compatibility": {
+        "input_hash": "2770d139b489eade1258037cfcdee623486394c2e6f0e4334f1730681dc8cb23",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+        "source_revision": 1,
+        "composition_identity": "{\"next\":\"32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958\",\"previous\":\"778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0\"}"
+      }
+    },
+    "output_json": {
+      "kind": "shared_lesson_boundary_result",
+      "work": {
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "next_section_id": "check",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "previous_section_id": "guided",
+        "source_plan_revision": 1,
+        "next_section_output_hash": "3d62e84d7604fbd64c444b699f9c1ee56503646227073b3692d4f135c57e20ca",
+        "next_composition_identity": "32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958",
+        "previous_section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+        "previous_composition_identity": "778f41048b0a5d50dbf3a7978ce9f7f8a5f268bf973591ee2a84dbade59b57e0"
+      },
+      "status": "pass",
+      "next_section": {
+        "id": "check",
+        "nodes": [
+          {
+            "id": "shared-node-de29f59a1337f2019e9c",
+            "kind": "paragraph",
+            "display": {
+              "text": "**This check asks you to choose a method, not to carry it out step by step.**\n\nThe shape you will meet is made from two rectangles joined along an edge with no overlap. No split is drawn for you and no prompt is supplied alongside it, so the options are all you have to read.\n\nDecide which calculation would give the area of the whole shape, and select it. Your choice alone shows whether the method is available without support, so nothing needs working out on paper here."
+            },
+            "accessibility": {
+              "description": "Short introduction to a diagnostic item. It explains that the learner will see a compound shape made of two rectangles joined along an edge with no overlap, that no split or prompt is given, and that the learner should select the calculation that gives the area of the whole shape. The method itself is not explained and no part-areas are provided."
+            },
+            "teaching_block_id": "check-b1"
+          },
+          {
+            "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+            "kind": "task_anchor",
+            "role": null,
+            "task_spec_id": "task-check-b1",
+            "teaching_block_id": "check-b1"
+          }
+        ],
+        "title": "Check: choosing the calculation",
+        "position": 4,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      },
+      "semantic_calls": 1,
+      "previous_section": {
+        "id": "guided",
+        "nodes": [
+          {
+            "id": "shared-node-1232bbdb937783c0bb2d",
+            "kind": "paragraph",
+            "display": {
+              "text": "**A compound shape's area is the sum of the areas of its non-overlapping parts.** The stage floor is a compound shape: a main rectangle 12 m by 5 m joined along an edge to an extension rectangle 2 m by 6 m.\n\nThe split is drawn for you, and the two parts share no region. Read each part's dimensions, multiply to find its area, then add the two areas. Before you finish, ask yourself two questions: do the two parts overlap, and does any part of the stage floor go uncovered?"
+            },
+            "accessibility": {
+              "description": "Introduces the stage floor as a compound shape made of a 12 m by 5 m main rectangle and a 2 m by 6 m extension rectangle, with the split supplied and two checking questions."
+            },
+            "teaching_block_id": "guided-b1"
+          },
+          {
+            "id": "shared-figure-node-d7977957a2b47d068947",
+            "kind": "figure",
+            "display": {
+              "caption": "The compound stage floor shown as two rectangles joined along an edge: the main rectangle labelled 12 m by 5 m and the extension rectangle labelled 2 m by 6 m, with the join between the two rectangles showing no shared region.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "guided-b1"
+          },
+          {
+            "id": "shared-task-anchor-84ac7107e1dec931de20",
+            "kind": "task_anchor",
+            "role": null,
+            "task_spec_id": "task-guided-b1",
+            "teaching_block_id": "guided-b1"
+          },
+          {
+            "id": "shared-node-c20685274e41da91ead3",
+            "kind": "callout",
+            "display": {
+              "tone": "warning",
+              "title": "Any split will do",
+              "belief": "I can split a shape any way I like and just add the part-areas together, because the parts are still pieces of the same shape.",
+              "variant": "misconception",
+              "evidence": "On the floor plan, a 5 m by 7 m column gives 35 m^2^ and an 8 m by 3 m strip gives 24 m^2^. They share the 5 m by 3 m top-left region, so 35 + 24 = 59 m^2^ counts that 15 m^2^ twice and overshoots the 44 m^2^ floor by 15 m^2^.",
+              "conclusion": "The parts of a split must not overlap: every region of the shape has to be counted exactly once, so an overlapping split gives a total that is too large."
+            },
+            "accessibility": {
+              "description": "Misconception callout: a split whose parts overlap cannot simply be added, because the shared 5 m by 3 m region gets counted twice and the total of 59 m^2^ overshoots the 44 m^2^ floor."
+            },
+            "teaching_block_id": "guided-b2"
+          },
+          {
+            "id": "shared-figure-node-12bb5adaaaa78ed0a4d2",
+            "kind": "figure",
+            "display": {
+              "caption": "The floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts; the 5 m by 3 m region where those two parts overlap is marked as the region counted twice, and the resulting 35 m^2^ + 24 m^2^ = 59 m^2^ compared with the correct 44 m^2^.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "guided-b2"
+          },
+          {
+            "id": "shared-node-98918b2efa72f643b511",
+            "kind": "paragraph",
+            "display": {
+              "text": "**Area is a count of unit squares, so every area answer carries square units.** The floor's area is written 44 m^2^, not a bare 44.\n\nA bare number does not say what was counted: 44 on its own could just as well be the length of a room's edge in metres. Writing m^2^ says the number counts square metres of surface, and the totals you reach on the stage floor need that same label."
+            },
+            "accessibility": {
+              "description": "Emphasises that area is a count of unit squares, so answers such as the floor's 44 m^2^ must carry square units; a bare number could be a length instead."
+            },
+            "teaching_block_id": "guided-b3"
+          }
+        ],
+        "title": "Your turn, with the split supplied",
+        "position": 3,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      }
+    },
+    "output_hash": "3264688a51a94abb6536017c6fbe04977dc8606a85a86200efedb3ef2c3dd5a9",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:57:59.368682",
+    "started_at": "2026-10-05 18:58:04.007131",
+    "updated_at": "2026-10-05 18:58:30.087117",
+    "completed_at": "2026-10-05 18:58:30.087117"
+  },
+  {
+    "id": "6b44991d-3595-4f28-8bb6-b7de12140df0",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "boundary:recall->model",
+    "stage": "continuity_validation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "e548746db5d9ee59cc2e8e319232b550b7a680321ebfe9f832f052c844e8386e",
+    "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+    "composition_identity": "{\"next\":\"97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8\",\"previous\":\"d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6\"}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:boundary",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:20.200842",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_lesson_boundary",
+        "work": {
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "next_section_id": "model",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "previous_section_id": "recall",
+          "source_plan_revision": 1,
+          "next_section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+          "next_composition_identity": "97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8",
+          "previous_section_output_hash": "2f3ff09c199292283067ad22060dd8e9caaada75f855e2e59c005463dba6e7b5",
+          "previous_composition_identity": "d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6"
+        }
+      },
+      "payload_hash": "54790d93fbc7bdbfbf991911c54d72f22f20d99fad2c0ee4b315c0758b08ffb3",
+      "compatibility": {
+        "input_hash": "e548746db5d9ee59cc2e8e319232b550b7a680321ebfe9f832f052c844e8386e",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+        "source_revision": 1,
+        "composition_identity": "{\"next\":\"97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8\",\"previous\":\"d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6\"}"
+      }
+    },
+    "output_json": {
+      "kind": "shared_lesson_boundary_result",
+      "work": {
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "next_section_id": "model",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "previous_section_id": "recall",
+        "source_plan_revision": 1,
+        "next_section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+        "next_composition_identity": "97472105a83326b66f2152d3a1630ec81ffc821780866b669df15b2ea4fe7fc8",
+        "previous_section_output_hash": "2f3ff09c199292283067ad22060dd8e9caaada75f855e2e59c005463dba6e7b5",
+        "previous_composition_identity": "d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6"
+      },
+      "status": "pass",
+      "next_section": {
+        "id": "model",
+        "nodes": [
+          {
+            "id": "shared-node-13309311b76feee40819",
+            "kind": "paragraph",
+            "display": {
+              "text": "**Splitting a shape into parts that do not overlap and adding their areas gives the whole area.**\n\nA single straight cut, drawn across the floor plan, separates it into two rectangles: a top strip and a lower rectangle. The top strip runs the full 8 m across and is 3 m deep. The lower rectangle is 5 m wide, and its depth is not labelled: it is whatever remains of the 7 m left edge below the top strip, so 7 m \u2212 3 m = 4 m.\n\nThe cut is valid because the two parts share only the cut line and together cover the whole floor, with nothing counted twice and no part left out."
+            },
+            "accessibility": {
+              "description": "Describes the single cut that splits the floor plan into a top strip and a lower rectangle, and shows how the unlabelled 4 m depth comes from the remaining part of the 7 m left edge."
+            },
+            "teaching_block_id": "model-b1"
+          },
+          {
+            "id": "shared-figure-node-4cc4e4238af60b67a68e",
+            "kind": "figure",
+            "display": {
+              "caption": "The L-shaped floor plan with a single cut that separates it into two rectangles: the top rectangle running 8 m across and 3 m deep, and the lower rectangle 5 m wide, with the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "model-b1"
+          },
+          {
+            "id": "shared-node-69a854eefac33031fcb8",
+            "kind": "equation",
+            "display": {
+              "label": "Area of the floor = area of the top rectangle + area of the lower rectangle",
+              "inputs": [
+                "8 m \u00d7 3 m",
+                "5 m \u00d7 4 m"
+              ],
+              "outputs": [
+                "24 m^2^ + 20 m^2^ = 44 m^2^"
+              ],
+              "condition": "the two parts share only the cut line and cover the whole floor"
+            },
+            "accessibility": {
+              "description": "Equation stating that the top rectangle's 8 m by 3 m gives 24 m^2^ and the lower rectangle's 5 m by 4 m gives 20 m^2^, and that adding the two part-areas gives the floor's area of 44 m^2^."
+            },
+            "teaching_block_id": "model-b2"
+          },
+          {
+            "id": "shared-figure-node-9a0066d1f6d753fc6a52",
+            "kind": "figure",
+            "display": {
+              "caption": "The floor plan split into the top rectangle and the lower rectangle, with the top rectangle carrying 24 m^2^ from 8 m \u00d7 3 m and the lower rectangle carrying 20 m^2^ from 5 m \u00d7 4 m, and the two part-areas added to give the whole floor, 44 m^2^.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "model-b2"
+          },
+          {
+            "id": "shared-node-4b0075f9e3b578f05616",
+            "kind": "callout",
+            "display": {
+              "tone": "warning",
+              "title": "Overall length times overall width",
+              "belief": "I multiply the overall length by the overall width, so the floor's area is 8 m \u00d7 7 m = 56 m^2^.",
+              "variant": "misconception",
+              "evidence": "Drawing the 8 m by 7 m rectangle around the floor gives 56 m^2^, but the floor is only 44 m^2^; the difference 56 m^2^ \u2212 44 m^2^ = 12 m^2^ is exactly the 3 m by 4 m bottom-right region, which the floor never occupies.",
+              "conclusion": "The floor is exactly the two rectangles, so its area is 24 m^2^ + 20 m^2^ = 44 m^2^; the enclosing rectangle counts a region that is not part of the floor."
+            },
+            "accessibility": {
+              "description": "Misconception callout: the belief that multiplying the overall 8 m by 7 m gives the floor's area, the enclosing-rectangle test that shows the extra 12 m^2^ lying outside the floor, and the correct understanding that the two part-areas are added instead."
+            },
+            "teaching_block_id": "model-b3"
+          },
+          {
+            "id": "shared-figure-node-9a40914d3a6a2e70804b",
+            "kind": "figure",
+            "display": {
+              "caption": "The L-shaped floor plan with the enclosing 8 m by 7 m rectangle drawn around the floor, its 3 m by 4 m bottom-right region shaded as not part of the floor, and 56 m^2^ compared with the correct 44 m^2^.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "model-b3"
+          }
+        ],
+        "title": "Splitting the floor plan and adding the parts",
+        "position": 2,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      },
+      "semantic_calls": 1,
+      "previous_section": {
+        "id": "recall",
+        "nodes": [
+          {
+            "id": "shared-node-535426f3b1bdd1d05faa",
+            "kind": "paragraph",
+            "display": {
+              "text": "**The area of a rectangle is its length multiplied by its width, and the result counts unit squares, so it is reported in square units.**\n\nMultiplying two lengths gives a count of unit squares, not a length, so the label must be square units. A bare number, or a number labelled in metres, does not name an area."
+            },
+            "accessibility": {
+              "description": "Recalls that the area of a rectangle is length multiplied by width, and that the result counts unit squares, so it carries a square-unit label rather than a length or a bare number."
+            },
+            "teaching_block_id": "recall-b1"
+          },
+          {
+            "id": "shared-task-anchor-0a3ce646ad894a99d29e",
+            "kind": "task_anchor",
+            "role": null,
+            "task_spec_id": "task-recall-b1",
+            "teaching_block_id": "recall-b1"
+          },
+          {
+            "id": "shared-node-3d1f43d6f7a8924ee17b",
+            "kind": "paragraph",
+            "display": {
+              "text": "However a shape is split into rectangles, the parts must not overlap and together they must cover the shape exactly. Overlapping parts would count the shared region more than once, so the total would be too large. Gaps would leave part of the shape uncounted, so the total would be too small. Only such a split counts every region exactly once."
+            },
+            "accessibility": {
+              "description": "States the requirement a split must satisfy: the parts do not overlap and together cover the shape exactly, so every region is counted once, and explains that overlap or gaps would distort the total."
+            },
+            "teaching_block_id": "recall-b2"
+          }
+        ],
+        "title": "What we already know about rectangles",
+        "position": 1,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      }
+    },
+    "output_hash": "ecc2a3c14593ad6bd90f0136579c782cfdfa146ba3b2b26ab8886c1c392b7b33",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:57:59.299770",
+    "started_at": "2026-10-05 18:58:20.200842",
+    "updated_at": "2026-10-05 18:58:21.755390",
+    "completed_at": "2026-10-05 18:58:21.755390"
+  },
+  {
+    "id": "fa23b6ab-8715-4642-8e46-28efda44a8c7",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "boundary:orient->recall",
+    "stage": "continuity_validation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "9210fe9f5c58246e7d6f63e20438fdc0e3890b7a8be07183b3a5735a75ae68c7",
+    "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+    "composition_identity": "{\"next\":\"d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6\",\"previous\":\"61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d\"}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:boundary",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:20.231032",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_lesson_boundary",
+        "work": {
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "next_section_id": "recall",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "previous_section_id": "orient",
+          "source_plan_revision": 1,
+          "next_section_output_hash": "2f3ff09c199292283067ad22060dd8e9caaada75f855e2e59c005463dba6e7b5",
+          "next_composition_identity": "d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6",
+          "previous_section_output_hash": "e7e987444333b818b483bc83ead565e3cc0b61cf4156879b42d6ce39dd950398",
+          "previous_composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+        }
+      },
+      "payload_hash": "275a972a7910206b2b63eafc319dfaff129321796ac3e348fff0ad7a456c9a58",
+      "compatibility": {
+        "input_hash": "9210fe9f5c58246e7d6f63e20438fdc0e3890b7a8be07183b3a5735a75ae68c7",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+        "source_revision": 1,
+        "composition_identity": "{\"next\":\"d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6\",\"previous\":\"61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d\"}"
+      }
+    },
+    "output_json": {
+      "kind": "shared_lesson_boundary_result",
+      "work": {
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "next_section_id": "recall",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "previous_section_id": "orient",
+        "source_plan_revision": 1,
+        "next_section_output_hash": "2f3ff09c199292283067ad22060dd8e9caaada75f855e2e59c005463dba6e7b5",
+        "next_composition_identity": "d66ad31d71186575f8b1b2fd8dc54ee78caa0523690c9a4486712ac6de640ed6",
+        "previous_section_output_hash": "e7e987444333b818b483bc83ead565e3cc0b61cf4156879b42d6ce39dd950398",
+        "previous_composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+      },
+      "status": "pass",
+      "next_section": {
+        "id": "recall",
+        "nodes": [
+          {
+            "id": "shared-node-535426f3b1bdd1d05faa",
+            "kind": "paragraph",
+            "display": {
+              "text": "**The area of a rectangle is its length multiplied by its width, and the result counts unit squares, so it is reported in square units.**\n\nMultiplying two lengths gives a count of unit squares, not a length, so the label must be square units. A bare number, or a number labelled in metres, does not name an area."
+            },
+            "accessibility": {
+              "description": "Recalls that the area of a rectangle is length multiplied by width, and that the result counts unit squares, so it carries a square-unit label rather than a length or a bare number."
+            },
+            "teaching_block_id": "recall-b1"
+          },
+          {
+            "id": "shared-task-anchor-0a3ce646ad894a99d29e",
+            "kind": "task_anchor",
+            "role": null,
+            "task_spec_id": "task-recall-b1",
+            "teaching_block_id": "recall-b1"
+          },
+          {
+            "id": "shared-node-3d1f43d6f7a8924ee17b",
+            "kind": "paragraph",
+            "display": {
+              "text": "However a shape is split into rectangles, the parts must not overlap and together they must cover the shape exactly. Overlapping parts would count the shared region more than once, so the total would be too large. Gaps would leave part of the shape uncounted, so the total would be too small. Only such a split counts every region exactly once."
+            },
+            "accessibility": {
+              "description": "States the requirement a split must satisfy: the parts do not overlap and together cover the shape exactly, so every region is counted once, and explains that overlap or gaps would distort the total."
+            },
+            "teaching_block_id": "recall-b2"
+          }
+        ],
+        "title": "What we already know about rectangles",
+        "position": 1,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      },
+      "semantic_calls": 1,
+      "previous_section": {
+        "id": "orient",
+        "nodes": [
+          {
+            "id": "shared-node-8db81c2aad956244b743",
+            "kind": "paragraph",
+            "display": {
+              "text": "**An L-shaped floor built from two rectangles has no single length and width that describe it.** In the plan, the top edge is 8 m, the top rectangle's depth is 3 m, the overall left edge is 7 m, and the lower rectangle's width is 5 m. The bottom-right corner of the outline is not part of the floor, so the 8 m and 7 m edges are not the sides of one rectangle. Notice the two rectangular parts that make the floor."
+            },
+            "accessibility": {
+              "description": "A paragraph introducing an L-shaped floor plan made from two rectangles, with labels for the top edge, top rectangle depth, overall left edge, and lower rectangle width."
+            },
+            "teaching_block_id": "orient-b1"
+          },
+          {
+            "id": "shared-figure-node-c636a419002a7fcd3257",
+            "kind": "figure",
+            "display": {
+              "caption": "An L-shaped floor plan made from two rectangles, with the top edge labelled 8 m, the depth of the top rectangle labelled 3 m, the overall left vertical edge labelled 7 m, and the lower rectangle's width labelled 5 m. The bottom-right corner of the enclosing outline that is not part of the floor is marked.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "orient-b1"
+          }
+        ],
+        "title": "A room that is not one rectangle",
+        "position": 0,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      }
+    },
+    "output_hash": "1990f7d3475ecd1db7b2ad3078e7e3878f62edd3172a73baac375fae5d163bb2",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:57:59.264712",
+    "started_at": "2026-10-05 18:58:20.231032",
+    "updated_at": "2026-10-05 18:58:21.988502",
+    "completed_at": "2026-10-05 18:58:21.988502"
+  },
+  {
+    "id": "fdd6e647-6f5a-47c5-b3f2-369fb52fe215",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "d1d64ead6178e2f7010edfda0a6254a923da4dd031042bb86736b2edf4722033",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-9a40914d3a6a2e70804b\",\"figure_semantic_hash\":\"616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0\",\"required\":true,\"section_id\":\"model\",\"section_output_hash\":\"799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The L-shaped floor plan with the enclosing 8 m by 7 m rectangle drawn around the floor, its 3 m by 4 m bottom-right region shaded as not part of the floor, and 56 m^2^ compared with the correct 44 m^2^.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"Overall length times overall width None\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-9a40914d3a6a2e70804b\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-616690c7c543a3cfcdf8f921\",\"labels_required\":[\"8 m\",\"7 m\",\"3 m\",\"4 m\",\"56 m\u00b2\",\"44 m\u00b2\"],\"mode\":\"diagram\",\"must_not_show\":[\"the overall-sides product presented as the correct method\",\"any overlapping split of the floor\"],\"must_show\":[\"the L-shaped floor plan\",\"the enclosing 8 m by 7 m rectangle drawn around the floor\",\"the 3 m by 4 m bottom-right region of that rectangle shaded as not part of the floor\",\"56 m\u00b2 compared with the correct 44 m\u00b2\"],\"print_requirements\":[],\"purpose\":\"Show that the overall 8 m by 7 m rectangle includes a 3 m by 4 m region that is not part of the floor, so its product is larger than the floor's area.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:45.248930",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [
+            "label_missing:56 m\u00b2",
+            "label_missing:44 m\u00b2"
+          ],
+          "section_id": "model",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-616690c7c543a3cfcdf8f921",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Show that the overall 8 m by 7 m rectangle includes a 3 m by 4 m region that is not part of the floor, so its product is larger than the floor's area.",
+              "must_show": [
+                "the L-shaped floor plan",
+                "the enclosing 8 m by 7 m rectangle drawn around the floor",
+                "the 3 m by 4 m bottom-right region of that rectangle shaded as not part of the floor",
+                "56 m\u00b2 compared with the correct 44 m\u00b2"
+              ],
+              "attaches_to": "shared-figure-node-9a40914d3a6a2e70804b",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "the overall-sides product presented as the correct method",
+                "any overlapping split of the floor"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "8 m",
+                "7 m",
+                "3 m",
+                "4 m",
+                "56 m\u00b2",
+                "44 m\u00b2"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "The L-shaped floor plan with the enclosing 8 m by 7 m rectangle drawn around the floor, its 3 m by 4 m bottom-right region shaded as not part of the floor, and 56 m^2^ compared with the correct 44 m^2^.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-1",
+                "text": "Overall length times overall width None",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-9a40914d3a6a2e70804b",
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+          "figure_semantic_hash": "616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+        "figure_semantic_hash": "616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "d1f019c1c2903665798fadf35bd29d3d8d857a3d3d1292f98e10745699d51e5a",
+      "compatibility": {
+        "input_hash": "d1d64ead6178e2f7010edfda0a6254a923da4dd031042bb86736b2edf4722033",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-9a40914d3a6a2e70804b\",\"figure_semantic_hash\":\"616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0\",\"required\":true,\"section_id\":\"model\",\"section_output_hash\":\"799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The L-shaped floor plan with the enclosing 8 m by 7 m rectangle drawn around the floor, its 3 m by 4 m bottom-right region shaded as not part of the floor, and 56 m^2^ compared with the correct 44 m^2^.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"Overall length times overall width None\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-9a40914d3a6a2e70804b\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-616690c7c543a3cfcdf8f921\",\"labels_required\":[\"8 m\",\"7 m\",\"3 m\",\"4 m\",\"56 m\u00b2\",\"44 m\u00b2\"],\"mode\":\"diagram\",\"must_not_show\":[\"the overall-sides product presented as the correct method\",\"any overlapping split of the floor\"],\"must_show\":[\"the L-shaped floor plan\",\"the enclosing 8 m by 7 m rectangle drawn around the floor\",\"the 3 m by 4 m bottom-right region of that rectangle shaded as not part of the floor\",\"56 m\u00b2 compared with the correct 44 m\u00b2\"],\"print_requirements\":[],\"purpose\":\"Show that the overall 8 m by 7 m rectangle includes a 3 m by 4 m region that is not part of the floor, so its product is larger than the floor's area.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-616690c7c543a3cfcdf8f921",
+      "section_id": "model",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "The L-shaped floor plan with the enclosing 8 m by 7 m rectangle drawn around the floor, its 3 m by 4 m bottom-right region shaded as not part of the floor, and 56 m^2^ compared with the correct 44 m^2^.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-1",
+          "text": "Overall length times overall width None",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0",
+      "figure_node_id": "shared-figure-node-9a40914d3a6a2e70804b",
+      "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+      "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+      "section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+      "figure_semantic_hash": "616690c7c543a3cfcdf8f9215c196d64819413b7efc638a7fc796c020afca8e0",
+      "source_plan_revision": 1
+    },
+    "output_hash": "9807c0c0356cfaf483089dd25156fa59bdad0e5151085bb8916df647f55fb5da",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:30.845117",
+    "started_at": "2026-10-05 18:58:45.248930",
+    "updated_at": "2026-10-05 18:58:47.238655",
+    "completed_at": "2026-10-05 18:58:47.238655"
+  },
+  {
+    "id": "96880c47-14a6-4fd7-b103-5f50c9b9bf7e",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "84afdf1b592e81538cdd561d7b35a5f180a949b67dc045a195a0e2a4979c818b",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-c636a419002a7fcd3257\",\"figure_semantic_hash\":\"57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e\",\"required\":true,\"section_id\":\"orient\",\"section_output_hash\":\"e7e987444333b818b483bc83ead565e3cc0b61cf4156879b42d6ce39dd950398\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"An L-shaped floor plan made from two rectangles, with the top edge labelled 8 m, the depth of the top rectangle labelled 3 m, the overall left vertical edge labelled 7 m, and the lower rectangle's width labelled 5 m. The bottom-right corner of the enclosing outline that is not part of the floor is marked.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"**An L-shaped floor built from two rectangles has no single length and width that describe it.** In the plan, the top edge is 8 m, the top rectangle's depth is 3 m, the overall left edge is 7 m, and the lower rectangle's width is 5 m.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"The bottom-right corner of the outline is not part of the floor, so the 8 m and 7 m edges are not the sides of one rectangle.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-c636a419002a7fcd3257\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-57b14973a34ba1cf6f511f92\",\"labels_required\":[\"8 m\",\"3 m\",\"7 m\",\"5 m\"],\"mode\":\"diagram\",\"must_not_show\":[\"any area value or product\",\"the lower rectangle's depth labelled as 4 m, which is to be derived later\",\"the enclosing 8 m by 7 m rectangle drawn as if the floor filled it\"],\"must_show\":[\"an L-shaped floor plan made from two rectangles\",\"the top edge labelled 8 m\",\"the depth of the top rectangle labelled 3 m\",\"the overall left vertical edge labelled 7 m\",\"the lower rectangle's width labelled 5 m\",\"the bottom-right corner of the enclosing outline that is not part of the floor\"],\"print_requirements\":[],\"purpose\":\"Let the learner see that the L-shaped floor is two rectangles whose labeled measurements can be read off, and that the overall width and overall height are not the sides of one rectangle.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:45.225049",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [],
+          "section_id": "orient",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-57b14973a34ba1cf6f511f92",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Let the learner see that the L-shaped floor is two rectangles whose labeled measurements can be read off, and that the overall width and overall height are not the sides of one rectangle.",
+              "must_show": [
+                "an L-shaped floor plan made from two rectangles",
+                "the top edge labelled 8 m",
+                "the depth of the top rectangle labelled 3 m",
+                "the overall left vertical edge labelled 7 m",
+                "the lower rectangle's width labelled 5 m",
+                "the bottom-right corner of the enclosing outline that is not part of the floor"
+              ],
+              "attaches_to": "shared-figure-node-c636a419002a7fcd3257",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "any area value or product",
+                "the lower rectangle's depth labelled as 4 m, which is to be derived later",
+                "the enclosing 8 m by 7 m rectangle drawn as if the floor filled it"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "8 m",
+                "3 m",
+                "7 m",
+                "5 m"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "An L-shaped floor plan made from two rectangles, with the top edge labelled 8 m, the depth of the top rectangle labelled 3 m, the overall left vertical edge labelled 7 m, and the lower rectangle's width labelled 5 m. The bottom-right corner of the enclosing outline that is not part of the floor is marked.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-1",
+                "text": "**An L-shaped floor built from two rectangles has no single length and width that describe it.** In the plan, the top edge is 8 m, the top rectangle's depth is 3 m, the overall left edge is 7 m, and the lower rectangle's width is 5 m.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-2",
+                "text": "The bottom-right corner of the outline is not part of the floor, so the 8 m and 7 m edges are not the sides of one rectangle.",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-c636a419002a7fcd3257",
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "section_output_hash": "e7e987444333b818b483bc83ead565e3cc0b61cf4156879b42d6ce39dd950398",
+          "figure_semantic_hash": "57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "section_output_hash": "e7e987444333b818b483bc83ead565e3cc0b61cf4156879b42d6ce39dd950398",
+        "figure_semantic_hash": "57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "8ce30a24e3948cfd2a9cb179613b17c3b60399af501c77164dd9e536157e0df4",
+      "compatibility": {
+        "input_hash": "84afdf1b592e81538cdd561d7b35a5f180a949b67dc045a195a0e2a4979c818b",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-c636a419002a7fcd3257\",\"figure_semantic_hash\":\"57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e\",\"required\":true,\"section_id\":\"orient\",\"section_output_hash\":\"e7e987444333b818b483bc83ead565e3cc0b61cf4156879b42d6ce39dd950398\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"An L-shaped floor plan made from two rectangles, with the top edge labelled 8 m, the depth of the top rectangle labelled 3 m, the overall left vertical edge labelled 7 m, and the lower rectangle's width labelled 5 m. The bottom-right corner of the enclosing outline that is not part of the floor is marked.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"**An L-shaped floor built from two rectangles has no single length and width that describe it.** In the plan, the top edge is 8 m, the top rectangle's depth is 3 m, the overall left edge is 7 m, and the lower rectangle's width is 5 m.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"The bottom-right corner of the outline is not part of the floor, so the 8 m and 7 m edges are not the sides of one rectangle.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-c636a419002a7fcd3257\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-57b14973a34ba1cf6f511f92\",\"labels_required\":[\"8 m\",\"3 m\",\"7 m\",\"5 m\"],\"mode\":\"diagram\",\"must_not_show\":[\"any area value or product\",\"the lower rectangle's depth labelled as 4 m, which is to be derived later\",\"the enclosing 8 m by 7 m rectangle drawn as if the floor filled it\"],\"must_show\":[\"an L-shaped floor plan made from two rectangles\",\"the top edge labelled 8 m\",\"the depth of the top rectangle labelled 3 m\",\"the overall left vertical edge labelled 7 m\",\"the lower rectangle's width labelled 5 m\",\"the bottom-right corner of the enclosing outline that is not part of the floor\"],\"print_requirements\":[],\"purpose\":\"Let the learner see that the L-shaped floor is two rectangles whose labeled measurements can be read off, and that the overall width and overall height are not the sides of one rectangle.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-57b14973a34ba1cf6f511f92",
+      "section_id": "orient",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "An L-shaped floor plan made from two rectangles, with the top edge labelled 8 m, the depth of the top rectangle labelled 3 m, the overall left vertical edge labelled 7 m, and the lower rectangle's width labelled 5 m. The bottom-right corner of the enclosing outline that is not part of the floor is marked.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-1",
+          "text": "**An L-shaped floor built from two rectangles has no single length and width that describe it.** In the plan, the top edge is 8 m, the top rectangle's depth is 3 m, the overall left edge is 7 m, and the lower rectangle's width is 5 m.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-2",
+          "text": "The bottom-right corner of the outline is not part of the floor, so the 8 m and 7 m edges are not the sides of one rectangle.",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e",
+      "figure_node_id": "shared-figure-node-c636a419002a7fcd3257",
+      "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+      "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+      "section_output_hash": "e7e987444333b818b483bc83ead565e3cc0b61cf4156879b42d6ce39dd950398",
+      "figure_semantic_hash": "57b14973a34ba1cf6f511f92876af13257324522a48399d2d4ee98275399bd3e",
+      "source_plan_revision": 1
+    },
+    "output_hash": "5acb47e657f6282ad855c4d144ab72ad0d8eb15a1b72e3a4ef73818b9f4a1974",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:30.666167",
+    "started_at": "2026-10-05 18:58:45.225049",
+    "updated_at": "2026-10-05 18:58:46.488482",
+    "completed_at": "2026-10-05 18:58:46.488482"
+  },
+  {
+    "id": "8d689fa5-a2fd-4074-9c76-f0831cf526e6",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "20b2a61bc39cb6cf29322b70012ae5c936f721ca44768542b73d7ee18782b8b6",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-9a0066d1f6d753fc6a52\",\"figure_semantic_hash\":\"59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad\",\"required\":true,\"section_id\":\"model\",\"section_output_hash\":\"799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The floor plan split into the top rectangle and the lower rectangle, with the top rectangle carrying 24 m^2^ from 8 m \u00d7 3 m and the lower rectangle carrying 20 m^2^ from 5 m \u00d7 4 m, and the two part-areas added to give the whole floor, 44 m^2^.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-9a0066d1f6d753fc6a52\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-59d49f1bde21c7de2fb6f2d8\",\"labels_required\":[\"8 m\",\"3 m\",\"5 m\",\"4 m\",\"24 m\u00b2\",\"20 m\u00b2\",\"44 m\u00b2\"],\"mode\":\"diagram\",\"must_not_show\":[\"8 m \u00d7 7 m or 56 m\u00b2\",\"any statement that multiplying the overall sides gives the area\"],\"must_show\":[\"the floor plan split into the top rectangle and the lower rectangle\",\"the top rectangle carrying 24 m\u00b2 from 8 m \u00d7 3 m\",\"the lower rectangle carrying 20 m\u00b2 from 5 m \u00d7 4 m\",\"the two part-areas added to give the whole floor, 44 m\u00b2\"],\"print_requirements\":[],\"purpose\":\"Let the learner see each part's area attached to that part before the two areas are added into the floor's area.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:45.239617",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [
+            "label_missing:24 m\u00b2",
+            "label_missing:20 m\u00b2",
+            "label_missing:44 m\u00b2"
+          ],
+          "section_id": "model",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-59d49f1bde21c7de2fb6f2d8",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Let the learner see each part's area attached to that part before the two areas are added into the floor's area.",
+              "must_show": [
+                "the floor plan split into the top rectangle and the lower rectangle",
+                "the top rectangle carrying 24 m\u00b2 from 8 m \u00d7 3 m",
+                "the lower rectangle carrying 20 m\u00b2 from 5 m \u00d7 4 m",
+                "the two part-areas added to give the whole floor, 44 m\u00b2"
+              ],
+              "attaches_to": "shared-figure-node-9a0066d1f6d753fc6a52",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "8 m \u00d7 7 m or 56 m\u00b2",
+                "any statement that multiplying the overall sides gives the area"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "8 m",
+                "3 m",
+                "5 m",
+                "4 m",
+                "24 m\u00b2",
+                "20 m\u00b2",
+                "44 m\u00b2"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "The floor plan split into the top rectangle and the lower rectangle, with the top rectangle carrying 24 m^2^ from 8 m \u00d7 3 m and the lower rectangle carrying 20 m^2^ from 5 m \u00d7 4 m, and the two part-areas added to give the whole floor, 44 m^2^.",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-9a0066d1f6d753fc6a52",
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+          "figure_semantic_hash": "59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+        "figure_semantic_hash": "59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "a0d25c59debd0cec2720fee1500286085afdcf0b61f9a1f73fa0b3bd8d9f36fc",
+      "compatibility": {
+        "input_hash": "20b2a61bc39cb6cf29322b70012ae5c936f721ca44768542b73d7ee18782b8b6",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-9a0066d1f6d753fc6a52\",\"figure_semantic_hash\":\"59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad\",\"required\":true,\"section_id\":\"model\",\"section_output_hash\":\"799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The floor plan split into the top rectangle and the lower rectangle, with the top rectangle carrying 24 m^2^ from 8 m \u00d7 3 m and the lower rectangle carrying 20 m^2^ from 5 m \u00d7 4 m, and the two part-areas added to give the whole floor, 44 m^2^.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-9a0066d1f6d753fc6a52\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-59d49f1bde21c7de2fb6f2d8\",\"labels_required\":[\"8 m\",\"3 m\",\"5 m\",\"4 m\",\"24 m\u00b2\",\"20 m\u00b2\",\"44 m\u00b2\"],\"mode\":\"diagram\",\"must_not_show\":[\"8 m \u00d7 7 m or 56 m\u00b2\",\"any statement that multiplying the overall sides gives the area\"],\"must_show\":[\"the floor plan split into the top rectangle and the lower rectangle\",\"the top rectangle carrying 24 m\u00b2 from 8 m \u00d7 3 m\",\"the lower rectangle carrying 20 m\u00b2 from 5 m \u00d7 4 m\",\"the two part-areas added to give the whole floor, 44 m\u00b2\"],\"print_requirements\":[],\"purpose\":\"Let the learner see each part's area attached to that part before the two areas are added into the floor's area.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-59d49f1bde21c7de2fb6f2d8",
+      "section_id": "model",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "The floor plan split into the top rectangle and the lower rectangle, with the top rectangle carrying 24 m^2^ from 8 m \u00d7 3 m and the lower rectangle carrying 20 m^2^ from 5 m \u00d7 4 m, and the two part-areas added to give the whole floor, 44 m^2^.",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad",
+      "figure_node_id": "shared-figure-node-9a0066d1f6d753fc6a52",
+      "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+      "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+      "section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+      "figure_semantic_hash": "59d49f1bde21c7de2fb6f2d86e33c88cc3991da2aab89b09126b0442427148ad",
+      "source_plan_revision": 1
+    },
+    "output_hash": "bccdb59dc5e8f0f03840e40b8c081518451130c121319b8b164a3629e6ae604e",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:30.777947",
+    "started_at": "2026-10-05 18:58:45.239617",
+    "updated_at": "2026-10-05 18:58:47.073368",
+    "completed_at": "2026-10-05 18:58:47.073368"
+  },
+  {
+    "id": "786ca387-d0fa-41c8-ae39-7e200e7b5bec",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "ac871d0e71c0d227024bc30e713aaa51290c69ecda28cf40b9ff4f3c0d5e7661",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-4cc4e4238af60b67a68e\",\"figure_semantic_hash\":\"e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61\",\"required\":true,\"section_id\":\"model\",\"section_output_hash\":\"799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The L-shaped floor plan with a single cut that separates it into two rectangles: the top rectangle running 8 m across and 3 m deep, and the lower rectangle 5 m wide, with the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"The top strip runs the full 8 m across and is 3 m deep.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"The lower rectangle is 5 m wide, and its depth is not labelled: it is whatever remains of the 7 m left edge below the top strip, so 7 m \u2212 3 m = 4 m.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-4cc4e4238af60b67a68e\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-e9978055820040fd6393fbfb\",\"labels_required\":[\"8 m\",\"3 m\",\"7 m\",\"5 m\",\"4 m\"],\"mode\":\"diagram\",\"must_not_show\":[\"the area of either part or of the whole floor\",\"any cut that leaves a part of the floor uncovered or that makes the two parts overlap\"],\"must_show\":[\"the L-shaped floor plan\",\"the single cut that separates the floor into two rectangles\",\"the top rectangle running 8 m across and 3 m deep\",\"the lower rectangle 5 m wide\",\"the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m\"],\"print_requirements\":[],\"purpose\":\"Show where the single cut falls and which measurements belong to each of the two parts, including the depth that has to be worked out.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:45.232568",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [],
+          "section_id": "model",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-e9978055820040fd6393fbfb",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Show where the single cut falls and which measurements belong to each of the two parts, including the depth that has to be worked out.",
+              "must_show": [
+                "the L-shaped floor plan",
+                "the single cut that separates the floor into two rectangles",
+                "the top rectangle running 8 m across and 3 m deep",
+                "the lower rectangle 5 m wide",
+                "the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m"
+              ],
+              "attaches_to": "shared-figure-node-4cc4e4238af60b67a68e",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "the area of either part or of the whole floor",
+                "any cut that leaves a part of the floor uncovered or that makes the two parts overlap"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "8 m",
+                "3 m",
+                "7 m",
+                "5 m",
+                "4 m"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "The L-shaped floor plan with a single cut that separates it into two rectangles: the top rectangle running 8 m across and 3 m deep, and the lower rectangle 5 m wide, with the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-1",
+                "text": "The top strip runs the full 8 m across and is 3 m deep.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-2",
+                "text": "The lower rectangle is 5 m wide, and its depth is not labelled: it is whatever remains of the 7 m left edge below the top strip, so 7 m \u2212 3 m = 4 m.",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-4cc4e4238af60b67a68e",
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+          "figure_semantic_hash": "e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+        "figure_semantic_hash": "e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "8d69595efc5ea34e74ab8f04b51fba6117f53a09da8ea121d5b9721de5e2acae",
+      "compatibility": {
+        "input_hash": "ac871d0e71c0d227024bc30e713aaa51290c69ecda28cf40b9ff4f3c0d5e7661",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-4cc4e4238af60b67a68e\",\"figure_semantic_hash\":\"e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61\",\"required\":true,\"section_id\":\"model\",\"section_output_hash\":\"799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The L-shaped floor plan with a single cut that separates it into two rectangles: the top rectangle running 8 m across and 3 m deep, and the lower rectangle 5 m wide, with the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"The top strip runs the full 8 m across and is 3 m deep.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"The lower rectangle is 5 m wide, and its depth is not labelled: it is whatever remains of the 7 m left edge below the top strip, so 7 m \u2212 3 m = 4 m.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-4cc4e4238af60b67a68e\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-e9978055820040fd6393fbfb\",\"labels_required\":[\"8 m\",\"3 m\",\"7 m\",\"5 m\",\"4 m\"],\"mode\":\"diagram\",\"must_not_show\":[\"the area of either part or of the whole floor\",\"any cut that leaves a part of the floor uncovered or that makes the two parts overlap\"],\"must_show\":[\"the L-shaped floor plan\",\"the single cut that separates the floor into two rectangles\",\"the top rectangle running 8 m across and 3 m deep\",\"the lower rectangle 5 m wide\",\"the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m\"],\"print_requirements\":[],\"purpose\":\"Show where the single cut falls and which measurements belong to each of the two parts, including the depth that has to be worked out.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-e9978055820040fd6393fbfb",
+      "section_id": "model",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "The L-shaped floor plan with a single cut that separates it into two rectangles: the top rectangle running 8 m across and 3 m deep, and the lower rectangle 5 m wide, with the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-1",
+          "text": "The top strip runs the full 8 m across and is 3 m deep.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-2",
+          "text": "The lower rectangle is 5 m wide, and its depth is not labelled: it is whatever remains of the 7 m left edge below the top strip, so 7 m \u2212 3 m = 4 m.",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61",
+      "figure_node_id": "shared-figure-node-4cc4e4238af60b67a68e",
+      "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+      "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+      "section_output_hash": "799765af160fa0d5188fc414ad4d5980aa872d25f992bd7728c53bd956db9f4d",
+      "figure_semantic_hash": "e9978055820040fd6393fbfbaf764e59f30b9448df0efc7afc45d40cf6cdbe61",
+      "source_plan_revision": 1
+    },
+    "output_hash": "54d1d16e0261ce71b3669b69f559a4521d326ada20ee655ce6eeed2d13c944f6",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:30.715368",
+    "started_at": "2026-10-05 18:58:45.232568",
+    "updated_at": "2026-10-05 18:58:47.129715",
+    "completed_at": "2026-10-05 18:58:47.129715"
+  },
+  {
+    "id": "5a7bb1f9-77ac-49c5-8e3f-28dcc227a976",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "fb4e66c031902f1c901c02de682dadc6abd604b8cd5cf311e047de6f08545a72",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-d7977957a2b47d068947\",\"figure_semantic_hash\":\"b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121\",\"required\":true,\"section_id\":\"guided\",\"section_output_hash\":\"2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The compound stage floor shown as two rectangles joined along an edge: the main rectangle labelled 12 m by 5 m and the extension rectangle labelled 2 m by 6 m, with the join between the two rectangles showing no shared region.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"**A compound shape's area is the sum of the areas of its non-overlapping parts.** The stage floor is a compound shape: a main rectangle 12 m by 5 m joined along an edge to an extension rectangle 2 m by 6 m.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-d7977957a2b47d068947\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-b2fb103786d6e14aac3e442a\",\"labels_required\":[\"12 m\",\"5 m\",\"2 m\",\"6 m\"],\"mode\":\"diagram\",\"must_not_show\":[\"the part-areas or the total area of the stage floor\"],\"must_show\":[\"the compound stage floor as two rectangles joined along an edge\",\"the main rectangle labelled 12 m by 5 m\",\"the extension rectangle labelled 2 m by 6 m\",\"the join between the two rectangles with no shared region\"],\"print_requirements\":[],\"purpose\":\"Show the stage floor as two rectangles joined along an edge, with the dimensions each part needs and the join visible.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:46.750061",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [],
+          "section_id": "guided",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-b2fb103786d6e14aac3e442a",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Show the stage floor as two rectangles joined along an edge, with the dimensions each part needs and the join visible.",
+              "must_show": [
+                "the compound stage floor as two rectangles joined along an edge",
+                "the main rectangle labelled 12 m by 5 m",
+                "the extension rectangle labelled 2 m by 6 m",
+                "the join between the two rectangles with no shared region"
+              ],
+              "attaches_to": "shared-figure-node-d7977957a2b47d068947",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "the part-areas or the total area of the stage floor"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "12 m",
+                "5 m",
+                "2 m",
+                "6 m"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "The compound stage floor shown as two rectangles joined along an edge: the main rectangle labelled 12 m by 5 m and the extension rectangle labelled 2 m by 6 m, with the join between the two rectangles showing no shared region.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-1",
+                "text": "**A compound shape's area is the sum of the areas of its non-overlapping parts.** The stage floor is a compound shape: a main rectangle 12 m by 5 m joined along an edge to an extension rectangle 2 m by 6 m.",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-d7977957a2b47d068947",
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+          "figure_semantic_hash": "b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+        "figure_semantic_hash": "b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "f03724f394725fec1f1c4fd9475307820f33cca6d27383f088a5a33197c8c026",
+      "compatibility": {
+        "input_hash": "fb4e66c031902f1c901c02de682dadc6abd604b8cd5cf311e047de6f08545a72",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-d7977957a2b47d068947\",\"figure_semantic_hash\":\"b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121\",\"required\":true,\"section_id\":\"guided\",\"section_output_hash\":\"2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The compound stage floor shown as two rectangles joined along an edge: the main rectangle labelled 12 m by 5 m and the extension rectangle labelled 2 m by 6 m, with the join between the two rectangles showing no shared region.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"**A compound shape's area is the sum of the areas of its non-overlapping parts.** The stage floor is a compound shape: a main rectangle 12 m by 5 m joined along an edge to an extension rectangle 2 m by 6 m.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-d7977957a2b47d068947\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-b2fb103786d6e14aac3e442a\",\"labels_required\":[\"12 m\",\"5 m\",\"2 m\",\"6 m\"],\"mode\":\"diagram\",\"must_not_show\":[\"the part-areas or the total area of the stage floor\"],\"must_show\":[\"the compound stage floor as two rectangles joined along an edge\",\"the main rectangle labelled 12 m by 5 m\",\"the extension rectangle labelled 2 m by 6 m\",\"the join between the two rectangles with no shared region\"],\"print_requirements\":[],\"purpose\":\"Show the stage floor as two rectangles joined along an edge, with the dimensions each part needs and the join visible.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-b2fb103786d6e14aac3e442a",
+      "section_id": "guided",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "The compound stage floor shown as two rectangles joined along an edge: the main rectangle labelled 12 m by 5 m and the extension rectangle labelled 2 m by 6 m, with the join between the two rectangles showing no shared region.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-1",
+          "text": "**A compound shape's area is the sum of the areas of its non-overlapping parts.** The stage floor is a compound shape: a main rectangle 12 m by 5 m joined along an edge to an extension rectangle 2 m by 6 m.",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121",
+      "figure_node_id": "shared-figure-node-d7977957a2b47d068947",
+      "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+      "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+      "section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+      "figure_semantic_hash": "b2fb103786d6e14aac3e442a41b05758c32246317400c5a83defb65f0840c121",
+      "source_plan_revision": 1
+    },
+    "output_hash": "405a12e6663f903d108ffbbb4a310fcde4a7cfbc66f5dac3b32f512d54b2ea99",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:30.902174",
+    "started_at": "2026-10-05 18:58:46.750061",
+    "updated_at": "2026-10-05 18:58:47.326942",
+    "completed_at": "2026-10-05 18:58:47.326942"
+  },
+  {
+    "id": "e107a523-d50b-4494-83ea-5a097bec598d",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "2",
+    "max_attempts": "3",
+    "input_hash": "8d343c5e1c32b805897cdbb22d3e7b4d744870bf63ad755be33eaae7141e9b7d",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-12bb5adaaaa78ed0a4d2\",\"figure_semantic_hash\":\"7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54\",\"required\":true,\"section_id\":\"guided\",\"section_output_hash\":\"2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts; the 5 m by 3 m region where those two parts overlap is marked as the region counted twice, and the resulting 35 m^2^ + 24 m^2^ = 59 m^2^ compared with the correct 44 m^2^.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"Any split will do None\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-12bb5adaaaa78ed0a4d2\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-7d84c74dad0321f7112cff58\",\"labels_required\":[\"5 m\",\"7 m\",\"8 m\",\"3 m\",\"5 m by 3 m\",\"59 m\u00b2\",\"44 m\u00b2\"],\"mode\":\"diagram\",\"must_not_show\":[\"the overlapping split presented as correct\",\"any new shape\"],\"must_show\":[\"the floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts\",\"the 5 m by 3 m region where those two parts overlap, marked as the region counted twice\",\"the resulting 35 m\u00b2 + 24 m\u00b2 = 59 m\u00b2 compared with the correct 44 m\u00b2\"],\"print_requirements\":[],\"purpose\":\"Show the two proposed parts sitting on top of one another, with the shared region visible as the region that would be counted twice.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "3",
+    "lease_expires_at": "2026-10-05 19:09:46.228159",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [
+            "label_missing:59 m\u00b2",
+            "label_missing:44 m\u00b2"
+          ],
+          "section_id": "guided",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-7d84c74dad0321f7112cff58",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Show the two proposed parts sitting on top of one another, with the shared region visible as the region that would be counted twice.",
+              "must_show": [
+                "the floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts",
+                "the 5 m by 3 m region where those two parts overlap, marked as the region counted twice",
+                "the resulting 35 m\u00b2 + 24 m\u00b2 = 59 m\u00b2 compared with the correct 44 m\u00b2"
+              ],
+              "attaches_to": "shared-figure-node-12bb5adaaaa78ed0a4d2",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "the overlapping split presented as correct",
+                "any new shape"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "5 m",
+                "7 m",
+                "8 m",
+                "3 m",
+                "5 m by 3 m",
+                "59 m\u00b2",
+                "44 m\u00b2"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "The floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts; the 5 m by 3 m region where those two parts overlap is marked as the region counted twice, and the resulting 35 m^2^ + 24 m^2^ = 59 m^2^ compared with the correct 44 m^2^.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-1",
+                "text": "Any split will do None",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-12bb5adaaaa78ed0a4d2",
+          "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+          "figure_semantic_hash": "7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+        "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+        "figure_semantic_hash": "7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "0d0ccc3512ff8f5e9413e263c550485d3f3ca59c6a12d07be76380b90a58d625",
+      "compatibility": {
+        "input_hash": "8d343c5e1c32b805897cdbb22d3e7b4d744870bf63ad755be33eaae7141e9b7d",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-12bb5adaaaa78ed0a4d2\",\"figure_semantic_hash\":\"7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54\",\"required\":true,\"section_id\":\"guided\",\"section_output_hash\":\"2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5\",\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"The floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts; the 5 m by 3 m region where those two parts overlap is marked as the region counted twice, and the resulting 35 m^2^ + 24 m^2^ = 59 m^2^ compared with the correct 44 m^2^.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"Any split will do None\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-12bb5adaaaa78ed0a4d2\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-7d84c74dad0321f7112cff58\",\"labels_required\":[\"5 m\",\"7 m\",\"8 m\",\"3 m\",\"5 m by 3 m\",\"59 m\u00b2\",\"44 m\u00b2\"],\"mode\":\"diagram\",\"must_not_show\":[\"the overlapping split presented as correct\",\"any new shape\"],\"must_show\":[\"the floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts\",\"the 5 m by 3 m region where those two parts overlap, marked as the region counted twice\",\"the resulting 35 m\u00b2 + 24 m\u00b2 = 59 m\u00b2 compared with the correct 44 m\u00b2\"],\"print_requirements\":[],\"purpose\":\"Show the two proposed parts sitting on top of one another, with the shared region visible as the region that would be counted twice.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-7d84c74dad0321f7112cff58",
+      "section_id": "guided",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "The floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts; the 5 m by 3 m region where those two parts overlap is marked as the region counted twice, and the resulting 35 m^2^ + 24 m^2^ = 59 m^2^ compared with the correct 44 m^2^.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-1",
+          "text": "Any split will do None",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54",
+      "figure_node_id": "shared-figure-node-12bb5adaaaa78ed0a4d2",
+      "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+      "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+      "section_output_hash": "2e092e3744fa408d75c5998759a4e6445db4a9a7ad3fd37bd00110b2ef3935f5",
+      "figure_semantic_hash": "7d84c74dad0321f7112cff58dcfd518279ed420c67174aa84299188774709a54",
+      "source_plan_revision": 1
+    },
+    "output_hash": "df865760ef1a8350a3aceaccfc9dbb9a4e0114feab6fc6f67dd45ede35676c4b",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:30.964933",
+    "started_at": "2026-10-05 18:58:41.234414",
+    "updated_at": "2026-10-05 19:04:47.537949",
+    "completed_at": "2026-10-05 19:04:47.537949"
+  },
+  {
+    "id": "a978783c-a76a-4287-b111-f3e0b1333308",
+    "run_id": "b596f4e5-dc6c-4207-8a61-4638cbb33b22",
+    "replaces_work_item_id": "None",
+    "item_key": "document-qa",
+    "stage": "document_qa",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "73916346780a97557c96d0b1679edd590c33fc37dbf6f6eddece0d73cfc8a3dc",
+    "definition_hash": "819f2903e02e603e4b9365c78859b90c4e0c307e69fe56404ca143cc006f6b78",
+    "composition_identity": "{\"document_hash\":\"883759563dd037acf29e1ff57e74eb94c28b12e2c7bac13f4c219e2e56e907e3\",\"document_id\":\"shared-document:b596f4e5-dc6c-4207-8a61-4638cbb33b22:revision:1\",\"document_revision\":1,\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:qa",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:09:48.343891",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "document-qa",
+        "source": {
+          "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+          "source_revision": 1,
+          "source_artifact_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+          "source_artifact_type": "teaching_plan"
+        },
+        "document_id": "shared-document:b596f4e5-dc6c-4207-8a61-4638cbb33b22:revision:1",
+        "document_hash": "883759563dd037acf29e1ff57e74eb94c28b12e2c7bac13f4c219e2e56e907e3",
+        "deterministic_qa": {
+          "issues": [],
+          "document_id": "shared-document:b596f4e5-dc6c-4207-8a61-4638cbb33b22:revision:1",
+          "advisory_issues": [],
+          "document_revision": 1
+        },
+        "document_revision": 1
+      },
+      "payload_hash": "b4b1b54f96df4bc458c2b2072b8af6561d9deb9eb0c75dbcae194f62692192d7",
+      "compatibility": {
+        "input_hash": "73916346780a97557c96d0b1679edd590c33fc37dbf6f6eddece0d73cfc8a3dc",
+        "source_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+        "schema_version": 1,
+        "definition_hash": "819f2903e02e603e4b9365c78859b90c4e0c307e69fe56404ca143cc006f6b78",
+        "source_revision": 1,
+        "composition_identity": "{\"document_hash\":\"883759563dd037acf29e1ff57e74eb94c28b12e2c7bac13f4c219e2e56e907e3\",\"document_id\":\"shared-document:b596f4e5-dc6c-4207-8a61-4638cbb33b22:revision:1\",\"document_revision\":1,\"source_plan_hash\":\"6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2\",\"source_plan_id\":\"73ad71e2-c888-45b7-a733-e2985afbab07\",\"source_plan_revision\":1}"
+      }
+    },
+    "output_json": {
+      "stage": "document_qa",
+      "document_id": "shared-document:b596f4e5-dc6c-4207-8a61-4638cbb33b22:revision:1",
+      "semantic_qa": {
+        "issues": [],
+        "status": "pass",
+        "document_id": "shared-document:b596f4e5-dc6c-4207-8a61-4638cbb33b22:revision:1",
+        "document_hash": "883759563dd037acf29e1ff57e74eb94c28b12e2c7bac13f4c219e2e56e907e3",
+        "semantic_calls": 1,
+        "document_revision": 1,
+        "deterministic_skipped_semantic": false
+      },
+      "document_hash": "883759563dd037acf29e1ff57e74eb94c28b12e2c7bac13f4c219e2e56e907e3",
+      "quality_flags": [
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[0].text/83/60; all written content was preserved.",
+          "node_ids": [
+            "shared-node-8db81c2aad956244b743"
+          ],
+          "severity": "warning",
+          "section_id": "orient",
+          "required_correction": "Review advisory shape check length_over_target at nodes[0].text/83/60 if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[1].text/61/60; all written content was preserved.",
+          "node_ids": [
+            "shared-node-3d1f43d6f7a8924ee17b"
+          ],
+          "severity": "warning",
+          "section_id": "recall",
+          "required_correction": "Review advisory shape check length_over_target at nodes[1].text/61/60 if a future revision is needed."
+        },
+        {
+          "code": "shape_missing",
+          "source": "writer_warning",
+          "message": "Advisory shape check shape_missing at section/key_idea; all written content was preserved.",
+          "node_ids": [],
+          "severity": "warning",
+          "section_id": "recall",
+          "required_correction": "Review advisory shape check shape_missing at section/key_idea if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[0].text/116/60; all written content was preserved.",
+          "node_ids": [
+            "shared-node-13309311b76feee40819"
+          ],
+          "severity": "warning",
+          "section_id": "model",
+          "required_correction": "Review advisory shape check length_over_target at nodes[0].text/116/60 if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[4].evidence/46/45; all written content was preserved.",
+          "node_ids": [
+            "shared-node-4b0075f9e3b578f05616"
+          ],
+          "severity": "warning",
+          "section_id": "model",
+          "required_correction": "Review advisory shape check length_over_target at nodes[4].evidence/46/45 if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[4].conclusion/32/30; all written content was preserved.",
+          "node_ids": [
+            "shared-node-4b0075f9e3b578f05616"
+          ],
+          "severity": "warning",
+          "section_id": "model",
+          "required_correction": "Review advisory shape check length_over_target at nodes[4].conclusion/32/30 if a future revision is needed."
+        },
+        {
+          "code": "kind_missing_semantic_cue",
+          "source": "writer_warning",
+          "message": "Advisory shape check kind_missing_semantic_cue at choices[1].kind; all written content was preserved.",
+          "node_ids": [],
+          "severity": "warning",
+          "section_id": "model",
+          "required_correction": "Review advisory shape check kind_missing_semantic_cue at choices[1].kind if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[0].text/91/60; all written content was preserved.",
+          "node_ids": [
+            "shared-node-1232bbdb937783c0bb2d"
+          ],
+          "severity": "warning",
+          "section_id": "guided",
+          "required_correction": "Review advisory shape check length_over_target at nodes[0].text/91/60 if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[2].evidence/56/45; all written content was preserved.",
+          "node_ids": [
+            "shared-node-c20685274e41da91ead3"
+          ],
+          "severity": "warning",
+          "section_id": "guided",
+          "required_correction": "Review advisory shape check length_over_target at nodes[2].evidence/56/45 if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[4].text/74/60; all written content was preserved.",
+          "node_ids": [
+            "shared-node-98918b2efa72f643b511"
+          ],
+          "severity": "warning",
+          "section_id": "guided",
+          "required_correction": "Review advisory shape check length_over_target at nodes[4].text/74/60 if a future revision is needed."
+        },
+        {
+          "code": "shape_missing",
+          "source": "writer_warning",
+          "message": "Advisory shape check shape_missing at section/subheading; all written content was preserved.",
+          "node_ids": [],
+          "severity": "warning",
+          "section_id": "guided",
+          "required_correction": "Review advisory shape check shape_missing at section/subheading if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[0].text/88/60; all written content was preserved.",
+          "node_ids": [
+            "shared-node-de29f59a1337f2019e9c"
+          ],
+          "severity": "warning",
+          "section_id": "check",
+          "required_correction": "Review advisory shape check length_over_target at nodes[0].text/88/60 if a future revision is needed."
+        }
+      ],
+      "schema_version": 1,
+      "source_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+      "source_plan_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+      "document_revision": 1,
+      "source_plan_revision": 1
+    },
+    "output_hash": "bbb56f9df5530d0f21274f4481dea1343c8e7ff7517a998bd37a0986e3f5565e",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 19:04:48.292626",
+    "started_at": "2026-10-05 19:04:48.343891",
+    "updated_at": "2026-10-05 19:05:02.683497",
+    "completed_at": "2026-10-05 19:05:02.683497"
+  }
+]

@@ -10,7 +10,12 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from curriculum.teaching_plan.models import LearnerActionId, TeachingPlanSection
-from document.shared_lesson.composer import CompositionItem, SectionCompositionPlan
+from document.shared_lesson.composer import (
+    KEY_IDEA_SLOT_PREFIX,
+    CompositionItem,
+    SectionCompositionPlan,
+)
+from document.shared_lesson.inline import parse_inline_markup
 from document.shared_lesson.models import (
     CalloutDisplay,
     CompareDisplay,
@@ -248,17 +253,18 @@ class SectionWriteResult(_ClosedModel):
     section_slot_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
     nodes: tuple[SharedLessonNode, ...] = Field(min_length=1)
-    #: Soft-issue (code, sanitized path) pairs accepted on the writer's final
-    #: bounded attempt rather than failed. Every code here is a member of
-    #: ``SOFT_SECTION_WRITE_ISSUE_CODES``; never provider output or learner
-    #: text. Mirrors the composer's ``warnings`` convention (see composer.py).
+    #: Advisory shape findings recorded for the section. They are structural
+    #: paths only and never provider output or learner text. They do not alter
+    #: readiness or cause another provider call.
     warnings: tuple[tuple[str, str], ...] = Field(default=(), exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
     def _validate_warnings(self) -> SectionWriteResult:
         for code, _path in self.warnings:
-            if code not in SOFT_SECTION_WRITE_ISSUE_CODES:
-                raise ValueError(f"writer warning code {code!r} is not a soft issue code")
+            if code not in SOFT_SECTION_WRITE_ISSUE_CODES | ADVISORY_SHAPE_ISSUE_CODES:
+                raise ValueError(
+                    f"writer warning code {code!r} is not a soft issue code or advisory shape code"
+                )
         return self
 
     def as_shared_section(self, *, section_id: str, position: int) -> SharedSection:
@@ -292,16 +298,25 @@ SECTION_WRITE_ISSUE_CODES = frozenset(
         "internal_id_leaked",
         "unsupported_number",
         "task_anchor_ownership_mismatch",
+        "length_over_target",
+        "shape_missing",
+        "list_item_not_parallel",
     }
 )
 
-#: SOFT issue codes are still checked on every attempt, but if this is the
-#: writer's final bounded attempt and every remaining issue is one of these
-#: codes, the section is deterministically accepted instead of failing the
-#: whole Run, with a ``warnings`` record of what was accepted. Every other
-#: code in ``SECTION_WRITE_ISSUE_CODES`` always fails closed. Mirrors the
-#: composer's ``SOFT_COMPOSITION_ISSUE_CODES`` convention (see composer.py).
+#: These legacy soft findings retain the writer's bounded-repair behavior:
+#: they are accepted with warnings only on the final bounded attempt.
 SOFT_SECTION_WRITE_ISSUE_CODES = frozenset({"task_answer_leaked", "unsupported_number"})
+
+#: Shape findings are advisory from the first attempt. They never enter the
+#: repair loop, regardless of the legacy ``accept_soft_issues`` flag.
+ADVISORY_SHAPE_ISSUE_CODES = frozenset(
+    {
+        "length_over_target",
+        "shape_missing",
+        "list_item_not_parallel",
+    }
+)
 
 _MAX_WRITER_ISSUE_PATH_LENGTH = 80
 
@@ -390,26 +405,78 @@ def _composition_error(
 
 
 def _node_text_values(node: WrittenNode) -> list[str]:
-    display = node.display.model_dump(mode="json")
-    accessibility = (
-        node.accessibility.model_dump(mode="json") if hasattr(node, "accessibility") else {}
-    )
-    values: list[str] = []
-    for mapping in (display, accessibility):
-        for key, value in mapping.items():
-            if isinstance(value, str) and key in _TEXT_FIELDS:
-                values.append(value)
-            elif isinstance(value, list):
-                values.extend(item for item in value if isinstance(item, str))
-            elif isinstance(value, list) and value and isinstance(value[0], list):
-                values.extend(cell for row in value for cell in row if isinstance(cell, str))
-    # Table cells are nested tuples after JSON-mode serialization.
-    if isinstance(node, WrittenTable):
-        values.extend(node.display.headers)
-        values.extend(cell for row in node.display.rows for cell in row)
-    if isinstance(node, WrittenList):
-        values.extend(node.display.items)
+    def strings(value: Any) -> list[str]:
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, (list, tuple)):
+            return [part for item in value for part in strings(item)]
+        if isinstance(value, dict):
+            return [part for item in value.values() for part in strings(item)]
+        return []
+
+    values = strings(node.display.model_dump(mode="json"))
+    if hasattr(node, "accessibility"):
+        values.extend(strings(node.accessibility.model_dump(mode="json")))
     return values
+
+
+def _required_node_texts(node: WrittenNode) -> tuple[str, ...]:
+    display = node.display
+    if isinstance(node, (WrittenParagraph, WrittenHeading)):
+        return (display.text,)
+    if isinstance(node, WrittenList):
+        return tuple(display.items)
+    if isinstance(node, WrittenFigure):
+        return (display.caption,)
+    if isinstance(node, WrittenTable):
+        return (*display.headers, *(cell for row in display.rows for cell in row))
+    if isinstance(node, WrittenCallout):
+        if display.variant == "misconception":
+            return tuple(
+                value
+                for value in (display.belief, display.evidence, display.conclusion)
+                if value is not None
+            )
+        if display.variant in {"key_idea", "note"}:
+            return (display.body or "",)
+        return (display.body,) if display.body is not None else ()
+    if isinstance(node, WrittenEquation):
+        return (*display.inputs, *display.outputs)
+    if isinstance(node, WrittenQuote):
+        return (display.text,)
+    if isinstance(node, WrittenCompare):
+        return tuple(value for item in display.items for value in (item.title, item.body))
+    return ()
+
+
+def _word_count(text: str) -> int:
+    return len(re.findall(r"\S+", text))
+
+
+def _inline_numeric_values(value: str) -> tuple[str, ...]:
+    """Return numeric facts in plain inline text, excluding notation spans."""
+    values: list[str] = []
+
+    def visit(nodes: Any, notation: bool = False) -> None:
+        for node in nodes:
+            if node["type"] == "text":
+                if not notation:
+                    values.extend(match.group(0) for match in _NUMBER.finditer(node["value"]))
+                continue
+            visit(node["children"], notation or node["type"] in {"subscript", "superscript"})
+
+    # The total parser leaves malformed markers as text, so they continue
+    # through the genuine numeric-fact check instead of being swallowed.
+    visit(parse_inline_markup(value))
+    return tuple(values)
+
+
+def _shape_warning(
+    warnings: list[tuple[str, str]], code: str, path: str
+) -> None:
+    warning = (code, _sanitize_writer_issue_path(path))
+    if warning not in warnings:
+        warnings.append(warning)
 
 
 def _approved_numbers(request: SectionWriterRequest) -> set[str]:
@@ -525,14 +592,8 @@ def _check_learner_text(
 ) -> None:
     node_path = f"nodes[{node_index}]"
     values = _node_text_values(node)
-    required: list[str] = []
-    if isinstance(node, (WrittenParagraph, WrittenHeading)):
-        required.append(node.display.text)
-    elif isinstance(node, WrittenList):
-        required.extend(node.display.items)
-    elif isinstance(node, WrittenFigure):
-        required.append(node.display.caption)
-    elif isinstance(node, WrittenTable):
+    required = _required_node_texts(node)
+    if isinstance(node, WrittenTable):
         if not node.display.headers or not node.display.rows:
             raise _composition_error(
                 "tables require headers and at least one row",
@@ -548,10 +609,6 @@ def _check_learner_text(
                 code="table_row_width_mismatch",
                 path=f"{node_path}.table.rows",
             )
-        required.extend(node.display.headers)
-        required.extend(cell for row in node.display.rows for cell in row)
-    elif isinstance(node, WrittenCallout):
-        required.append(node.display.body)
     for text in required:
         if not text.strip():
             raise _composition_error(
@@ -599,20 +656,119 @@ def _check_learner_text(
                     code="internal_id_leaked",
                     path=f"{node_path}.text",
                 )
-        for number in _NUMBER.finditer(value):
-            if number.group(0) not in all_inputs:
+        for number in _inline_numeric_values(value):
+            if number not in all_inputs:
                 code, path = "unsupported_number", f"{node_path}.text"
                 if accept_soft_issues:
                     if (code, path) not in warnings:
                         warnings.append((code, path))
                 else:
-                    raise _composition_error(
-                        f"learner-facing content contains unsupported numeric fact "
-                        f"{number.group(0)!r}",
+                        raise _composition_error(
+                            f"learner-facing content contains unsupported numeric fact "
+                            f"{number!r}",
                         item,
                         code=code,
                         path=path,
                     )
+
+
+def _record_shape_advisories(
+    *,
+    nodes: Sequence[WrittenNode],
+    items: Sequence[CompositionItem],
+    warnings: list[tuple[str, str]],
+) -> None:
+    """Record writer targets without changing the accepted node payload.
+
+    These checks deliberately inspect the full provider output.  They never
+    trim text, cap equation terms, or collapse comparison cards.
+    """
+    key_idea_count = 0
+    explanation_present = any(item.semantic_role == "explanation" for item in items)
+    heading_present = False
+    prose_words = 0
+    for node_index, node in enumerate(nodes):
+        node_path = f"nodes[{node_index}]"
+        display = node.display
+        if isinstance(node, WrittenParagraph):
+            prose_words += _word_count(display.text)
+            if _word_count(display.text) > 60:
+                _shape_warning(
+                    warnings,
+                    "length_over_target",
+                    f"{node_path}.text/{_word_count(display.text)}/60",
+                )
+        elif isinstance(node, WrittenHeading):
+            heading_present = True
+        elif isinstance(node, WrittenList):
+            for item_index, value in enumerate(display.items):
+                if _word_count(value) > 30:
+                    _shape_warning(
+                        warnings,
+                        "length_over_target",
+                        f"{node_path}.items[{item_index}]/{_word_count(value)}/30",
+                    )
+        elif isinstance(node, WrittenTable):
+            for row_index, row in enumerate((display.headers, *display.rows)):
+                for cell_index, value in enumerate(row):
+                    if _word_count(value) > 12:
+                        _shape_warning(
+                            warnings,
+                            "length_over_target",
+                            f"{node_path}.table[{row_index}][{cell_index}]/{_word_count(value)}/12",
+                        )
+        elif isinstance(node, WrittenCallout):
+            if display.variant == "key_idea":
+                key_idea_count += 1
+                if display.body is not None and _word_count(display.body) > 25:
+                    _shape_warning(
+                        warnings,
+                        "length_over_target",
+                        f"{node_path}.body/{_word_count(display.body)}/25",
+                    )
+            elif display.variant == "note":
+                if display.body is not None and _word_count(display.body) > 50:
+                    _shape_warning(
+                        warnings,
+                        "length_over_target",
+                        f"{node_path}.body/{_word_count(display.body)}/50",
+                    )
+            elif display.variant == "misconception":
+                for field_name, value, target in (
+                    ("belief", display.belief, 30),
+                    ("evidence", display.evidence, 45),
+                    ("conclusion", display.conclusion, 30),
+                ):
+                    if value is not None and _word_count(value) > target:
+                        _shape_warning(
+                            warnings,
+                            "length_over_target",
+                            f"{node_path}.{field_name}/{_word_count(value)}/{target}",
+                        )
+        elif isinstance(node, WrittenEquation):
+            if len(display.inputs) > 4:
+                _shape_warning(
+                    warnings,
+                    "length_over_target",
+                    f"{node_path}.inputs/{len(display.inputs)}/4",
+                )
+            if len(display.outputs) > 3:
+                _shape_warning(
+                    warnings,
+                    "length_over_target",
+                    f"{node_path}.outputs/{len(display.outputs)}/3",
+                )
+        elif isinstance(node, WrittenCompare) and len(display.items) > 3:
+            _shape_warning(
+                warnings,
+                "length_over_target",
+                f"{node_path}.items/{len(display.items)}/3",
+            )
+
+    if explanation_present and key_idea_count != 1:
+        _shape_warning(warnings, "shape_missing", "section/key_idea")
+    if prose_words > 120 and not heading_present:
+        _shape_warning(warnings, "shape_missing", "section/subheading")
 
 
 def validate_and_build_section(
@@ -623,13 +779,11 @@ def validate_and_build_section(
 ) -> SectionWriteResult:
     """Validate exact composed shape, then insert immutable TaskAnchors by code.
 
-    By default (``accept_soft_issues=False``) every issue -- HARD or SOFT --
-    fails closed, exactly as before. ``accept_soft_issues=True`` is used only
-    on the writer's final bounded attempt (see ``write_section``) and by the
-    durable trust-boundary reload that reproduces an already-accepted section
-    (see ``work_item_inputs._parse_writer``): a code in
-    ``SOFT_SECTION_WRITE_ISSUE_CODES`` is recorded as a warning instead of
-    raised. Any HARD issue still fails closed regardless of this flag.
+    Shape findings are recorded as advisory warnings on every attempt and
+    never trigger repair. Legacy soft findings in
+    ``SOFT_SECTION_WRITE_ISSUE_CODES`` are recorded only when
+    ``accept_soft_issues=True`` on the final bounded attempt. All other
+    validation errors still fail closed.
     """
     try:
         parsed = (
@@ -696,6 +850,12 @@ def validate_and_build_section(
                 code="node_shape_mismatch",
                 path=node_path,
             ) from exc
+
+    _record_shape_advisories(
+        nodes=parsed.nodes,
+        items=expected,
+        warnings=warnings,
+    )
 
     final_nodes: list[SharedLessonNode] = []
     for item_index, item in enumerate(request.composition_plan.items):
@@ -782,6 +942,39 @@ def _request_payload(
         "composition_plan": [
             item.model_dump(mode="json") for item in request.composition_plan.items
         ],
+        # Code-reserved key-idea slot: one `key_idea` callout of at most 25
+        # words, first in the section. Advisory; never repaired.
+        "key_idea_slot_node_id": next(
+            (
+                item.id
+                for item in request.composition_plan.items
+                if item.kind == "callout" and item.id.startswith(KEY_IDEA_SLOT_PREFIX)
+            ),
+            None,
+        ),
+        "shaping_targets": {
+            "paragraph_words_max": 60,
+            "key_idea_words_max": 25,
+            "note_words_max": 50,
+            "misconception_words_max": {
+                "belief": 30,
+                "evidence": 45,
+                "conclusion": 30,
+            },
+            "list_item_words_max": 30,
+            "table_cell_words_max": 12,
+            "equation_inputs_target_max": 4,
+            "equation_outputs_target_max": 3,
+            "compare_items_target_max": 3,
+            "prose_section_words_target": [150, 280],
+        },
+        "inline_vocabulary": {
+            "strong": "**text**",
+            "emphasis": "*text*",
+            "subscript": "~text~",
+            "superscript": "^text^",
+            "paragraph_break": "\\n\\n",
+        },
         "sources": [source.model_dump(mode="json") for source in request.sources],
         # Only the visible task/prompt/purpose context is ordinary input.
         # `expected_evidence` names the worked answer and evaluation names
@@ -844,11 +1037,9 @@ async def write_section(
 ) -> SectionWriteResult:
     """Write one section with one initial, one section, and one targeted call max.
 
-    On the final ("targeted") internal attempt only, a remaining issue set
-    made up entirely of ``SOFT_SECTION_WRITE_ISSUE_CODES`` is accepted rather
-    than raised, with the accepted codes/paths recorded as ``warnings`` on the
-    result. Any HARD issue on any attempt -- including the final one -- still
-    fails the WorkItem exactly as before.
+    Shape findings are accepted on the initial response and returned as
+    advisory warnings. Only hard identity, schema, leakage, and task
+    correctness issues enter the bounded repair loop.
     """
     dispatch = provider or _default_provider
     repair_scopes = ("initial", "section", "targeted")
@@ -883,6 +1074,7 @@ async def write_section(
 __all__ = [
     "SECTION_WRITE_ISSUE_CODES",
     "SOFT_SECTION_WRITE_ISSUE_CODES",
+    "ADVISORY_SHAPE_ISSUE_CODES",
     "SectionSource",
     "SectionTaskSummary",
     "SectionWriteResult",

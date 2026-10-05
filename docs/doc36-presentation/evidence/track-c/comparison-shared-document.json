@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "doc36:doc36-track-c-comparison-0ed3c2ffa59a:revision:1",
+  "revision": 1,
+  "content_hash": "853c9caddaff3200d31d365a7a37b40611b7dde82cd995d126f9e407db14387d",
+  "teaching_plan_id": "doc36-plan-comparison",
+  "teaching_plan_revision": 1,
+  "teaching_plan_hash": "aa9a394f1983165a111cf96834b4e75f327a44dc30dffa864cb1e3971d21907a",
+  "title": "Photosynthesis and respiration",
+  "sections": [
+    {
+      "id": "comparison-section",
+      "title": "Photosynthesis and respiration",
+      "position": 0,
+      "nodes": [
+        {
+          "id": "shared-node-88d372c6edc617a35179",
+          "teaching_block_id": "b0",
+          "kind": "compare",
+          "display": {
+            "items": [
+              {
+                "title": "Photosynthesis",
+                "body": "Inputs: carbon dioxide, water, and light energy. Outputs: glucose and oxygen. Role: stores light energy in glucose."
+              },
+              {
+                "title": "Cellular respiration",
+                "body": "Inputs: glucose and oxygen. Outputs: carbon dioxide, water, and released energy. Role: releases the energy stored in glucose so the cell can use it."
+              }
+            ]
+          },
+          "accessibility": {
+            "description": "Side-by-side comparison of photosynthesis and cellular respiration, listing the inputs, outputs, and role of each pathway."
+          }
+        },
+        {
+          "id": "shared-node-37f0fe66a0da924b4a99",
+          "teaching_block_id": "b1",
+          "kind": "callout",
+          "display": {
+            "tone": "note",
+            "title": "How the pathways connect",
+            "body": "**Photosynthesis stores energy in glucose, and cellular respiration releases that energy, so the two pathways feed each other's inputs and outputs.**",
+            "variant": "key_idea",
+            "aside": "Cellular respiration uses glucose and oxygen and gives off carbon dioxide and water. Photosynthesis uses carbon dioxide and water and gives off glucose and oxygen. Because each pathway supplies what the other needs, matter cycles between them."
+          },
+          "accessibility": {
+            "description": "Key idea callout explaining that the inputs and outputs of photosynthesis and cellular respiration supply each other."
+          }
+        }
+      ],
+      "provenance": {
+        "source_ids": [
+          "src-comparison"
+        ],
+        "source_hashes": {
+          "src-comparison": "a2d78737ad8f7bf50145ab7d99fa57d859557960dab60edc3aa463170bdc38e8"
+        }
+      }
+    }
+  ],
+  "tasks": [],
+  "provenance": {
+    "source_ids": [
+      "src-comparison"
+    ],
+    "source_hashes": {
+      "src-comparison": "a2d78737ad8f7bf50145ab7d99fa57d859557960dab60edc3aa463170bdc38e8"
+    }
+  },
+  "created_at": "2026-10-05T00:00:00Z",
+  "diagnostics": []
+}

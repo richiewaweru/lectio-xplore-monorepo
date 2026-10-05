@@ -1,0 +1,20 @@
+[
+  {
+    "run": "photosynthesis",
+    "shared_hash": "e86357d7ce88633e0776cd1f852c7841aa9b0759e4aa0921c3bd4688ce52b6a1",
+    "validated": true,
+    "sections": 5
+  },
+  {
+    "run": "area",
+    "shared_hash": "789d554b7b7345e5ec7437b175cda9fef6a63560586718e64a05df148ad27f12",
+    "validated": true,
+    "sections": 5
+  },
+  {
+    "run": "compare",
+    "shared_hash": "0a0510a31b4789798dbf4c6865cdb0d67c131fa83ddb07e42ee529c4e12b7f1a",
+    "validated": true,
+    "sections": 5
+  }
+]

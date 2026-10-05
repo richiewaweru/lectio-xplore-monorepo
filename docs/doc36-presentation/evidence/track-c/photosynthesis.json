@@ -1,0 +1,361 @@
+{
+  "lesson": "photosynthesis",
+  "run_id": "doc36-track-c-photosynthesis-d656b71a6931",
+  "job_id": "doc36-track-c-photosynthesis-d656b71a6931-composer-writer",
+  "document_id": "doc36:doc36-track-c-photosynthesis-d656b71a6931:revision:1",
+  "plan": {
+    "slot_id": "photosynthesis",
+    "specific_purpose": "Explain how light energy becomes stored chemical energy in photosynthesis.",
+    "transition": null,
+    "blocks": [
+      {
+        "id": "b0",
+        "position": 0,
+        "intent": "explain the photosynthesis process and formula inputs outputs",
+        "brief": "Show the process from light energy to sugar.",
+        "evidence_refs": [],
+        "evidence": "Plants use light energy to build glucose from water and carbon dioxide, releasing oxygen.",
+        "departure_reason": null,
+        "source_question_ids": [],
+        "task_mode": "none",
+        "sourcebook_needs": [],
+        "sourcebook_refs": [],
+        "stimulus_dependencies": [],
+        "learner_action": null
+      },
+      {
+        "id": "b1",
+        "position": 1,
+        "intent": "explain a key idea about chlorophyll",
+        "brief": "Connect chlorophyll to capturing light energy.",
+        "evidence_refs": [],
+        "evidence": "Chlorophyll absorbs light energy in plant cells.",
+        "departure_reason": null,
+        "source_question_ids": [],
+        "task_mode": "none",
+        "sourcebook_needs": [],
+        "sourcebook_refs": [],
+        "stimulus_dependencies": [],
+        "learner_action": null
+      }
+    ],
+    "display_title": "How plants make food",
+    "entry_state": [
+      "Learner can use the stated vocabulary"
+    ],
+    "must_establish": [
+      "Explain how light energy becomes stored chemical energy in photosynthesis."
+    ],
+    "avoid_repeating": [
+      "Do not restate the entry state"
+    ],
+    "bridge_from_previous": null,
+    "exit_state": [
+      "Explain how light energy becomes stored chemical energy in photosynthesis."
+    ]
+  },
+  "sources": [
+    {
+      "id": "src-photosynthesis",
+      "kind": "approved_fact",
+      "text": "Plants use light energy to build glucose from water and carbon dioxide, releasing oxygen."
+    }
+  ],
+  "provider_calls": [
+    {
+      "stage": "composer",
+      "request": {
+        "section": {
+          "slot_id": "photosynthesis",
+          "specific_purpose": "Explain how light energy becomes stored chemical energy in photosynthesis.",
+          "transition": null,
+          "blocks": [
+            {
+              "id": "b0",
+              "position": 0,
+              "intent": "explain the photosynthesis process and formula inputs outputs",
+              "brief": "Show the process from light energy to sugar.",
+              "evidence_refs": [],
+              "evidence": "Plants use light energy to build glucose from water and carbon dioxide, releasing oxygen.",
+              "departure_reason": null,
+              "source_question_ids": [],
+              "task_mode": "none",
+              "sourcebook_needs": [],
+              "sourcebook_refs": [],
+              "stimulus_dependencies": [],
+              "learner_action": null
+            },
+            {
+              "id": "b1",
+              "position": 1,
+              "intent": "explain a key idea about chlorophyll",
+              "brief": "Connect chlorophyll to capturing light energy.",
+              "evidence_refs": [],
+              "evidence": "Chlorophyll absorbs light energy in plant cells.",
+              "departure_reason": null,
+              "source_question_ids": [],
+              "task_mode": "none",
+              "sourcebook_needs": [],
+              "sourcebook_refs": [],
+              "stimulus_dependencies": [],
+              "learner_action": null
+            }
+          ],
+          "display_title": "How plants make food",
+          "entry_state": [
+            "Learner can use the stated vocabulary"
+          ],
+          "must_establish": [
+            "Explain how light energy becomes stored chemical energy in photosynthesis."
+          ],
+          "avoid_repeating": [
+            "Do not restate the entry state"
+          ],
+          "bridge_from_previous": null,
+          "exit_state": [
+            "Explain how light energy becomes stored chemical energy in photosynthesis."
+          ]
+        },
+        "shaping_targets": {
+          "paragraph_words_max": 60,
+          "key_idea_words_max": 25,
+          "note_words_max": 50,
+          "misconception_words_max": {
+            "belief": 30,
+            "evidence": 45,
+            "conclusion": 30
+          },
+          "list_item_words_max": 30,
+          "table_cell_words_max": 12,
+          "equation_inputs_target_max": 4,
+          "equation_outputs_target_max": 3,
+          "compare_items_target_max": 3,
+          "prose_section_words_target": [
+            150,
+            280
+          ]
+        },
+        "inline_vocabulary": {
+          "strong": "**text**",
+          "emphasis": "*text*",
+          "subscript": "~text~",
+          "superscript": "^text^",
+          "paragraph_break": "\\n\\n"
+        },
+        "tasks": [],
+        "repair_errors": []
+      },
+      "response": {
+        "items": [
+          {
+            "teaching_block_id": "b0",
+            "kind": "equation",
+            "semantic_role": "explanation"
+          },
+          {
+            "teaching_block_id": "b1",
+            "kind": "callout",
+            "semantic_role": "explanation"
+          }
+        ]
+      },
+      "status": "success",
+      "duration_seconds": 4.112
+    },
+    {
+      "stage": "writer",
+      "request": {
+        "section_contract": {
+          "display_title": "How plants make food",
+          "entry_state": [
+            "Learner can use the stated vocabulary"
+          ],
+          "must_establish": [
+            "Explain how light energy becomes stored chemical energy in photosynthesis."
+          ],
+          "avoid_repeating": [
+            "Do not restate the entry state"
+          ],
+          "bridge_from_previous": null,
+          "exit_state": [
+            "Explain how light energy becomes stored chemical energy in photosynthesis."
+          ],
+          "specific_purpose": "Explain how light energy becomes stored chemical energy in photosynthesis.",
+          "blocks": [
+            {
+              "id": "b0",
+              "intent": "explain the photosynthesis process and formula inputs outputs",
+              "brief": "Show the process from light energy to sugar.",
+              "evidence": "Plants use light energy to build glucose from water and carbon dioxide, releasing oxygen.",
+              "visual": null
+            },
+            {
+              "id": "b1",
+              "intent": "explain a key idea about chlorophyll",
+              "brief": "Connect chlorophyll to capturing light energy.",
+              "evidence": "Chlorophyll absorbs light energy in plant cells.",
+              "visual": null
+            }
+          ]
+        },
+        "composition_plan": [
+          {
+            "id": "shared-node-014f83d5587a2a572750",
+            "kind": "equation",
+            "teaching_block_id": "b0",
+            "semantic_role": "explanation",
+            "task_spec_id": null
+          },
+          {
+            "id": "shared-node-662591cfeeed5c8aadd7",
+            "kind": "callout",
+            "teaching_block_id": "b1",
+            "semantic_role": "explanation",
+            "task_spec_id": null
+          }
+        ],
+        "shaping_targets": {
+          "paragraph_words_max": 60,
+          "key_idea_words_max": 25,
+          "note_words_max": 50,
+          "misconception_words_max": {
+            "belief": 30,
+            "evidence": 45,
+            "conclusion": 30
+          },
+          "list_item_words_max": 30,
+          "table_cell_words_max": 12,
+          "equation_inputs_target_max": 4,
+          "equation_outputs_target_max": 3,
+          "compare_items_target_max": 3,
+          "prose_section_words_target": [
+            150,
+            280
+          ]
+        },
+        "inline_vocabulary": {
+          "strong": "**text**",
+          "emphasis": "*text*",
+          "subscript": "~text~",
+          "superscript": "^text^",
+          "paragraph_break": "\\n\\n"
+        },
+        "sources": [
+          {
+            "id": "src-photosynthesis",
+            "kind": "approved_fact",
+            "text": "Plants use light energy to build glucose from water and carbon dioxide, releasing oxygen."
+          }
+        ],
+        "task_summaries": [],
+        "hidden_answer_context_do_not_reveal": [],
+        "repair": null
+      },
+      "response": {
+        "nodes": [
+          {
+            "id": "shared-node-014f83d5587a2a572750",
+            "teaching_block_id": "b0",
+            "kind": "equation",
+            "display": {
+              "label": "Word equation for photosynthesis",
+              "inputs": [
+                "light energy",
+                "water",
+                "carbon dioxide"
+              ],
+              "condition": "in the presence of chlorophyll",
+              "outputs": [
+                "glucose",
+                "oxygen"
+              ]
+            },
+            "accessibility": {
+              "description": "Word equation for photosynthesis. Inputs: light energy, water, and carbon dioxide. Outputs: glucose and oxygen. Condition: in the presence of chlorophyll."
+            }
+          },
+          {
+            "id": "shared-node-662591cfeeed5c8aadd7",
+            "teaching_block_id": "b1",
+            "kind": "callout",
+            "display": {
+              "tone": "note",
+              "title": "Chlorophyll captures the light",
+              "body": "**Chlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose.**",
+              "variant": "key_idea",
+              "aside": "Water and carbon dioxide supply the atoms for that glucose, and oxygen leaves the plant as a gas.\n\nThe light is not kept as light. It is transferred into the sugar the plant builds, so the plant holds that energy in a chemical form it can use later."
+            },
+            "accessibility": {
+              "description": "Key idea: chlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose. Water and carbon dioxide supply the atoms for the glucose, and oxygen leaves the plant as a gas. The light is not kept as light; it is transferred into the sugar the plant builds."
+            }
+          }
+        ]
+      },
+      "status": "success",
+      "duration_seconds": 12.179
+    }
+  ],
+  "advisory_records": [],
+  "status": "writer_success",
+  "composition": {
+    "section_slot_id": "photosynthesis",
+    "items": [
+      {
+        "id": "shared-node-014f83d5587a2a572750",
+        "kind": "equation",
+        "teaching_block_id": "b0",
+        "semantic_role": "explanation",
+        "task_spec_id": null
+      },
+      {
+        "id": "shared-node-662591cfeeed5c8aadd7",
+        "kind": "callout",
+        "teaching_block_id": "b1",
+        "semantic_role": "explanation",
+        "task_spec_id": null
+      }
+    ]
+  },
+  "document": {
+    "section_slot_id": "photosynthesis",
+    "title": "How plants make food",
+    "nodes": [
+      {
+        "id": "shared-node-014f83d5587a2a572750",
+        "teaching_block_id": "b0",
+        "kind": "equation",
+        "display": {
+          "label": "Word equation for photosynthesis",
+          "inputs": [
+            "light energy",
+            "water",
+            "carbon dioxide"
+          ],
+          "condition": "in the presence of chlorophyll",
+          "outputs": [
+            "glucose",
+            "oxygen"
+          ]
+        },
+        "accessibility": {
+          "description": "Word equation for photosynthesis. Inputs: light energy, water, and carbon dioxide. Outputs: glucose and oxygen. Condition: in the presence of chlorophyll."
+        }
+      },
+      {
+        "id": "shared-node-662591cfeeed5c8aadd7",
+        "teaching_block_id": "b1",
+        "kind": "callout",
+        "display": {
+          "tone": "note",
+          "title": "Chlorophyll captures the light",
+          "body": "**Chlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose.**",
+          "variant": "key_idea",
+          "aside": "Water and carbon dioxide supply the atoms for that glucose, and oxygen leaves the plant as a gas.\n\nThe light is not kept as light. It is transferred into the sugar the plant builds, so the plant holds that energy in a chemical form it can use later."
+        },
+        "accessibility": {
+          "description": "Key idea: chlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose. Water and carbon dioxide supply the atoms for the glucose, and oxygen leaves the plant as a gas. The light is not kept as light; it is transferred into the sugar the plant builds."
+        }
+      }
+    ]
+  }
+}

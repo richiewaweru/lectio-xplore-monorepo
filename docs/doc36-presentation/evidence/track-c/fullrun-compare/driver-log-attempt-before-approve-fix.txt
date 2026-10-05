@@ -1,0 +1,7 @@
+[21:39:54] resume unit 1bc74518-cd5a-4fb8-bba7-ad088ecbced4 lesson de9bfb9f-f1a9-4cc5-b28d-bce71f8c4a86 title=Complementary relationship between photosynthesis and respiration
+[21:39:59] generation f8099d04-fd37-4fa1-9616-40fc689e2957
+[21:39:59] stage stage2_running/planning
+[21:52:36] stage awaiting_review/planning
+[21:54:39] stage awaiting_teaching_approval/awaiting_review
+[21:54:39] teaching approve 409 {"detail":{"code":"TEACHING_CONTENT_HASH_REQUIRED","message":"Reload the Teaching Plan review and approve the displayed version.","recovery_action":"reload_review"}}
+[21:54:40] generate-learn 409 after 0s

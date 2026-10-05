@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "doc36:doc36-track-c-photosynthesis-d656b71a6931:revision:1",
+  "revision": 1,
+  "content_hash": "18c1a0f0edfc4b48cc9b19d238d271d1fa1d06c02d96afa870fb756e23c6b237",
+  "teaching_plan_id": "doc36-plan-photosynthesis",
+  "teaching_plan_revision": 1,
+  "teaching_plan_hash": "84cc2672bc536bf4c9064dcffd9f6c024b80b892616f1df347d3de6a46daa37f",
+  "title": "How plants make food",
+  "sections": [
+    {
+      "id": "photosynthesis-section",
+      "title": "How plants make food",
+      "position": 0,
+      "nodes": [
+        {
+          "id": "shared-node-014f83d5587a2a572750",
+          "teaching_block_id": "b0",
+          "kind": "equation",
+          "display": {
+            "label": "Word equation for photosynthesis",
+            "inputs": [
+              "light energy",
+              "water",
+              "carbon dioxide"
+            ],
+            "condition": "in the presence of chlorophyll",
+            "outputs": [
+              "glucose",
+              "oxygen"
+            ]
+          },
+          "accessibility": {
+            "description": "Word equation for photosynthesis. Inputs: light energy, water, and carbon dioxide. Outputs: glucose and oxygen. Condition: in the presence of chlorophyll."
+          }
+        },
+        {
+          "id": "shared-node-662591cfeeed5c8aadd7",
+          "teaching_block_id": "b1",
+          "kind": "callout",
+          "display": {
+            "tone": "note",
+            "title": "Chlorophyll captures the light",
+            "body": "**Chlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose.**",
+            "variant": "key_idea",
+            "aside": "Water and carbon dioxide supply the atoms for that glucose, and oxygen leaves the plant as a gas.\n\nThe light is not kept as light. It is transferred into the sugar the plant builds, so the plant holds that energy in a chemical form it can use later."
+          },
+          "accessibility": {
+            "description": "Key idea: chlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose. Water and carbon dioxide supply the atoms for the glucose, and oxygen leaves the plant as a gas. The light is not kept as light; it is transferred into the sugar the plant builds."
+          }
+        }
+      ],
+      "provenance": {
+        "source_ids": [
+          "src-photosynthesis"
+        ],
+        "source_hashes": {
+          "src-photosynthesis": "738b4ac697bb899dec2cd9b52f9e16db0c2f21878c41f51bc606335ccf985741"
+        }
+      }
+    }
+  ],
+  "tasks": [],
+  "provenance": {
+    "source_ids": [
+      "src-photosynthesis"
+    ],
+    "source_hashes": {
+      "src-photosynthesis": "738b4ac697bb899dec2cd9b52f9e16db0c2f21878c41f51bc606335ccf985741"
+    }
+  },
+  "created_at": "2026-10-05T00:00:00Z",
+  "diagnostics": []
+}

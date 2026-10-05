@@ -1,0 +1,273 @@
+{
+ "ts": 1791227087.7637224,
+ "unit_id": "1bc74518-cd5a-4fb8-bba7-ad088ecbced4",
+ "lesson_id": "de9bfb9f-f1a9-4cc5-b28d-bce71f8c4a86",
+ "learn": {
+  "state": "failed_recoverable",
+  "realization_id": "83d604bb-2005-48e8-a432-50c5d576fd21",
+  "output_id": "learn-out-d2c630207dce411c",
+  "open_href": "/builder/from-native-learn/learn-out-d2c630207dce411c",
+  "stale": false,
+  "legacy_ambiguous": false,
+  "error": {
+   "code": "REALIZATION_FAILED",
+   "error_type": null,
+   "failure_class": null,
+   "message": "shared_document_post_section_blocked: The SharedDocument post-section stages could not produce a ready document.",
+   "retryable": true,
+   "stage": "failed_recoverable",
+   "work_item_id": null,
+   "attempt": null,
+   "recovery_action": "retry"
+  },
+  "shared_document_state": "failed",
+  "shared_document_run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+  "shared_document_id": null,
+  "shared_document_revision": null,
+  "shared_document_hash": null,
+  "run_id": null,
+  "recovery_action": "retry",
+  "progress": {
+   "steps": [
+    {
+     "key": "sourcebook",
+     "label": "Gathering source notes",
+     "status": "done",
+     "done": null,
+     "total": null
+    },
+    {
+     "key": "shared_tasks",
+     "label": "Writing practice questions",
+     "status": "done",
+     "done": null,
+     "total": null
+    },
+    {
+     "key": "compose",
+     "label": "Planning sections",
+     "status": "done",
+     "done": 5,
+     "total": 5
+    },
+    {
+     "key": "write",
+     "label": "Writing sections",
+     "status": "done",
+     "done": 5,
+     "total": 5
+    },
+    {
+     "key": "boundary",
+     "label": "Checking how sections connect",
+     "status": "done",
+     "done": 4,
+     "total": 4
+    },
+    {
+     "key": "media",
+     "label": "Creating figures",
+     "status": "done",
+     "done": 4,
+     "total": 4
+    },
+    {
+     "key": "document_qa",
+     "label": "Final quality check",
+     "status": "done",
+     "done": null,
+     "total": null
+    },
+    {
+     "key": "realize",
+     "label": "Building the Learn lesson",
+     "status": "pending",
+     "done": null,
+     "total": null
+    }
+   ],
+   "current_label": null,
+   "started_at": "2026-10-05T18:55:12.647986"
+  }
+ },
+ "status": {
+  "path_lesson_id": "de9bfb9f-f1a9-4cc5-b28d-bce71f8c4a86",
+  "lesson_revision": 1,
+  "generation_id": "f8099d04-fd37-4fa1-9616-40fc689e2957",
+  "generation_status": "awaiting_teaching_approval",
+  "workflow_stage": "awaiting_teaching_approval",
+  "objective_hash": "e4b1fb088b53d462d75af98d9fbdb0e6fa5e4d13e78cd059e4e4e388f126032b",
+  "stale": false,
+  "can_prepare": false,
+  "can_regenerate": true,
+  "realizations": [
+   {
+    "realization_id": "83d604bb-2005-48e8-a432-50c5d576fd21",
+    "path": "learn",
+    "teaching_plan_id": "af070978-797b-4c21-b744-29f404128830",
+    "teaching_plan_revision": 1,
+    "teaching_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+    "variant_id": "everyone",
+    "native_policy_version": "1",
+    "native_policy_hash": "e3dae24f7e7555f43a031e75fd107ab6f8b155add5f377608e8982ec71cad219",
+    "package_contract_version": "2.0.0",
+    "package_contract_hash": "28c14e8db77ec576ad0a201fe874d4c27c563422ef4d7e81421095c4c77504e5",
+    "realization_revision": 1,
+    "status": "failed_recoverable",
+    "output_id": "learn-out-d2c630207dce411c",
+    "error_summary": "shared_document_post_section_blocked: The SharedDocument post-section stages could not produce a ready document.",
+    "pack_id": null,
+    "open_href": "/builder/from-native-learn/learn-out-d2c630207dce411c",
+    "shared_document_run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "shared_document_id": null,
+    "shared_document_revision": null,
+    "shared_document_hash": null,
+    "shared_document_state": "failed",
+    "run_id": null,
+    "recovery_action": "retry"
+   }
+  ],
+  "print_realization_id": null,
+  "learn_realization_id": "83d604bb-2005-48e8-a432-50c5d576fd21",
+  "builder_id": null,
+  "print_output_id": null,
+  "learn_output_id": "learn-out-d2c630207dce411c",
+  "print_open_href": null,
+  "learn_open_href": "/builder/from-native-learn/learn-out-d2c630207dce411c",
+  "workspace": {
+   "preparation": {
+    "state": "approved",
+    "review_kind": null,
+    "generation_id": "f8099d04-fd37-4fa1-9616-40fc689e2957",
+    "teaching_plan_id": "af070978-797b-4c21-b744-29f404128830",
+    "approved_revision": 1,
+    "approved_content_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+    "approved_snapshot_verified": true,
+    "stale": false,
+    "legacy_ambiguous": false,
+    "error": null,
+    "run_id": "36a90fdc-74ea-457e-9b12-1971580eff2c",
+    "recovery_action": "none",
+    "retryable": null,
+    "progress": {
+     "items_total": 1,
+     "items_ready": 1,
+     "items_failed": 0,
+     "teaching_plan": "ready",
+     "failed_work_item_ids": []
+    }
+   },
+   "learn": {
+    "state": "failed_recoverable",
+    "realization_id": "83d604bb-2005-48e8-a432-50c5d576fd21",
+    "output_id": "learn-out-d2c630207dce411c",
+    "open_href": "/builder/from-native-learn/learn-out-d2c630207dce411c",
+    "stale": false,
+    "legacy_ambiguous": false,
+    "error": {
+     "code": "REALIZATION_FAILED",
+     "error_type": null,
+     "failure_class": null,
+     "message": "shared_document_post_section_blocked: The SharedDocument post-section stages could not produce a ready document.",
+     "retryable": true,
+     "stage": "failed_recoverable",
+     "work_item_id": null,
+     "attempt": null,
+     "recovery_action": "retry"
+    },
+    "shared_document_state": "failed",
+    "shared_document_run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "shared_document_id": null,
+    "shared_document_revision": null,
+    "shared_document_hash": null,
+    "run_id": null,
+    "recovery_action": "retry",
+    "progress": {
+     "steps": [
+      {
+       "key": "sourcebook",
+       "label": "Gathering source notes",
+       "status": "done",
+       "done": null,
+       "total": null
+      },
+      {
+       "key": "shared_tasks",
+       "label": "Writing practice questions",
+       "status": "done",
+       "done": null,
+       "total": null
+      },
+      {
+       "key": "compose",
+       "label": "Planning sections",
+       "status": "done",
+       "done": 5,
+       "total": 5
+      },
+      {
+       "key": "write",
+       "label": "Writing sections",
+       "status": "done",
+       "done": 5,
+       "total": 5
+      },
+      {
+       "key": "boundary",
+       "label": "Checking how sections connect",
+       "status": "done",
+       "done": 4,
+       "total": 4
+      },
+      {
+       "key": "media",
+       "label": "Creating figures",
+       "status": "done",
+       "done": 4,
+       "total": 4
+      },
+      {
+       "key": "document_qa",
+       "label": "Final quality check",
+       "status": "done",
+       "done": null,
+       "total": null
+      },
+      {
+       "key": "realize",
+       "label": "Building the Learn lesson",
+       "status": "pending",
+       "done": null,
+       "total": null
+      }
+     ],
+     "current_label": null,
+     "started_at": "2026-10-05T18:55:12.647986"
+    }
+   },
+   "print": {
+    "state": "not_created",
+    "realization_id": null,
+    "output_id": null,
+    "open_href": null,
+    "stale": false,
+    "legacy_ambiguous": false,
+    "error": null,
+    "shared_document_state": null,
+    "shared_document_run_id": null,
+    "shared_document_id": null,
+    "shared_document_revision": null,
+    "shared_document_hash": null,
+    "run_id": null,
+    "recovery_action": null,
+    "progress": null
+   },
+   "legacy_ambiguities": []
+  },
+  "worker_debug": {
+   "debug_only": true,
+   "generation_status": "awaiting_teaching_approval",
+   "workflow_stage": "awaiting_teaching_approval"
+  }
+ }
+}

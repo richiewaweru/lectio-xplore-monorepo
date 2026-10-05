@@ -1,0 +1,279 @@
+{
+ "run": "fullrun-photosynthesis",
+ "document_id": "shared-document:96113be7-b9a6-45b4-8516-09b719c7bd6c:revision:1",
+ "sections": [
+  {
+   "id": "orient",
+   "title": "Two plants, one difference",
+   "node_sequence": [
+    "paragraph",
+    "list",
+    "task_anchor"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-8db81c2aad956244b743",
+     "segments": 3,
+     "words_per_segment": [
+      18,
+      44,
+      44
+     ],
+     "total_words": 106
+    }
+   ]
+  },
+  {
+   "id": "explain",
+   "title": "What the leaf does with the light",
+   "node_sequence": [
+    "callout:key_idea",
+    "figure",
+    "paragraph"
+   ],
+   "has_content": true,
+   "key_idea_count": 1,
+   "key_idea_index": 0,
+   "key_idea_opens_section": true,
+   "key_idea_before_blocky": true,
+   "paragraphs": [
+    {
+     "id": "shared-node-6fb7d5bb3b22e04c9a2b",
+     "segments": 2,
+     "words_per_segment": [
+      60,
+      39
+     ],
+     "total_words": 99
+    }
+   ]
+  },
+  {
+   "id": "confront",
+   "title": "Two tempting explanations that fail the cupboard plant",
+   "node_sequence": [
+    "callout:misconception",
+    "callout:misconception"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": []
+  },
+  {
+   "id": "contrast",
+   "title": "Take one input away",
+   "node_sequence": [
+    "list",
+    "task_anchor",
+    "callout:misconception"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": []
+  },
+  {
+   "id": "check",
+   "title": "Check: the greenhouse with no sun",
+   "node_sequence": [
+    "paragraph",
+    "task_anchor"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-3d3352f8a062a92f362f",
+     "segments": 2,
+     "words_per_segment": [
+      27,
+      35
+     ],
+     "total_words": 62
+    }
+   ]
+  }
+ ],
+ "totals": {
+  "paragraph_nodes": 3,
+  "paragraph_over80_segments": 0,
+  "strong_spans": 12,
+  "sub_spans": 0,
+  "sup_spans": 0,
+  "unicode_subsup": 0,
+  "bare_formula_or_unit": 0,
+  "literal_fallbacks": 0,
+  "equations": 0,
+  "tables": 0,
+  "compares": 0,
+  "lists": 2,
+  "misconception_callouts": 3,
+  "misconceptions_three_part": 3,
+  "key_idea_callouts": 1,
+  "figures": 1
+ },
+ "list_items_review": [
+  {
+   "section": "orient",
+   "node": "shared-node-d057556ea171afe6f65b",
+   "items": [
+    "**Water** reaches the plant through its **roots**, which take it in from the soil; the stem then carries it up to the leaves.",
+    "**Carbon dioxide** reaches the leaves from the air around the plant, passing in through small **openings** in the leaf surface.",
+    "**Light energy** reaches the leaves from the sun, and the leaves **absorb** it.",
+    "A plant needs all three \u2014 water, carbon dioxide and light \u2014 and it fails to grow well when any one of them is missing."
+   ]
+  },
+  {
+   "section": "contrast",
+   "node": "shared-node-4f2ac0bbd1093a40395b",
+   "items": [
+    "Start with **light energy** \u2014 is the leaf in a bright place, or is the plant somewhere dark?",
+    "Then check **water** \u2014 is water reaching the leaf from the soil, or has the soil been dry for days?",
+    "Then check **carbon dioxide** \u2014 can air reach the leaf openings, or is the leaf coated so air cannot get in?"
+   ]
+  }
+ ],
+ "list_summary_marker_hits": [],
+ "literal_markup_fallbacks": [],
+ "bare_formulas_or_units": [],
+ "advisory_event_codes": {
+  "composition_style_warning": {
+   "kind_missing_semantic_cue": 1,
+   "section_exceeds_callout_limit": 1,
+   "callout_missing_cautionary_cue": 1
+  },
+  "section_write_warning": {
+   "length_over_target": 4
+  },
+  "document_qa_advisory_flags": {
+   "callout_missing_cautionary_cue": 1,
+   "kind_missing_semantic_cue": 1,
+   "length_over_target": 1,
+   "section_exceeds_callout_limit": 1
+  }
+ },
+ "diagnostics_in_document": [],
+ "retried_work_items": [
+  {
+   "item": "boundary:explain->confront",
+   "attempt": "2"
+  },
+  {
+   "item": "write:check",
+   "attempt": "2"
+  }
+ ],
+ "failure_events": [
+  {
+   "seq": "11",
+   "type": "work_item_failed",
+   "stage": "section_writing",
+   "code": "database_transient",
+   "payload": {
+    "retryable": true,
+    "error_class": "provider_transport",
+    "safe_summary": "A transient database error interrupted the section.",
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "12",
+   "type": "section_writer_failure_diagnostic",
+   "stage": "section_writing",
+   "code": "database_transient",
+   "payload": {
+    "original_exception_type": "DBAPIError"
+   }
+  },
+  {
+   "seq": "20",
+   "type": "work_item_retry_queued",
+   "stage": "section_writing",
+   "code": "None",
+   "payload": {
+    "attempt": 2,
+    "from_attempt": 1,
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "21",
+   "type": "auto_retry_scheduled",
+   "stage": "section_writing",
+   "code": "None",
+   "payload": {
+    "attempts": [
+     1
+    ],
+    "error_codes": [
+     "database_transient"
+    ],
+    "work_item_ids": [
+     "8f55cab1-f2a9-4df5-9dee-08f619f6da19"
+    ]
+   }
+  },
+  {
+   "seq": "24",
+   "type": "work_item_failed",
+   "stage": "continuity_validation",
+   "code": "database_transient",
+   "payload": {
+    "retryable": true,
+    "error_class": "provider_transport",
+    "safe_summary": "A transient database error interrupted boundary validation.",
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "25",
+   "type": "boundary_failure_diagnostic",
+   "stage": "continuity_validation",
+   "code": "database_transient",
+   "payload": {
+    "original_exception_type": "DBAPIError"
+   }
+  },
+  {
+   "seq": "29",
+   "type": "work_item_retry_queued",
+   "stage": "continuity_validation",
+   "code": "None",
+   "payload": {
+    "attempt": 2,
+    "from_attempt": 1,
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "30",
+   "type": "auto_retry_scheduled",
+   "stage": "continuity_validation",
+   "code": "None",
+   "payload": {
+    "attempts": [
+     1
+    ],
+    "error_codes": [
+     "database_transient"
+    ],
+    "work_item_ids": [
+     "fcf205e9-f09d-429a-9cc5-64ea815c201d"
+    ]
+   }
+  }
+ ]
+}
