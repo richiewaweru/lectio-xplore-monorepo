@@ -90,6 +90,12 @@ def _figure_plan(*, plan_id: str = "plan-figure") -> TeachingPlan:
                         "evidence": "Learner interprets the diagram.",
                         "source_question_ids": [],
                         "task_mode": "none",
+                        "visual": {
+                            "mode": "diagram",
+                            "purpose": "Show how root hairs take in water.",
+                            "must_show": ["Root hair", "Water"],
+                            "labels_required": ["Root hair"],
+                        },
                     },
                 ],
             }
@@ -191,8 +197,8 @@ def _figure_composer_provider(calls: list[dict]):
                 },
                 {
                     "teaching_block_id": figure_block["id"],
-                    "kind": "figure",
-                    "semantic_role": "visual_model",
+                    "kind": "paragraph",
+                    "semantic_role": "explanation",
                 },
             ]
         }
@@ -205,6 +211,7 @@ def _figure_writer_provider(calls: list[dict]):
         calls.append(payload)
         items = payload["composition_plan"]
         callout_item = next(i for i in items if i["kind"] == "callout")
+        paragraph_item = next(i for i in items if i["kind"] == "paragraph")
         figure_item = next(i for i in items if i["kind"] == "figure")
         return {
             "nodes": [
@@ -222,15 +229,18 @@ def _figure_writer_provider(calls: list[dict]):
                     },
                 },
                 {
+                    "id": paragraph_item["id"],
+                    "kind": "paragraph",
+                    "teaching_block_id": paragraph_item["teaching_block_id"],
+                    "display": {
+                        "text": "The diagram shows a Root hair taking in water from the soil."
+                    },
+                },
+                {
                     "id": figure_item["id"],
                     "kind": "figure",
                     "teaching_block_id": figure_item["teaching_block_id"],
-                    "display": {"caption": "Root hairs absorbing water"},
-                    "accessibility": {
-                        "alt_text": (
-                            "Learner can describe root uptake using this diagram of root hairs."
-                        )
-                    },
+                    "display": {"caption": "Root hair absorbing water"},
                 },
             ]
         }

@@ -78,7 +78,7 @@ prompts:
     file: figure-authoring.md
     stage_label: Designs lesson figures
     editable: false
-    version: 1
+    version: 2
 
   - id: print-realization
     file: print-realization.md
@@ -102,13 +102,13 @@ prompts:
     file: section-composer.md
     stage_label: Composes shared lesson section structure
     editable: false
-    version: 1
+    version: 2
 
   - id: shared-section-writer
     file: shared-section-writer.md
     stage_label: Writes shared lesson section content
     editable: false
-    version: 1
+    version: 2
 
   - id: boundary-continuity-validator
     file: boundary-continuity-validator.md

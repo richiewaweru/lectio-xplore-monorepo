@@ -11,6 +11,7 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
     TeachingRevisionRecord,
+    VisualSpec,
 )
 from document.shared_lesson import build_shared_lesson_document
 from document.shared_lesson.assembly import SharedLessonAssemblyResult
@@ -92,6 +93,15 @@ def _approved_source_and_document(*, include_figure: bool = False):
                 intent="Explain photosynthesis",
                 brief="Explain how plants make food",
                 evidence="Learner can explain how plants make food",
+                visual=(
+                    VisualSpec(
+                        purpose="Show how a plant uses light",
+                        must_show=["Plant", "Light"],
+                        labels_required=["Light"],
+                    )
+                    if include_figure
+                    else None
+                ),
             )
         ],
     )

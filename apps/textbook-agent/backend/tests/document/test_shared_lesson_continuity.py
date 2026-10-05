@@ -752,3 +752,55 @@ async def test_repair_failure_is_bounded_and_does_not_loop() -> None:
 
     assert engine.calls == 1
     assert raised.value.issues[0].issue_code == "metadata_or_placeholder_leak"
+
+
+def _figure_section(*, asset_id: str | None, alt_text: str) -> SharedSection:
+    from document.shared_lesson.models import FigureAccessibility, FigureDisplay, FigureNode
+
+    section = _section()
+    return section.model_copy(
+        update={
+            "nodes": (
+                section.nodes[0],
+                FigureNode(
+                    id="figure-1",
+                    teaching_block_id="b1",
+                    display=FigureDisplay(asset_id=asset_id, caption="A light diagram"),
+                    accessibility=FigureAccessibility(alt_text=alt_text),
+                ),
+                section.nodes[1],
+            )
+        }
+    )
+
+
+def _figure_shape() -> tuple[ExpectedNodeShape, ...]:
+    shape = _shape()
+    return (
+        shape[0],
+        ExpectedNodeShape(
+            id="figure-1",
+            kind="figure",
+            teaching_block_id="b1",
+            semantic_role="visual_model",
+        ),
+        shape[1],
+    )
+
+
+def test_pending_figure_with_empty_alt_is_not_an_issue_but_bound_figure_needs_alt() -> None:
+    plan = _plan("section-1", title="Light and energy")
+
+    pending = validate_section_continuity(
+        section=_figure_section(asset_id=None, alt_text=""),
+        teaching_plan_section=plan,
+        expected_nodes=_figure_shape(),
+    )
+    assert "figure_alt_text_missing" not in {issue.issue_code for issue in pending}
+
+    bound = validate_section_continuity(
+        section=_figure_section(asset_id="asset-1", alt_text=""),
+        teaching_plan_section=plan,
+        expected_nodes=_figure_shape(),
+    )
+    assert "figure_alt_text_missing" in {issue.issue_code for issue in bound}

@@ -20,6 +20,7 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
     TeachingRevisionRecord,
+    VisualSpec,
 )
 from document.shared_lesson.assembly import assemble_shared_lesson_document
 from document.shared_lesson.composer import CompositionChoice, validate_and_build_composition
@@ -66,6 +67,11 @@ def _source_with_figure() -> TeachingPlanSource:
                 intent="Explain energy transfer with a diagram",
                 brief="Explain energy transfer clearly and show a diagram of the energy flow",
                 evidence="The learner can explain energy transfer",
+                visual=VisualSpec(
+                    purpose="Show how energy flows between systems",
+                    must_show=["Source system", "Receiving system"],
+                    labels_required=["Energy"],
+                ),
             )
         ],
     )
@@ -112,11 +118,6 @@ def _accepted_with_figure():
                 teaching_block_id="explain-block",
                 kind="paragraph",
                 semantic_role="explanation",
-            ),
-            CompositionChoice(
-                teaching_block_id="explain-block",
-                kind="figure",
-                semantic_role="visual_model",
             ),
         ),
         tasks=(),

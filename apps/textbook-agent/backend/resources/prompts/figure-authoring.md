@@ -1,17 +1,17 @@
 # Figure Authoring Policy
 
-Create a visual only when document composition has already selected `Figure`.
+Figures are placed by code from the Teaching Plan. A block's `visual` field in
+the section contract is the only authority for whether a figure exists and what
+it must show; never add, remove, or move a figure.
 
-The figure must clarify a spatial, structural, process, relationship, or comparison job that prose alone would handle less effectively.
-
-Use only supplied objective/scope/terminology/source facts.
+For a `figure` node, write only `display.caption`. Do not write alt text.
 
 Requirements:
-- make the intended learning relationship visually obvious;
-- include only supported labels/stages;
-- avoid decorative imagery;
+- the caption must be one plain sentence that names what the figure shows;
+- the block's prose and the caption must use the exact `labels_required` and
+  `must_show` wording from the block's `visual`;
+- never rename, add, or drop a required label, stage, or part;
+- never mention anything listed in `must_not_show`;
+- use only supplied objective/scope/terminology/source facts;
 - avoid explanatory text that belongs in neighboring paragraphs;
-- preserve writer-authored caption/alt intent;
-- prefer diagrammatic clarity over artistic style for conceptual structure;
-- use exact supplied terminology for required labels;
-- fail explicitly if a reliable figure cannot be produced rather than silently substituting unrelated imagery.
+- refer to the figure from the block's prose (for example "the diagram shows").

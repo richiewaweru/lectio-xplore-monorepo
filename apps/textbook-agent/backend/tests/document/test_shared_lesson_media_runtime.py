@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.dialects import postgresql
 
-from document.shared_lesson.media import SharedFigureWorkOrder
+from document.shared_lesson.media import SharedFigureWorkOrder, rebuild_figure_work_order
 from document.shared_lesson.media_runtime import (
     MediaRuntimeError,
     MediaRuntimeOutcome,
@@ -55,6 +55,7 @@ from infra.generation_runtime import (
     WorkItemUnavailable,
 )
 from media.generation.contracts import (
+    SourceOfTruthEntry,
     GeneratedVisualBlock,
     VisualGeneratorWorkOrder,
     VisualPlanItem,
@@ -123,45 +124,47 @@ async def _seed_run(session, *, suffix: str = "a"):
     return owner, admitted.record.id
 
 
-def _work(*, suffix: str = "a", required: bool = True) -> SharedFigureWorkOrder:
+def _work_for(
+    accepted: SharedSection,
+    *,
+    purpose: str,
+    must_show: list[str],
+    required: bool = True,
+) -> SharedFigureWorkOrder:
+    """Build a frozen work order with the one shared builder (identity-only path)."""
+    suffix = accepted.id.removeprefix("section-")
     figure_id = f"figure-{suffix}"
-    accepted = _accepted_section(suffix)
-    order = VisualGeneratorWorkOrder(
-        work_order_id="placeholder",
-        resource_type="shared_lesson_figure",
-        dependency="section_text",
-        visual=VisualPlanItem(
-            id="placeholder",
-            attaches_to=figure_id,
-            mode="diagram",
-            purpose=f"A diagram for {suffix}",
-            must_show=[f"The {suffix} relationship"],
-        ),
-    )
     draft = SharedFigureWorkOrder(
         source_plan_id=SOURCE.source_artifact_id,
         source_plan_revision=SOURCE.source_revision,
         source_plan_hash=SOURCE.source_hash,
-        section_id=f"section-{suffix}",
+        section_id=accepted.id,
         section_output_hash=accepted_section_output_hash(accepted),
         figure_node_id=figure_id,
         figure_semantic_hash="0" * 64,
         required=required,
-        work_order=order,
-    )
-    semantic_hash = frozen_figure_semantic_hash(draft, accepted)
-    return draft.model_copy(
-        update={
-            "figure_semantic_hash": semantic_hash,
-            "work_order": order.model_copy(
-                update={
-                    "work_order_id": f"shared-media-{semantic_hash}",
-                    "visual": order.visual.model_copy(
-                        update={"id": f"shared-figure-{semantic_hash[:24]}"}
-                    ),
-                }
+        work_order=VisualGeneratorWorkOrder(
+            work_order_id="placeholder",
+            resource_type="shared_lesson_figure",
+            dependency="section_text",
+            visual=VisualPlanItem(
+                id="placeholder",
+                attaches_to=figure_id,
+                mode="diagram",
+                purpose=purpose,
+                must_show=must_show,
             ),
-        }
+        ),
+    )
+    return rebuild_figure_work_order(draft, accepted)
+
+
+def _work(*, suffix: str = "a", required: bool = True) -> SharedFigureWorkOrder:
+    return _work_for(
+        _accepted_section(suffix),
+        purpose=f"A diagram for {suffix}",
+        must_show=[f"The {suffix} relationship"],
+        required=required,
     )
 
 
@@ -169,10 +172,9 @@ def _accepted_section(
     suffix: str,
     *,
     caption: str | None = None,
-    alt_text: str | None = None,
+    alt_text: str = "",
 ) -> SharedSection:
     caption = caption or f"A diagram for {suffix}"
-    alt_text = alt_text or f"The {suffix} relationship"
     return SharedSection(
         id=f"section-{suffix}",
         title=f"Section {suffix}",
@@ -392,16 +394,23 @@ async def test_changed_active_figure_requires_linked_replacement_and_preserves_s
 async def test_forged_work_order_is_rejected_against_accepted_section(db_session) -> None:
     owner, run_id = await _seed_run(db_session)
     accepted = _accepted_section("a")
-    forged = _work().model_copy(
+    # Identity-only source: the spec is read back from the work order, so the
+    # shared builder still catches forged writer context. (A forged spec is
+    # caught against the approved plan; see test_shared_lesson_media.py.)
+    work = _work()
+    forged = work.model_copy(
         update={
-            "work_order": _work().work_order.model_copy(
+            "work_order": work.work_order.model_copy(
                 update={
-                    "visual": _work().work_order.visual.model_copy(update={"purpose": "Forged"})
+                    "source_of_truth": [
+                        *work.work_order.source_of_truth,
+                        SourceOfTruthEntry(key="context:caption", text="Forged caption"),
+                    ]
                 }
             )
         }
     )
-    with pytest.raises(MediaSourceConflict, match="purpose"):
+    with pytest.raises(MediaSourceConflict, match="differs"):
         await admit_figure_media_work_item(
             db_session,
             run_id=run_id,
@@ -441,39 +450,12 @@ async def test_non_ascii_section_hash_and_semantics_match_media_canonicalization
 ) -> None:
     owner, run_id = await _seed_run(db_session, suffix="unicode")
     accepted = _accepted_section(
-        "é", caption="Énergie solaire", alt_text="Relation énergie lumière"
+        "é", caption="Énergie solaire"
     )
-    draft = _work(suffix="é").model_copy(
-        update={
-            "section_output_hash": accepted_section_output_hash(accepted),
-            "figure_semantic_hash": "0" * 64,
-            "work_order": _work(suffix="é").work_order.model_copy(
-                update={
-                    "work_order_id": "placeholder",
-                    "visual": _work(suffix="é").work_order.visual.model_copy(
-                        update={
-                            "id": "placeholder",
-                            "purpose": "Énergie solaire",
-                            "must_show": ["Relation énergie lumière"],
-                        }
-                    ),
-                }
-            ),
-        }
-    )
-    semantic_hash = frozen_figure_semantic_hash(draft, accepted)
-    work = draft.model_copy(
-        update={
-            "figure_semantic_hash": semantic_hash,
-            "work_order": draft.work_order.model_copy(
-                update={
-                    "work_order_id": f"shared-media-{semantic_hash}",
-                    "visual": draft.work_order.visual.model_copy(
-                        update={"id": f"shared-figure-{semantic_hash[:24]}"}
-                    ),
-                }
-            ),
-        }
+    work = _work_for(
+        accepted,
+        purpose="Énergie solaire",
+        must_show=["Relation énergie lumière"],
     )
     admitted = await admit_figure_media_work_item(
         db_session,
@@ -671,39 +653,12 @@ async def test_repaired_figure_uses_linked_replacement_and_active_readiness(db_s
         )
     )
     repaired_section = _accepted_section(
-        "a", caption="A repaired diagram", alt_text="The repaired relationship"
+        "a", caption="A repaired diagram"
     )
-    repaired_draft = original.model_copy(
-        update={
-            "section_output_hash": accepted_section_output_hash(repaired_section),
-            "figure_semantic_hash": "0" * 64,
-            "work_order": original.work_order.model_copy(
-                update={
-                    "work_order_id": "placeholder",
-                    "visual": original.work_order.visual.model_copy(
-                        update={
-                            "id": "placeholder",
-                            "purpose": "A repaired diagram",
-                            "must_show": ["The repaired relationship"],
-                        }
-                    ),
-                }
-            ),
-        }
-    )
-    repaired_hash = frozen_figure_semantic_hash(repaired_draft, repaired_section)
-    repaired = repaired_draft.model_copy(
-        update={
-            "figure_semantic_hash": repaired_hash,
-            "work_order": repaired_draft.work_order.model_copy(
-                update={
-                    "work_order_id": f"shared-media-{repaired_hash}",
-                    "visual": repaired_draft.work_order.visual.model_copy(
-                        update={"id": f"shared-figure-{repaired_hash[:24]}"}
-                    ),
-                }
-            ),
-        }
+    repaired = _work_for(
+        repaired_section,
+        purpose="A repaired diagram",
+        must_show=["The repaired relationship"],
     )
     replacement = await admit_repaired_figure_media_work_item(
         db_session,
@@ -1429,39 +1384,12 @@ async def test_find_active_figure_media_work_item_follows_replacement(db_session
         )
     )
     repaired_section = _accepted_section(
-        "find-active-repair", caption="A repaired diagram", alt_text="The repaired relationship"
+        "find-active-repair", caption="A repaired diagram"
     )
-    repaired_draft = original.model_copy(
-        update={
-            "section_output_hash": accepted_section_output_hash(repaired_section),
-            "figure_semantic_hash": "0" * 64,
-            "work_order": original.work_order.model_copy(
-                update={
-                    "work_order_id": "placeholder",
-                    "visual": original.work_order.visual.model_copy(
-                        update={
-                            "id": "placeholder",
-                            "purpose": "A repaired diagram",
-                            "must_show": ["The repaired relationship"],
-                        }
-                    ),
-                }
-            ),
-        }
-    )
-    repaired_hash = frozen_figure_semantic_hash(repaired_draft, repaired_section)
-    repaired = repaired_draft.model_copy(
-        update={
-            "figure_semantic_hash": repaired_hash,
-            "work_order": repaired_draft.work_order.model_copy(
-                update={
-                    "work_order_id": f"shared-media-{repaired_hash}",
-                    "visual": repaired_draft.work_order.visual.model_copy(
-                        update={"id": f"shared-figure-{repaired_hash[:24]}"}
-                    ),
-                }
-            ),
-        }
+    repaired = _work_for(
+        repaired_section,
+        purpose="A repaired diagram",
+        must_show=["The repaired relationship"],
     )
     replacement = await admit_repaired_figure_media_work_item(
         db_session,

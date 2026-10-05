@@ -36,7 +36,9 @@ from document.shared_lesson.media import (
     SharedFigureWorkOrder,
     bind_deferred_figure_media,
     bind_generated_figure,
+    rebuild_figure_work_order,
 )
+from curriculum.teaching_plan.models import VisualSpec
 from document.shared_lesson.models import FigureNode, SharedSection
 from document.shared_lesson.runtime import (
     TeachingPlanSource,
@@ -70,7 +72,6 @@ from infra.generation_runtime import (
 from media.generation.contracts import (
     GeneratedVisualBlock,
     VisualGeneratorWorkOrder,
-    VisualPlanItem,
 )
 
 MEDIA_STAGE = "media_generation"
@@ -205,26 +206,10 @@ def accepted_section_output_hash(section: SharedSection) -> str:
 
 def frozen_figure_semantic_hash(work: SharedFigureWorkOrder, section: SharedSection) -> str:
     """Recompute the semantic identity without trusting caller-supplied hashes."""
-    node = next(
-        (candidate for candidate in section.nodes if candidate.id == work.figure_node_id), None
-    )
-    if not isinstance(node, FigureNode):
-        raise MediaSourceConflict("accepted section does not contain the frozen FigureNode")
-    payload = {
-        "source_plan_id": work.source_plan_id,
-        "source_plan_revision": work.source_plan_revision,
-        "source_plan_hash": work.source_plan_hash,
-        "section_output_hash": accepted_section_output_hash(section),
-        "section_id": section.id,
-        "figure_node_id": work.figure_node_id,
-        "caption": node.display.caption,
-        "alt_text": node.accessibility.alt_text,
-        "source_facts": [fact.model_dump(mode="json") for fact in work.work_order.source_of_truth],
-        "mode": work.work_order.visual.mode,
-        "required": work.required,
-    }
-    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    try:
+        return rebuild_figure_work_order(work, section).figure_semantic_hash
+    except SharedFigureMediaError as exc:
+        raise MediaSourceConflict(str(exc)) from exc
 
 
 def _item_request(
@@ -285,7 +270,30 @@ def _verify_work_source(work: SharedFigureWorkOrder, source: SourceIdentity) -> 
         raise MediaSourceConflict("figure work order is bound to a different Teaching Plan source")
 
 
-def _verify_accepted_section(work: SharedFigureWorkOrder, section: SharedSection) -> None:
+def _plan_visual_spec(
+    source: TeachingPlanSource | SourceIdentity | None, work: SharedFigureWorkOrder, node: FigureNode
+) -> VisualSpec | None:
+    """The approved plan block's authoritative spec, when the plan is available."""
+    if not isinstance(source, TeachingPlanSource):
+        return None
+    planned = next(
+        (item for item in source.plan.sections if item.slot_id == work.section_id), None
+    )
+    block = (
+        next((item for item in planned.blocks if item.id == node.teaching_block_id), None)
+        if planned is not None
+        else None
+    )
+    if block is None or block.visual is None:
+        raise MediaSourceConflict("figure node has no visual spec in the approved Teaching Plan")
+    return block.visual
+
+
+def _verify_accepted_section(
+    work: SharedFigureWorkOrder,
+    section: SharedSection,
+    source: TeachingPlanSource | SourceIdentity | None = None,
+) -> None:
     if section.id != work.section_id:
         raise MediaSourceConflict("figure work order section differs from the accepted section")
     if accepted_section_output_hash(section) != work.section_output_hash:
@@ -295,35 +303,21 @@ def _verify_accepted_section(work: SharedFigureWorkOrder, section: SharedSection
     )
     if not isinstance(node, FigureNode):
         raise MediaSourceConflict("accepted section does not contain the frozen FigureNode")
-    if work.work_order.visual.attaches_to != node.id:
-        raise MediaSourceConflict("figure work order attaches to a different FigureNode")
-    expected_purpose = node.display.caption.strip() or node.accessibility.alt_text.strip()
-    if work.work_order.visual.purpose != expected_purpose:
-        raise MediaSourceConflict("figure work order purpose differs from the accepted FigureNode")
-    if work.work_order.visual.must_show != [node.accessibility.alt_text.strip()]:
-        raise MediaSourceConflict("figure work order semantics differ from the accepted FigureNode")
-    semantic_hash = frozen_figure_semantic_hash(work, section)
-    if work.figure_semantic_hash != semantic_hash:
+    # One builder derives the expected order: re-run it from the accepted section
+    # (and the plan's authoritative spec when available) and require equality.
+    try:
+        expected = rebuild_figure_work_order(
+            work, section, spec=_plan_visual_spec(source, work, node)
+        )
+    except SharedFigureMediaError as exc:
+        raise MediaSourceConflict(f"figure work order cannot be re-derived: {exc}") from exc
+    if work.figure_semantic_hash != expected.figure_semantic_hash:
         raise MediaSourceConflict("figure work order semantic hash is stale or forged")
-    if work.work_order.visual.id != f"shared-figure-{semantic_hash[:24]}":
-        raise MediaSourceConflict("figure work order visual identity is stale or forged")
-    if work.work_order.work_order_id != f"shared-media-{semantic_hash}":
-        raise MediaSourceConflict("figure work order identity is stale or forged")
-    expected_order = VisualGeneratorWorkOrder(
-        work_order_id=work.work_order.work_order_id,
-        resource_type="shared_lesson_figure",
-        dependency="section_text",
-        visual=VisualPlanItem(
-            id=f"shared-figure-{semantic_hash[:24]}",
-            attaches_to=node.id,
-            mode=work.work_order.visual.mode,
-            purpose=expected_purpose,
-            must_show=[node.accessibility.alt_text.strip()],
-        ),
-        source_of_truth=list(work.work_order.source_of_truth),
-    )
-    if work.work_order != expected_order:
-        raise MediaSourceConflict("figure work order contains an unsupported or forged spec")
+    if work != expected:
+        raise MediaSourceConflict(
+            "figure work order differs from the work order derived from the plan spec "
+            "and accepted section"
+        )
 
 
 def find_active_figure_media_work_item(
@@ -398,7 +392,7 @@ async def admit_figure_media_work_item(
         raise ValueError("max_attempts must be positive")
     identity = _identity(source)
     _verify_work_source(work, identity)
-    _verify_accepted_section(work, accepted_section)
+    _verify_accepted_section(work, accepted_section, source)
     run = await _verify_run_source(
         session, run_id=run_id, owner_user_id=owner_user_id, source=identity, lock=True
     )
@@ -444,7 +438,7 @@ async def admit_repaired_figure_media_work_item(
         raise ValueError("max_attempts must be positive")
     identity = _identity(source)
     _verify_work_source(work, identity)
-    _verify_accepted_section(work, accepted_section)
+    _verify_accepted_section(work, accepted_section, source)
     predecessor = await session.get(GenerationWorkItemModel, predecessor_work_item_id)
     if predecessor is None:
         raise MediaRuntimeError("media replacement predecessor does not exist")
@@ -636,7 +630,7 @@ async def execute_figure_media_work_item(
     optional_media = settings.shared_document_media_optional if media_optional is None else media_optional
     identity = _identity(job.source)
     _verify_work_source(job.work, identity)
-    _verify_accepted_section(job.work, job.accepted_section)
+    _verify_accepted_section(job.work, job.accepted_section, job.source)
     item = await claim_work_item(
         job.session,
         work_item_id=job.work_item_id,

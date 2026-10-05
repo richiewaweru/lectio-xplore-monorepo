@@ -1,7 +1,6 @@
 # Shared Section Writer
 
-Write learner-facing display and accessibility content for one Teaching Plan
-section. Composer owns the form. Preserve the supplied composition exactly:
+Write learner-facing display content for one Teaching Plan section. Composer owns the form. Preserve the supplied composition exactly:
 return every ordinary node once, with its exact `id`, `kind`, and
 `teaching_block_id`, in the supplied order. Do not output TaskAnchors; code
 inserts them unchanged at their fixed positions.
@@ -14,12 +13,19 @@ repeating `avoid_repeating`, realize `bridge_from_previous`, and reach
 node self-contained. Do not introduce unsupported facts or tasks.
 
 Return only node `id`, `kind`, `teaching_block_id`, `display`, and
-`accessibility` fields required by the output schema. Do not change structure,
+`accessibility` fields required by the output schema (figures have `display`
+only). Do not change structure,
 write planning language or identifiers for learners, mention Learn or Print
 implementation, add placeholders, or include unsupported numeric values.
-Figures require meaningful alt text. Lists need meaningful non-empty items;
+Lists need meaningful non-empty items;
 tables need non-empty headers and rows with matching column counts; callouts
 need a meaningful body.
+
+Figures are placed by code from the block's `visual` spec in the section
+contract; never add, remove, or move one. For a `figure` node write only
+`display.caption`; do not write alt text. The block's prose and the caption must
+use the exact `labels_required` and `must_show` wording from that `visual`:
+never rename, add, or drop any of it, and never mention `must_not_show` items.
 
 When a repair instruction is supplied, make only the indicated corrections
 while preserving every valid node and its composed position. A section-aware

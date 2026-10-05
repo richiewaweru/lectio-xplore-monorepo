@@ -7,7 +7,11 @@ from pydantic import ValidationError
 
 from core.prompts import effective_prompt_text
 from curriculum.shared_tasks.models import SharedTaskSpec
-from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
+from curriculum.teaching_plan.models import (
+    TeachingPlanBlock,
+    TeachingPlanSection,
+    VisualSpec,
+)
 from document.shared_lesson.composer import (
     COMPOSITION_ISSUE_CODES,
     SOFT_COMPOSITION_ISSUE_CODES,
@@ -23,13 +27,24 @@ from document.shared_lesson.composer import (
 from infra.authoring.model_policy import SECTION_COMPOSER, get_v3_slot
 
 
-def _block(block_id: str, intent: str, brief: str | None = None) -> TeachingPlanBlock:
+def _visual() -> VisualSpec:
+    return VisualSpec(
+        purpose="Show the particle arrangement",
+        must_show=["particles"],
+        labels_required=["Particle"],
+    )
+
+
+def _block(
+    block_id: str, intent: str, brief: str | None = None, *, visual: bool = False
+) -> TeachingPlanBlock:
     return TeachingPlanBlock(
         id=block_id,
         position=int(block_id.removeprefix("b")),
         intent=intent,
         brief=brief or intent,
         evidence=f"Learner can demonstrate {intent}.",
+        visual=_visual() if visual else None,
     )
 
 
@@ -59,14 +74,13 @@ def _choice(block_id: str, kind: str, role: str) -> dict[str, str]:
 @pytest.mark.asyncio
 async def test_composes_diverse_section_with_fixed_order_and_stable_ids() -> None:
     section = _section(
-        _block("b0", "explain the particle model"),
+        _block("b0", "explain the particle model", visual=True),
         _block("b1", "compare two models using evidence"),
         _block("b2", "warn about a misconception in this subsection"),
     )
     response = {
         "items": [
             _choice("b0", "paragraph", "explanation"),
-            _choice("b0", "figure", "visual_model"),
             _choice("b1", "table", "comparison"),
             _choice("b1", "list", "evidence"),
             _choice("b2", "heading", "subsection"),
@@ -93,7 +107,16 @@ async def test_composes_diverse_section_with_fixed_order_and_stable_ids() -> Non
         "callout",
     ]
     assert len({item.id for item in first.items}) == len(first.items)
-    assert all(item.id.startswith("shared-node-") for item in first.items)
+    assert all(
+        item.id.startswith("shared-figure-node-" if item.kind == "figure" else "shared-node-")
+        for item in first.items
+    )
+    figure = first.items[1]
+    assert (figure.kind, figure.teaching_block_id, figure.semantic_role) == (
+        "figure",
+        "b0",
+        "visual_model",
+    )
 
 
 def test_code_inserts_adjacent_task_anchors_after_owning_block_nodes() -> None:
@@ -161,18 +184,14 @@ def test_rejects_too_many_consecutive_paragraphs_and_unsuitable_forms() -> None:
     with pytest.raises(CompositionValidationError, match="unsuitable"):
         validate_and_build_composition(
             section=section,
-            choices=[
-                CompositionChoice(teaching_block_id="b0", kind="figure", semantic_role="summary")
-            ],
+            choices=[CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="summary")],
             tasks=[],
         )
     with pytest.raises(CompositionValidationError, match="suitable semantic cues"):
         validate_and_build_composition(
-            section=_section(_block("b0", "explain the evidence")),
+            section=_section(_block("b0", "explain the topic")),
             choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="figure", semantic_role="visual_model"
-                )
+                CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison")
             ],
             tasks=[],
         )
@@ -649,20 +668,18 @@ def test_each_rejects_test_case_reports_expected_issue_code() -> None:
         validate_and_build_composition(
             section=paragraph_section,
             choices=[
-                CompositionChoice(teaching_block_id="b0", kind="figure", semantic_role="summary")
+                CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="summary")
             ],
             tasks=[],
         )
     assert ("kind_role_mismatch", "choices[0].kind") in role_mismatch_excinfo.value.issues
 
-    cueless_section = _section(_block("b0", "explain the evidence"))
+    cueless_section = _section(_block("b0", "explain the topic"))
     with pytest.raises(CompositionValidationError) as cue_excinfo:
         validate_and_build_composition(
             section=cueless_section,
             choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="figure", semantic_role="visual_model"
-                )
+                CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison")
             ],
             tasks=[],
         )
@@ -828,3 +845,106 @@ def test_empty_warnings_are_omitted_so_pre_warning_outputs_hash_identically():
     }
     warned = plan.model_copy(update={"warnings": (("paragraph_run_exceeded", "choices[2]"),)})
     assert warned.model_dump(mode="json")["warnings"] == [["paragraph_run_exceeded", "choices[2]"]]
+
+
+@pytest.mark.asyncio
+async def test_composer_output_containing_a_figure_is_rejected_and_repaired() -> None:
+    section = _section(_block("b0", "explain the particle model", visual=True))
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            return {
+                "items": [
+                    _choice("b0", "paragraph", "explanation"),
+                    _choice("b0", "figure", "visual_model"),
+                ]
+            }
+        return {"items": [_choice("b0", "paragraph", "explanation")]}
+
+    plan = await compose_section(section=section, tasks=[], provider=provider)
+
+    assert len(calls) == 2
+    assert any("figure" in error for error in calls[1]["repair_errors"])
+    # The figure still exists -- placed by code from the plan, not the composer.
+    assert [item.kind for item in plan.items] == ["paragraph", "figure"]
+
+
+@pytest.mark.asyncio
+async def test_persistent_composer_figure_fails_closed() -> None:
+    section = _section(_block("b0", "explain the particle model", visual=True))
+    calls = 0
+
+    async def provider(_payload: dict[str, Any]) -> Any:
+        nonlocal calls
+        calls += 1
+        return {"items": [_choice("b0", "figure", "visual_model")]}
+
+    with pytest.raises(CompositionValidationError) as excinfo:
+        await compose_section(section=section, tasks=[], provider=provider)
+    assert calls == 2
+    assert _issue_codes(excinfo.value) == {"provider_draft_schema_invalid"}
+
+    with pytest.raises(ValidationError):
+        CompositionChoice.model_validate(_choice("b0", "figure", "visual_model"))
+
+
+def test_code_places_exactly_one_figure_per_visual_block_before_task_anchors() -> None:
+    section = _section(
+        _block("b0", "explain the particle model", visual=True),
+        _block("b1", "compare two models using evidence"),
+        _block("b2", "summarize the idea", visual=True),
+    )
+    tasks = [_task("task-a", "b0"), _task("task-c", "b2")]
+    choices = [
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+        CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="summary"),
+        CompositionChoice(teaching_block_id="b1", kind="table", semantic_role="comparison"),
+        CompositionChoice(teaching_block_id="b2", kind="paragraph", semantic_role="summary"),
+    ]
+
+    plan = validate_and_build_composition(
+        section=section, choices=choices, tasks=tasks, policy=CompositionPolicy(max_nodes_per_block=2)
+    )
+
+    assert [(item.kind, item.teaching_block_id) for item in plan.items] == [
+        ("paragraph", "b0"),
+        ("paragraph", "b0"),
+        ("figure", "b0"),  # does not count toward max_nodes_per_block=2
+        ("task_anchor", "b0"),
+        ("table", "b1"),
+        ("paragraph", "b2"),
+        ("figure", "b2"),
+        ("task_anchor", "b2"),
+    ]
+    assert sum(item.kind == "figure" for item in plan.items) == 2
+    validate_composition_plan(plan=plan, section=section, tasks=tasks)
+
+    again = validate_and_build_composition(
+        section=section, choices=choices, tasks=tasks, policy=CompositionPolicy()
+    )
+    assert again.items == plan.items  # figure ids are stable
+
+    without_figure = SectionCompositionPlan(
+        section_slot_id=plan.section_slot_id,
+        items=tuple(item for item in plan.items if item.id != plan.items[2].id),
+    )
+    with pytest.raises(CompositionValidationError):
+        validate_composition_plan(plan=without_figure, section=section, tasks=tasks)
+
+
+def test_no_visual_blocks_means_no_figure_items() -> None:
+    section = _section(
+        _block("b0", "show the diagram of the particle model figure"),
+        _block("b1", "explain the visual flow"),
+    )
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+            CompositionChoice(teaching_block_id="b1", kind="paragraph", semantic_role="summary"),
+        ],
+        tasks=[],
+    )
+    assert all(item.kind != "figure" for item in plan.items)

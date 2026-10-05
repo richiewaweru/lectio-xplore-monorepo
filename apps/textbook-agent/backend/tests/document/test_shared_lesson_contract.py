@@ -149,8 +149,10 @@ def test_contract_rejects_path_specific_fields_and_unknown_node_kinds() -> None:
         build_shared_lesson_document(unknown_node)
 
 
-@pytest.mark.parametrize("alt_text", [None, "", "   "])
-def test_figure_requires_meaningful_alt_text(alt_text: str | None) -> None:
+@pytest.mark.parametrize("alt_text", [None, ""])
+def test_pending_figure_may_have_empty_alt_text(alt_text: str | None) -> None:
+    # Alt text is pending until media binds the ready result (media.py
+    # enforces it there), so the document contract no longer demands it.
     payload = _payload()
     figure = payload["sections"][0]["nodes"][3]
     if alt_text is None:
@@ -158,8 +160,8 @@ def test_figure_requires_meaningful_alt_text(alt_text: str | None) -> None:
     else:
         figure["accessibility"]["alt_text"] = alt_text
 
-    with pytest.raises(ValidationError, match="alt_text"):
-        build_shared_lesson_document(payload)
+    document = build_shared_lesson_document(payload)
+    assert document.sections[0].nodes[3].accessibility.alt_text == ""
 
 
 @pytest.mark.parametrize(

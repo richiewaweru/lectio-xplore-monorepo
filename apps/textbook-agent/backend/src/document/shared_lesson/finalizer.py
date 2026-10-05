@@ -697,6 +697,7 @@ _READY_MEDIA_COMPARISON_FIELDS = (
     "visual_id",
     "asset_id",
     "asset_url",
+    "alt_text",
     "mode",
     "required",
     "source_facts",

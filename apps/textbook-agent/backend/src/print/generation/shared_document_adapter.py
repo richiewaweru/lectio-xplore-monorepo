@@ -95,7 +95,7 @@ def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, Figu
             "figure",
             {
                 "asset": {"kind": "image", "status": "ready", "src": media.asset_url},
-                "alt_text": node.accessibility.alt_text,
+                "alt_text": node.accessibility.alt_text or media.alt_text,
                 **({"caption": node.display.caption} if node.display.caption else {}),
             },
         )

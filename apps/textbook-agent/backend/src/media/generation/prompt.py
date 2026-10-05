@@ -126,7 +126,7 @@ MUST SHOW:
 MUST NOT SHOW:
 {must_not_block}
 
-{('LABELS REQUIRED: ' + ', '.join(order.visual.labels_required)) if visual_style != 'diagram_precision' else ''}
+{('LABELS REQUIRED (draw each label exactly as written, spelled identically, and no other text): ' + ', '.join(order.visual.labels_required)) if visual_style != 'diagram_precision' and order.visual.labels_required else ''}
 {frame_lines}
 {source_block}{anchor_block}{qc_block}{continuity_block}
 

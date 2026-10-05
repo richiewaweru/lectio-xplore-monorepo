@@ -13,7 +13,6 @@ from pydantic import (
     Field,
     TypeAdapter,
     ValidationInfo,
-    field_validator,
     model_validator,
 )
 
@@ -77,14 +76,9 @@ class NodeAccessibility(_ClosedModel):
 
 
 class FigureAccessibility(_ClosedModel):
-    alt_text: str = Field(min_length=1)
-
-    @field_validator("alt_text")
-    @classmethod
-    def _require_meaningful_alt_text(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("figure alt_text must not be blank")
-        return value
+    #: Empty while the figure is pending; media binding fills it from the
+    #: ready result. Final-document assembly requires it to be non-empty.
+    alt_text: str = ""
 
 
 class ParagraphDisplay(_ClosedModel):

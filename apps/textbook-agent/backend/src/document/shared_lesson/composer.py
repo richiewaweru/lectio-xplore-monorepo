@@ -13,7 +13,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
 
-OrdinaryNodeKind = Literal["paragraph", "heading", "list", "figure", "table", "callout"]
+#: Figures are placed by code from the Teaching Plan visual spec; the composer
+#: never chooses one.
+OrdinaryNodeKind = Literal["paragraph", "heading", "list", "table", "callout"]
 SemanticRole = Literal[
     "bridge",
     "explanation",
@@ -24,7 +26,6 @@ SemanticRole = Literal[
     "comparison",
     "evidence",
     "visual_model",
-    "visual_interpretation",
     "misconception",
     "safety_guidance",
     "subsection",
@@ -188,24 +189,13 @@ _KIND_ROLES: dict[str, set[str]] = {
     },
     "heading": {"subsection"},
     "list": {"sequence", "evidence"},
-    "figure": {"visual_model", "visual_interpretation"},
     "table": {"comparison", "evidence"},
     "callout": {"misconception", "safety_guidance"},
 }
+#: Role of the code-inserted figure item for a block that carries a visual spec.
+_FIGURE_ROLE: SemanticRole = "visual_model"
 _SUBSECTION_CUES = ("subsection", "subtopic", "case study", "phase", "stage", "category")
 _KIND_CUES: dict[str, tuple[str, ...]] = {
-    "figure": (
-        "visual",
-        "diagram",
-        "figure",
-        "show",
-        "model",
-        "structure",
-        "part",
-        "flow",
-        "map",
-        "image",
-    ),
     "table": ("compare", "contrast", "relationship", "data", "evidence"),
     "list": ("sequence", "step", "stage", "set", "category", "example", "evidence", "sort"),
 }
@@ -214,6 +204,16 @@ _KIND_CUES: dict[str, tuple[str, ...]] = {
 def _stable_id(prefix: str, value: str) -> str:
     digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:20]
     return f"{prefix}-{digest}"
+
+
+def figure_item_for_block(section_slot_id: str, block: TeachingPlanBlock) -> CompositionItem:
+    """The code-owned figure item for a block whose plan carries a visual spec."""
+    return CompositionItem(
+        id=_stable_id("shared-figure-node", f"{section_slot_id}\0{block.id}"),
+        kind="figure",
+        teaching_block_id=block.id,
+        semantic_role=_FIGURE_ROLE,
+    )
 
 
 def _block_text(block: TeachingPlanBlock) -> str:
@@ -626,6 +626,9 @@ def validate_and_build_composition(
                     semantic_role=choice.semantic_role,
                 )
             )
+        if block.visual is not None:
+            # Code-placed: after the block's ordinary nodes, before its anchors.
+            items.append(figure_item_for_block(section_key, block))
         for task in tasks_by_block[block.id]:
             items.append(
                 CompositionItem(
@@ -648,7 +651,8 @@ def validate_composition_plan(
     """Reject mutated plans, including moved, duplicated, or invented anchors."""
     choices: list[CompositionChoice] = []
     for item in plan.items:
-        if item.kind == "task_anchor":
+        if item.kind in ("task_anchor", "figure"):
+            # Anchors and figures are code-owned and re-derived below.
             continue
         choices.append(
             CompositionChoice(
@@ -722,6 +726,13 @@ async def _default_provider(payload: dict[str, Any]) -> Any:
     )
 
 
+def _draft_contains_figure(raw: Any) -> bool:
+    items = raw.get("items") if isinstance(raw, dict) else None
+    return isinstance(items, list) and any(
+        isinstance(item, dict) and item.get("kind") == "figure" for item in items
+    )
+
+
 async def compose_section(
     *,
     section: TeachingPlanSection,
@@ -759,6 +770,12 @@ async def compose_section(
             if isinstance(exc, CompositionValidationError):
                 previous_errors = exc.errors
                 previous_issues = exc.issues
+            elif _draft_contains_figure(raw):
+                previous_errors = (
+                    "figure is not a composer kind: figures are placed by code from the"
+                    " Teaching Plan and must not be emitted",
+                )
+                previous_issues = (("provider_draft_schema_invalid", "items"),)
             else:
                 previous_errors = ("invalid closed schema",)
                 previous_issues = (("provider_draft_schema_invalid", "items"),)
@@ -778,6 +795,7 @@ __all__ = [
     "SectionCompositionDraft",
     "SectionCompositionPlan",
     "compose_section",
+    "figure_item_for_block",
     "validate_and_build_composition",
     "validate_composition_plan",
 ]

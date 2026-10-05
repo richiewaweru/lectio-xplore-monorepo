@@ -89,6 +89,7 @@ def _ready_media_item(source, document, *, tamper=False):
         asset_id=bound.asset_id,
         asset_url=bound.asset_url,
         mode=bound.mode,
+        alt_text=bound.alt_text,
         source_facts=bound.source_facts,
         required=bound.required,
         status=bound.status,

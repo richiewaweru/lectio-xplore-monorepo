@@ -78,8 +78,8 @@ SECTION_WRITER_LEASE_SECONDS = 360
 # A writer can make up to three 90-second provider calls. Bound the full
 # section operation below its lease so a stalled call fails while fenced.
 SECTION_WRITER_TIMEOUT_SECONDS = 300
-_COMPOSER_DEFINITION = "shared-section-composer:v1"
-_WRITER_DEFINITION = "shared-section-writer:v1"
+_COMPOSER_DEFINITION = "shared-section-composer:v2"
+_WRITER_DEFINITION = "shared-section-writer:v2"
 _SECTION_PROVIDER_SEMAPHORES: weakref.WeakKeyDictionary[
     asyncio.AbstractEventLoop, asyncio.Semaphore
 ] = weakref.WeakKeyDictionary()

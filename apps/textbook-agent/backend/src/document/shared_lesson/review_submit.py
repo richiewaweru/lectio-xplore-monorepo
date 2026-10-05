@@ -178,7 +178,6 @@ async def _regenerate_figure_media_for_review_edit(
                     expected_shape=expected_shape,
                     approved_source_facts=facts,
                     approved_source_ids=approved_ids,
-                    required=True,
                 )
             except SharedFigureMediaError as exc:
                 raise ReviewSubmitConflict(
