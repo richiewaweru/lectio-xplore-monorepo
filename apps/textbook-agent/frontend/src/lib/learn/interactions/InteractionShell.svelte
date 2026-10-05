@@ -402,6 +402,7 @@
 							class="option"
 							class:selected={selectedLeft === item.id}
 							class:matched={matches.some((m) => m.left === item.id)}
+							aria-pressed={selectedLeft === item.id || matches.some((m) => m.left === item.id)}
 							disabled={submitted || disabled}
 							onclick={() => pickLeft(item.id)}
 						>
@@ -417,6 +418,7 @@
 							type="button"
 							class="option"
 							class:matched={matches.some((m) => m.right === item.id)}
+							aria-pressed={matches.some((m) => m.right === item.id)}
 							disabled={submitted || disabled || !selectedLeft}
 							onclick={() => pickRight(item.id)}
 						>
@@ -496,7 +498,7 @@
 		</button>
 
 		{#if error}<p class="error" role="alert"><InlineMarkup value={error} /></p>{/if}
-		{#if display}<p class="feedback" data-outcome={display.outcome} role="status"><InlineMarkup value={display.feedback} /></p>{/if}
+		{#if display}<p class="feedback" data-outcome={display.outcome} role="status">{#if display.outcome === 'correct'}<svg class="feedback-icon" data-testid="feedback-correct-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11" fill="#1B5E40" /><path d="M7 12.5l3.2 3.2L17 8.8" fill="none" stroke="#E4F0E8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>{/if}<span class="feedback-text"><InlineMarkup value={display.feedback} /></span></p>{/if}
 	</div>
 </section>
 
@@ -636,7 +638,12 @@
 		background: var(--green-tint, #e4f0e8);
 		font-size: 16px;
 		line-height: 1.5;
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
 	}
+	.feedback-icon { flex: 0 0 22px; margin-top: 1px; color: #1b5e40; }
+	.feedback-text { min-width: 0; }
 	.error {
 		margin: 0;
 		font-size: 13px;
