@@ -943,7 +943,12 @@
             },
             {
               "question_id": "Q2",
-              "answer": "A",
+              "answer": [
+                {
+                  "type": "text",
+                  "value": "A — A watered plant kept in darkness becomes pale and stops growing larger."
+                }
+              ],
               "feedback": [
                 {
                   "type": "text",

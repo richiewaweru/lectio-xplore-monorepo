@@ -371,11 +371,21 @@
           "entries": [
             {
               "question_id": "Q1",
-              "answer": "B"
+              "answer": [
+                {
+                  "type": "text",
+                  "value": "B — The plant captures its growing energy from the light, using its leaves."
+                }
+              ]
             },
             {
               "question_id": "Q2",
-              "answer": "A",
+              "answer": [
+                {
+                  "type": "text",
+                  "value": "A — A watered plant kept in darkness becomes pale and stops growing larger."
+                }
+              ],
               "feedback": [
                 {
                   "type": "text",
