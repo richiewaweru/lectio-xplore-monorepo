@@ -615,11 +615,6 @@ async def execute_document_qa_work_item(
             for issue in verdict_issues
             if issue.issue_code in SEMANTIC_ADVISORY_SHAPE_ISSUE_CODES
         )
-        semantic_actionable_issues = tuple(
-            issue
-            for issue in verdict_issues
-            if issue.issue_code not in SEMANTIC_ADVISORY_SHAPE_ISSUE_CODES
-        )
         if job.synthetic_issues:
             # An accepted writer SOFT issue (task_answer_leaked or
             # unsupported_number) must still block automatic READY promotion
@@ -635,6 +630,12 @@ async def execute_document_qa_work_item(
                 semantic_calls=semantic.semantic_calls,
                 deterministic_skipped_semantic=semantic.deterministic_skipped_semantic,
             )
+        combined_issues = tuple(semantic.issues)
+        combined_actionable_issues = tuple(
+            issue
+            for issue in combined_issues
+            if issue.issue_code not in SEMANTIC_ADVISORY_SHAPE_ISSUE_CODES
+        )
         quality_flags: tuple[QualityFlag, ...] = ()
         gate = job.quality_gate or settings.document_quality_gate
         advisory_writer_flags = quality_flags_from_issues(
@@ -652,7 +653,7 @@ async def execute_document_qa_work_item(
                 + quality_flags_from_issues(job.synthetic_issues, source="writer_warning")
                 + advisory_writer_flags
             )
-        if semantic_shape_issues and not semantic_actionable_issues and not job.synthetic_issues:
+        if semantic_shape_issues and not combined_actionable_issues:
             # Presentation-target findings from a semantic reviewer are
             # advisory under both gate modes; preserve them in flags above.
             semantic = DocumentSemanticQAResult(
@@ -664,13 +665,13 @@ async def execute_document_qa_work_item(
                 semantic_calls=semantic.semantic_calls,
                 deterministic_skipped_semantic=semantic.deterministic_skipped_semantic,
             )
-        elif semantic_shape_issues and semantic_actionable_issues:
+        elif semantic_shape_issues and combined_actionable_issues:
             semantic = DocumentSemanticQAResult(
                 document_id=semantic.document_id,
                 document_revision=semantic.document_revision,
                 document_hash=semantic.document_hash,
                 status="issue",
-                issues=semantic_actionable_issues,
+                issues=combined_actionable_issues,
                 semantic_calls=semantic.semantic_calls,
                 deterministic_skipped_semantic=semantic.deterministic_skipped_semantic,
             )

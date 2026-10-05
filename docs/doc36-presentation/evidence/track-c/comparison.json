@@ -1,0 +1,359 @@
+{
+  "lesson": "comparison",
+  "run_id": "doc36-track-c-comparison-0ed3c2ffa59a",
+  "job_id": "doc36-track-c-comparison-0ed3c2ffa59a-composer-writer",
+  "document_id": "doc36:doc36-track-c-comparison-0ed3c2ffa59a:revision:1",
+  "plan": {
+    "slot_id": "comparison",
+    "specific_purpose": "Compare photosynthesis and cellular respiration using their inputs, outputs, and roles.",
+    "transition": null,
+    "blocks": [
+      {
+        "id": "b0",
+        "position": 0,
+        "intent": "compare the alternative pathways and evidence",
+        "brief": "Place the two pathways side by side.",
+        "evidence_refs": [],
+        "evidence": "Photosynthesis stores energy in glucose, while cellular respiration releases energy from glucose.",
+        "departure_reason": null,
+        "source_question_ids": [],
+        "task_mode": "none",
+        "sourcebook_needs": [],
+        "sourcebook_refs": [],
+        "stimulus_dependencies": [],
+        "learner_action": null
+      },
+      {
+        "id": "b1",
+        "position": 1,
+        "intent": "explain the key idea connecting the pathways",
+        "brief": "Explain how the pathways are related.",
+        "evidence_refs": [],
+        "evidence": "The products of one pathway can serve as inputs for the other.",
+        "departure_reason": null,
+        "source_question_ids": [],
+        "task_mode": "none",
+        "sourcebook_needs": [],
+        "sourcebook_refs": [],
+        "stimulus_dependencies": [],
+        "learner_action": null
+      }
+    ],
+    "display_title": "Photosynthesis and respiration",
+    "entry_state": [
+      "Learner can use the stated vocabulary"
+    ],
+    "must_establish": [
+      "Compare photosynthesis and cellular respiration using their inputs, outputs, and roles."
+    ],
+    "avoid_repeating": [
+      "Do not restate the entry state"
+    ],
+    "bridge_from_previous": null,
+    "exit_state": [
+      "Compare photosynthesis and cellular respiration using their inputs, outputs, and roles."
+    ]
+  },
+  "sources": [
+    {
+      "id": "src-comparison",
+      "kind": "approved_fact",
+      "text": "Photosynthesis stores energy in glucose, while cellular respiration releases energy from glucose."
+    }
+  ],
+  "provider_calls": [
+    {
+      "stage": "composer",
+      "request": {
+        "section": {
+          "slot_id": "comparison",
+          "specific_purpose": "Compare photosynthesis and cellular respiration using their inputs, outputs, and roles.",
+          "transition": null,
+          "blocks": [
+            {
+              "id": "b0",
+              "position": 0,
+              "intent": "compare the alternative pathways and evidence",
+              "brief": "Place the two pathways side by side.",
+              "evidence_refs": [],
+              "evidence": "Photosynthesis stores energy in glucose, while cellular respiration releases energy from glucose.",
+              "departure_reason": null,
+              "source_question_ids": [],
+              "task_mode": "none",
+              "sourcebook_needs": [],
+              "sourcebook_refs": [],
+              "stimulus_dependencies": [],
+              "learner_action": null
+            },
+            {
+              "id": "b1",
+              "position": 1,
+              "intent": "explain the key idea connecting the pathways",
+              "brief": "Explain how the pathways are related.",
+              "evidence_refs": [],
+              "evidence": "The products of one pathway can serve as inputs for the other.",
+              "departure_reason": null,
+              "source_question_ids": [],
+              "task_mode": "none",
+              "sourcebook_needs": [],
+              "sourcebook_refs": [],
+              "stimulus_dependencies": [],
+              "learner_action": null
+            }
+          ],
+          "display_title": "Photosynthesis and respiration",
+          "entry_state": [
+            "Learner can use the stated vocabulary"
+          ],
+          "must_establish": [
+            "Compare photosynthesis and cellular respiration using their inputs, outputs, and roles."
+          ],
+          "avoid_repeating": [
+            "Do not restate the entry state"
+          ],
+          "bridge_from_previous": null,
+          "exit_state": [
+            "Compare photosynthesis and cellular respiration using their inputs, outputs, and roles."
+          ]
+        },
+        "shaping_targets": {
+          "paragraph_words_max": 60,
+          "key_idea_words_max": 25,
+          "note_words_max": 50,
+          "misconception_words_max": {
+            "belief": 30,
+            "evidence": 45,
+            "conclusion": 30
+          },
+          "list_item_words_max": 30,
+          "table_cell_words_max": 12,
+          "equation_inputs_target_max": 4,
+          "equation_outputs_target_max": 3,
+          "compare_items_target_max": 3,
+          "prose_section_words_target": [
+            150,
+            280
+          ]
+        },
+        "inline_vocabulary": {
+          "strong": "**text**",
+          "emphasis": "*text*",
+          "subscript": "~text~",
+          "superscript": "^text^",
+          "paragraph_break": "\\n\\n"
+        },
+        "tasks": [],
+        "repair_errors": []
+      },
+      "response": {
+        "items": [
+          {
+            "teaching_block_id": "b0",
+            "kind": "compare",
+            "semantic_role": "comparison"
+          },
+          {
+            "teaching_block_id": "b1",
+            "kind": "callout",
+            "semantic_role": "explanation"
+          }
+        ]
+      },
+      "status": "success",
+      "duration_seconds": 1.332
+    },
+    {
+      "stage": "writer",
+      "request": {
+        "section_contract": {
+          "display_title": "Photosynthesis and respiration",
+          "entry_state": [
+            "Learner can use the stated vocabulary"
+          ],
+          "must_establish": [
+            "Compare photosynthesis and cellular respiration using their inputs, outputs, and roles."
+          ],
+          "avoid_repeating": [
+            "Do not restate the entry state"
+          ],
+          "bridge_from_previous": null,
+          "exit_state": [
+            "Compare photosynthesis and cellular respiration using their inputs, outputs, and roles."
+          ],
+          "specific_purpose": "Compare photosynthesis and cellular respiration using their inputs, outputs, and roles.",
+          "blocks": [
+            {
+              "id": "b0",
+              "intent": "compare the alternative pathways and evidence",
+              "brief": "Place the two pathways side by side.",
+              "evidence": "Photosynthesis stores energy in glucose, while cellular respiration releases energy from glucose.",
+              "visual": null
+            },
+            {
+              "id": "b1",
+              "intent": "explain the key idea connecting the pathways",
+              "brief": "Explain how the pathways are related.",
+              "evidence": "The products of one pathway can serve as inputs for the other.",
+              "visual": null
+            }
+          ]
+        },
+        "composition_plan": [
+          {
+            "id": "shared-node-88d372c6edc617a35179",
+            "kind": "compare",
+            "teaching_block_id": "b0",
+            "semantic_role": "comparison",
+            "task_spec_id": null
+          },
+          {
+            "id": "shared-node-37f0fe66a0da924b4a99",
+            "kind": "callout",
+            "teaching_block_id": "b1",
+            "semantic_role": "explanation",
+            "task_spec_id": null
+          }
+        ],
+        "shaping_targets": {
+          "paragraph_words_max": 60,
+          "key_idea_words_max": 25,
+          "note_words_max": 50,
+          "misconception_words_max": {
+            "belief": 30,
+            "evidence": 45,
+            "conclusion": 30
+          },
+          "list_item_words_max": 30,
+          "table_cell_words_max": 12,
+          "equation_inputs_target_max": 4,
+          "equation_outputs_target_max": 3,
+          "compare_items_target_max": 3,
+          "prose_section_words_target": [
+            150,
+            280
+          ]
+        },
+        "inline_vocabulary": {
+          "strong": "**text**",
+          "emphasis": "*text*",
+          "subscript": "~text~",
+          "superscript": "^text^",
+          "paragraph_break": "\\n\\n"
+        },
+        "sources": [
+          {
+            "id": "src-comparison",
+            "kind": "approved_fact",
+            "text": "Photosynthesis stores energy in glucose, while cellular respiration releases energy from glucose."
+          }
+        ],
+        "task_summaries": [],
+        "hidden_answer_context_do_not_reveal": [],
+        "repair": null
+      },
+      "response": {
+        "nodes": [
+          {
+            "id": "shared-node-88d372c6edc617a35179",
+            "teaching_block_id": "b0",
+            "kind": "compare",
+            "display": {
+              "items": [
+                {
+                  "title": "Photosynthesis",
+                  "body": "Inputs: carbon dioxide, water, and light energy. Outputs: glucose and oxygen. Role: stores light energy in glucose."
+                },
+                {
+                  "title": "Cellular respiration",
+                  "body": "Inputs: glucose and oxygen. Outputs: carbon dioxide, water, and released energy. Role: releases the energy stored in glucose so the cell can use it."
+                }
+              ]
+            },
+            "accessibility": {
+              "description": "Side-by-side comparison of photosynthesis and cellular respiration, listing the inputs, outputs, and role of each pathway."
+            }
+          },
+          {
+            "id": "shared-node-37f0fe66a0da924b4a99",
+            "teaching_block_id": "b1",
+            "kind": "callout",
+            "display": {
+              "tone": "note",
+              "title": "How the pathways connect",
+              "body": "**Photosynthesis stores energy in glucose, and cellular respiration releases that energy, so the two pathways feed each other's inputs and outputs.**",
+              "variant": "key_idea",
+              "aside": "Cellular respiration uses glucose and oxygen and gives off carbon dioxide and water. Photosynthesis uses carbon dioxide and water and gives off glucose and oxygen. Because each pathway supplies what the other needs, matter cycles between them."
+            },
+            "accessibility": {
+              "description": "Key idea callout explaining that the inputs and outputs of photosynthesis and cellular respiration supply each other."
+            }
+          }
+        ]
+      },
+      "status": "success",
+      "duration_seconds": 11.628
+    }
+  ],
+  "advisory_records": [],
+  "status": "writer_success",
+  "composition": {
+    "section_slot_id": "comparison",
+    "items": [
+      {
+        "id": "shared-node-88d372c6edc617a35179",
+        "kind": "compare",
+        "teaching_block_id": "b0",
+        "semantic_role": "comparison",
+        "task_spec_id": null
+      },
+      {
+        "id": "shared-node-37f0fe66a0da924b4a99",
+        "kind": "callout",
+        "teaching_block_id": "b1",
+        "semantic_role": "explanation",
+        "task_spec_id": null
+      }
+    ]
+  },
+  "document": {
+    "section_slot_id": "comparison",
+    "title": "Photosynthesis and respiration",
+    "nodes": [
+      {
+        "id": "shared-node-88d372c6edc617a35179",
+        "teaching_block_id": "b0",
+        "kind": "compare",
+        "display": {
+          "items": [
+            {
+              "title": "Photosynthesis",
+              "body": "Inputs: carbon dioxide, water, and light energy. Outputs: glucose and oxygen. Role: stores light energy in glucose."
+            },
+            {
+              "title": "Cellular respiration",
+              "body": "Inputs: glucose and oxygen. Outputs: carbon dioxide, water, and released energy. Role: releases the energy stored in glucose so the cell can use it."
+            }
+          ]
+        },
+        "accessibility": {
+          "description": "Side-by-side comparison of photosynthesis and cellular respiration, listing the inputs, outputs, and role of each pathway."
+        }
+      },
+      {
+        "id": "shared-node-37f0fe66a0da924b4a99",
+        "teaching_block_id": "b1",
+        "kind": "callout",
+        "display": {
+          "tone": "note",
+          "title": "How the pathways connect",
+          "body": "**Photosynthesis stores energy in glucose, and cellular respiration releases that energy, so the two pathways feed each other's inputs and outputs.**",
+          "variant": "key_idea",
+          "aside": "Cellular respiration uses glucose and oxygen and gives off carbon dioxide and water. Photosynthesis uses carbon dioxide and water and gives off glucose and oxygen. Because each pathway supplies what the other needs, matter cycles between them."
+        },
+        "accessibility": {
+          "description": "Key idea callout explaining that the inputs and outputs of photosynthesis and cellular respiration supply each other."
+        }
+      }
+    ]
+  }
+}

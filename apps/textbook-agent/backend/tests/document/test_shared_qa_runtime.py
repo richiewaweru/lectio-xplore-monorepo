@@ -603,6 +603,73 @@ async def test_semantic_shape_finding_is_advisory_under_blocking_gate(db_session
 
 @pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
+async def test_shape_finding_does_not_hide_synthetic_writer_issue(db_session):
+    from document.shared_lesson.continuity import ContinuityIssue
+
+    source, document = _source_and_document()
+    owner, run_id = await _seed_run(db_session, source, suffix="semantic-shape-mixed")
+    admitted = await admit_document_qa_work_item(
+        db_session,
+        run_id=run_id,
+        owner_user_id=owner,
+        source=source,
+        document=document,
+        deterministic_qa=_deterministic(document),
+    )
+
+    async def shape_issue(_request):
+        return DocumentSemanticVerdict(
+            status="issue",
+            issues=(
+                {
+                    "issue_code": "shape_missing",
+                    "affected_section_id": document.sections[0].id,
+                    "explanation": "the key idea target is missing",
+                    "required_correction": "Review the advisory target only.",
+                },
+            ),
+        )
+
+    synthetic = ContinuityIssue(
+        issue_code="unsupported_number",
+        affected_section_id=document.sections[0].id,
+        explanation="writer retained an unsupported numeric fact",
+        required_correction="Review the writer output.",
+    )
+    outcome = await execute_document_qa_work_item(
+        DocumentQAWorkItemJob(
+            session=db_session,
+            work_item_id=admitted.record.id,
+            worker_id="qa-worker-shape-mixed",
+            owner_user_id=owner,
+            source=source,
+            document=document,
+            deterministic_qa=_deterministic(document),
+            semantic_validator=shape_issue,
+            synthetic_issues=(synthetic,),
+        )
+    )
+    assert outcome.qa is None
+    item = await db_session.get(GenerationWorkItemModel, admitted.record.id)
+    assert item is not None
+    assert item.status == "failed_recoverable"
+    events = list(
+        (
+            await db_session.scalars(
+                select(GenerationEventModel)
+                .where(GenerationEventModel.work_item_id == admitted.record.id)
+                .order_by(GenerationEventModel.seq)
+            )
+        ).all()
+    )
+    issue_event = next(event for event in events if event.event_type == "document_qa_semantic_issues")
+    assert [issue["issue_code"] for issue in issue_event.safe_payload_json["issues"]] == [
+        "unsupported_number"
+    ]
+
+
+@pytest.mark.usefixtures("blocking_quality_gate")
+@pytest.mark.asyncio
 async def test_document_qa_synthetic_writer_issues_route_a_passing_semantic_verdict_to_review(
     db_session,
 ):
