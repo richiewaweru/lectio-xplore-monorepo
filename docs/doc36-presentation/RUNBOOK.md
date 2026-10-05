@@ -26,6 +26,7 @@ Classification: major. Lead owns orchestration and gate review; Luna executors o
 - Normal Print blocks stay together. Owner selected safe continuation for blocks taller than an A4 content area, preserving every word.
 - Phase 0 freezes shared declarations. A owns task markup/styles; D owns task behaviour and data. B owns the necessary `lectio-page` rendering/contract changes.
 - Three execution workers can run alongside the lead in this session; queue the fourth track. Isolate each branch/worktree, no pushes to main.
+- DeepSeek uses JSON output mode, with local validation after the response. Do not enable strict tool/schema mode to resolve generation failures (owner correction during resumed execution).
 
 ## Evidence
 
