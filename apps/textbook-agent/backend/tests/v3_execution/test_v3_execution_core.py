@@ -8,7 +8,6 @@ from types import SimpleNamespace
 import pytest
 from PIL import Image
 
-from contracts.lectio import get_section_field_for_component
 from media.qc.visual_qc import VisualQCVerdict
 from v3_blueprint.models import ProductionBlueprint
 from media.generation.contracts import validate_visual_block
@@ -20,7 +19,6 @@ from v3_execution.models import (
     VisualGeneratorWorkOrder,
     VisualPlanItem,
 )
-from v3_review.models import CoherenceReport, ReviewIssue
 
 
 def _png_bytes(size: tuple[int, int] = (1024, 1024)) -> bytes:

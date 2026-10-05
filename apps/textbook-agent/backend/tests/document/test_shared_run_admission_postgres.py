@@ -5,14 +5,14 @@ import asyncio
 import pytest
 from sqlalchemy import func, select
 
-pytest_plugins = ("tests.generation_runtime.test_runtime_postgres",)
-
 from test_shared_composer_admission import _source
 from test_shared_run_admission import _snapshot
 
 from document.shared_lesson import run_admission
 from document.shared_lesson.run_admission import admit_shared_document_run
 from infra.database.models import GenerationBuildModel, GenerationRunModel, GenerationWorkItemModel
+
+pytest_plugins = ("tests.generation_runtime.test_runtime_postgres",)
 
 
 @pytest.mark.postgres

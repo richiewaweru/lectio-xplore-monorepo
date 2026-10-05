@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from v3_execution.booklet_status import collect_fatal_issue_categories, derive_booklet_status
-from v3_execution.models import DraftPack
+from v3_execution.booklet_status import derive_booklet_status
 
 
 def test_no_sections_is_failed_unusable() -> None:

@@ -5,4 +5,4 @@ Temporary (R4). Remove when all call sites import the domain path (R7).
 
 from __future__ import annotations
 
-from learn.contracts.lesson_document import *
+from learn.contracts.lesson_document import *  # noqa: F403 - compatibility re-export shim
