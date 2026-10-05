@@ -1,0 +1,8 @@
+{
+  "run_id": "g4-d-live-20261005-1821",
+  "work_order_id": "g4-d-live-20261005-1821:task-authoring",
+  "provider_calls": [],
+  "status": "failed",
+  "error_type": "AttributeError",
+  "error": "'AuthoringProviderCall' object has no attribute 'repair_attempts'"
+}

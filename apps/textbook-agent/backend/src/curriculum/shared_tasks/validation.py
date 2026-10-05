@@ -101,6 +101,26 @@ def _validate_choice_feedback(
     return errors
 
 
+def _validate_option_notes(
+    task: SharedTaskSpec, declared_ids: set[str], correct_ids: list[str]
+) -> list[str]:
+    """Teacher-only notes may explain declared wrong options only."""
+    notes = task.option_notes
+    if notes is None:
+        return []
+    errors: list[str] = []
+    unknown = sorted(set(notes) - declared_ids)
+    if unknown:
+        errors.append(f"task {task.id!r} option_notes_unknown_option {unknown}")
+    correct = sorted(set(notes) & {str(value) for value in correct_ids})
+    if correct:
+        errors.append(f"task {task.id!r} option_notes_on_correct_option {correct}")
+    for option_id, note in notes.items():
+        if not isinstance(note, str) or not note.strip():
+            errors.append(f"task {task.id!r} option_notes_blank at {option_id}")
+    return errors
+
+
 def _validate_classification_feedback(task: SharedTaskSpec, items: list[str]) -> list[str]:
     """Validate the deterministic feedback contract for classification tasks.
 
@@ -204,6 +224,7 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
                     errors.extend(
                         _validate_choice_feedback(task, declared, [str(value) for value in correct_ids])
                     )
+            errors.extend(_validate_option_notes(task, declared, [str(value) for value in correct_ids]))
     elif response_type == "classification":
         items = response.get("items")
         categories = response.get("categories")

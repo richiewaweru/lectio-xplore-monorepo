@@ -130,6 +130,22 @@ def test_predict_feedback_rejects_right_wrong_messages() -> None:
     assert any("prediction feedback must contain only saved" in error for error in errors)
 
 
+def test_option_notes_are_teacher_only_and_may_explain_wrong_choices() -> None:
+    task = _choice_task(
+        action="select-one",
+        response_type="single_choice",
+        correct_keys=["a"],
+        feedback={"correct": "A is supported.", "incorrect": "Look at the evidence."},
+    ).model_copy(update={"option_notes": {"b": "B conflicts with the evidence."}})
+
+    assert validate_final_task_response_contract(task) == []
+
+    errors = validate_final_task_response_contract(
+        task.model_copy(update={"option_notes": {"a": "This is the answer."}})
+    )
+    assert any("option_notes_on_correct_option" in error for error in errors)
+
+
 def test_legacy_option_id_saved_remains_an_option_key() -> None:
     task = _choice_task(
         options=[

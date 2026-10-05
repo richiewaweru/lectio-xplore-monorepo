@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "run_id": "g4-d-live-20261005-1832-json",
+      "teaching_plan": {
+        "arc": "Build and check the idea",
+        "anchor_usage": [],
+        "misconception_focus_ids": [],
+        "sections": [
+          {
+            "slot_id": "slot-a",
+            "specific_purpose": "Check the idea.",
+            "transition": null,
+            "blocks": [
+              {
+                "id": "block-a",
+                "position": 1,
+                "intent": "check",
+                "brief": "Check understanding using the approved sourcebook evidence.",
+                "evidence_refs": [],
+                "evidence": "Learner demonstrates the idea.",
+                "departure_reason": null,
+                "source_question_ids": [
+                  "item-a"
+                ],
+                "task_mode": "assessment",
+                "sourcebook_needs": [],
+                "sourcebook_refs": [
+                  "source-a"
+                ],
+                "stimulus_dependencies": [],
+                "learner_action": {
+                  "action": "select-one",
+                  "target": "the supported idea after the explanation",
+                  "purpose": "Check understanding",
+                  "expected_evidence": "Learner selects the correct idea.",
+                  "difficulty": "guided"
+                }
+              }
+            ],
+            "display_title": "Practice",
+            "entry_state": [
+              "Learner has a question"
+            ],
+            "must_establish": [
+              "Learner can identify the idea"
+            ],
+            "avoid_repeating": [],
+            "bridge_from_previous": null,
+            "exit_state": [
+              "Learner can identify the idea"
+            ]
+          }
+        ],
+        "contract_version": 2,
+        "learner_title": "A shared lesson",
+        "starting_state": [
+          "Learner has a question"
+        ],
+        "target_state": [
+          "Learner can identify the idea"
+        ],
+        "teaching_plan_id": "plan-a",
+        "revision": 3,
+        "preparation_hash": null,
+        "approval_status": "approved"
+      },
+      "sourcebook": {
+        "teaching_plan_id": "plan-a",
+        "teaching_plan_revision": 3,
+        "teaching_plan_hash": "d436a4c4b9ea9509873c90afaf49a9b2fa9896845d49052c66a455d7e894eacc",
+        "entries": [
+          {
+            "id": "source-a",
+            "type": "definition",
+            "purpose": "Support the task.",
+            "content": {
+              "text": "The approved fact."
+            },
+            "provenance_refs": [
+              "fact:1"
+            ]
+          }
+        ]
+      },
+      "approved_item_snapshot": {
+        "schema_version": 1,
+        "teaching_plan_id": "plan-a",
+        "teaching_plan_revision": 3,
+        "teaching_plan_hash": "d436a4c4b9ea9509873c90afaf49a9b2fa9896845d49052c66a455d7e894eacc",
+        "items": {
+          "item-a": {
+            "id": "item-a",
+            "prompt": "Approved question"
+          }
+        }
+      }
+    },
+    {
+      "run_id": "g4-d-live-20261005-1835-predict-json",
+      "teaching_plan": {
+        "arc": "Build and check the idea",
+        "anchor_usage": [],
+        "misconception_focus_ids": [],
+        "sections": [
+          {
+            "slot_id": "slot-a",
+            "specific_purpose": "Check the idea.",
+            "transition": null,
+            "blocks": [
+              {
+                "id": "block-a",
+                "position": 1,
+                "intent": "predict",
+                "brief": "Elicit a committed prediction before the evidence is explained using the approved sourcebook evidence.",
+                "evidence_refs": [],
+                "evidence": "Learner demonstrates the idea.",
+                "departure_reason": null,
+                "source_question_ids": [
+                  "item-a"
+                ],
+                "task_mode": "assessment",
+                "sourcebook_needs": [],
+                "sourcebook_refs": [
+                  "source-a"
+                ],
+                "stimulus_dependencies": [],
+                "learner_action": {
+                  "action": "select-one",
+                  "target": "the supported idea after the explanation",
+                  "purpose": "Elicit a committed prediction before the evidence is explained",
+                  "expected_evidence": "Learner commits to one option as a prediction to revisit after the evidence.",
+                  "difficulty": "guided"
+                }
+              }
+            ],
+            "display_title": "Practice",
+            "entry_state": [
+              "Learner has a question"
+            ],
+            "must_establish": [
+              "Learner can identify the idea"
+            ],
+            "avoid_repeating": [],
+            "bridge_from_previous": null,
+            "exit_state": [
+              "Learner can identify the idea"
+            ]
+          }
+        ],
+        "contract_version": 2,
+        "learner_title": "A shared lesson",
+        "starting_state": [
+          "Learner has a question"
+        ],
+        "target_state": [
+          "Learner can identify the idea"
+        ],
+        "teaching_plan_id": "plan-a",
+        "revision": 3,
+        "preparation_hash": null,
+        "approval_status": "approved"
+      },
+      "sourcebook": {
+        "teaching_plan_id": "plan-a",
+        "teaching_plan_revision": 3,
+        "teaching_plan_hash": "bfff17c1e12a8c6ee5844682c7bf00a506d7e0af92e6398eda19d425004467e8",
+        "entries": [
+          {
+            "id": "source-a",
+            "type": "definition",
+            "purpose": "Support the task.",
+            "content": {
+              "text": "The approved fact."
+            },
+            "provenance_refs": [
+              "fact:1"
+            ]
+          }
+        ]
+      },
+      "approved_item_snapshot": {
+        "schema_version": 1,
+        "teaching_plan_id": "plan-a",
+        "teaching_plan_revision": 3,
+        "teaching_plan_hash": "bfff17c1e12a8c6ee5844682c7bf00a506d7e0af92e6398eda19d425004467e8",
+        "items": {
+          "item-a": {
+            "id": "item-a",
+            "prompt": "Approved question"
+          }
+        }
+      }
+    },
+    {
+      "run_id": "g4-d-live-20261005-1839-check-json-retry",
+      "teaching_plan": {
+        "arc": "Build and check the idea",
+        "anchor_usage": [],
+        "misconception_focus_ids": [],
+        "sections": [
+          {
+            "slot_id": "slot-a",
+            "specific_purpose": "Check the idea.",
+            "transition": null,
+            "blocks": [
+              {
+                "id": "block-a",
+                "position": 1,
+                "intent": "check",
+                "brief": "Check understanding of the explained idea using the approved sourcebook evidence.",
+                "evidence_refs": [],
+                "evidence": "Learner demonstrates the idea.",
+                "departure_reason": null,
+                "source_question_ids": [
+                  "item-a"
+                ],
+                "task_mode": "assessment",
+                "sourcebook_needs": [],
+                "sourcebook_refs": [
+                  "source-a"
+                ],
+                "stimulus_dependencies": [],
+                "learner_action": {
+                  "action": "select-one",
+                  "target": "the supported idea after the explanation",
+                  "purpose": "Check understanding of the explained idea",
+                  "expected_evidence": "Learner selects the idea supported by the approved evidence.",
+                  "difficulty": "guided"
+                }
+              }
+            ],
+            "display_title": "Practice",
+            "entry_state": [
+              "Learner has a question"
+            ],
+            "must_establish": [
+              "Learner can identify the idea"
+            ],
+            "avoid_repeating": [],
+            "bridge_from_previous": null,
+            "exit_state": [
+              "Learner can identify the idea"
+            ]
+          }
+        ],
+        "contract_version": 2,
+        "learner_title": "A shared lesson",
+        "starting_state": [
+          "Learner has a question"
+        ],
+        "target_state": [
+          "Learner can identify the idea"
+        ],
+        "teaching_plan_id": "plan-a",
+        "revision": 3,
+        "preparation_hash": null,
+        "approval_status": "approved"
+      },
+      "sourcebook": {
+        "teaching_plan_id": "plan-a",
+        "teaching_plan_revision": 3,
+        "teaching_plan_hash": "b5034a6f7a79069dffe5da54ec90b50e9f20de1a696db5d03cd02c036b9a61f1",
+        "entries": [
+          {
+            "id": "source-a",
+            "type": "definition",
+            "purpose": "Support the task.",
+            "content": {
+              "text": "The approved fact."
+            },
+            "provenance_refs": [
+              "fact:1"
+            ]
+          }
+        ]
+      },
+      "approved_item_snapshot": {
+        "schema_version": 1,
+        "teaching_plan_id": "plan-a",
+        "teaching_plan_revision": 3,
+        "teaching_plan_hash": "b5034a6f7a79069dffe5da54ec90b50e9f20de1a696db5d03cd02c036b9a61f1",
+        "items": {
+          "item-a": {
+            "id": "item-a",
+            "prompt": "Approved question"
+          }
+        }
+      }
+    }
+  ]
+}

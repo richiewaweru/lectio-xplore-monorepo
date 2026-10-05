@@ -73,6 +73,14 @@
 	}: Props = $props();
 
 	const nodes = $derived(document.nodes ?? []);
+	const questionNumbers = $derived.by(() => {
+		const numbers = new Map<string, number>();
+		let number = 0;
+		for (const node of nodes) {
+			if (node.kind === 'interaction') numbers.set(node.id, ++number);
+		}
+		return numbers;
+	});
 
 	function select(node: LearnNode) {
 		onSelectNode?.(node.id);
@@ -179,6 +187,7 @@
 					{node}
 					onSubmit={submitFor(node.id)}
 					initialEvaluation={initialEval(node.id)}
+					questionNumber={questionNumbers.get(node.id)}
 				/>
 			{:else}
 				<DocumentNodeRenderer {node} {assets} />

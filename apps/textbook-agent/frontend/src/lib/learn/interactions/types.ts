@@ -7,7 +7,10 @@ export type FeedbackSpec = {
 	correct: string;
 	incorrect: string;
 	partial?: string;
+	saved?: string;
 };
+
+export type InteractionRole = 'predict' | 'practice' | 'check';
 
 export type ServerEvaluation = {
 	outcome: string;
