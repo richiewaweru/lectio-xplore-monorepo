@@ -123,7 +123,7 @@ def test_print_adapter_verifies_source_and_maps_heading_hierarchy_and_task_label
         {"letter": "B", "text": [{"type": "text", "value": "Second"}]},
     ]
     assert result.document["answer_key"]["content"]["groups"][0]["entries"] == [
-        {"question_id": "Q1", "answer": "B"}
+        {"question_id": "Q1", "answer": [{"type": "text", "value": "B — Second"}]}
     ]
     metadata = result.document["metadata"]["shared_tasks"][0]
     assert metadata == {
@@ -215,6 +215,10 @@ def test_print_adapter_projects_doc36_blocks_and_shared_inline_markup(
     for note in notes:
         assert all(len(key) == 1 and key.isupper() for key in note), note
     assert not any("soil" in note for note in notes)
+    # The teacher answer shows the option letter and its text.
+    entries = result["answer_key"]["content"]["groups"][0]["entries"]
+    check = "".join(run.get("value", "") for run in entries[1]["answer"] if isinstance(run, dict))
+    assert check.startswith("A — A watered plant kept in darkness")
 
 
 def test_print_adapter_lowers_markup_in_new_block_labels() -> None:

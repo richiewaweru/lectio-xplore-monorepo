@@ -118,7 +118,16 @@ def validate_answer_key_integrity(
             # correct option; the neutral teacher answer may therefore be
             # descriptive rather than one of the learner-facing letters.
             continue
-        answer = str(entry.get("answer") or "")
+        raw_answer = entry.get("answer")
+        if isinstance(raw_answer, list):
+            # Inline runs: "B — option text" (one segment per correct option).
+            raw_answer = "".join(
+                str(run.get("value", "")) for run in raw_answer if isinstance(run, dict)
+            )
+        answer = str(raw_answer or "")
+        # Teacher copy prints the letter and its option text; only the letters
+        # (the part before each em dash) are checked against the options.
+        answer = "; ".join(part.split(" — ", 1)[0] for part in answer.split("; "))
         # ``choices`` is also the closed Print treatment for a SharedTaskSpec
         # select-many response.  Its answer key is a comma-separated set of
         # option letters; accept that set while retaining strict membership.

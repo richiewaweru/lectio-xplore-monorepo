@@ -223,12 +223,13 @@ def _single_choice_answer(task: SharedTaskSpec, labels: Mapping[str, str]) -> st
     return labels[value]
 
 
-def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], str, dict[str, str]]:
+def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, str]]:
     response = _mapping(task.response, field="response", task=task)
     options = response.get("options")
     if not isinstance(options, list) or len(options) < 2:
         raise SharedDocumentPrintMappingError(f"task {task.id!r} needs at least two choice options")
     labels: dict[str, str] = {}
+    texts: dict[str, str] = {}
     paper_options: list[dict[str, str]] = []
     for index, option in enumerate(options):
         if not isinstance(option, Mapping):
@@ -245,6 +246,7 @@ def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], str, dict[str, s
             letters = chr(65 + remainder) + letters
         label = letters
         labels[option_id] = label
+        texts[option_id] = text
         paper_options.append({"letter": label, "text": _inline(text)})
 
     evaluation = _mapping(task.evaluation, field="evaluation", task=task)
@@ -257,8 +259,13 @@ def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], str, dict[str, s
             raw = [one] if isinstance(one, str) else None
         if not isinstance(raw, list) or not raw or any(not isinstance(key, str) or key not in labels for key in raw):
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has invalid Print choice answer labels")
-        answer = ", ".join(labels[key] for key in raw)
-    return {"stem": _inline(task.display_prompt or task.prompt), "options": paper_options}, answer, labels
+        answer = None
+        answer_keys = list(raw)
+    if task.action == "select-one":
+        answer_keys = [key for key, label in labels.items() if label == answer]
+    # Teacher copy shows the letter and the option text, e.g. "B — The plant ...".
+    answer_runs = _inline("; ".join(f"{labels[key]} — {texts[key]}" for key in answer_keys))
+    return {"stem": _inline(task.display_prompt or task.prompt), "options": paper_options}, answer_runs, labels
 
 
 def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]]:
