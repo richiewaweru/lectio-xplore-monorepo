@@ -204,6 +204,17 @@ def test_print_adapter_projects_doc36_blocks_and_shared_inline_markup(
     assert misconception["content"]["belief"]
     assert result["front_matter"]["contents"] is False
     assert "task-predict" not in str(result["answer_key"])
+    # Teacher option notes are keyed by the displayed option letter, never the raw option id.
+    notes = [
+        entry["option_notes"]
+        for group in result["answer_key"]["content"]["groups"]
+        for entry in group["entries"]
+        if entry.get("option_notes")
+    ]
+    assert notes
+    for note in notes:
+        assert all(len(key) == 1 and key.isupper() for key in note), note
+    assert not any("soil" in note for note in notes)
 
 
 def test_print_adapter_lowers_markup_in_new_block_labels() -> None:

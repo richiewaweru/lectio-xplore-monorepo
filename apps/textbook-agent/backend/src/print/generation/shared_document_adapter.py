@@ -223,7 +223,7 @@ def _single_choice_answer(task: SharedTaskSpec, labels: Mapping[str, str]) -> st
     return labels[value]
 
 
-def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], str]:
+def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], str, dict[str, str]]:
     response = _mapping(task.response, field="response", task=task)
     options = response.get("options")
     if not isinstance(options, list) or len(options) < 2:
@@ -258,7 +258,7 @@ def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], str]:
         if not isinstance(raw, list) or not raw or any(not isinstance(key, str) or key not in labels for key in raw):
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has invalid Print choice answer labels")
         answer = ", ".join(labels[key] for key in raw)
-    return {"stem": _inline(task.display_prompt or task.prompt), "options": paper_options}, answer
+    return {"stem": _inline(task.display_prompt or task.prompt), "options": paper_options}, answer, labels
 
 
 def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -362,7 +362,7 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
     return item, entry
 
 
-def _teacher_task_details(task: SharedTaskSpec) -> dict[str, Any]:
+def _teacher_task_details(task: SharedTaskSpec, option_labels: Mapping[str, str] | None = None) -> dict[str, Any]:
     """Project teacher-only task guidance without changing shared task semantics."""
     details: dict[str, Any] = {}
     feedback = task.feedback if isinstance(task.feedback, Mapping) else {}
@@ -371,7 +371,7 @@ def _teacher_task_details(task: SharedTaskSpec) -> dict[str, Any]:
         details["feedback"] = _inline(correct)
     if isinstance(task.option_notes, Mapping) and task.option_notes:
         details["option_notes"] = {
-            str(option): _inline(str(note))
+            (option_labels or {}).get(str(option), str(option)): _inline(str(note))
             for option, note in task.option_notes.items()
             if str(note).strip()
         }
@@ -392,8 +392,9 @@ def _task_block(task: SharedTaskSpec, *, index: int, position: int, anchor: Task
         raise SharedDocumentPrintMappingError(f"task {task.id!r} has no closed Print paper treatment")
 
     label = _human_label(index, prefix="Q")
+    option_labels: dict[str, str] = {}
     if treatment == "choices":
-        content, answer = _choice_task(task)
+        content, answer, option_labels = _choice_task(task)
         block_id = label
         block = _object_block(block_id, position, "choices", content)
     else:
@@ -414,7 +415,7 @@ def _task_block(task: SharedTaskSpec, *, index: int, position: int, anchor: Task
     if treatment == "questions":
         entry.update({key: value for key, value in answer_entry.items() if key != "answer"})
         entry["answer"] = _inline(answer)
-    entry.update(_teacher_task_details(task))
+    entry.update(_teacher_task_details(task, option_labels))
     return block, {"label": label, "anchor_id": anchor.id, "task_spec_id": task.id, "answer_entry": entry}
 
 
