@@ -5,10 +5,10 @@
       "fixture": "shared-lesson-legacy",
       "edition": "student",
       "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\shared-lesson-legacy-student.pdf",
-      "source_tokens": 1258,
-      "pdf_tokens": 1359,
+      "source_tokens": 1257,
+      "pdf_tokens": 1299,
       "missing_multiplicity": {},
-      "source_unique": 327,
+      "source_unique": 326,
       "missing_unique": 0,
       "pass": true
     },

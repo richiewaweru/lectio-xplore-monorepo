@@ -1,6 +1,7 @@
 from collections import Counter
 from pathlib import Path
-import json,re,subprocess,unicodedata
+import json,os,re,subprocess,unicodedata
+BIN=lambda n: os.path.join(os.environ.get('POPPLER_BIN',''),n)
 
 ROOT=Path(__file__).resolve().parents[4]
 OUT=ROOT/'docs/doc36-presentation/evidence/track-b'; PDFDIR=OUT/'pdf'
@@ -37,13 +38,13 @@ def main():
   for edition in ['student','teacher']:
    p=PDFDIR/(name+('-student.pdf' if edition=='student' else '-bg-on.pdf'))
    if not p.exists(): continue
-   txt=subprocess.check_output(['pdftotext','-raw',str(p),'-'],text=True,encoding='utf8'); (OUT/(p.stem+'.txt')).write_text(txt,encoding='utf8');
-   with (OUT/(p.stem+'-pdfinfo.txt')).open('w',encoding='utf8') as fh: subprocess.run(['pdfinfo',str(p)],stdout=fh,check=True)
+   txt=subprocess.check_output([BIN('pdftotext'),'-raw',str(p),'-'],text=True,encoding='utf8'); (OUT/(p.stem+'.txt')).write_text(txt,encoding='utf8');
+   with (OUT/(p.stem+'-pdfinfo.txt')).open('w',encoding='utf8') as fh: subprocess.run([BIN('pdfinfo'),str(p)],stdout=fh,check=True)
    src=toks(source_text(doc,edition=='teacher').replace('CO2','CO').replace('m2','m')); got=Counter(toks(txt)); want=Counter(src); missing={k:v-got[k] for k,v in want.items() if v>got[k]}
    rows.append({'fixture':name,'edition':edition,'pdf':str(p),'source_tokens':len(src),'pdf_tokens':len(toks(txt)),'missing_multiplicity':missing,'source_unique':len(want),'missing_unique':len(missing),'pass':not missing})
  answer=[]
  for name in ['shared-lesson-golden','shared-lesson-overlong','oversized-stress']:
-  st=subprocess.check_output(['pdftotext',str(PDFDIR/(name+'-student.pdf')),'-'],text=True,encoding='utf8').lower(); tt=subprocess.check_output(['pdftotext',str(PDFDIR/(name+'-bg-on.pdf')),'-'],text=True,encoding='utf8').lower()
+  st=subprocess.check_output([BIN('pdftotext'),str(PDFDIR/(name+'-student.pdf')),'-'],text=True,encoding='utf8').lower(); tt=subprocess.check_output([BIN('pdftotext'),str(PDFDIR/(name+'-bg-on.pdf')),'-'],text=True,encoding='utf8').lower()
   answer.append({'fixture':name,'student_excludes_answer_key':'answer key' not in st and 'feedback:' not in st and 'teacher note' not in st,'teacher_includes_answer_key':'teacher copy' in tt and 'answer key' in tt,'student_answer_leaks':[x for x in ['feedback:','not marked:','teacher note'] if x in st]})
  result={'ordered_sequence_note':'PDF layout adds running furniture and line wrapping; multiset multiplicity proves every authored token is present. Hyphenated line wraps and typed inline delimiters are normalized before comparison.','fixtures':rows,'answer_separation':answer,'all_pass':all(r['pass'] for r in rows) and all(a['student_excludes_answer_key'] and a['teacher_includes_answer_key'] for a in answer)}
  (OUT/'text-parity-multiset.json').write_text(json.dumps(result,indent=2,ensure_ascii=False)+'\n',encoding='utf8'); print(json.dumps({'all_pass':result['all_pass'],'rows':[(r['fixture'],r['edition'],r['pass'],r['missing_multiplicity']) for r in rows]},indent=2,ensure_ascii=False))

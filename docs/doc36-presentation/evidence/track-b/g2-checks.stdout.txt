@@ -1,0 +1,204 @@
+{
+ "page_counts": {
+  "golden": {
+   "student": 4,
+   "teacher": 5
+  },
+  "overlong": {
+   "student": 6,
+   "teacher": 7
+  },
+  "legacy": {
+   "student": 3,
+   "teacher": null
+  },
+  "stress": {
+   "student": 25,
+   "teacher": 26
+  }
+ },
+ "overlong_more_pages_than_golden": true,
+ "forbidden_string_hits": {
+  "shared-lesson-golden-student.pdf": [],
+  "shared-lesson-golden-bg-on.pdf": [],
+  "shared-lesson-overlong-student.pdf": [],
+  "shared-lesson-overlong-bg-on.pdf": [],
+  "shared-lesson-legacy-student.pdf": [],
+  "oversized-stress-student.pdf": [],
+  "oversized-stress-bg-on.pdf": []
+ },
+ "learner_leakage": {
+  "golden": {
+   "secret_snippets_checked": 5,
+   "snippets_found_on_learner_pages": [],
+   "teacher_markers_on_learner_pages": []
+  },
+  "overlong": {
+   "secret_snippets_checked": 5,
+   "snippets_found_on_learner_pages": [],
+   "teacher_markers_on_learner_pages": []
+  },
+  "legacy": {
+   "secret_snippets_checked": 1,
+   "snippets_found_on_learner_pages": [],
+   "teacher_markers_on_learner_pages": []
+  },
+  "stress": {
+   "secret_snippets_checked": 5,
+   "snippets_found_on_learner_pages": [],
+   "teacher_markers_on_learner_pages": []
+  }
+ },
+ "teacher_page": {
+  "golden": {
+   "teacher_copy_label": true,
+   "questions_in_answer_key": 2,
+   "all_Q1_to_Qn_present": true,
+   "prediction_not_marked_text": true,
+   "option_note_keys": [
+    "A",
+    "B",
+    "C",
+    "D"
+   ]
+  },
+  "overlong": {
+   "teacher_copy_label": true,
+   "questions_in_answer_key": 2,
+   "all_Q1_to_Qn_present": true,
+   "prediction_not_marked_text": true,
+   "option_note_keys": [
+    "A",
+    "B",
+    "C",
+    "D"
+   ]
+  },
+  "stress": {
+   "teacher_copy_label": true,
+   "questions_in_answer_key": 2,
+   "all_Q1_to_Qn_present": true,
+   "prediction_not_marked_text": true,
+   "option_note_keys": [
+    "A",
+    "B",
+    "C",
+    "D"
+   ]
+  }
+ },
+ "q_numbers": {
+  "golden": {
+   "learner_pages": [
+    "1",
+    "2"
+   ],
+   "teacher_answer_page": [
+    "1",
+    "2"
+   ],
+   "match": true
+  },
+  "overlong": {
+   "learner_pages": [
+    "1",
+    "2"
+   ],
+   "teacher_answer_page": [
+    "1",
+    "2"
+   ],
+   "match": true
+  },
+  "stress": {
+   "learner_pages": [
+    "1",
+    "2"
+   ],
+   "teacher_answer_page": [
+    "1",
+    "2"
+   ],
+   "match": true
+  }
+ },
+ "legacy": {
+  "page1_paragraph_blocks_over_12_words": 6,
+  "source_paragraph_count_block0": 3,
+  "ordered_list_numbers_seen": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "numbered_1_to_5": true
+ },
+ "geometry_16mm_margins_and_overlap": {
+  "oversized-stress-bg-on.pdf": {
+   "words": 10896,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  },
+  "oversized-stress-student.pdf": {
+   "words": 10778,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  },
+  "shared-lesson-golden-bg-on.pdf": {
+   "words": 1095,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  },
+  "shared-lesson-golden-student.pdf": {
+   "words": 977,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  },
+  "shared-lesson-legacy-student.pdf": {
+   "words": 1320,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  },
+  "shared-lesson-overlong-bg-on.pdf": {
+   "words": 2142,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  },
+  "shared-lesson-overlong-student.pdf": {
+   "words": 1937,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  },
+  "track-c-comparison-print-student.pdf": {
+   "words": 123,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  },
+  "track-c-formula-print-student.pdf": {
+   "words": 57,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  },
+  "track-c-photosynthesis-print-student.pdf": {
+   "words": 107,
+   "outside_count": 0,
+   "outside_sample": [],
+   "overlapping_word_pairs": 0
+  }
+ },
+ "colour_pixels_in_colour_render_tol2": {
+  "shared-lesson-golden-bg-off.pdf": 0,
+  "shared-lesson-golden-bg-on.pdf": 0,
+  "shared-lesson-golden-student.pdf": 0
+ }
+}
