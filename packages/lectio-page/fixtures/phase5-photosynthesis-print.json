@@ -144,9 +144,52 @@
                 "prompt": [
                   {
                     "type": "text",
-                    "value": "Match each thing the plant relies on with how it reaches or is captured by the plant.\nMatch each item to its pair. Items: water; carbon dioxide; light\nPossible matches: taken in by the roots from the soil and carried up the stem to the leaves; taken in from the air through the leaves; captured by the leaves"
+                    "value": "Match each thing the plant relies on with how it reaches or is captured by the plant."
                   }
-                ]
+                ],
+                "match": {
+                  "left": [
+                    [
+                      {
+                        "type": "text",
+                        "value": "water"
+                      }
+                    ],
+                    [
+                      {
+                        "type": "text",
+                        "value": "carbon dioxide"
+                      }
+                    ],
+                    [
+                      {
+                        "type": "text",
+                        "value": "light"
+                      }
+                    ]
+                  ],
+                  "right": [
+                    [
+                      {
+                        "type": "text",
+                        "value": "taken in from the air through the leaves"
+                      }
+                    ],
+                    [
+                      {
+                        "type": "text",
+                        "value": "captured by the leaves"
+                      }
+                    ],
+                    [
+                      {
+                        "type": "text",
+                        "value": "taken in by the roots from the soil and carried up the stem to the leaves"
+                      }
+                    ]
+                  ]
+                },
+                "answer_lines": 0
               }
             ]
           },
@@ -615,7 +658,7 @@
               "answer": [
                 {
                   "type": "text",
-                  "value": "water: taken in by the roots from the soil and carried up the stem to the leaves; carbon dioxide: taken in from the air through the leaves; light: captured by the leaves"
+                  "value": "1 (water) → C (taken in by the roots from the soil and carried up the stem to the leaves); 2 (carbon dioxide) → A (taken in from the air through the leaves); 3 (light) → B (captured by the leaves)"
                 }
               ],
               "feedback": [
@@ -628,12 +671,6 @@
             {
               "question_id": "Q2",
               "answer": [
-                {
-                  "type": "text",
-                  "value": "an explanation that identical soil and identical water rule the soil account out, so the difference must lie in something the windowsill plant had and the cupboard plant did not"
-                }
-              ],
-              "rubric": [
                 {
                   "type": "text",
                   "value": "an explanation that identical soil and identical water rule the soil account out, so the difference must lie in something the windowsill plant had and the cupboard plant did not"
@@ -654,12 +691,6 @@
                   "value": "an explanation naming carbon dioxide entering the leaves, water from the roots, light energy captured in the leaves and sugar used for growth, and stating that with too little light the extra carbon dioxide cannot be combined"
                 }
               ],
-              "rubric": [
-                {
-                  "type": "text",
-                  "value": "an explanation naming carbon dioxide entering the leaves, water from the roots, light energy captured in the leaves and sugar used for growth, and stating that with too little light the extra carbon dioxide cannot be combined"
-                }
-              ],
               "feedback": [
                 {
                   "type": "text",
@@ -670,12 +701,6 @@
             {
               "question_id": "Q4",
               "answer": [
-                {
-                  "type": "text",
-                  "value": "an explanation that less light reaches the leaves, so less light energy is captured, less carbon dioxide and water are combined into sugar, and less food is available for new growth"
-                }
-              ],
-              "rubric": [
                 {
                   "type": "text",
                   "value": "an explanation that less light reaches the leaves, so less light energy is captured, less carbon dioxide and water are combined into sugar, and less food is available for new growth"
@@ -706,19 +731,19 @@
                 "B": [
                   {
                     "type": "text",
-                    "value": "Credits water with providing the growth material and treats light as merely helping, which is the soil/water-source misconception (m1)."
+                    "value": "Credits water with providing the growth material and treats light as merely helping, which is the soil/water-source misconception."
                   }
                 ],
                 "C": [
                   {
                     "type": "text",
-                    "value": "Claims the plant takes oxygen in to build tissue, reversing the direction of oxygen in food-making (m3)."
+                    "value": "Claims the plant takes oxygen in to build tissue, reversing the direction of oxygen in food-making."
                   }
                 ],
                 "D": [
                   {
                     "type": "text",
-                    "value": "Treats light as a mere comfort condition and water alone as the growth material (m2)."
+                    "value": "Treats light as a mere comfort condition and water alone as the growth material."
                   }
                 ]
               }
