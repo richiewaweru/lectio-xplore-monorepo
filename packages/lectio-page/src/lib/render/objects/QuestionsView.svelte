@@ -26,6 +26,28 @@
 			<span class="lectio-question-marks">[{item.marks}]</span>
 		{/if}
 		<InlineView nodes={asRichText(item.prompt)} />
+		{#if item.match}
+			<p class="lectio-match-instruction">Write the letter of the matching answer in each box.</p>
+			<div class="lectio-match">
+				<ol class="lectio-match-col lectio-match-left">
+					{#each item.match.left as entry, n}
+						<li class="lectio-match-row">
+							<span class="lectio-match-key">{n + 1}</span>
+							<span class="lectio-match-text"><InlineView nodes={asRichText(entry)} /></span>
+							<span class="lectio-match-blank">Match</span>
+						</li>
+					{/each}
+				</ol>
+				<ol class="lectio-match-col lectio-match-right">
+					{#each item.match.right as entry, n}
+						<li class="lectio-match-row">
+							<span class="lectio-match-key">{String.fromCharCode(65 + n)}</span>
+							<span class="lectio-match-text"><InlineView nodes={asRichText(entry)} /></span>
+						</li>
+					{/each}
+				</ol>
+			</div>
+		{/if}
 		<div class="lectio-answer-lines">
 			{#each Array(item.answer_lines ?? 3) as _}
 				<div class="lectio-answer-line"></div>

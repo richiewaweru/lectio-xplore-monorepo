@@ -125,6 +125,17 @@ p { margin: 0 0 var(--line); }
 .lectio-aside--key_idea { font-size: 12pt; line-height: 17pt; }
 .lectio-aside--key_idea .lectio-aside-label { font-size: 10pt; line-height: 14pt; }
 .lectio-aside--key_idea .lectio-aside-body { display: block; font-size: 18pt; line-height: 24pt; font-weight: 700; }
+/* Key idea: green tint plus a 1px border. The border and 18pt bold carry it in greyscale; print-color-adjust keeps the tint when background graphics are off. */
+.lectio-aside--key_idea.lectio-aside { background: #E4F0E8; border: 1px solid #1B5E40; padding: 7pt 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+/* Match-pairs task: numbered items and lettered answers in two columns with a blank to write the match in. */
+.lectio-match-instruction { margin: 6pt 0 8pt; font-size: 10.5pt; }
+.lectio-match { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 14pt; margin: 4pt 0 8pt; break-inside: avoid; }
+.lectio-match-col { list-style: none; margin: 0; padding: 0; }
+.lectio-match-row { display: flex; align-items: flex-start; gap: 6pt; padding: 5pt 0; border-bottom: 1px solid #767676; break-inside: avoid; }
+.lectio-match-key { flex: 0 0 auto; min-width: 5mm; font-weight: 700; }
+.lectio-match-text { flex: 1 1 auto; min-width: 0; }
+.lectio-match-blank { flex: 0 0 auto; display: inline-flex; align-items: flex-end; gap: 3pt; font-size: 9pt; }
+.lectio-match-blank::after { content: ""; display: inline-block; width: 12mm; height: 14pt; border-bottom: 1px solid #111; }
 
 /* ── List ────────────────────────────────────────────────────*/
 .lectio-list { margin: 0 0 var(--line); padding-left: 9mm; }

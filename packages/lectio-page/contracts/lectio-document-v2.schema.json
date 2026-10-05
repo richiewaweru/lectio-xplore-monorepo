@@ -363,7 +363,24 @@
               "id": { "type": "string", "minLength": 1 },
               "prompt": { "$ref": "#/$defs/rich-text" },
               "marks": { "type": ["number", "null"] },
-              "answer_lines": { "type": "integer", "minimum": 0 }
+              "answer_lines": { "type": "integer", "minimum": 0 },
+              "match": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["left", "right"],
+                "properties": {
+                  "left": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "$ref": "#/$defs/rich-text" }
+                  },
+                  "right": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "$ref": "#/$defs/rich-text" }
+                  }
+                }
+              }
             }
           }
         }

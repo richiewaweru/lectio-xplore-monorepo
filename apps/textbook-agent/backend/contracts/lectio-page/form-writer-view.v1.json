@@ -1225,6 +1225,30 @@
                 "answer_lines": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "match": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "left",
+                    "right"
+                  ],
+                  "properties": {
+                    "left": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "$ref": "#/$defs/rich-text"
+                      }
+                    },
+                    "right": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "$ref": "#/$defs/rich-text"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1274,7 +1298,7 @@
         ]
       },
       "converter_ref": "print.approved_assessment_converter",
-      "definition_hash": "cffa8c93e83ca7c965eabcd1f49bd5ec171ce0f733b12a662a82facfadbf896d",
+      "definition_hash": "7723f5436a1ea8ed3d0cba9114632dc208a48950fcbcb1577bab31313d7b3440",
       "fragmentation": "Split between questions, never inside a question. Prompt stays with minimum answer space.",
       "emphasis": "Hanging numbers, marks aligned to edge, ruled answer space. No cards.",
       "placement": [

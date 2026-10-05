@@ -6,8 +6,8 @@
   "files": {
     "lectio-document-v2.schema.json": {
       "path": "lectio-document-v2.schema.json",
-      "sha256": "a887491b2aeb38bd21845bed60c8bf4f28dc7edf154027511e8d6944b5db2587",
-      "bytes": 22167
+      "sha256": "c560bf52d8c0df124766c97d618c974f71577f9a0531a37d3904c0a9f1266695",
+      "bytes": 22768
     },
     "intent-catalogue.v1.json": {
       "path": "intent-catalogue.v1.json",
@@ -21,12 +21,12 @@
     },
     "base-print.css": {
       "path": "base-print.css",
-      "sha256": "b1550827d987b20e16886da8254e62794cb7e6cfb903a6349c006c35cc965324",
-      "bytes": 14088
+      "sha256": "e258f2790a243deb0ffc8d461da6c7265197f5786cd05f724c6da63d2cded98c",
+      "bytes": 15310
     },
     "manifest.json": {
       "path": "manifest.json",
-      "sha256": "ce6b77555ab76db298a7c81dc9ba1f77bb79b5d3202b7d57de5246f39a8ada42",
+      "sha256": "2332849443bd0375d42dfb12017f7e9196c7ecb7de06ac2d8e86a521280f0bbc",
       "bytes": 3710
     }
   }

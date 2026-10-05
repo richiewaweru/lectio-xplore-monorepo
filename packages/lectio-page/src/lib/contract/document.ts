@@ -138,6 +138,8 @@ export interface QuestionItem {
 	prompt: RichText | string;
 	marks?: number | null;
 	answer_lines?: number;
+	/** Match-pairs task: numbered items on the left, lettered answers (shuffled) on the right. */
+	match?: { left: Array<RichText | string>; right: Array<RichText | string> };
 }
 
 export interface QuestionsContent {
