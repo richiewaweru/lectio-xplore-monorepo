@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -224,6 +225,26 @@ def _single_choice_answer(task: SharedTaskSpec, labels: Mapping[str, str]) -> st
     return labels[value]
 
 
+def _letters(n: int) -> str:
+    """Paper labels A, B, ..., Z, AA, ..."""
+    letters = ""
+    while n:
+        n, remainder = divmod(n - 1, 26)
+        letters = chr(65 + remainder) + letters
+    return letters
+
+
+_PLAN_ID_NOTE = re.compile(r"\s*\(\s*m\d+\s*\)")
+
+
+def _relabel_note(note: str, option_labels: Mapping[str, str]) -> str:
+    """Show the displayed option label wherever a note cites an option id; drop plan ids like (m1)."""
+    for option_id, label in option_labels.items():
+        if option_id != label:
+            note = re.sub(rf"\(\s*{re.escape(option_id)}\s*\)", f"({label})", note)
+    return _PLAN_ID_NOTE.sub("", note)
+
+
 def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, str]]:
     response = _mapping(task.response, field="response", task=task)
     options = response.get("options")
@@ -240,12 +261,7 @@ def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], list[dict[str, A
         if not option_id or not text.strip() or option_id in labels:
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has invalid or duplicate choice options")
         # Paper choices use A, B, …, AA; these are the answer labels shown to learners.
-        n = index + 1
-        letters = ""
-        while n:
-            n, remainder = divmod(n - 1, 26)
-            letters = chr(65 + remainder) + letters
-        label = letters
+        label = _letters(index + 1)
         labels[option_id] = label
         texts[option_id] = text
         paper_options.append({"letter": label, "text": _inline(text)})
@@ -278,6 +294,7 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
     answer: str | None = None
     alternatives: list[str] = []
     rubric: str | None = None
+    match: dict[str, Any] | None = None
 
     if response_type == "missing_values":
         values = response.get("values", response.get("answers"))
@@ -311,9 +328,16 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
                 raise SharedDocumentPrintMappingError(f"task {task.id!r} has malformed matching pairs")
             left.append(str(pair["left"]))
             right.append(str(pair["right"]))
-        prompt += "\nMatch each item to its pair. Items: " + "; ".join(left)
-        prompt += "\nPossible matches: " + "; ".join(right)
-        answer = "; ".join(f"{pair['left']}: {pair['right']}" for pair in pairs)
+        # Two columns on paper: numbered items on the left, lettered matches on the
+        # right. The right column is rotated so no row lines up with its own answer.
+        unique_right = list(dict.fromkeys(right))
+        shift = len(unique_right) // 2
+        shown_right = unique_right[shift:] + unique_right[:shift]
+        letters = {text: _letters(index + 1) for index, text in enumerate(shown_right)}
+        match = {"left": [_inline(text) for text in left], "right": [_inline(text) for text in shown_right]}
+        answer = "; ".join(
+            f"{index + 1} ({left[index]}) → {letters[right[index]]} ({right[index]})" for index in range(len(left))
+        )
     elif response_type == "ordered_items":
         items = response.get("items")
         order = evaluation.get("correct_order", evaluation.get("order"))
@@ -360,12 +384,17 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
         else:
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has no representable Print answer key")
     item: dict[str, Any] = {"id": "", "prompt": _inline(prompt)}
+    if match is not None:
+        item["match"] = match
+        # The match blanks are the answer space; no extra ruled lines.
+        answer_lines = 0
     if answer_lines is not None:
         item["answer_lines"] = answer_lines
     entry: dict[str, Any] = {"answer": answer}
     if alternatives:
         entry["alternatives"] = [_inline(value) for value in alternatives]
-    if rubric:
+    # A rubric that only repeats the answer would print the same text twice.
+    if rubric and rubric.strip() != str(answer).strip():
         entry["rubric"] = _inline(rubric)
     return item, entry
 
@@ -379,7 +408,7 @@ def _teacher_task_details(task: SharedTaskSpec, option_labels: Mapping[str, str]
         details["feedback"] = _inline(correct)
     if isinstance(task.option_notes, Mapping) and task.option_notes:
         details["option_notes"] = {
-            (option_labels or {}).get(str(option), str(option)): _inline(str(note))
+            (option_labels or {}).get(str(option), str(option)): _inline(_relabel_note(str(note), option_labels or {}))
             for option, note in task.option_notes.items()
             if str(note).strip()
         }
