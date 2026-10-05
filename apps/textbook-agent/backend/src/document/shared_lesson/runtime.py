@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import weakref
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic_ai.exceptions import UnexpectedModelBehavior
+from sqlalchemy.exc import DBAPIError
 
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
@@ -55,6 +57,8 @@ from infra.generation_runtime import (
     SourceIdentityConflict,
     WorkItemAdmission,
     WorkItemFailure,
+    WorkItemNotFound,
+    WorkItemUnavailable,
     add_work_item,
     admit_run,
     append_event,
@@ -66,6 +70,8 @@ from infra.generation_runtime import (
     persist_checkpoint,
     retry_work_item,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 MAX_CONCURRENT_SECTION_WRITERS = 4
 SECTION_WRITER_LEASE_SECONDS = 360
@@ -232,6 +238,54 @@ def _checkpoint_compatibility(
 _MAX_DIAGNOSTIC_VALIDATION_ENTRIES = 20
 
 
+async def rollback_for_failure_record(
+    session: Any,
+    *,
+    lease_token: int,
+    lease_committed: bool,
+    reclaim: Callable[[], Awaitable[Any]],
+) -> int | None:
+    """Clear the session's transaction, then return the fence to record a failure under.
+
+    A raw database error (for example ``InFailedSQLTransactionError``) leaves
+    PostgreSQL's transaction aborted while ``session.is_active`` can still be
+    True, so the failure must never be recorded on an un-rolled-back session:
+    the write would fail too and the item would sit ``running`` until its
+    lease expired. Rollback is therefore unconditional.
+
+    If the claim was committed (``lease_committed``) the existing fence still
+    holds and is returned. Otherwise the rollback discarded the uncommitted
+    claim, so ``reclaim`` re-claims under a fresh fence. If the item is no
+    longer claimable (locked, or already claimed under our own earlier fence)
+    the original fence is returned and the fenced failure write itself decides:
+    it succeeds when that fence is still live and raises ``LeaseLostError``
+    when another worker owns the item. Returns ``None`` only when the item no
+    longer exists; callers then skip the record and re-raise the original error.
+
+    Callers must capture any ORM attributes they need into locals *before*
+    calling this: rollback expires every loaded instance, and a lazy refresh
+    outside the greenlet raises ``MissingGreenlet``.
+    """
+    rollback = getattr(session, "rollback", None)
+    if not callable(rollback):
+        return lease_token
+    await rollback()
+    if lease_committed:
+        return lease_token
+    try:
+        reclaimed = await reclaim()
+    except WorkItemUnavailable:
+        LOGGER.warning(
+            "Work item not reclaimable after rollback; recording failure under prior fence"
+        )
+        return lease_token
+    except WorkItemNotFound:
+        LOGGER.warning("Work item vanished after rollback; failure cannot be recorded")
+        return None
+    fresh_token = getattr(reclaimed, "lease_token", None)
+    return fresh_token if isinstance(fresh_token, int) else None
+
+
 async def _record_execution_failure(
     session: Any,
     *,
@@ -257,6 +311,15 @@ async def _record_execution_failure(
         recovery = RecoveryAction.RETRY
         code = "provider_transport"
         summary = "Section provider transport failed."
+    elif isinstance(error, DBAPIError):
+        # Raw database errors (dropped/aborted connection, failed transaction)
+        # are transient infrastructure faults, not section-content or
+        # programming faults. PROVIDER_TRANSPORT is the only retryable
+        # transport-style class retry_work_item accepts.
+        error_class = ErrorClass.PROVIDER_TRANSPORT
+        recovery = RecoveryAction.RETRY
+        code = "database_transient"
+        summary = "A transient database error interrupted the section."
     elif isinstance(
         error,
         (
@@ -461,18 +524,24 @@ async def compose_section_work_item(
         source=identity,
         lease_seconds=lease_seconds,
     )
+    # Capture ORM attributes now: rollback expires ``item`` and a lazy reload
+    # outside the greenlet raises MissingGreenlet.
+    lease_token = item.lease_token
+    run_id = item.run_id
+    lease_committed = False
     try:
         checkpoint = await load_compatible_checkpoint(
             session,
             work_item_id=work_item_id,
             worker_id=worker_id,
-            lease_token=item.lease_token,
+            lease_token=lease_token,
             compatibility=compatibility,
         )
         if checkpoint is None:
             # The provider call can be slow. Persist the claim first so no
             # database transaction or lock remains open while composing.
             await session.commit()
+            lease_committed = True
             plan = await compose_section(
                 section=section,
                 tasks=task_slice,
@@ -483,13 +552,13 @@ async def compose_section_work_item(
                 session,
                 work_item_id=work_item_id,
                 worker_id=worker_id,
-                lease_token=item.lease_token,
+                lease_token=lease_token,
                 compatibility=compatibility,
                 payload=plan.model_dump(mode="json"),
             )
             await _record_composition_style_warnings(
                 session,
-                run_id=item.run_id,
+                run_id=run_id,
                 work_item_id=work_item_id,
                 warnings=plan.warnings,
             )
@@ -512,19 +581,32 @@ async def compose_section_work_item(
     except LeaseLostError:
         raise
     except Exception as exc:
-        await _record_execution_failure(
+        failure_lease_token = await rollback_for_failure_record(
             session,
-            work_item_id=work_item_id,
-            worker_id=worker_id,
-            lease_token=item.lease_token,
-            error=exc,
+            lease_token=lease_token,
+            lease_committed=lease_committed,
+            reclaim=lambda: claim_work_item(
+                session,
+                work_item_id=work_item_id,
+                worker_id=worker_id,
+                source=identity,
+                lease_seconds=lease_seconds,
+            ),
         )
+        if failure_lease_token is not None:
+            await _record_execution_failure(
+                session,
+                work_item_id=work_item_id,
+                worker_id=worker_id,
+                lease_token=failure_lease_token,
+                error=exc,
+            )
         raise
     await complete_work_item(
         session,
         work_item_id=work_item_id,
         worker_id=worker_id,
-        lease_token=item.lease_token,
+        lease_token=lease_token,
         output_json=plan.model_dump(mode="json"),
         output_hash=content_hash(plan.model_dump(mode="json")),
     )
@@ -616,13 +698,17 @@ async def _write_section_work_item(
         source=identity,
         lease_seconds=lease_seconds,
     )
+    # Capture ORM attributes now: rollback expires ``item`` and a lazy reload
+    # outside the greenlet raises MissingGreenlet.
+    lease_token = item.lease_token
+    run_id = item.run_id
     lease_checkpoint_committed = False
     try:
         checkpoint = await load_compatible_checkpoint(
             session,
             work_item_id=work_item_id,
             worker_id=worker_id,
-            lease_token=item.lease_token,
+            lease_token=lease_token,
             compatibility=compatibility,
         )
         expected_composition = request.composition_plan.model_dump(mode="json")
@@ -631,7 +717,7 @@ async def _write_section_work_item(
                 session,
                 work_item_id=work_item_id,
                 worker_id=worker_id,
-                lease_token=item.lease_token,
+                lease_token=lease_token,
                 compatibility=compatibility,
                 payload={
                     "composition_identity": composition_identity,
@@ -683,32 +769,31 @@ async def _write_section_work_item(
     except LeaseLostError:
         raise
     except Exception as exc:
-        # A provider or SQL error may leave PostgreSQL's transaction aborted.
-        # The initial claim/checkpoint commit above is durable, so rollback
-        # clears only this session's failed transaction before fenced failure
-        # persistence. Earlier failures have an uncommitted claim; rollback
-        # and reclaim a fresh fence before recording their typed failure.
-        rollback = getattr(session, "rollback", None)
-        failure_lease_token = item.lease_token
-        transaction_failed = getattr(session, "is_active", True) is False
-        if callable(rollback) and (lease_checkpoint_committed or transaction_failed):
-            await rollback()
-        if not lease_checkpoint_committed and transaction_failed and callable(rollback):
-            item = await claim_work_item(
+        # A provider or SQL error may leave PostgreSQL's transaction aborted
+        # while ``session.is_active`` is still True, so always roll back first.
+        # If the initial claim/checkpoint commit landed its fence still holds;
+        # otherwise rollback discarded the claim and a fresh fence is claimed
+        # before the typed failure is recorded.
+        failure_lease_token = await rollback_for_failure_record(
+            session,
+            lease_token=lease_token,
+            lease_committed=lease_checkpoint_committed,
+            reclaim=lambda: claim_work_item(
                 session,
                 work_item_id=work_item_id,
                 worker_id=worker_id,
                 source=identity,
                 lease_seconds=lease_seconds,
-            )
-            failure_lease_token = item.lease_token
-        await _record_execution_failure(
-            session,
-            work_item_id=work_item_id,
-            worker_id=worker_id,
-            lease_token=failure_lease_token,
-            error=exc,
+            ),
         )
+        if failure_lease_token is not None:
+            await _record_execution_failure(
+                session,
+                work_item_id=work_item_id,
+                worker_id=worker_id,
+                lease_token=failure_lease_token,
+                error=exc,
+            )
         raise
     output = result.model_dump(mode="json")
     # A cancelled run, expired lease, or newer fence rejects this completion.
@@ -716,13 +801,13 @@ async def _write_section_work_item(
         session,
         work_item_id=work_item_id,
         worker_id=worker_id,
-        lease_token=item.lease_token,
+        lease_token=lease_token,
         output_json=output,
         output_hash=content_hash(output),
     )
     await _record_writer_style_warnings(
         session,
-        run_id=item.run_id,
+        run_id=run_id,
         work_item_id=work_item_id,
         warnings=result.warnings,
     )

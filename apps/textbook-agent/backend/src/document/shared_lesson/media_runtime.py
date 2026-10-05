@@ -26,6 +26,7 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError
 
 from document.shared_lesson.media import (
     DeferredFigureMediaResult,
@@ -37,7 +38,11 @@ from document.shared_lesson.media import (
     bind_generated_figure,
 )
 from document.shared_lesson.models import FigureNode, SharedSection
-from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from document.shared_lesson.runtime import (
+    TeachingPlanSource,
+    rollback_for_failure_record,
+    verify_teaching_plan_source,
+)
 from infra.config import settings
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
@@ -514,6 +519,14 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
             safe_summary="Figure media provider transport failed.",
             recovery_action=RecoveryAction.RETRY,
         )
+    if isinstance(exc, DBAPIError):
+        # Raw database faults are transient infrastructure errors; retryable.
+        return WorkItemFailure(
+            error_code="database_transient",
+            error_class=ErrorClass.PROVIDER_TRANSPORT,
+            safe_summary="A transient database error interrupted figure media work.",
+            recovery_action=RecoveryAction.RETRY,
+        )
     name = type(exc).__name__.casefold()
     if any(token in name for token in ("auth", "permission", "config", "program")):
         return WorkItemFailure(
@@ -527,6 +540,45 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
         error_class=ErrorClass.INTERNAL_PROGRAMMING,
         safe_summary="Figure media executor failed unexpectedly.",
         recovery_action=RecoveryAction.NONE,
+    )
+
+
+async def _fail_after_rollback(
+    job: MediaWorkItemJob,
+    *,
+    identity: SourceIdentity,
+    lease_token: int,
+    lease_committed: bool,
+    failure: WorkItemFailure,
+    now: Any,
+) -> GenerationWorkItemModel | None:
+    """Roll the session back, then persist ``failure`` under a valid fence.
+
+    Returns ``None`` when the uncommitted claim could not be re-claimed; the
+    caller then re-raises and lease expiry reconciles the item.
+    """
+    failure_lease_token = await rollback_for_failure_record(
+        job.session,
+        lease_token=lease_token,
+        lease_committed=lease_committed,
+        reclaim=lambda: claim_work_item(
+            job.session,
+            work_item_id=job.work_item_id,
+            worker_id=job.worker_id,
+            source=identity,
+            lease_seconds=job.lease_seconds,
+            now=now,
+        ),
+    )
+    if failure_lease_token is None:
+        return None
+    return await fail_work_item(
+        job.session,
+        work_item_id=job.work_item_id,
+        worker_id=job.worker_id,
+        lease_token=failure_lease_token,
+        failure=failure,
+        now=now,
     )
 
 
@@ -593,6 +645,10 @@ async def execute_figure_media_work_item(
         lease_seconds=job.lease_seconds,
         now=now,
     )
+    # Capture ORM attributes now: rollback expires ``item`` and a lazy reload
+    # outside the greenlet raises MissingGreenlet.
+    item_id = item.id
+    lease_token = item.lease_token or 0
     compatibility = _checkpoint_compatibility(source=identity, item=item)
     try:
         _validate_item_binding(item, job.work)
@@ -625,38 +681,50 @@ async def execute_figure_media_work_item(
             safe_summary="Figure media checkpoint failed compatibility or integrity validation.",
             recovery_action=RecoveryAction.NONE,
         )
-        await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
-            now=now,
-        )
+        if (
+            await _fail_after_rollback(
+                job,
+                identity=identity,
+                lease_token=lease_token,
+                lease_committed=False,
+                failure=failure,
+                now=now,
+            )
+            is None
+        ):
+            raise
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
-    except Exception:  # noqa: BLE001 - persist unknown checkpoint failures as terminal.
+    except Exception as exc:  # noqa: BLE001 - persist unknown checkpoint failures as terminal.
         # Checkpoint integrity/source mismatches are terminal contract errors;
-        # they must not enter semantic provider retry.
-        failure = WorkItemFailure(
-            error_code="media_checkpoint_integrity",
-            error_class=ErrorClass.UNSUPPORTED_CONTRACT,
-            safe_summary="Figure media checkpoint failed compatibility or integrity validation.",
-            recovery_action=RecoveryAction.NONE,
-        )
-        await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
-            now=now,
-        )
+        # they must not enter semantic provider retry. A raw database fault is
+        # transient and stays retryable.
+        if isinstance(exc, DBAPIError):
+            failure = _failure_for_exception(exc)
+        else:
+            failure = WorkItemFailure(
+                error_code="media_checkpoint_integrity",
+                error_class=ErrorClass.UNSUPPORTED_CONTRACT,
+                safe_summary="Figure media checkpoint failed compatibility or integrity validation.",
+                recovery_action=RecoveryAction.NONE,
+            )
+        if (
+            await _fail_after_rollback(
+                job,
+                identity=identity,
+                lease_token=lease_token,
+                lease_committed=False,
+                failure=failure,
+                now=now,
+            )
+            is None
+        ):
+            raise
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
@@ -687,14 +755,15 @@ async def execute_figure_media_work_item(
             safe_summary="Figure media provider call failed.",
             recovery_action=RecoveryAction.RETRY,
         )
-        failed_item = await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
+        failed_item = await _fail_after_rollback(
+            job,
+            identity=identity,
+            lease_token=lease_token,
+            lease_committed=True,
             failure=failure,
             now=now,
         )
+        assert failed_item is not None  # lease_committed=True never skips the record
         await append_event(
             job.session,
             run_id=failed_item.run_id,
@@ -704,7 +773,7 @@ async def execute_figure_media_work_item(
             safe_payload={"media_block_status": "failed"},
         )
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
@@ -719,31 +788,39 @@ async def execute_figure_media_work_item(
             safe_summary="Figure media output failed the shared semantic contract.",
             recovery_action=RecoveryAction.RETRY,
         )
-        await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
-            now=now,
-        )
+        if (
+            await _fail_after_rollback(
+                job,
+                identity=identity,
+                lease_token=lease_token,
+                lease_committed=True,
+                failure=failure,
+                now=now,
+            )
+            is None
+        ):
+            raise
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
     except Exception as exc:  # noqa: BLE001 - fail closed for unknown provider errors.
         failure = _failure_for_exception(exc)
-        await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
-            now=now,
-        )
+        if (
+            await _fail_after_rollback(
+                job,
+                identity=identity,
+                lease_token=lease_token,
+                lease_committed=True,
+                failure=failure,
+                now=now,
+            )
+            is None
+        ):
+            raise
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
@@ -753,7 +830,7 @@ async def execute_figure_media_work_item(
         job.session,
         work_item_id=item.id,
         worker_id=job.worker_id,
-        lease_token=item.lease_token or 0,
+        lease_token=lease_token,
         output_json=output,
         output_hash=content_hash(output),
         now=now,

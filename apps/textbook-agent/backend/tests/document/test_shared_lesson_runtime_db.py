@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
@@ -770,15 +770,16 @@ async def test_writer_rolls_back_poisoned_session_before_failure_record_and_keep
         preserved = await verify.get(GenerationWorkItemModel, ready_id)
         failed_run = await verify.get(GenerationRunModel, run.id)
         assert failed is not None
-        assert failed.status == "failed_terminal"
-        assert failed.error_code == "section_runtime_error"
-        assert failed.error_class == "internal_programming"
+        assert failed.status == "failed_recoverable"
+        assert failed.error_code == "database_transient"
+        assert failed.error_class == "provider_transport"
         assert failed.lease_owner is None
         assert preserved is not None
         assert preserved.status == "ready"
         assert preserved.output_json == ready_output
         assert preserved.output_hash == content_hash(ready_output)
-        assert failed_run is not None and failed_run.status == "failed_terminal"
+        # A retryable item must not terminalize its Run.
+        assert failed_run is not None and failed_run.status != "failed_terminal"
         events = list(
             (
                 await verify.scalars(
@@ -794,6 +795,154 @@ async def test_writer_rolls_back_poisoned_session_before_failure_record_and_keep
             if event.event_type == "section_writer_failure_diagnostic"
         )
         assert diagnostic.safe_payload_json == {"original_exception_type": "OperationalError"}
+
+
+async def _seed_writer_target(db_session, *, suffix: str):
+    owner_id, lesson_id = await _seed_build(db_session, suffix=suffix)
+    source = _source()
+    _build, (run, _items) = await _admit_run(
+        db_session,
+        owner_id=owner_id,
+        lesson_id=lesson_id,
+        source=source,
+        request_key=f"{suffix}-request",
+    )
+    section = {s.slot_id: s for s in source.plan.sections}["explain"]
+    request = _writer_request(section)
+    target = await admit_writer_work_item(
+        db_session, run_id=run.id, section=section, request=request
+    )
+    await db_session.commit()
+    return source, request, target.id
+
+
+class _RollbackSpy:
+    """Delegate to the real session but count rollbacks."""
+
+    def __init__(self, session) -> None:
+        self._session = session
+        self.rollbacks = 0
+
+    def __getattr__(self, name):
+        return getattr(self._session, name)
+
+    async def rollback(self) -> None:
+        self.rollbacks += 1
+        await self._session.rollback()
+
+
+def _raw_db_error() -> ProgrammingError:
+    # Mirrors asyncpg's InFailedSQLTransactionError surfacing as a DBAPIError
+    # while the AsyncSession itself still reports is_active=True.
+    return ProgrammingError("SELECT 1", {}, Exception("current transaction is aborted"))
+
+
+@pytest.mark.asyncio
+async def test_writer_raw_db_error_before_claim_commit_rolls_back_and_is_retryable_immediately(
+    db_session, db_session_factory, monkeypatch
+) -> None:
+    source, request, target_id = await _seed_writer_target(
+        db_session, suffix="writer-raw-db-before-commit"
+    )
+    spy = _RollbackSpy(db_session)
+
+    async def raising_load(*_args, **_kwargs):
+        raise _raw_db_error()
+
+    monkeypatch.setattr(shared_runtime, "load_compatible_checkpoint", raising_load)
+    assert db_session.is_active is True
+    with pytest.raises(ProgrammingError):
+        await _write_section_work_item(
+            spy,
+            work_item_id=target_id,
+            worker_id="writer-raw-db-before-commit",
+            source=source,
+            request=request,
+            provider_semaphore=asyncio.Semaphore(1),
+        )
+    await db_session.commit()
+
+    assert spy.rollbacks == 1
+    async with db_session_factory() as verify:
+        failed = await verify.get(GenerationWorkItemModel, target_id)
+        assert failed is not None
+        # Recorded straight away: no lease-expiry wait, retryable.
+        assert failed.status == "failed_recoverable"
+        assert failed.error_code == "database_transient"
+        assert failed.error_class == "provider_transport"
+        assert failed.recovery_action == "retry"
+        assert failed.lease_owner is None
+        assert failed.lease_expires_at is None
+
+
+@pytest.mark.asyncio
+async def test_writer_raw_db_error_after_lease_commit_rolls_back_and_records_failure(
+    db_session, db_session_factory, monkeypatch
+) -> None:
+    source, request, target_id = await _seed_writer_target(
+        db_session, suffix="writer-raw-db-after-commit"
+    )
+    spy = _RollbackSpy(db_session)
+
+    async def raising_writer(**_kwargs):
+        raise _raw_db_error()
+
+    monkeypatch.setattr(shared_runtime, "write_section", raising_writer)
+    with pytest.raises(ProgrammingError):
+        await _write_section_work_item(
+            spy,
+            work_item_id=target_id,
+            worker_id="writer-raw-db-after-commit",
+            source=source,
+            request=request,
+            provider_semaphore=asyncio.Semaphore(1),
+        )
+    await db_session.commit()
+
+    assert spy.rollbacks == 1
+    async with db_session_factory() as verify:
+        failed = await verify.get(GenerationWorkItemModel, target_id)
+        assert failed is not None
+        assert failed.status == "failed_recoverable"
+        assert failed.error_class == "provider_transport"
+        assert failed.recovery_action == "retry"
+        assert failed.attempt == 1
+
+
+@pytest.mark.asyncio
+async def test_writer_unclaimable_item_after_rollback_falls_back_to_fenced_record(
+    db_session, monkeypatch
+) -> None:
+    source, request, target_id = await _seed_writer_target(
+        db_session, suffix="writer-raw-db-unclaimable"
+    )
+    real_claim = shared_runtime.claim_work_item
+    calls = {"n": 0}
+
+    async def claim_once(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] > 1:
+            raise shared_runtime.WorkItemUnavailable("locked")
+        return await real_claim(*args, **kwargs)
+
+    async def raising_load(*_args, **_kwargs):
+        raise _raw_db_error()
+
+    monkeypatch.setattr(shared_runtime, "claim_work_item", claim_once)
+    monkeypatch.setattr(shared_runtime, "load_compatible_checkpoint", raising_load)
+    # Re-claim is refused after rollback; the failure write then runs under the
+    # prior fence. It either lands (fence still live) or raises LeaseLostError
+    # (another worker owns the item); it must never crash with anything else.
+    with pytest.raises((ProgrammingError, LeaseLostError)):
+        await _write_section_work_item(
+            db_session,
+            work_item_id=target_id,
+            worker_id="writer-raw-db-unclaimable",
+            source=source,
+            request=request,
+            provider_semaphore=asyncio.Semaphore(1),
+        )
+    assert calls["n"] == 2
 
 
 @pytest.mark.asyncio
