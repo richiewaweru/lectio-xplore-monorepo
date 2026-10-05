@@ -117,9 +117,9 @@ class DocumentQAWorkItemOutput(BaseModel):
     document_revision: int = Field(ge=1)
     document_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     semantic_qa: DocumentSemanticQAResult
-    #: Non-blocking findings recorded by the advisory quality gate. When
-    #: present, ``semantic_qa`` is the (issue-free) PASS the run proceeds on and
-    #: these flags carry what the reviewer reported. Always empty in blocking mode.
+    #: Non-blocking findings from deterministic, semantic-shape, composer, and
+    #: writer advisory checks. When present, ``semantic_qa`` is the issue-free
+    #: PASS the run proceeds on and these flags carry what the reviewer reported.
     quality_flags: tuple[QualityFlag, ...] = ()
 
     @model_validator(mode="after")
