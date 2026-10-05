@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "id": "golden-shared-lesson",
+  "revision": 1,
+  "content_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "teaching_plan_id": "golden-plan",
+  "teaching_plan_revision": 1,
+  "teaching_plan_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+  "title": "How Plants Get the Energy to Grow",
+  "sections": [
+    {
+      "id": "orient",
+      "title": "Two Pots, One Difference",
+      "position": 0,
+      "nodes": [
+        {
+          "id": "observe-paragraph",
+          "kind": "paragraph",
+          "teaching_block_id": "observe-paragraph-block",
+          "display": {"text": "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits. Same in both pots: soil, water, room, temperature. This controlled comparison makes it possible to ask which missing condition explains the different growth, while every other treatment remains visible and unchanged."},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "observe-figure",
+          "kind": "figure",
+          "teaching_block_id": "observe-figure-block",
+          "display": {"asset_id": null, "caption": "The two seedlings are treated the same in every way except where they stand."},
+          "accessibility": {"alt_text": "A sunny windowsill seedling is green and leaning toward the window; a dark cupboard seedling is pale and has stopped growing."}
+        },
+        {
+          "id": "observe-question",
+          "kind": "paragraph",
+          "teaching_block_id": "observe-question-block",
+          "display": {"text": "A plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question: where does the energy a plant uses to grow actually come from?"},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "observe-list",
+          "kind": "list",
+          "teaching_block_id": "observe-list-block",
+          "display": {"ordered": false, "items": ["soil", "water", "room", "temperature"]},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "observe-known-heading",
+          "kind": "heading",
+          "teaching_block_id": "observe-known-heading-block",
+          "display": {"text": "What you already know", "level": 3},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "observe-known-list",
+          "kind": "list",
+          "teaching_block_id": "observe-known-list-block",
+          "display": {"ordered": false, "items": ["Plants are living things that need light and water to grow.", "Every living thing needs energy to stay alive."]},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "observe-answers-heading",
+          "kind": "heading",
+          "teaching_block_id": "observe-answers-heading-block",
+          "display": {"text": "Two possible answers", "level": 3},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "observe-answers-paragraph",
+          "kind": "paragraph",
+          "teaching_block_id": "observe-answers-paragraph-block",
+          "display": {"text": "Where the growing energy comes from is exactly what people disagree about."},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "observe-answers-compare",
+          "kind": "compare",
+          "teaching_block_id": "observe-answers-compare-block",
+          "display": {"items": [
+            {"label": "Answer A", "title": "From the soil", "body": "The energy is taken in together with the water the roots draw up."},
+            {"label": "Answer B", "title": "From the light", "body": "The energy is captured from the light by the plant's leaves."}
+          ]},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "observe-prediction-paragraph",
+          "kind": "paragraph",
+          "teaching_block_id": "observe-prediction-paragraph-block",
+          "display": {"text": "Neither answer is settled yet. Take the one you think is more likely and hold it as a prediction, not a fact. Evidence, not preference, is what settles a question like this."},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "observe-task-anchor",
+          "kind": "task_anchor",
+          "task_spec_id": "task-predict",
+          "teaching_block_id": "observe-task-block",
+          "role": "predict"
+        }
+      ],
+      "provenance": {"source_ids": [], "source_hashes": {}}
+    },
+    {
+      "id": "explain",
+      "title": "Where the Growing Energy Comes From",
+      "position": 1,
+      "nodes": [
+        {
+          "id": "explain-key-idea",
+          "kind": "callout",
+          "teaching_block_id": "explain-key-idea-block",
+          "display": {"tone": "important", "title": "Key idea", "body": "The energy a plant grows on is captured from light, not taken in from the soil.", "variant": "key_idea"},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "explain-paragraph-one",
+          "kind": "paragraph",
+          "teaching_block_id": "explain-paragraph-one-block",
+          "display": {"text": "The green parts of a plant — mostly its leaves — absorb light energy. The leaf uses that energy to make the plant's own food: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air."},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "explain-equation",
+          "kind": "equation",
+          "teaching_block_id": "explain-equation-block",
+          "display": {"label": "In one line", "inputs": ["water", "carbon dioxide (CO~2~)"], "condition": "light energy", "outputs": ["sugar (the plant's food)"]},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "explain-paragraph-two",
+          "kind": "paragraph",
+          "teaching_block_id": "explain-paragraph-two-block",
+          "display": {"text": "The energy stored inside that sugar is what the plant spends on building new leaves, stem and roots."},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "explain-steps-heading",
+          "kind": "heading",
+          "teaching_block_id": "explain-steps-heading-block",
+          "display": {"text": "Follow the energy, step by step", "level": 3},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "explain-steps",
+          "kind": "list",
+          "teaching_block_id": "explain-steps-block",
+          "display": {"ordered": true, "items": ["Sunlight reaches the leaf.", "The leaf's green parts capture that light energy.", "The captured energy is used to build sugar from water and carbon dioxide. The energy is now stored inside food the plant has made for itself.", "The plant breaks some of that sugar down again and uses the released energy to build new leaves, stem and roots. That is growth."]},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "explain-misconception",
+          "kind": "callout",
+          "teaching_block_id": "explain-misconception-block",
+          "display": {"tone": "note", "title": "Notice two things", "body": "The energy enters the plant through the leaf, never through the soil. The only things arriving from the soil are water and dissolved minerals.", "variant": "note"},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "explain-soil-heading",
+          "kind": "heading",
+          "teaching_block_id": "explain-soil-heading-block",
+          "display": {"text": "So what is the soil for?", "level": 3},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "explain-paragraph",
+          "kind": "paragraph",
+          "teaching_block_id": "explain-paragraph-block",
+          "display": {"text": "Soil does a real job. It holds the plant firmly in place, and it holds water and dissolved minerals, which the roots take in and which then travel up to the leaves. Minerals are raw materials. They are not food, and they carry no usable energy. So a plant standing in rich soil with plenty of water, but kept in the dark, cannot make its own food and cannot grow, however well watered it is."},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "explain-table",
+          "kind": "table",
+          "teaching_block_id": "explain-table-block",
+          "display": {"headers": ["What the plant takes in", "Where from", "Is it energy?"], "rows": [["Water", "Soil, through the roots", "No. A raw material for making sugar."], ["Dissolved minerals", "Soil, through the roots", "No. Raw materials for building the plant's body."], ["Light", "Captured by the leaves", "Yes. It ends up stored in sugar."]], "caption": ""},
+          "accessibility": {"description": ""}
+        }
+      ],
+      "provenance": {"source_ids": [], "source_hashes": {}}
+    },
+    {
+      "id": "contrast",
+      "title": "Two Beliefs That Fail the Evidence",
+      "position": 2,
+      "nodes": [
+        {
+          "id": "contrast-belief",
+          "kind": "callout",
+          "teaching_block_id": "contrast-belief-block",
+          "display": {"tone": "warning", "title": "Common belief 1", "body": null, "variant": "misconception", "belief": "The soil feeds the plant. A plant kept in the dark will keep growing as long as it is watered.", "evidence": "Both pots held the same soil and got the same water. If the soil were supplying food and energy, the cupboard plant should have grown just as well. It stopped growing and turned pale.", "conclusion": "Soil supplies only water and dissolved minerals. The plant's food is made in its own leaves, using light energy.", "aside": "The cupboard plant kept going for a while on food it had already made and stored. Once that store ran down, it stopped growing and lost its green colour."},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "contrast-belief-two",
+          "kind": "callout",
+          "teaching_block_id": "contrast-belief-two-block",
+          "display": {"tone": "warning", "title": "Common belief 2", "body": null, "variant": "misconception", "belief": "Light only keeps a plant warm or makes it look healthy. The energy for growth comes from the water and the minerals.", "evidence": "Both pots stood in the same room at the same temperature. The cupboard was not cold, so the cupboard plant lacked no warmth. It still did not grow.", "conclusion": "Light is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food."},
+          "accessibility": {"description": ""}
+        }
+      ],
+      "provenance": {"source_ids": [], "source_hashes": {}}
+    },
+    {
+      "id": "check",
+      "title": "Which Observation Challenges the Soil Idea?",
+      "position": 3,
+      "nodes": [
+        {
+          "id": "check-quote",
+          "kind": "quote",
+          "teaching_block_id": "check-quote-block",
+          "display": {"text": "Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.", "attribution": "A student says"},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "check-paragraph",
+          "kind": "paragraph",
+          "teaching_block_id": "check-paragraph-block",
+          "display": {"text": "That claim is wrong. The strong move is not to repeat the explanation, but to point to evidence the claim cannot explain. Read the observations and choose the one that best challenges the soil idea."},
+          "accessibility": {"description": ""}
+        },
+        {
+          "id": "check-task-anchor",
+          "kind": "task_anchor",
+          "task_spec_id": "task-check",
+          "teaching_block_id": "check-task-block",
+          "role": "check"
+        }
+      ],
+      "provenance": {"source_ids": [], "source_hashes": {}}
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-predict",
+      "teaching_plan_id": "golden-plan",
+      "teaching_plan_revision": 1,
+      "teaching_plan_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "teaching_block_id": "observe-task-block",
+      "mode": "formative",
+      "action": "select-one",
+      "purpose": "elicit a committed prediction before the mechanism is taught so the explanation has something concrete to settle",
+      "prompt": "Two pots hold identical soil, are watered the same amount, and stand in the same room at the same temperature. One sits on a sunny windowsill: its seedling is green and leans toward the window. The other is shut in a dark cupboard: its seedling has turned pale and stopped growing. Before we explain anything, commit to your prediction. Where does the energy a plant uses to grow come from?",
+      "role": "predict",
+      "display_prompt": "Where does the energy a plant uses to grow come from?",
+      "difficulty": "guided",
+      "sourcebook_refs": [],
+      "expected_evidence": "the learner chooses one of the two competing sources — soil or light — as a prediction that can be revisited later in the lesson",
+      "response": {"type": "single_choice", "options": [{"id": "soil", "text": "The plant takes in its growing energy from the soil, together with the water."}, {"id": "light", "text": "The plant captures its growing energy from the light, using its leaves."}]},
+      "evaluation": {"type": "exact_match", "correct_option_id": "light"},
+      "feedback": {"saved": "Prediction saved. Keep it in mind — Part 2 will test it."},
+      "option_notes": {"soil": "The evidence will test this idea."},
+      "approved_source_ids": []
+    },
+    {
+      "id": "task-check",
+      "teaching_plan_id": "golden-plan",
+      "teaching_plan_revision": 1,
+      "teaching_plan_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "teaching_block_id": "check-task-block",
+      "mode": "assessment",
+      "action": "select-one",
+      "purpose": "Use evidence to challenge the soil claim.",
+      "prompt": "Which observation challenges the claim?",
+      "role": "check",
+      "display_prompt": "Which observation challenges the claim?",
+      "difficulty": "independent",
+      "sourcebook_refs": [],
+      "expected_evidence": "The learner selects the evidence-based observation.",
+      "response": {"type": "single_choice", "options": [{"id": "a", "text": "A watered plant kept in darkness becomes pale and stops growing larger."}, {"id": "b", "text": "A watered plant in darkness grows taller because it stretches toward the light."}, {"id": "c", "text": "A watered plant in darkness stays cool, which proves it lacks growth energy."}, {"id": "d", "text": "A watered plant in darkness grows well when it is given plant food."}]},
+      "evaluation": {"type": "exact_match", "correct_option_id": "a"},
+      "feedback": {"correct": "That's the one. The soil idea says this plant should keep growing, because it still has soil and water. It does not, so the soil idea cannot be right.", "incorrect": "Not yet. Look for the observation the soil idea cannot explain: a plant that has soil and water and still does not grow. Choose again."},
+      "option_notes": {"b": "A plant growing taller in the dark would fit the soil idea, not challenge it.", "c": "Temperature is not the issue. In the two-pot comparison both plants were equally warm.", "d": "Growing well on plant food in the dark would support the soil idea, not challenge it."},
+      "approved_source_ids": []
+    }
+  ],
+  "provenance": {"source_ids": [], "source_hashes": {}},
+  "created_at": "2026-10-05T08:00:00Z",
+  "diagnostics": []
+}

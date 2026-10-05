@@ -11,6 +11,7 @@ def _choice_task(
     options: list[dict] | None = None,
     correct_keys: list[str] | None = None,
     feedback: dict | None = None,
+    role: str | None = None,
 ) -> SharedTaskSpec:
     options = options or [
         {"id": "a", "text": "A"},
@@ -26,6 +27,7 @@ def _choice_task(
         action=action,
         purpose="measure understanding",
         prompt="Pick the correct option(s).",
+        role=role,
         difficulty="independent",
         expected_evidence="the learner selects the correct option(s)",
         response={"type": response_type, "options": options},
@@ -98,6 +100,56 @@ def test_correct_by_option_shape_passes() -> None:
         },
     )
 
+    assert validate_final_task_response_contract(task) == []
+
+
+def test_predict_feedback_preserves_saved_message_and_skips_grading_feedback() -> None:
+    task = _choice_task(
+        action="select-one",
+        response_type="single_choice",
+        correct_keys=["a"],
+        role="predict",
+        feedback={"saved": "Prediction saved; we will test it against the evidence later."},
+    )
+
+    assert task.feedback == {"saved": "Prediction saved; we will test it against the evidence later."}
+    assert validate_final_task_response_contract(task) == []
+
+
+def test_predict_feedback_rejects_right_wrong_messages() -> None:
+    task = _choice_task(
+        action="select-one",
+        response_type="single_choice",
+        correct_keys=["a"],
+        role="predict",
+        feedback={"correct": "Correct."},
+    )
+
+    errors = validate_final_task_response_contract(task)
+
+    assert any("prediction feedback must contain only saved" in error for error in errors)
+
+
+def test_legacy_option_id_saved_remains_an_option_key() -> None:
+    task = _choice_task(
+        options=[
+            {"id": "a", "text": "A"},
+            {"id": "b", "text": "B"},
+            {"id": "c", "text": "C"},
+            {"id": "d", "text": "D"},
+            {"id": "saved", "text": "Saved"},
+        ],
+        correct_keys=["a"],
+        feedback={
+            "correct": "A is correct.",
+            "b": "B is not correct.",
+            "c": "C is not correct.",
+            "d": "D is not correct.",
+            "saved": "Saved is not correct.",
+        },
+    )
+
+    assert task.feedback["saved"] == "Saved is not correct."
     assert validate_final_task_response_contract(task) == []
 
 

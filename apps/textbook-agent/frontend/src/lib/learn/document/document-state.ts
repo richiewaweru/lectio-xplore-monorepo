@@ -7,13 +7,16 @@
 import type {
 	CalloutNode,
 	CalloutTone,
+	CompareNode,
 	DocumentPrimitiveKind,
+	EquationNode,
 	FigureNode,
 	HeadingNode,
 	LearnDocument,
 	LearnNode,
 	ListNode,
 	ParagraphNode,
+	QuoteNode,
 	TableNode
 } from './types';
 
@@ -269,6 +272,24 @@ function createPrimitive(kind: AddableKind): LearnNode {
 				title: '',
 				body: 'New callout'
 			} satisfies CalloutNode;
+		case 'equation':
+			return {
+				id,
+				kind: 'equation',
+				inputs: ['input'],
+				outputs: ['output']
+			} satisfies EquationNode;
+		case 'quote':
+			return { id, kind: 'quote', text: 'New quote' } satisfies QuoteNode;
+		case 'compare':
+			return {
+				id,
+				kind: 'compare',
+				items: [
+					{ title: 'Option A', body: '' },
+					{ title: 'Option B', body: '' }
+				]
+			} satisfies CompareNode;
 	}
 }
 

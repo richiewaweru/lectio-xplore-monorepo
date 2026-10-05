@@ -146,7 +146,7 @@
 						/>
 					{:else if node.kind === 'callout'}
 						<CalloutEditor
-							body={node.body}
+							body={node.body ?? ''}
 							title={node.title ?? ''}
 							tone={node.tone ?? 'note'}
 							onChange={(patch) => onUpdateCallout?.(node.id, patch)}

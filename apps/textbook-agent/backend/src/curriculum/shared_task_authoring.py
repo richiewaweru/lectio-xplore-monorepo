@@ -275,12 +275,15 @@ def _draft_contract_validator(
                 action=expected["action"],
                 purpose=expected["purpose"],
                 prompt=draft.prompt,
+                role=draft.role,
+                display_prompt=draft.display_prompt,
                 difficulty=draft.difficulty,
                 sourcebook_refs=list(descriptor["sourcebook_refs"]),
                 expected_evidence=draft.expected_evidence,
                 response=dict(draft.response),
                 evaluation=dict(draft.evaluation),
                 feedback=draft.feedback,
+                option_notes=draft.option_notes,
                 approved_source_ids=list(descriptor["source_question_ids"]),
             )
         except ValidationError as exc:
@@ -466,12 +469,15 @@ async def author_shared_tasks(
             action=block.learner_action.action,  # type: ignore[union-attr]
             purpose=block.learner_action.purpose,  # type: ignore[union-attr]
             prompt=draft_task.prompt,
+            role=draft_task.role,
+            display_prompt=draft_task.display_prompt,
             difficulty=draft_task.difficulty,
             sourcebook_refs=list(block.sourcebook_refs),
             expected_evidence=draft_task.expected_evidence,
             response=dict(draft_task.response),
             evaluation=dict(draft_task.evaluation),
             feedback=draft_task.feedback,
+            option_notes=draft_task.option_notes,
             approved_source_ids=list(block.source_question_ids),
         )
         for block, descriptor, draft_task in zip(blocks, descriptors, draft.tasks, strict=True)

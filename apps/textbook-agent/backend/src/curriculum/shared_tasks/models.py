@@ -77,7 +77,11 @@ _FEEDBACK_META_KEYS = frozenset({"correct", "incorrect", "partial", "by_option"}
 
 
 def normalize_choice_feedback(
-    response: dict[str, Any], evaluation: dict[str, Any], feedback: dict[str, Any] | None
+    response: dict[str, Any],
+    evaluation: dict[str, Any],
+    feedback: dict[str, Any] | None,
+    *,
+    role: str | None = None,
 ) -> dict[str, Any] | None:
     """Deterministically tidy per-option feedback for choice tasks.
 
@@ -121,9 +125,12 @@ def normalize_choice_feedback(
         return kept, moved
 
     normalized: dict[str, Any] = {}
+    feedback_meta_keys = (
+        _FEEDBACK_META_KEYS | {"saved"} if role == "predict" else _FEEDBACK_META_KEYS
+    )
     top_level_options: dict[str, Any] = {}
     for key, value in feedback.items():
-        if key in _FEEDBACK_META_KEYS:
+        if key in feedback_meta_keys:
             if key == "by_option":
                 normalized[key] = value
             elif isinstance(value, str) and value.strip():
@@ -158,12 +165,17 @@ class SharedTaskSpec(BaseModel):
     action: LearnerActionId
     purpose: str = Field(min_length=1)
     prompt: str = Field(min_length=1)
+    role: Literal["predict", "practice", "check"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    display_prompt: str | None = Field(default=None, exclude_if=lambda value: value is None)
     difficulty: Literal["guided", "independent"]
     sourcebook_refs: list[str] = Field(default_factory=list)
     expected_evidence: str = Field(min_length=1)
     response: dict[str, Any]
     evaluation: dict[str, Any]
     feedback: dict[str, Any] | None = None
+    option_notes: dict[str, str] | None = Field(default=None, exclude_if=lambda value: value is None)
     approved_source_ids: list[str] = Field(default_factory=list)
 
     @model_validator(mode="before")
@@ -174,7 +186,9 @@ class SharedTaskSpec(BaseModel):
         response, evaluation = data.get("response"), data.get("evaluation")
         if not isinstance(response, dict) or not isinstance(evaluation, dict):
             return data
-        normalized = normalize_choice_feedback(response, evaluation, data.get("feedback"))
+        normalized = normalize_choice_feedback(
+            response, evaluation, data.get("feedback"), role=data.get("role")
+        )
         if normalized is data.get("feedback"):
             return data
         return {**data, "feedback": normalized}
@@ -191,9 +205,14 @@ class SharedTaskDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     prompt: str = Field(min_length=1)
+    role: Literal["predict", "practice", "check"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    display_prompt: str | None = Field(default=None, exclude_if=lambda value: value is None)
     response: dict[str, Any]
     evaluation: dict[str, Any]
     feedback: dict[str, Any] | None = None
+    option_notes: dict[str, str] | None = Field(default=None, exclude_if=lambda value: value is None)
     expected_evidence: str = Field(min_length=1)
     difficulty: Literal["guided", "independent"]
 
@@ -205,7 +224,9 @@ class SharedTaskDraft(BaseModel):
         response, evaluation = data.get("response"), data.get("evaluation")
         if not isinstance(response, dict) or not isinstance(evaluation, dict):
             return data
-        normalized = normalize_choice_feedback(response, evaluation, data.get("feedback"))
+        normalized = normalize_choice_feedback(
+            response, evaluation, data.get("feedback"), role=data.get("role")
+        )
         if normalized is data.get("feedback"):
             return data
         return {**data, "feedback": normalized}

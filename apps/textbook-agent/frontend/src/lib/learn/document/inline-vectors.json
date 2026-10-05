@@ -1,0 +1,64 @@
+[
+  {
+    "name": "empty",
+    "input": "",
+    "expected": []
+  },
+  {
+    "name": "plain text and blank line",
+    "input": "First line.\n\nSecond line.",
+    "expected": [{"type":"text","value":"First line.\n\nSecond line."}]
+  },
+  {
+    "name": "all supported spans",
+    "input": "**strong** *emphasis* ~sub~ ^sup^",
+    "expected": [
+      {"type":"strong","children":[{"type":"text","value":"strong"}]},
+      {"type":"text","value":" "},
+      {"type":"emphasis","children":[{"type":"text","value":"emphasis"}]},
+      {"type":"text","value":" "},
+      {"type":"subscript","children":[{"type":"text","value":"sub"}]},
+      {"type":"text","value":" "},
+      {"type":"superscript","children":[{"type":"text","value":"sup"}]}
+    ]
+  },
+  {
+    "name": "strong may contain subscript and superscript",
+    "input": "Energy **CO~2~ + m^2^**.",
+    "expected": [
+      {"type":"text","value":"Energy "},
+      {"type":"strong","children":[
+        {"type":"text","value":"CO"},
+        {"type":"subscript","children":[{"type":"text","value":"2"}]},
+        {"type":"text","value":" + m"},
+        {"type":"superscript","children":[{"type":"text","value":"2"}]}
+      ]},
+      {"type":"text","value":"."}
+    ]
+  },
+  {
+    "name": "unmatched markers stay literal",
+    "input": "Unmatched ** and lone ~ and ^",
+    "expected": [{"type":"text","value":"Unmatched ** and lone ~ and ^"}]
+  },
+  {
+    "name": "unsupported nesting stays inside the outer span",
+    "input": "**bold *marker* **",
+    "expected": [
+      {"type":"strong","children":[{"type":"text","value":"bold *marker* "}]}
+    ]
+  },
+  {
+    "name": "html is text",
+    "input": "<script>alert(1)</script>",
+    "expected": [{"type":"text","value":"<script>alert(1)</script>"}]
+  },
+  {
+    "name": "empty spans are valid",
+    "input": "**** **",
+    "expected": [
+      {"type":"strong","children":[]},
+      {"type":"text","value":" **"}
+    ]
+  }
+]

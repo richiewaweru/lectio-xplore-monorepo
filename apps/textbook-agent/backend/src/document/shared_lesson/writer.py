@@ -13,6 +13,8 @@ from curriculum.teaching_plan.models import LearnerActionId, TeachingPlanSection
 from document.shared_lesson.composer import CompositionItem, SectionCompositionPlan
 from document.shared_lesson.models import (
     CalloutDisplay,
+    CompareDisplay,
+    EquationDisplay,
     FigureDisplay,
     HeadingDisplay,
     ListDisplay,
@@ -22,6 +24,7 @@ from document.shared_lesson.models import (
     SharedSection,
     TableDisplay,
     TaskAnchor,
+    QuoteDisplay,
     shared_lesson_node_adapter,
 )
 
@@ -205,8 +208,34 @@ class WrittenCallout(_WrittenNodeBase):
     accessibility: NodeAccessibility = Field(default_factory=NodeAccessibility)
 
 
+class WrittenEquation(_WrittenNodeBase):
+    kind: Literal["equation"]
+    display: EquationDisplay
+    accessibility: NodeAccessibility = Field(default_factory=NodeAccessibility)
+
+
+class WrittenQuote(_WrittenNodeBase):
+    kind: Literal["quote"]
+    display: QuoteDisplay
+    accessibility: NodeAccessibility = Field(default_factory=NodeAccessibility)
+
+
+class WrittenCompare(_WrittenNodeBase):
+    kind: Literal["compare"]
+    display: CompareDisplay
+    accessibility: NodeAccessibility = Field(default_factory=NodeAccessibility)
+
+
 WrittenNode = Annotated[
-    WrittenParagraph | WrittenHeading | WrittenList | WrittenFigure | WrittenTable | WrittenCallout,
+    WrittenParagraph
+    | WrittenHeading
+    | WrittenList
+    | WrittenFigure
+    | WrittenTable
+    | WrittenCallout
+    | WrittenEquation
+    | WrittenQuote
+    | WrittenCompare,
     Field(discriminator="kind"),
 ]
 
