@@ -687,6 +687,7 @@ def test_fallback_alt_text_is_built_from_the_spec_and_binds_with_the_ready_resul
         "Show the water cycle. Shows: Evaporation, Rain. Labels: Water vapour."
     )
     assert fallback_alt_text(VisualSpec(purpose="P", must_show=["A"])) == "P. Shows: A."
+    assert fallback_alt_text(VisualSpec(purpose="P.", must_show=["A"])) == "P. Shows: A."
 
     work = _work()
     ready = bind_generated_figure(work, [_block(work)])

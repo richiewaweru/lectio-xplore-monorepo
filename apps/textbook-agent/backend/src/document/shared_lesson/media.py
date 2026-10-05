@@ -278,7 +278,8 @@ def fallback_alt_text(spec: Any) -> str:
 
     Interim: a later phase prefers the image provider's own text part.
     """
-    alt = f"{spec.purpose}. Shows: {', '.join(spec.must_show)}."
+    purpose = spec.purpose.strip().rstrip(".!?;: ")
+    alt = f"{purpose}. Shows: {', '.join(spec.must_show)}."
     labels = list(spec.labels_required)
     if labels:
         alt += f" Labels: {', '.join(labels)}."
