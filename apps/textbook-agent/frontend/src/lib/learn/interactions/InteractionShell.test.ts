@@ -25,7 +25,9 @@ describe('InteractionShell task roles', () => {
 		render(InteractionShell, { node: predictionNode });
 
 		expect(screen.getByText('Where will the evidence point?')).toBeTruthy();
-		await fireEvent.click(screen.getByRole('radio', { name: 'Soil' }));
+		const soil = screen.getByRole('button', { name: 'Soil' });
+		await fireEvent.click(soil);
+		expect(soil.getAttribute('aria-pressed')).toBe('true');
 		await fireEvent.click(screen.getByTestId('interaction-check'));
 
 		expect(screen.getByRole('status').textContent).toBe(

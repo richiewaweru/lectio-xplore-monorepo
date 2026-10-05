@@ -8,7 +8,6 @@ export function isPublicLearnerPath(path: string, options: { devFixture?: boolea
 	if (path === '/join' || path.startsWith('/join/')) return true;
 	if (path.startsWith('/learn/home/')) return true;
 	if (path.startsWith('/learn/instances/')) return true;
-	if (path.startsWith('/dev/shared-lesson/')) return true;
 	return false;
 }
 
