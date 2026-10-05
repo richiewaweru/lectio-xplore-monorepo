@@ -1,0 +1,35 @@
+Browser QA — golden fixture (final G1 keyboard supplement)
+
+Captured: 2026-10-05T15:09:33.282Z
+Route: http://127.0.0.1:5181/dev/shared-lesson/golden
+Viewport: 1280x900 (Chromium)
+
+Real keyboard sequence (Space selects only when required to enable the action):
+1. Task 1 option A selected by Space: <button> "A
+The plant takes in its growing energy from the soil, together with the water." aria-pressed=true disabled=false role=none
+2. Tab -> Task 1 option B: <button> "B
+The plant captures its growing energy from the light, using its leaves." aria-pressed=false disabled=false role=none
+3. Tab -> Task 1 Lock in my prediction: <button> "Lock in my prediction" aria-pressed=n/a disabled=false role=none
+4. Task 2 option A selected by Space: <button> "A
+A watered plant kept in darkness becomes pale and stops growing larger." aria-pressed=true disabled=false role=none
+5. Tab -> Task 2 option B: <button> "B
+A watered plant in darkness grows taller because it stretches toward the light." aria-pressed=false disabled=false role=none
+6. Tab -> Task 2 option C: <button> "C
+A watered plant in darkness stays cool, which proves it lacks growth energy." aria-pressed=false disabled=false role=none
+7. Tab -> Task 2 option D: <button> "D
+A watered plant in darkness grows well when it is given plant food." aria-pressed=false disabled=false role=none
+8. Tab -> Task 2 Check my answer: <button> "Check my answer" aria-pressed=n/a disabled=false role=none
+
+DOM option count: 6 native button.option controls; every role is null.
+Option 1: pressed=true, role=none
+Option 2: pressed=false, role=none
+Option 3: pressed=true, role=none
+Option 4: pressed=false, role=none
+Option 5: pressed=false, role=none
+Option 6: pressed=false, role=none
+Enabled actions after selection: Lock in my prediction; Check my answer
+All action states: Lock in my prediction disabled=false; Check my answer disabled=false
+Accessible groups: Choose one; Choose one
+
+Result: all six options and both task actions were reached with real Tab traversal; no radio role was present.
+

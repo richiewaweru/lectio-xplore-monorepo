@@ -5,6 +5,7 @@ import type { User } from '$lib/types';
 
 import {
 	getOnboardingRoute,
+	isPublicLearnerPath,
 	isOnboardingEditMode,
 	navigateToLanding,
 	resolveDashboardProfileFailure,
@@ -58,6 +59,11 @@ describe('auth routing helpers', () => {
 	it('allows learner paths without forcing onboarding', () => {
 		expect(shouldRedirectToOnboarding(baseUser, '/join')).toBe(false);
 		expect(shouldRedirectToOnboarding(baseUser, '/learn/instances/x')).toBe(false);
+	});
+
+	it('allows fixture previews only in dev mode', () => {
+		expect(isPublicLearnerPath('/dev/shared-lesson/golden', { devFixture: true })).toBe(true);
+		expect(isPublicLearnerPath('/dev/shared-lesson/golden', { devFixture: false })).toBe(false);
 	});
 
 	it('detects onboarding edit mode and builds the edit route', () => {

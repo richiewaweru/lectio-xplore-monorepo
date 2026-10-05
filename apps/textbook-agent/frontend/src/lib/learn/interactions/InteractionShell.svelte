@@ -15,25 +15,33 @@
 		evalShortResponse
 	} from './local-eval';
 	import type { InteractionSubmitHandler, ServerEvaluation } from './types';
+	import InlineMarkup from '$lib/learn/document/renderers/InlineMarkup.svelte';
 
 	interface Props {
 		node: InteractionNode;
 		onSubmit?: InteractionSubmitHandler;
 		initialEvaluation?: ServerEvaluation | null;
 		disabled?: boolean;
+		questionNumber?: number;
 	}
 
 	let {
 		node,
 		onSubmit = undefined,
 		initialEvaluation = null,
-		disabled = false
+		disabled = false,
+		questionNumber = undefined
 	}: Props = $props();
 
-	const prompt = $derived(node.prompt?.trim() || 'Interaction');
+	const prompt = $derived(node.display_prompt?.trim() || node.prompt?.trim() || 'Question');
+	const role = $derived(node.role ?? (node.assessment_mode === 'practice' ? 'practice' : 'check'));
+	const submitLabel = $derived(role === 'predict' ? 'Lock in my prediction' : 'Check my answer');
 	const config = $derived((node.config ?? {}) as Record<string, unknown>);
 	const feedback = $derived(normalizeFeedback(node.feedback));
 	const type = $derived(node.interaction_type as InteractionType);
+	const modeLabel = $derived(
+		role === 'predict' ? 'Prediction — not marked' : role === 'practice' ? 'Practice' : type === 'choice' ? 'Check — choose one' : 'Check'
+	);
 
 	let submitted = $state(false);
 	let submitting = $state(false);
@@ -77,9 +85,10 @@
 
 	const choiceOptions = $derived(
 		Array.isArray(config.options)
-			? (config.options as Array<{ id: string; text?: string; label?: string }>).map((o) => ({
+			? (config.options as Array<{ id: string; text?: string; label?: string }>).map((o, index) => ({
 					id: String(o.id),
-					text: String(o.text ?? o.label ?? o.id)
+					text: String(o.text ?? o.label ?? o.id),
+					letter: String.fromCharCode(65 + index)
 				}))
 			: []
 	);
@@ -296,25 +305,28 @@
 <section
 	class="ix-shell"
 	data-testid="interaction-shell"
-	data-interaction-type={type}
-	data-node-id={node.id}
 >
-	<p class="prompt">{prompt}</p>
+	<header class="task-header">
+		<strong>YOUR TURN · QUESTION {questionNumber ?? ''}</strong>
+		<span>{modeLabel}</span>
+	</header>
+	<div class="task-body">
+		<p class="prompt"><InlineMarkup value={prompt} /></p>
 
 	{#if type === 'choice'}
-		<ul class="options" role="radiogroup" aria-label={prompt}>
+		<ul class="options" role="group" aria-label="Choose one">
 			{#each choiceOptions as option (option.id)}
 				<li>
 					<button
 						type="button"
 						class="option"
 						class:selected={selectedOne === option.id}
-						role="radio"
-						aria-checked={selectedOne === option.id}
+						aria-pressed={selectedOne === option.id}
 						disabled={submitted || disabled}
 						onclick={() => (selectedOne = option.id)}
 					>
-						{option.text}
+						<span class="option-letter" aria-hidden="true">{option.letter}</span>
+						<span><InlineMarkup value={option.text} /></span>
 					</button>
 				</li>
 			{/each}
@@ -331,7 +343,8 @@
 						disabled={submitted || disabled}
 						onclick={() => toggleMulti(option.id)}
 					>
-						{option.text}
+						<span class="option-letter" aria-hidden="true">{option.letter}</span>
+						<span><InlineMarkup value={option.text} /></span>
 					</button>
 				</li>
 			{/each}
@@ -389,7 +402,7 @@
 							disabled={submitted || disabled}
 							onclick={() => pickLeft(item.id)}
 						>
-							{item.label}
+							<InlineMarkup value={item.label} />
 						</button>
 					</li>
 				{/each}
@@ -404,7 +417,7 @@
 							disabled={submitted || disabled || !selectedLeft}
 							onclick={() => pickRight(item.id)}
 						>
-							{item.label}
+							<InlineMarkup value={item.label} />
 						</button>
 					</li>
 				{/each}
@@ -422,7 +435,7 @@
 						disabled={submitted || disabled}
 						onclick={() => pickLeft(item.id)}
 					>
-						{item.label}
+						<InlineMarkup value={item.label} />
 					</button>
 				</li>
 			{/each}
@@ -436,7 +449,7 @@
 						disabled={submitted || disabled || !selectedLeft}
 						onclick={() => pickClassifyCategory(cat.id)}
 					>
-						{cat.label}
+						<InlineMarkup value={cat.label} />
 					</button>
 				</li>
 			{/each}
@@ -445,7 +458,7 @@
 		<ol class="steps">
 			{#each order as id, index (id)}
 				<li>
-					<span>{labelFor(id)}</span>
+					<span><InlineMarkup value={labelFor(id)} /></span>
 					<div class="moves">
 						<button
 							type="button"
@@ -469,37 +482,39 @@
 		</ol>
 	{/if}
 
-	<button
-		type="button"
-		class="submit"
-		disabled={!canSubmit()}
-		onclick={handleCheck}
-		data-testid="interaction-check"
-	>
-		{submitting ? 'Saving…' : 'Check'}
-	</button>
+		<button
+			type="button"
+			class="submit"
+			disabled={!canSubmit()}
+			onclick={handleCheck}
+			data-testid="interaction-check"
+		>
+			{submitting ? 'Saving…' : submitLabel}
+		</button>
 
-	{#if error}
-		<p class="error" role="alert">{error}</p>
-	{/if}
-	{#if display}
-		<p class="feedback" data-outcome={display.outcome} role="status">{display.feedback}</p>
-	{/if}
+		{#if error}<p class="error" role="alert"><InlineMarkup value={error} /></p>{/if}
+		{#if display}<p class="feedback" data-outcome={display.outcome} role="status"><InlineMarkup value={display.feedback} /></p>{/if}
+	</div>
 </section>
 
 <style>
 	.ix-shell {
 		display: grid;
-		gap: 12px;
-		border: 1px solid var(--rule, #d6d3d1);
-		border-radius: 12px;
+		gap: 0;
+		border: 2px solid var(--ink, #1c2321);
+		border-radius: 14px;
 		background: var(--surface, #fff);
-		padding: 14px;
+		overflow: hidden;
 		color: var(--ink, #1c1917);
 	}
+	.task-header { display: flex; justify-content: space-between; gap: 12px; padding: 13px 18px; background: var(--ink, #1c2321); color: var(--surface, #fff); font-size: 14px; letter-spacing: .06em; text-transform: uppercase; }
+	.task-header span { color: var(--sand, #f3eee3); font-weight: 400; }
+	.task-body { display: grid; gap: 16px; padding: 22px; }
 	.prompt {
 		margin: 0;
-		font-weight: 600;
+		font-size: 20px;
+		font-weight: 700;
+		line-height: 1.4;
 	}
 	.options,
 	.steps,
@@ -525,14 +540,19 @@
 	.chip {
 		width: 100%;
 		text-align: left;
-		border: 1px solid var(--rule, #d6d3d1);
+		min-height: 56px;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		border: 1px solid var(--rule-strong, #c9c3b5);
 		border-radius: 10px;
-		background: var(--paper, #fafaf9);
-		padding: 10px 12px;
+		background: var(--surface, #fff);
+		padding: 12px 14px;
 		cursor: pointer;
 		color: inherit;
 		font: inherit;
 	}
+	.option-letter { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; background: var(--sand, #f3eee3); font-weight: 700; }
 	.chip {
 		width: auto;
 		border-radius: 999px;
@@ -541,8 +561,8 @@
 	.option.matched,
 	.chip.selected,
 	.chip.matched {
-		border-color: var(--accent, #0f766e);
-		background: color-mix(in srgb, var(--accent, #0f766e) 12%, white);
+		border-color: var(--green, #1b5e40);
+		background: var(--sand, #f3eee3);
 	}
 	.field {
 		display: grid;
@@ -593,11 +613,12 @@
 	}
 	.submit {
 		justify-self: start;
-		border: 1px solid var(--accent, #0f766e);
+		min-height: 48px;
+		border: 1px solid var(--action, #c2410c);
 		border-radius: 8px;
-		background: var(--accent, #0f766e);
+		background: var(--action, #c2410c);
 		color: white;
-		padding: 8px 12px;
+		padding: 10px 16px;
 		font-weight: 600;
 		cursor: pointer;
 	}
@@ -607,11 +628,20 @@
 	}
 	.feedback {
 		margin: 0;
-		font-size: 14px;
+		padding: 12px 14px;
+		border-radius: 8px;
+		background: var(--green-tint, #e4f0e8);
+		font-size: 16px;
+		line-height: 1.5;
 	}
 	.error {
 		margin: 0;
 		font-size: 13px;
-		color: var(--amber, #b45309);
+		color: var(--action, #c2410c);
+	}
+	@media (max-width: 520px) {
+		.task-header { align-items: flex-start; flex-direction: column; gap: 3px; }
+		.task-body { padding: 18px; }
+		.prompt { font-size: 18px; }
 	}
 </style>

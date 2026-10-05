@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { TableNode } from '../types';
+	import InlineMarkup from './InlineMarkup.svelte';
 
 	interface Props {
 		node: TableNode;
@@ -11,13 +12,13 @@
 	const rows = $derived(node.rows ?? []);
 </script>
 
-<figure class="learn-table-wrap" data-testid="table-node" data-node-id={node.id}>
+	<figure class="learn-table-wrap" data-testid="table-node">
 	<table class="learn-table">
 		{#if headers.length > 0}
 			<thead>
 				<tr>
 					{#each headers as header, i (i)}
-						<th>{header}</th>
+						<th><InlineMarkup value={header} /></th>
 					{/each}
 				</tr>
 			</thead>
@@ -26,14 +27,14 @@
 			{#each rows as row, ri (ri)}
 				<tr>
 					{#each row as cell, ci (ci)}
-						<td>{cell}</td>
+						<td><InlineMarkup value={cell} /></td>
 					{/each}
 				</tr>
 			{/each}
 		</tbody>
 	</table>
 	{#if node.caption}
-		<figcaption>{node.caption}</figcaption>
+		<figcaption><InlineMarkup value={node.caption} /></figcaption>
 	{/if}
 </figure>
 
@@ -45,18 +46,18 @@
 	.learn-table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 14px;
+		font-size: 17px;
 		color: var(--ink, #1a1a1a);
 	}
 	.learn-table th,
 	.learn-table td {
 		border: 1px solid var(--rule, #ccc);
-		padding: 8px 10px;
+		padding: 12px 14px;
 		text-align: left;
 		vertical-align: top;
 	}
 	.learn-table th {
-		background: var(--surface, #f7f7f5);
+		background: var(--surface, #fff);
 		font-weight: 600;
 	}
 	figcaption {

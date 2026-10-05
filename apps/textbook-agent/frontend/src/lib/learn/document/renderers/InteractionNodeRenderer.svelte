@@ -12,23 +12,23 @@
 		disabled?: boolean;
 		onSubmit?: InteractionSubmitHandler;
 		initialEvaluation?: ServerEvaluation | null;
+		questionNumber?: number;
 	}
 
 	let {
 		node,
 		disabled = false,
 		onSubmit = undefined,
-		initialEvaluation = null
+		initialEvaluation = null,
+		questionNumber = undefined
 	}: Props = $props();
 </script>
 
 <section
 	class="interaction-node"
 	data-testid="interaction-node-renderer"
-	data-interaction-type={node.interaction_type}
-	data-node-id={node.id}
 >
-	<InteractionShell {node} {disabled} {onSubmit} {initialEvaluation} />
+	<InteractionShell {node} {disabled} {onSubmit} {initialEvaluation} {questionNumber} />
 </section>
 
 <style>

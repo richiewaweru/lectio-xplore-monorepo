@@ -1,0 +1,193 @@
+{
+  "capturedAt": "2026-10-05T15:04:19.317Z",
+  "results": [
+    {
+      "fixture": "g3-photosynthesis",
+      "mobile": false,
+      "http": 200,
+      "image": "C:/Users/richi/.codex/worktrees/doc36-learn/lectio/docs/doc36-presentation/evidence/track-a/g3-photosynthesis-learn-desktop.png",
+      "dom": {
+        "title": "How plants make food",
+        "url": "http://127.0.0.1:5181/dev/shared-lesson/g3-photosynthesis",
+        "status": null,
+        "bodyText": "science\n\nHow plants make food\nAll sections\n1\nHow plants make food\n\nPART 1 OF 1\n\nHow plants make food\nWORD EQUATION FOR PHOTOSYNTHESIS\nlight energy\nwater\ncarbon dioxide\nin the presence of chlorophyll\n→\nglucose\noxygen\n\nKEY IDEA\n\nChlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose.",
+        "tags": {
+          "strong": 1,
+          "em": 0,
+          "sub": 0,
+          "sup": 0
+        },
+        "classes": [
+          "learn-equation s-lUmq97Ybo-no",
+          "equation-line s-lUmq97Ybo-no",
+          "equation-terms s-lUmq97Ybo-no",
+          "equation-terms s-lUmq97Ybo-no",
+          "learn-callout s-0KgZCNv3jV-B key-idea"
+        ],
+        "literalMarkup": false,
+        "dimensions": {
+          "width": 1280,
+          "scrollWidth": 1280,
+          "scrollHeight": 984
+        },
+        "images": []
+      }
+    },
+    {
+      "fixture": "g3-photosynthesis",
+      "mobile": true,
+      "http": 200,
+      "image": "C:/Users/richi/.codex/worktrees/doc36-learn/lectio/docs/doc36-presentation/evidence/track-a/g3-photosynthesis-learn-mobile.png",
+      "dom": {
+        "title": "How plants make food",
+        "url": "http://127.0.0.1:5181/dev/shared-lesson/g3-photosynthesis",
+        "status": null,
+        "bodyText": "science\n\nHow plants make food\nAll sections\n1\nHow plants make food\n\nPART 1 OF 1\n\nHow plants make food\nWORD EQUATION FOR PHOTOSYNTHESIS\nlight energy\nwater\ncarbon dioxide\nin the presence of chlorophyll\n→\nglucose\noxygen\n\nKEY IDEA\n\nChlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose.",
+        "tags": {
+          "strong": 1,
+          "em": 0,
+          "sub": 0,
+          "sup": 0
+        },
+        "classes": [
+          "learn-equation s-lUmq97Ybo-no",
+          "equation-line s-lUmq97Ybo-no",
+          "equation-terms s-lUmq97Ybo-no",
+          "equation-terms s-lUmq97Ybo-no",
+          "learn-callout s-0KgZCNv3jV-B key-idea"
+        ],
+        "literalMarkup": false,
+        "dimensions": {
+          "width": 390,
+          "scrollWidth": 390,
+          "scrollHeight": 1140
+        },
+        "images": []
+      }
+    },
+    {
+      "fixture": "g3-formula",
+      "mobile": false,
+      "http": 200,
+      "image": "C:/Users/richi/.codex/worktrees/doc36-learn/lectio/docs/doc36-presentation/evidence/track-a/g3-formula-learn-desktop.png",
+      "dom": {
+        "title": "Area of a rectangle",
+        "url": "http://127.0.0.1:5181/dev/shared-lesson/g3-formula",
+        "status": null,
+        "bodyText": "mathematics\n\nArea of a rectangle\nAll sections\n1\nArea of a rectangle\n\nPART 1 OF 1\n\nArea of a rectangle\nAREA OF A RECTANGLE\nlength\nwidth\n→\narea\n\nAn 8 m by 3 m rectangle has an area of 8 × 3 = 24 square metres. Multiplying the length by the width gives the result in square metres.",
+        "tags": {
+          "strong": 1,
+          "em": 0,
+          "sub": 0,
+          "sup": 0
+        },
+        "classes": [
+          "learn-equation s-lUmq97Ybo-no",
+          "equation-line s-lUmq97Ybo-no",
+          "equation-terms s-lUmq97Ybo-no",
+          "equation-terms s-lUmq97Ybo-no"
+        ],
+        "literalMarkup": false,
+        "dimensions": {
+          "width": 1280,
+          "scrollWidth": 1280,
+          "scrollHeight": 948
+        },
+        "images": []
+      }
+    },
+    {
+      "fixture": "g3-formula",
+      "mobile": true,
+      "http": 200,
+      "image": "C:/Users/richi/.codex/worktrees/doc36-learn/lectio/docs/doc36-presentation/evidence/track-a/g3-formula-learn-mobile.png",
+      "dom": {
+        "title": "Area of a rectangle",
+        "url": "http://127.0.0.1:5181/dev/shared-lesson/g3-formula",
+        "status": null,
+        "bodyText": "mathematics\n\nArea of a rectangle\nAll sections\n1\nArea of a rectangle\n\nPART 1 OF 1\n\nArea of a rectangle\nAREA OF A RECTANGLE\nlength\nwidth\n→\narea\n\nAn 8 m by 3 m rectangle has an area of 8 × 3 = 24 square metres. Multiplying the length by the width gives the result in square metres.",
+        "tags": {
+          "strong": 1,
+          "em": 0,
+          "sub": 0,
+          "sup": 0
+        },
+        "classes": [
+          "learn-equation s-lUmq97Ybo-no",
+          "equation-line s-lUmq97Ybo-no",
+          "equation-terms s-lUmq97Ybo-no",
+          "equation-terms s-lUmq97Ybo-no"
+        ],
+        "literalMarkup": false,
+        "dimensions": {
+          "width": 390,
+          "scrollWidth": 390,
+          "scrollHeight": 892
+        },
+        "images": []
+      }
+    },
+    {
+      "fixture": "g3-comparison",
+      "mobile": false,
+      "http": 200,
+      "image": "C:/Users/richi/.codex/worktrees/doc36-learn/lectio/docs/doc36-presentation/evidence/track-a/g3-comparison-learn-desktop.png",
+      "dom": {
+        "title": "Photosynthesis and respiration",
+        "url": "http://127.0.0.1:5181/dev/shared-lesson/g3-comparison",
+        "status": null,
+        "bodyText": "science\n\nPhotosynthesis and respiration\nAll sections\n1\nPhotosynthesis and respiration\n\nPART 1 OF 1\n\nPhotosynthesis and respiration\nPhotosynthesis\n\nInputs: carbon dioxide, water, and light energy. Outputs: glucose and oxygen. Role: stores light energy in glucose.\n\nCellular respiration\n\nInputs: glucose and oxygen. Outputs: carbon dioxide, water, and released energy. Role: releases the energy stored in glucose so the cell can use it.\n\nKEY IDEA\n\nPhotosynthesis stores energy in glucose, and cellular respiration releases that energy, so the two pathways feed each other's inputs and outputs.",
+        "tags": {
+          "strong": 1,
+          "em": 0,
+          "sub": 0,
+          "sup": 0
+        },
+        "classes": [
+          "learn-compare s-k8MAabCGLsTJ",
+          "compare-card s-k8MAabCGLsTJ",
+          "compare-card s-k8MAabCGLsTJ",
+          "learn-callout s-0KgZCNv3jV-B key-idea"
+        ],
+        "literalMarkup": false,
+        "dimensions": {
+          "width": 1280,
+          "scrollWidth": 1280,
+          "scrollHeight": 1046
+        },
+        "images": []
+      }
+    },
+    {
+      "fixture": "g3-comparison",
+      "mobile": true,
+      "http": 200,
+      "image": "C:/Users/richi/.codex/worktrees/doc36-learn/lectio/docs/doc36-presentation/evidence/track-a/g3-comparison-learn-mobile.png",
+      "dom": {
+        "title": "Photosynthesis and respiration",
+        "url": "http://127.0.0.1:5181/dev/shared-lesson/g3-comparison",
+        "status": null,
+        "bodyText": "science\n\nPhotosynthesis and respiration\nAll sections\n1\nPhotosynthesis and respiration\n\nPART 1 OF 1\n\nPhotosynthesis and respiration\nPhotosynthesis\n\nInputs: carbon dioxide, water, and light energy. Outputs: glucose and oxygen. Role: stores light energy in glucose.\n\nCellular respiration\n\nInputs: glucose and oxygen. Outputs: carbon dioxide, water, and released energy. Role: releases the energy stored in glucose so the cell can use it.\n\nKEY IDEA\n\nPhotosynthesis stores energy in glucose, and cellular respiration releases that energy, so the two pathways feed each other's inputs and outputs.",
+        "tags": {
+          "strong": 1,
+          "em": 0,
+          "sub": 0,
+          "sup": 0
+        },
+        "classes": [
+          "learn-compare s-k8MAabCGLsTJ",
+          "compare-card s-k8MAabCGLsTJ",
+          "compare-card s-k8MAabCGLsTJ",
+          "learn-callout s-0KgZCNv3jV-B key-idea"
+        ],
+        "literalMarkup": false,
+        "dimensions": {
+          "width": 390,
+          "scrollWidth": 390,
+          "scrollHeight": 1274
+        },
+        "images": []
+      }
+    }
+  ]
+}

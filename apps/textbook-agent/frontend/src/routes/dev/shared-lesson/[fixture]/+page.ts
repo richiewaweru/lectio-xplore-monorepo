@@ -1,7 +1,14 @@
 import { dev } from '$app/environment';
 import { error } from '@sveltejs/kit';
 
-const FIXTURES = new Set(['golden', 'legacy', 'overlong']);
+const FIXTURES = new Set([
+	'golden',
+	'legacy',
+	'overlong',
+	'g3-photosynthesis',
+	'g3-formula',
+	'g3-comparison'
+]);
 
 export const load = async ({ fetch, params }) => {
 	if (!dev) error(404, 'Development fixture previews are disabled.');

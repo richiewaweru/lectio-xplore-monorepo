@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HeadingNode } from '../types';
+	import InlineMarkup from './InlineMarkup.svelte';
 
 	interface Props {
 		node: HeadingNode;
@@ -11,16 +12,16 @@
 </script>
 
 {#if level === 1}
-	<h1 class="learn-heading" data-testid="heading-node" data-node-id={node.id} data-level="1">
-		{node.text}
+	<h1 class="learn-heading" data-testid="heading-node" data-level="1">
+		<InlineMarkup value={node.text} />
 	</h1>
 {:else if level === 2}
-	<h2 class="learn-heading" data-testid="heading-node" data-node-id={node.id} data-level="2">
-		{node.text}
+	<h2 class="learn-heading" data-testid="heading-node" data-level="2">
+		<InlineMarkup value={node.text} />
 	</h2>
 {:else}
-	<h3 class="learn-heading" data-testid="heading-node" data-node-id={node.id} data-level="3">
-		{node.text}
+	<h3 class="learn-heading" data-testid="heading-node" data-level="3">
+		<InlineMarkup value={node.text} />
 	</h3>
 {/if}
 
@@ -41,7 +42,8 @@
 		font-weight: 500;
 	}
 	.learn-heading[data-level='3'] {
-		font-size: 17px;
-		font-weight: 600;
+		font-size: 21px;
+		font-weight: 700;
+		margin-top: 14px;
 	}
 </style>
