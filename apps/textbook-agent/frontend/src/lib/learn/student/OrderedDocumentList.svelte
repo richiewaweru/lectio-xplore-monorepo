@@ -130,25 +130,21 @@
 <style>
 	.ordered-document-list { display: grid; gap: 36px; min-width: 0; }
 	.lesson-map { display: grid; gap: 14px; }
-	.lesson-map ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; }
+	.lesson-map ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; }
 	.lesson-map li { min-width: 0; }
-	.lesson-map button { width: 100%; min-height: 56px; border: 1px solid var(--rule, #ddd8cc); border-radius: 12px; background: var(--surface, #fff); color: var(--ink, #1c2321); padding: 11px 12px; cursor: pointer; font: inherit; text-align: left; }
+	.lesson-map button { width: 100%; height: 100%; min-height: 56px; border: 1px solid var(--rule, #ddd8cc); border-radius: 12px; background: var(--surface, #fff); color: var(--ink, #1c2321); padding: 11px 12px; cursor: pointer; font: inherit; text-align: left; }
 	.lesson-map button:hover, .lesson-map button:focus-visible { border-color: var(--ink, #1c2321); }
 	.lesson-map button.active { border-color: var(--ink, #1c2321); box-shadow: inset 0 -3px 0 var(--ink, #1c2321); }
 	.lesson-map .all-sections { justify-self: start; width: auto; min-height: auto; border: 0; background: transparent; padding: 0; color: var(--muted, #5b6460); font-size: 14px; font-weight: 700; }
 	.lesson-map .all-sections.active { box-shadow: none; color: var(--ink, #1c2321); }
 	.lesson-map li button { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; gap: 9px; }
-	.lesson-map li button > span:last-child { min-width: 0; overflow-wrap: anywhere; line-height: 1.3; }
+	.lesson-map li button > span:last-child { min-width: 0; overflow-wrap: break-word; line-height: 1.3; }
 	.map-number { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sand, #f3eee3); color: var(--ink, #1c2321); font-weight: 700; }
 	.lesson-map li button.active .map-number { background: var(--ink, #1c2321); color: var(--surface, #fff); }
 	.lesson-sections { display: grid; gap: 72px; }
 	.lesson-section { display: grid; gap: 22px; min-width: 0; scroll-margin-top: 20px; }
 	.section-content { min-width: 0; }
 	@media (max-width: 720px) {
-		.lesson-map ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 		.lesson-sections { gap: 54px; }
-	}
-	@media (max-width: 420px) {
-		.lesson-map ol { grid-template-columns: 1fr; }
 	}
 </style>
