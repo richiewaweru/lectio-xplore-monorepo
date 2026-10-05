@@ -18,15 +18,12 @@ from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.media import (
     SharedFigureMediaError,
     SharedFigureMediaProviderFailed,
-    bind_deferred_figure_media,
-    bind_deferred_figure_media_to_document,
     bind_figure_media_to_document,
     bind_generated_figure,
     build_figure_work_order,
     execute_figure_work_orders,
     fallback_alt_text,
     validate_reusable_figure_asset,
-    verify_bound_deferred_figure_media,
     verify_bound_figure_media,
 )
 from document.shared_lesson.models import (
@@ -308,73 +305,6 @@ def test_changed_section_and_stale_document_are_rejected() -> None:
     )
     with pytest.raises(SharedFigureMediaError, match="stale"):
         bind_figure_media_to_document(ready, stale)
-
-
-def test_deferred_media_binds_only_after_document_hash_and_semantics_are_verified() -> None:
-    source = _source()
-    work = _work()
-    deferred = bind_deferred_figure_media(work, reason_code="media_provider_failed")
-
-    assert deferred.status == "deferred"
-    assert deferred.reason_code == "media_provider_failed"
-    assert not hasattr(deferred, "asset_id")
-    assert not hasattr(deferred, "asset_url")
-
-    bound = bind_deferred_figure_media_to_document(deferred, _document(source))
-    assert bound.source_document_id == "shared-media-lesson"
-    assert bound.source_document_hash == _document(source).content_hash
-    assert bound.reason_code == "media_provider_failed"
-    assert bound.status == "deferred"
-
-
-def test_deferred_media_rejects_unsupported_reason_code() -> None:
-    work = _work()
-    with pytest.raises(SharedFigureMediaError, match="reason_code"):
-        bind_deferred_figure_media(work, reason_code="media_executor_configuration")
-
-
-@pytest.mark.parametrize(
-    "mutate",
-    [
-        lambda value: value.model_copy(update={"source_document_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"section_output_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"figure_semantic_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"work_order_id": "shared-media-" + "c" * 64}),
-    ],
-)
-def test_deferred_media_verifier_rejects_stale_identity(mutate) -> None:
-    work = _work()
-    document = _document()
-    bound = bind_deferred_figure_media_to_document(
-        bind_deferred_figure_media(work, reason_code="media_invalid_output"), document
-    )
-    with pytest.raises(SharedFigureMediaError):
-        verify_bound_deferred_figure_media(mutate(bound), document)
-
-
-def test_deferred_media_verifier_recomputes_an_unchanged_result() -> None:
-    work = _work()
-    document = _document()
-    bound = bind_deferred_figure_media_to_document(
-        bind_deferred_figure_media(work, reason_code="media_provider_failed"), document
-    )
-
-    assert verify_bound_deferred_figure_media(bound, document) == bound
-
-
-@pytest.mark.parametrize(
-    "mutate",
-    [
-        lambda value: value.model_copy(update={"source_plan_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"section_output_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"figure_node_id": "other-figure"}),
-    ],
-)
-def test_deferred_media_changed_identity_is_rejected_at_document_binding(mutate) -> None:
-    work = _work()
-    deferred = mutate(bind_deferred_figure_media(work, reason_code="media_invalid_output"))
-    with pytest.raises(SharedFigureMediaError):
-        bind_deferred_figure_media_to_document(deferred, _document())
 
 
 def test_pending_source_and_invalid_shape_or_facts_fail_before_media_order() -> None:
@@ -802,3 +732,33 @@ def test_image_prompt_renders_spec_labels_and_writer_context_for_the_non_precisi
     assert "- A person" in prompt  # MUST NOT SHOW
     assert "LABELS REQUIRED" in prompt and "Sunlight, Leaf" in prompt
     assert "[context:caption] A leaf in sunlight" in prompt
+
+
+def test_bound_alt_text_prefers_cleaned_provider_text() -> None:
+    work = _work()
+    block = _block(work).model_copy(
+        update={"provider_text": "  A leaf under the sun.\n\nArrows show light.  "}
+    )
+
+    ready = bind_generated_figure(work, [block])
+
+    assert ready.alt_text == "A leaf under the sun. Arrows show light."
+
+
+def test_bound_alt_text_caps_long_provider_text() -> None:
+    work = _work()
+    block = _block(work).model_copy(update={"provider_text": "word " * 300})
+
+    ready = bind_generated_figure(work, [block])
+
+    assert 0 < len(ready.alt_text) <= 400
+
+
+@pytest.mark.parametrize("provider_text", [None, "", "   \n "])
+def test_bound_alt_text_falls_back_to_spec_without_provider_text(provider_text) -> None:
+    work = _work()
+    block = _block(work).model_copy(update={"provider_text": provider_text})
+
+    ready = bind_generated_figure(work, [block])
+
+    assert ready.alt_text == fallback_alt_text(work.work_order.visual)

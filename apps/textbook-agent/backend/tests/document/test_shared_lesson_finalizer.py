@@ -40,18 +40,13 @@ from document.shared_lesson.finalizer import (
 )
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import (
-    DeferredFigureMediaResult,
     ReadyFigureMediaResult,
-    bind_deferred_figure_media,
-    bind_deferred_figure_media_to_document,
-    build_figure_work_order,
 )
 from document.shared_lesson.models import build_shared_lesson_document
 from document.shared_lesson.qa_runtime import VerifiedDocumentQA
 from document.shared_lesson.runtime import _stable_hash
 from document.shared_lesson.semantic_inputs import VerifiedSemanticInputs
 from document.shared_lesson.writer import SectionSource, SectionWriteResult
-from infra.config import settings
 from infra.database.models import GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 
@@ -462,103 +457,6 @@ def test_media_evidence_must_match_ready_media_work_item() -> None:
         output_hash=item.output_hash,
     )
     forged = media.model_copy(update={"asset_id": "different-asset"})
-
-    with pytest.raises(SharedLessonFinalizationError, match="durable work-item output"):
-        _verify_media_matches_work_items(
-            document=document,
-            media_results=(forged,),
-            active_items=(item,),
-            loaded_outputs=(output,),
-        )
-
-
-def _deferred_binding(source, document, *, reason_code: str = "media_provider_failed"):
-    work = build_figure_work_order(
-        source,
-        document.sections[0],
-        figure_node_id="figure-1",
-        expected_shape=_expected_shapes(include_figure=True)["section-1"],
-    )
-    deferred = bind_deferred_figure_media(work, reason_code=reason_code)
-    return bind_deferred_figure_media_to_document(deferred, document)
-
-
-def _work_item_for(deferred_output: dict) -> GenerationWorkItemModel:
-    return GenerationWorkItemModel(
-        id="media-item-1",
-        run_id="run-1",
-        item_key=f"media:{deferred_output['work_order_id']}",
-        stage="media_generation",
-        status="ready",
-        input_hash="input",
-        definition_hash="definition",
-        output_json=deferred_output,
-        output_hash=content_hash(deferred_output),
-    )
-
-
-def test_media_evidence_accepts_deferred_output_when_media_optional_is_on(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "shared_document_media_optional", True)
-    source, document = _approved_source_and_document(include_figure=True)
-    bound = _deferred_binding(source, document)
-    unbound_payload = bound.model_dump(mode="json")
-    for key in ("source_document_id", "source_document_revision", "source_document_hash"):
-        unbound_payload.pop(key)
-    unbound = DeferredFigureMediaResult.model_validate(unbound_payload)
-    item = _work_item_for(unbound.model_dump(mode="json"))
-    output = VerifiedWorkItemOutput(
-        work_item_id=item.id,
-        output_json=item.output_json,
-        output_hash=item.output_hash,
-    )
-
-    _verify_media_matches_work_items(
-        document=document,
-        media_results=(bound,),
-        active_items=(item,),
-        loaded_outputs=(output,),
-    )
-
-
-def test_media_evidence_rejects_deferred_output_when_media_optional_is_off() -> None:
-    assert settings.shared_document_media_optional is False
-    source, document = _approved_source_and_document(include_figure=True)
-    bound = _deferred_binding(source, document)
-    unbound_payload = bound.model_dump(mode="json")
-    for key in ("source_document_id", "source_document_revision", "source_document_hash"):
-        unbound_payload.pop(key)
-    unbound = DeferredFigureMediaResult.model_validate(unbound_payload)
-    item = _work_item_for(unbound.model_dump(mode="json"))
-    output = VerifiedWorkItemOutput(
-        work_item_id=item.id,
-        output_json=item.output_json,
-        output_hash=item.output_hash,
-    )
-
-    with pytest.raises(SharedLessonFinalizationError, match="SHARED_DOCUMENT_MEDIA_OPTIONAL"):
-        _verify_media_matches_work_items(
-            document=document,
-            media_results=(bound,),
-            active_items=(item,),
-            loaded_outputs=(output,),
-        )
-
-
-def test_media_evidence_rejects_deferred_identity_mismatch_even_when_on(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "shared_document_media_optional", True)
-    source, document = _approved_source_and_document(include_figure=True)
-    bound = _deferred_binding(source, document)
-    unbound_payload = bound.model_dump(mode="json")
-    for key in ("source_document_id", "source_document_revision", "source_document_hash"):
-        unbound_payload.pop(key)
-    unbound = DeferredFigureMediaResult.model_validate(unbound_payload)
-    item = _work_item_for(unbound.model_dump(mode="json"))
-    output = VerifiedWorkItemOutput(
-        work_item_id=item.id,
-        output_json=item.output_json,
-        output_hash=item.output_hash,
-    )
-    forged = bound.model_copy(update={"reason_code": "media_invalid_output"})
 
     with pytest.raises(SharedLessonFinalizationError, match="durable work-item output"):
         _verify_media_matches_work_items(

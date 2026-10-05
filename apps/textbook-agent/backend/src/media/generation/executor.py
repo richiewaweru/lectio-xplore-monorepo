@@ -158,7 +158,12 @@ async def _render_frame(
     cache_object_key = f"images/cache/{cache_key}.png"
     destination_key = f"{generation_id}/{order.visual.attaches_to or 'visuals'}/{visual_id}.png"
 
-    is_diagram_precision = getattr(order.visual, "visual_style", None) == "diagram_precision"
+    # Gemini renders its own labels; the deterministic compositor (and its
+    # preflight) only applies to the other providers.
+    is_diagram_precision = (
+        getattr(order.visual, "visual_style", None) == "diagram_precision"
+        and provider_name != "gemini"
+    )
     # Fail before touching the provider (and before accepting a cache entry) if
     # the deterministic label band cannot fit at print-safe font size.
     if is_diagram_precision:
@@ -508,6 +513,7 @@ async def _render_frame(
         qc_reasons=qc_reasons,
         qc_correction_hint=qc_correction_hint,
         qc_trace_id=trace_id,
+        provider_text=getattr(image, "text", None),
     )
     errs = validate_visual_block(block, order)
     if errs:
@@ -576,7 +582,11 @@ async def execute_visual(
                     frame_order = order.model_copy(deep=True)
                     frame_order.visual.must_show = frame.must_show or frame_order.visual.must_show
                     frame_order.visual.purpose = frame.description or frame_order.visual.purpose
-                    prompt = build_visual_prompt(frame_order, previous_frame_description=previous)
+                    prompt = build_visual_prompt(
+                        frame_order,
+                        previous_frame_description=previous,
+                        provider_renders_labels=spec.provider == "gemini",
+                    )
                     block = await _render_frame(
                         order=frame_order,
                         generation_id=gid,
@@ -595,7 +605,9 @@ async def execute_visual(
                     blocks.append(block)
                     previous = frame.description
             else:
-                prompt = build_visual_prompt(order)
+                prompt = build_visual_prompt(
+                    order, provider_renders_labels=spec.provider == "gemini"
+                )
                 block = await _render_frame(
                     order=order,
                     generation_id=gid,

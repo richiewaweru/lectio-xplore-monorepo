@@ -7,9 +7,9 @@ import hashlib
 import json
 import re
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, Protocol
+from typing import Any, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from document.shared_lesson.continuity import (
     ExpectedNodeShape,
@@ -28,7 +28,6 @@ from document.shared_lesson.models import (
     SharedSection,
 )
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
-from infra.config import settings
 from infra.generation_runtime.contracts import SourceIdentity
 from media.generation.contracts import (
     GeneratedVisualBlock,
@@ -137,82 +136,6 @@ class FigureMediaResult(BaseModel):
     source_facts: tuple[SourceOfTruthEntry, ...] = ()
     required: bool = True
     status: str = "ready"
-
-
-# Fixed, closed set of reasons a figure may be deferred instead of persisted
-# as a failure. Only these two failure classifications -- a reporting
-# provider/transport failure and a genuine shared-media-contract violation --
-# may ever be deferred. Programming/auth/config errors must never become a
-# semantic fallback and are excluded on purpose (see media_runtime.py).
-_DEFERRED_MEDIA_REASON_CODES = frozenset({"media_provider_failed", "media_invalid_output"})
-
-
-class DeferredFigureMediaResult(BaseModel):
-    """A section-early figure explicitly deferred instead of a ready result.
-
-    Produced only when the local-only, default-OFF ``shared_document_media_
-    optional`` switch is enabled and the media provider or the shared media
-    contract failed. It carries the identical section-early identity as
-    ``ReadyFigureMediaResult`` so it can still be verified and rebound to the
-    assembled document, but it never carries a hosted asset URL, an asset ID,
-    or any provider diagnostic text -- the figure has no rendered image and
-    the underlying ``FigureNode`` keeps ``asset_id=None``.
-    """
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    source_plan_id: str = Field(min_length=1)
-    source_plan_revision: int = Field(ge=1)
-    source_plan_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    section_id: str = Field(min_length=1)
-    section_output_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    figure_node_id: str = Field(min_length=1)
-    figure_semantic_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    work_order_id: str = Field(min_length=1)
-    visual_id: str = Field(min_length=1)
-    mode: str = Field(min_length=1)
-    required: bool = True
-    source_facts: tuple[SourceOfTruthEntry, ...] = ()
-    reason_code: str = Field(min_length=1)
-    status: Literal["deferred"] = "deferred"
-
-    @field_validator("reason_code")
-    @classmethod
-    def _known_reason_code(cls, value: str) -> str:
-        if value not in _DEFERRED_MEDIA_REASON_CODES:
-            raise ValueError(f"unsupported deferred media reason_code: {value!r}")
-        return value
-
-
-class DeferredFigureMediaBinding(BaseModel):
-    """A deferred media result bound to one immutable assembled document."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    source_plan_id: str = Field(min_length=1)
-    source_plan_revision: int = Field(ge=1)
-    source_plan_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    source_document_id: str = Field(min_length=1)
-    source_document_revision: int = Field(ge=1)
-    source_document_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    section_id: str = Field(min_length=1)
-    section_output_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    figure_node_id: str = Field(min_length=1)
-    figure_semantic_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    work_order_id: str = Field(min_length=1)
-    visual_id: str = Field(min_length=1)
-    mode: str = Field(min_length=1)
-    required: bool = True
-    source_facts: tuple[SourceOfTruthEntry, ...] = ()
-    reason_code: str = Field(min_length=1)
-    status: Literal["deferred"] = "deferred"
-
-    @field_validator("reason_code")
-    @classmethod
-    def _known_reason_code(cls, value: str) -> str:
-        if value not in _DEFERRED_MEDIA_REASON_CODES:
-            raise ValueError(f"unsupported deferred media reason_code: {value!r}")
-        return value
 
 
 class FigureMediaFailure(BaseModel):
@@ -347,6 +270,21 @@ def fallback_alt_text(spec: Any) -> str:
     if labels:
         alt += f" Labels: {', '.join(labels)}."
     return alt
+
+
+_MAX_PROVIDER_ALT_CHARS = 400
+
+
+def _clean_provider_alt_text(text: str | None) -> str | None:
+    """Single-paragraph, length-capped provider text, or None if unusable."""
+    if not text:
+        return None
+    cleaned = " ".join(text.split())
+    if not cleaned:
+        return None
+    if len(cleaned) > _MAX_PROVIDER_ALT_CHARS:
+        cleaned = cleaned[: _MAX_PROVIDER_ALT_CHARS - 1].rstrip() + "…"
+    return cleaned
 
 
 def figure_semantic_hash(
@@ -623,8 +561,8 @@ def bind_generated_figure(
     # Shared figure semantics come only from the plan spec and FigureNode that
     # produced this work order, never from the provider block. The provider's
     # own caption/alt_text fields are diagnostic only (the executor sets both to
-    # the work order's purpose). Alt text is built in code from the spec; a
-    # later phase will prefer the provider's text part.
+    # the work order's purpose). Alt text prefers the provider's text part and
+    # falls back to text built in code from the spec.
     return ReadyFigureMediaResult(
         source_plan_id=work.source_plan_id,
         source_plan_revision=work.source_plan_revision,
@@ -638,41 +576,13 @@ def bind_generated_figure(
         asset_id=block.visual_id,
         asset_url=block.image_url,
         mode=work.work_order.visual.mode,
-        alt_text=fallback_alt_text(work.work_order.visual),
+        alt_text=(
+            _clean_provider_alt_text(block.provider_text)
+            or fallback_alt_text(work.work_order.visual)
+        ),
         required=work.required,
         source_facts=tuple(work.work_order.source_of_truth),
         status=block.status,
-    )
-
-
-def bind_deferred_figure_media(
-    work: SharedFigureWorkOrder,
-    *,
-    reason_code: str,
-) -> DeferredFigureMediaResult:
-    """Close one figure as deferred instead of a ready provider result.
-
-    Only the local-only ``shared_document_media_optional`` switch may call
-    this, and only for the two closed failure reasons the switch is allowed
-    to defer.  It never receives or persists the provider's own diagnostic
-    text -- the caller supplies only the fixed, safe ``reason_code``.
-    """
-    if reason_code not in _DEFERRED_MEDIA_REASON_CODES:
-        raise SharedFigureMediaError(f"unsupported deferred media reason_code: {reason_code!r}")
-    return DeferredFigureMediaResult(
-        source_plan_id=work.source_plan_id,
-        source_plan_revision=work.source_plan_revision,
-        source_plan_hash=work.source_plan_hash,
-        section_id=work.section_id,
-        section_output_hash=work.section_output_hash,
-        figure_node_id=work.figure_node_id,
-        figure_semantic_hash=work.figure_semantic_hash,
-        work_order_id=work.work_order.work_order_id,
-        visual_id=work.work_order.visual.id,
-        mode=work.work_order.visual.mode,
-        required=work.required,
-        source_facts=tuple(work.work_order.source_of_truth),
-        reason_code=reason_code,
     )
 
 
@@ -793,171 +703,24 @@ def verify_bound_figure_media(
     return media
 
 
-def bind_deferred_figure_media_to_document(
-    media: DeferredFigureMediaResult,
-    document: SharedLessonDocument,
-) -> DeferredFigureMediaBinding:
-    """Bind a deferred figure result only after the assembled document is verified.
-
-    Mirrors ``bind_figure_media_to_document`` exactly for every identity check
-    (document, section, figure, semantic hash, work-order/visual identity),
-    but never checks for a hosted asset -- a deferred figure has none, and the
-    document figure keeps ``asset_id=None``.
-    """
-    _verify_document(document)
-    if (
-        media.source_plan_id != document.teaching_plan_id
-        or media.source_plan_revision != document.teaching_plan_revision
-        or media.source_plan_hash != document.teaching_plan_hash
-    ):
-        raise SharedFigureMediaError("media source plan lineage does not match the document")
-    section = next((item for item in document.sections if item.id == media.section_id), None)
-    if section is None:
-        raise SharedFigureMediaError("media section is absent from the assembled document")
-    section_hash = _hash_payload(section.model_dump(mode="json"))
-    if section_hash != media.section_output_hash:
-        raise SharedFigureMediaError("media section output is stale or changed")
-    node = next((item for item in section.nodes if item.id == media.figure_node_id), None)
-    if not isinstance(node, FigureNode):
-        raise SharedFigureMediaError("media figure is absent or has changed kind")
-    if node.display.asset_id:
-        raise SharedFigureMediaError("assembled figure already has a bound asset")
-    semantic_hash = figure_semantic_hash(
-        source_plan_id=media.source_plan_id,
-        source_plan_revision=media.source_plan_revision,
-        source_plan_hash=media.source_plan_hash,
-        section_output_hash=section_hash,
-        section_id=section.id,
-        figure_node_id=node.id,
-        caption=node.display.caption,
-        source_facts=media.source_facts,
-        mode=media.mode,
-        required=media.required,
-    )
-    if semantic_hash != media.figure_semantic_hash:
-        raise SharedFigureMediaError("media figure semantic identity is stale or changed")
-    expected_visual_id = f"shared-figure-{semantic_hash[:24]}"
-    expected_work_order_id = f"shared-media-{semantic_hash}"
-    if media.visual_id != expected_visual_id or media.work_order_id != expected_work_order_id:
-        raise SharedFigureMediaError("media work-order identity is stale or changed")
-    return DeferredFigureMediaBinding(
-        source_plan_id=media.source_plan_id,
-        source_plan_revision=media.source_plan_revision,
-        source_plan_hash=media.source_plan_hash,
-        source_document_id=document.id,
-        source_document_revision=document.revision,
-        source_document_hash=document.content_hash,
-        section_id=media.section_id,
-        section_output_hash=media.section_output_hash,
-        figure_node_id=media.figure_node_id,
-        figure_semantic_hash=media.figure_semantic_hash,
-        work_order_id=media.work_order_id,
-        visual_id=media.visual_id,
-        mode=media.mode,
-        source_facts=tuple(media.source_facts),
-        required=media.required,
-        reason_code=media.reason_code,
-    )
-
-
-def verify_bound_deferred_figure_media(
-    media: DeferredFigureMediaBinding,
-    document: SharedLessonDocument,
-) -> DeferredFigureMediaBinding:
-    """Recompute and verify every identity of an already document-bound deferred result.
-
-    Mirrors ``verify_bound_figure_media`` for the deferred binding: reconstruct
-    the pre-binding view from the closed result, bind it again, and require an
-    exact canonical match.
-    """
-    _verify_document(document)
-    if (
-        media.source_document_id != document.id
-        or media.source_document_revision != document.revision
-        or media.source_document_hash != document.content_hash
-    ):
-        raise SharedFigureMediaError("bound media document identity is stale or changed")
-    candidate = DeferredFigureMediaResult(
-        source_plan_id=media.source_plan_id,
-        source_plan_revision=media.source_plan_revision,
-        source_plan_hash=media.source_plan_hash,
-        section_id=media.section_id,
-        section_output_hash=media.section_output_hash,
-        figure_node_id=media.figure_node_id,
-        figure_semantic_hash=media.figure_semantic_hash,
-        work_order_id=media.work_order_id,
-        visual_id=media.visual_id,
-        mode=media.mode,
-        source_facts=tuple(media.source_facts),
-        required=media.required,
-        reason_code=media.reason_code,
-    )
-    rebound = bind_deferred_figure_media_to_document(candidate, document)
-    if rebound != media:
-        raise SharedFigureMediaError(
-            "bound media result does not match its recomputed document binding"
-        )
-    return media
-
-
 def bind_durable_media_output(
     payload: Any,
     document: SharedLessonDocument,
-    *,
-    media_optional: bool | None = None,
-) -> FigureMediaResult | DeferredFigureMediaBinding:
+) -> FigureMediaResult:
     """Parse and bind one durable media WorkItem output to the assembled document.
 
     Every real-Run consumer of a media WorkItem's ``output_json`` (document QA
-    dispatch, handoff, finalization) must go through this single parsing rule
-    instead of assuming a ready result. A ``status="deferred"`` payload only
-    exists because the local-only, default-OFF ``shared_document_media_
-    optional`` switch was enabled when the figure was executed. If the switch
-    is off now -- including for a Run produced while it was on -- the
-    deferred output is rejected exactly like any other invalid media output,
-    fail-closed, never silently accepted.
-
-    ``media_optional`` defaults to the live ``settings.shared_document_media_
-    optional`` value when not given explicitly, matching the executor's own
-    default-resolution rule.
+    dispatch, handoff, finalization) goes through this single parsing rule.
     """
-    optional_media = (
-        settings.shared_document_media_optional if media_optional is None else media_optional
-    )
-    status = payload.get("status") if isinstance(payload, Mapping) else None
-    if status == "deferred":
-        if not optional_media:
-            raise SharedFigureMediaError(
-                "durable media output is deferred, but shared_document_media_optional "
-                "is not enabled"
-            )
-        deferred = DeferredFigureMediaResult.model_validate(payload)
-        return bind_deferred_figure_media_to_document(deferred, document)
     ready = ReadyFigureMediaResult.model_validate(payload)
     return bind_figure_media_to_document(ready, document)
 
 
 def verify_bound_durable_media(
-    result: FigureMediaResult | DeferredFigureMediaBinding,
+    result: FigureMediaResult,
     document: SharedLessonDocument,
-    *,
-    media_optional: bool | None = None,
-) -> FigureMediaResult | DeferredFigureMediaBinding:
-    """Verify one already document-bound durable media result, failing closed on deferred.
-
-    Mirrors ``bind_durable_media_output``'s switch policy at the verification
-    boundary: a ``DeferredFigureMediaBinding`` is only ever accepted when the
-    local-only ``shared_document_media_optional`` switch is enabled.
-    """
-    optional_media = (
-        settings.shared_document_media_optional if media_optional is None else media_optional
-    )
-    if isinstance(result, DeferredFigureMediaBinding):
-        if not optional_media:
-            raise SharedFigureMediaError(
-                "media evidence is deferred, but shared_document_media_optional is not enabled"
-            )
-        return verify_bound_deferred_figure_media(result, document)
+) -> FigureMediaResult:
+    """Verify one already document-bound durable media result."""
     return verify_bound_figure_media(result, document)
 
 
@@ -1035,8 +798,6 @@ def validate_reusable_figure_asset(
 
 
 __all__ = [
-    "DeferredFigureMediaBinding",
-    "DeferredFigureMediaResult",
     "FigureExecutor",
     "FigureMediaBatchResult",
     "FigureMediaFailure",
@@ -1048,8 +809,6 @@ __all__ = [
     "fallback_alt_text",
     "figure_semantic_hash",
     "rebuild_figure_work_order",
-    "bind_deferred_figure_media",
-    "bind_deferred_figure_media_to_document",
     "bind_durable_media_output",
     "bind_figure_media_to_document",
     "bind_generated_figure",
@@ -1057,7 +816,6 @@ __all__ = [
     "execute_figure_work_order",
     "execute_figure_work_orders",
     "validate_reusable_figure_asset",
-    "verify_bound_deferred_figure_media",
     "verify_bound_durable_media",
     "verify_bound_figure_media",
 ]

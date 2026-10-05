@@ -14,7 +14,6 @@ from document.shared_lesson.handoff import (
 )
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.media import (
-    DeferredFigureMediaBinding,
     FigureMediaResult,
     SharedFigureMediaError,
     verify_bound_durable_media,
@@ -50,7 +49,7 @@ def _required_media(document: SharedLessonDocument) -> dict[str, tuple[str, ...]
 def _verify_media(
     document: SharedLessonDocument,
     required_media_by_section: Mapping[str, Sequence[str]] | None,
-    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
+    media_results: Sequence[FigureMediaResult],
 ) -> tuple[str, ...]:
     expected = _required_media(document)
     declared = {
@@ -67,7 +66,7 @@ def _verify_media(
     expected_ids = {
         (section_id, figure_id) for section_id, values in expected.items() for figure_id in values
     }
-    supplied: dict[tuple[str, str], FigureMediaResult | DeferredFigureMediaBinding] = {}
+    supplied: dict[tuple[str, str], FigureMediaResult] = {}
     for result in media_results:
         identity = (result.section_id, result.figure_node_id)
         if identity in supplied:
@@ -131,7 +130,7 @@ async def handoff_qa_dispatch_result(
     sections: Mapping[str, SharedSection] | Sequence[SharedSection],
     tasks: Sequence[SharedTaskSpec] = (),
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
+    media_results: Sequence[FigureMediaResult] = (),
 ) -> SharedLessonHandoffEvidence:
     """Handoff one already-QA'd document without making another provider call."""
     if not isinstance(result, SharedDocumentQADispatchResult):

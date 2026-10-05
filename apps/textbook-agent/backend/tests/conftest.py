@@ -28,7 +28,6 @@ os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("V3_VISUAL_QC_ENABLED", "false")
 os.environ.setdefault("V3_IMAGE_CACHE_ENABLED", "false")
 os.environ.setdefault("V2_SKELETON_SHADOW_ENABLED", "false")
-os.environ["SHARED_DOCUMENT_MEDIA_OPTIONAL"] = "false"
 
 from core.database.models import Base
 from core.database.session import engine as runtime_engine
@@ -157,18 +156,6 @@ async def db_session(db_engine):
     )() as session:
         yield session
         await session.rollback()
-
-
-@pytest.fixture(autouse=True)
-def _shared_document_media_optional_off(monkeypatch):
-    """Pin the local-only media-optional switch OFF; tests opt in explicitly.
-
-    A developer's ``backend/.env`` may enable ``SHARED_DOCUMENT_MEDIA_OPTIONAL``
-    for local quality runs; tests must not inherit that.
-    """
-    from infra.config import settings
-
-    monkeypatch.setattr(settings, "shared_document_media_optional", False)
 
 
 @pytest.fixture(autouse=True)

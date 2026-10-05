@@ -114,3 +114,58 @@ def test_generate_image_sends_configured_model_and_thinking_level(monkeypatch):
     assert result.format == "png"
     assert calls[0]["model"] == "gemini-3.1-flash-image"
     assert str(calls[0]["config"].thinking_config.thinking_level).endswith("MINIMAL")
+
+
+def test_generate_image_collects_text_parts_and_keeps_first_image(monkeypatch):
+    class _Models:
+        def generate_content_stream(self, *, model, contents, config):
+            image = SimpleNamespace(
+                inline_data=SimpleNamespace(data=b"first", mime_type="image/png"),
+                text=None,
+            )
+            text_a = SimpleNamespace(inline_data=None, text="A labelled ")
+            text_b = SimpleNamespace(inline_data=None, text="water cycle. ")
+            second = SimpleNamespace(
+                inline_data=SimpleNamespace(data=b"second", mime_type="image/png"),
+                text=None,
+            )
+            for parts in ([text_a], [image], [text_b, second]):
+                yield SimpleNamespace(
+                    candidates=[SimpleNamespace(content=SimpleNamespace(parts=parts))]
+                )
+
+    class _FakeGenai:
+        def __init__(self, **_kwargs):
+            self.models = _Models()
+
+    monkeypatch.setattr(gemini.genai, "Client", _FakeGenai)
+    monkeypatch.setenv("GEMINI_IMAGE_API_KEY", "key")
+    gemini.get_gemini_image_client.cache_clear()
+
+    result = asyncio.run(gemini.get_gemini_image_client().generate_image(prompt="x"))
+    gemini.get_gemini_image_client.cache_clear()
+
+    assert result.bytes == b"first"
+    assert result.text == "A labelled water cycle."
+
+
+def test_generate_image_text_is_none_when_provider_sends_none(monkeypatch):
+    class _Models:
+        def generate_content_stream(self, *, model, contents, config):
+            part = SimpleNamespace(
+                inline_data=SimpleNamespace(data=b"png", mime_type="image/png"), text=None
+            )
+            yield SimpleNamespace(candidates=[SimpleNamespace(content=SimpleNamespace(parts=[part]))])
+
+    class _FakeGenai:
+        def __init__(self, **_kwargs):
+            self.models = _Models()
+
+    monkeypatch.setattr(gemini.genai, "Client", _FakeGenai)
+    monkeypatch.setenv("GEMINI_IMAGE_API_KEY", "key")
+    gemini.get_gemini_image_client.cache_clear()
+
+    result = asyncio.run(gemini.get_gemini_image_client().generate_image(prompt="x"))
+    gemini.get_gemini_image_client.cache_clear()
+
+    assert result.text is None

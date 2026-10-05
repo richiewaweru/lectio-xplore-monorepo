@@ -984,3 +984,72 @@ async def test_execute_visual_preserves_stage_and_exception_type_on_failure(
     assert failure_log.original_exception_type == "RuntimeError"
     assert "provider timeout" in failure_log.original_exception_message
     assert "RuntimeError: provider timeout" in failure_log.traceback
+
+
+@pytest.mark.asyncio
+async def test_gemini_diagram_precision_skips_compositor_and_keeps_provider_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "false")
+    order = VisualGeneratorWorkOrder(
+        work_order_id="v-gemini",
+        visual=VisualPlanItem(
+            id="vis-gemini",
+            attaches_to="practice",
+            mode="diagram",
+            visual_style="diagram_precision",
+            labels_required=["Evaporation", "Condensation"],
+            purpose="show the cycle",
+        ),
+    )
+    base = _png_bytes()
+    prompts: list[str] = []
+
+    class Client:
+        async def generate_image(self, *, prompt: str):
+            prompts.append(prompt)
+            return SimpleNamespace(
+                bytes=base, format="png", mime_type="image/png", text="A water cycle diagram."
+            )
+
+    class Store:
+        def __init__(self) -> None:
+            self.generated: list[bytes] = []
+
+        async def image_exists(self, *, key: str) -> bool:
+            return False
+
+        async def store_image(self, image_bytes, *_args, **kwargs):
+            self.generated.append(image_bytes)
+            return f"https://cdn.example/{kwargs['filename']}"
+
+    store = Store()
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("compositor must not run for gemini")
+
+    async def one_attempt(_label, attempt, max_retries):
+        _ = max_retries
+        return await attempt(False)
+
+    monkeypatch.setattr("media.generation.executor.visual_qc_enabled", lambda: False)
+    monkeypatch.setattr("media.generation.executor.compose_diagram_precision", boom)
+    monkeypatch.setattr("media.generation.executor.preflight_diagram_labels", boom)
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: Client())
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
+    monkeypatch.setattr("media.generation.executor.run_with_retries", one_attempt)
+    monkeypatch.setattr(
+        "media.generation.executor.load_image_provider_spec",
+        lambda: SimpleNamespace(provider="gemini", model_name="gemini-test"),
+    )
+
+    async def emit(_event_type: str, _payload: dict) -> None:
+        return None
+
+    blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
+
+    assert blocks[0].status == "ready"
+    assert store.generated == [base]
+    assert blocks[0].provider_text == "A water cycle diagram."
+    assert "NO visible text" not in prompts[0]
+    assert "Evaporation" in prompts[0]

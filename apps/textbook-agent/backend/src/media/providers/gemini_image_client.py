@@ -136,9 +136,10 @@ class GeminiImageClient:
             )
         ]
 
-        def _call() -> tuple[bytes, str | None]:
+        def _call() -> tuple[bytes, str | None, str | None]:
             image_bytes: bytes | None = None
             image_mime_type: str | None = None
+            text_parts: list[str] = []
             for chunk in self._client.models.generate_content_stream(
                 model=self._model,
                 contents=contents,
@@ -146,19 +147,23 @@ class GeminiImageClient:
             ):
                 if not chunk.candidates:
                     continue
-                for part in chunk.candidates[0].content.parts:
+                content = chunk.candidates[0].content
+                for part in (content.parts if content is not None else None) or []:
                     if part.inline_data is not None:
-                        image_bytes = part.inline_data.data
-                        image_mime_type = part.inline_data.mime_type
-                        break
-                if image_bytes is not None:
-                    break
+                        # Keep the first image; keep consuming the stream so
+                        # trailing text parts (alt text) are not discarded.
+                        if image_bytes is None:
+                            image_bytes = part.inline_data.data
+                            image_mime_type = part.inline_data.mime_type
+                    elif part.text and not getattr(part, "thought", False):
+                        text_parts.append(part.text)
 
             if image_bytes is None:
                 raise RuntimeError("Gemini returned no image data in response")
-            return image_bytes, image_mime_type
+            provider_text = "".join(text_parts).strip() or None
+            return image_bytes, image_mime_type, provider_text
 
-        image_bytes, provider_mime_type = await asyncio.to_thread(_call)
+        image_bytes, provider_mime_type, provider_text = await asyncio.to_thread(_call)
         result_format, result_mime_type = self._resolve_result_format(
             requested_format=format,
             provider_mime_type=provider_mime_type,
@@ -168,6 +173,7 @@ class GeminiImageClient:
             bytes=image_bytes,
             format=result_format,
             mime_type=result_mime_type,
+            text=provider_text,
         )
 
 

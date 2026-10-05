@@ -36,7 +36,6 @@ from document.shared_lesson.approved_source import (
 )
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.media import (
-    DeferredFigureMediaBinding,
     FigureMediaResult,
     SharedFigureMediaError,
     bind_durable_media_output,
@@ -100,7 +99,7 @@ class ReadyRealizationSource:
     plan_id: str
     plan_revision: int
     plan_hash: str
-    media_results: tuple[FigureMediaResult | DeferredFigureMediaBinding, ...]
+    media_results: tuple[FigureMediaResult, ...]
     #: Advisory-gate findings recorded on the document-QA WorkItem (never part
     #: of the document identity). Empty in blocking mode or when QA was clean.
     quality_flags: tuple[QualityFlag, ...] = ()
@@ -279,13 +278,13 @@ async def ensure_shared_document_run(
 def _document_media_results(
     document: SharedLessonDocument,
     active_items: Sequence[GenerationWorkItemModel],
-) -> tuple[FigureMediaResult | DeferredFigureMediaBinding, ...]:
+) -> tuple[FigureMediaResult, ...]:
     media_items = [
         item
         for item in active_items
         if item.stage == MEDIA_STAGE or item.item_key.startswith("media:")
     ]
-    results: list[FigureMediaResult | DeferredFigureMediaBinding] = []
+    results: list[FigureMediaResult] = []
     for item in media_items:
         if item.status != "ready" or item.output_json is None or not item.output_hash:
             raise SharedFigureMediaError(f"media WorkItem {item.id!r} is not ready")

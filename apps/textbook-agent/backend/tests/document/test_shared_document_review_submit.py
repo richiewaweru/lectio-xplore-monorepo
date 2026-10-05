@@ -38,7 +38,6 @@ from document.shared_lesson.models import build_shared_lesson_document
 from document.shared_lesson.post_section_pipeline import run_post_section_pipeline
 from document.shared_lesson.repository import save_shared_lesson_document
 from document.shared_lesson.runtime import TeachingPlanSource
-from infra.config import settings
 from infra.database.models import GenerationEventModel, GenerationRunModel, GenerationWorkItemModel
 from infra.generation_runtime import active_work_items
 from media.generation.contracts import GeneratedVisualBlock
@@ -473,10 +472,9 @@ async def test_review_submit_regenerates_figure_media_for_edited_figure_section(
 
 
 @pytest.mark.asyncio
-async def test_review_submit_figure_media_failure_blocks_ready_without_media_optional(
-    db_session, db_session_factory, monkeypatch
+async def test_review_submit_figure_media_failure_blocks_ready(
+    db_session, db_session_factory
 ):
-    monkeypatch.setattr(settings, "shared_document_media_optional", False)
     admission, generation, lesson, edited = await _issue_on_callout_then_edit(
         db_session, db_session_factory
     )
@@ -512,47 +510,6 @@ async def test_review_submit_figure_media_failure_blocks_ready_without_media_opt
         run = await verify.get(GenerationRunModel, admission.run.id)
         assert run is not None
         assert run.status != "ready"
-
-
-@pytest.mark.asyncio
-async def test_review_submit_figure_media_failure_defers_when_media_optional_is_on(
-    db_session, db_session_factory, monkeypatch
-):
-    monkeypatch.setattr(settings, "shared_document_media_optional", True)
-    admission, generation, lesson, edited = await _issue_on_callout_then_edit(
-        db_session, db_session_factory
-    )
-    async with db_session_factory() as session:
-        await post_shared_document_review_draft_submit(
-            admission.run.id,
-            ReviewDraftSubmitRequest(
-                expected_revision=edited["draft"]["revision"],
-                expected_hash=edited["draft"]["hash"],
-            ),
-            current_user=SimpleNamespace(id="source-owner"),
-            session=session,
-        )
-        await session.commit()
-
-    async def pass_qa(_request):
-        return DocumentSemanticVerdict(status="pass")
-
-    outcome = await run_post_section_pipeline(
-        db_session_factory,
-        run_id=admission.run.id,
-        owner_user_id="source-owner",
-        path_lesson_id=lesson.id,
-        preparation_generation_id=generation.id,
-        media_executor=_FakeFigureExecutor(fail=True),
-        qa_semantic_validator=pass_qa,
-        worker_id="figure-review-media-deferred",
-    )
-    assert outcome.state == "ready", outcome.error
-
-    async with db_session_factory() as verify:
-        run = await verify.get(GenerationRunModel, admission.run.id)
-        assert run is not None
-        assert run.status == "ready"
 
 
 async def _issue_then_edit(db_session, db_session_factory, monkeypatch):

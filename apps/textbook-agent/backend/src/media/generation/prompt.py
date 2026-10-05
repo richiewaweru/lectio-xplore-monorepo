@@ -29,8 +29,14 @@ def format_anchor_for_visual(order: VisualGeneratorWorkOrder) -> str:
 def build_visual_prompt(
     order: VisualGeneratorWorkOrder,
     previous_frame_description: str | None = None,
+    *,
+    provider_renders_labels: bool = False,
 ) -> str:
     visual_style = order.visual.visual_style or "illustration"
+    # A provider that draws its own labels (Gemini) is not run through the
+    # deterministic label compositor, so the no-text diagram contract is
+    # replaced by the ordinary labelled-illustration prompt.
+    is_precision = visual_style == "diagram_precision" and not provider_renders_labels
     anchor_block = ""
     if order.visual.uses_anchor_id:
         anchor_block = f"""
@@ -55,7 +61,7 @@ Maintain consistent style and geometry; only depict new information.
 """
 
     qc_block = ""
-    if order.qc_correction_hint and visual_style != "diagram_precision":
+    if order.qc_correction_hint and not is_precision:
         qc_block = f"""
 PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never render this text):
 {order.qc_correction_hint}
@@ -82,7 +88,7 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
         if order.visual.consistency_locks
         else "- none"
     )
-    if visual_style == "diagram_precision":
+    if is_precision:
         # Provider text must stay closed to the no-text contract; any labels
         # are added only by the deterministic compositor after generation.
         prints = "- high contrast; grayscale-safe; no visible text"
@@ -92,7 +98,7 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
             if order.visual.print_requirements
             else "- high contrast; large readable labels; grayscale-safe"
         )
-    if visual_style == "diagram_precision":
+    if is_precision:
         style_requirements = (
             "- clean vector-style raster diagram, not SVG\n"
             "- white or very light background with high contrast\n"
@@ -116,7 +122,7 @@ VISUAL STYLE: {visual_style}
 
 STYLE REQUIREMENTS:
 {style_requirements}
-{'' if visual_style == 'diagram_precision' else NO_CAPTION_TEXT_CONSTRAINT}
+{'' if is_precision else NO_CAPTION_TEXT_CONSTRAINT}
 
 PURPOSE: {order.visual.purpose}
 
@@ -126,7 +132,7 @@ MUST SHOW:
 MUST NOT SHOW:
 {must_not_block}
 
-{('LABELS REQUIRED (draw each label exactly as written, spelled identically, and no other text): ' + ', '.join(order.visual.labels_required)) if visual_style != 'diagram_precision' and order.visual.labels_required else ''}
+{('LABELS REQUIRED (draw each label exactly as written, spelled identically, and no other text): ' + ', '.join(order.visual.labels_required)) if not is_precision and order.visual.labels_required else ''}
 {frame_lines}
 {source_block}{anchor_block}{qc_block}{continuity_block}
 

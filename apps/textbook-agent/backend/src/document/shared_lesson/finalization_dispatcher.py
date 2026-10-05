@@ -34,7 +34,6 @@ from document.shared_lesson.finalizer import (
 )
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import (
-    DeferredFigureMediaBinding,
     FigureMediaResult,
     SharedFigureMediaError,
     bind_durable_media_output,
@@ -112,7 +111,7 @@ def _all_section_sources(semantic: Any, source: Any) -> tuple[Any, ...]:
 
 
 def _required_media_map(
-    results: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
+    results: Sequence[FigureMediaResult],
 ) -> dict[str, tuple[str, ...]]:
     grouped: dict[str, list[str]] = {}
     for result in results:
@@ -124,7 +123,7 @@ def _durable_media_results(
     *,
     document: Any,
     active_items: Sequence[GenerationWorkItemModel],
-) -> tuple[tuple[FigureMediaResult | DeferredFigureMediaBinding, ...], dict[str, tuple[str, ...]]]:
+) -> tuple[tuple[FigureMediaResult, ...], dict[str, tuple[str, ...]]]:
     expected = tuple(
         (section.id, node.id)
         for section in document.sections
@@ -141,7 +140,7 @@ def _durable_media_results(
             "durable media leaves do not cover exactly the document figures"
         )
 
-    results: list[FigureMediaResult | DeferredFigureMediaBinding] = []
+    results: list[FigureMediaResult] = []
     seen: set[tuple[str, str]] = set()
     for item in media_items:
         if item.status != "ready" or item.output_json is None or not item.output_hash:

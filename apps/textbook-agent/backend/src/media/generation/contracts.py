@@ -42,6 +42,7 @@ class GeneratedVisualBlock(BaseModel):
     qc_reasons: list[str] = Field(default_factory=list)
     qc_correction_hint: str | None = None
     qc_trace_id: str | None = None
+    provider_text: str | None = None
 
 
 class ExecutorOutcome(BaseModel):
