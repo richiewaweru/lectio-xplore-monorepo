@@ -54,6 +54,9 @@ def build_answer_key_block(
             entry["working"] = raw.get("working")
         if "rubric" in raw:
             entry["rubric"] = raw.get("rubric")
+        for key in ("feedback", "option_notes", "not_marked"):
+            if key in raw:
+                entry[key] = raw.get(key)
         entries.append(entry)
     group: dict[str, Any] = {"entries": entries}
     if group_title:

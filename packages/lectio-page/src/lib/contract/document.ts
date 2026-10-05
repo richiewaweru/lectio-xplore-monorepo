@@ -5,6 +5,8 @@ export type InlineNode =
 	| { type: 'text'; value: string }
 	| { type: 'strong'; children: InlineNode[] }
 	| { type: 'emphasis'; children: InlineNode[] }
+	| { type: 'subscript'; children: InlineNode[] }
+	| { type: 'superscript'; children: InlineNode[] }
 	| { type: 'small-caps'; children: InlineNode[] }
 	| { type: 'term'; value: string; definition?: string }
 	| { type: 'math'; latex: string }
@@ -38,7 +40,7 @@ export interface BlockBase<
 
 export interface HeadingContent {
 	level: 1 | 2 | 3 | '1' | '2' | '3';
-	text: string;
+	text: RichText | string;
 	number?: string | null;
 }
 
@@ -58,7 +60,7 @@ export interface ListContent {
 
 export interface TableColumn {
 	id: string;
-	label: string;
+	label: RichText | string;
 }
 
 export interface TableRow {
@@ -68,7 +70,7 @@ export interface TableRow {
 export interface TableContent {
 	columns: TableColumn[];
 	rows: TableRow[];
-	caption?: string | null;
+	caption?: RichText | string | null;
 	presentation?: 'standard' | 'comparison' | 'timeline';
 }
 
@@ -82,14 +84,41 @@ export interface FigureAsset {
 
 export interface FigureContent {
 	asset: FigureAsset;
-	caption?: string | null;
+	caption?: RichText | string | null;
 	alt_text: string;
 	width?: 'main' | 'span';
 }
 
 export interface AsideContent {
-	label?: string | null;
+	label?: RichText | string | null;
 	body: RichText | string;
+	variant?: 'key_idea' | 'note' | 'misconception' | null;
+	belief?: RichText | string | null;
+	evidence?: RichText | string | null;
+	conclusion?: RichText | string | null;
+	aside?: RichText | string | null;
+}
+
+export interface EquationContent {
+	label?: RichText | string | null;
+	inputs: Array<RichText | string>;
+	condition?: RichText | string | null;
+	outputs: Array<RichText | string>;
+}
+
+export interface QuoteContent {
+	text: RichText | string;
+	attribution?: RichText | string | null;
+}
+
+export interface CompareItem {
+	label?: RichText | string | null;
+	title: RichText | string;
+	body: RichText | string;
+}
+
+export interface CompareContent {
+	items: CompareItem[];
 }
 
 export interface WorkedStep {
@@ -133,6 +162,9 @@ export interface AnswerEntry {
 	alternatives?: Array<RichText | string>;
 	working?: RichText | string | null;
 	rubric?: RichText | string | null;
+	feedback?: RichText | string | null;
+	option_notes?: Record<string, RichText | string> | null;
+	not_marked?: boolean;
 }
 
 export interface AnswerGroup {
@@ -152,6 +184,9 @@ export type ListBlock = BlockBase<'list', ListContent>;
 export type TableBlock = BlockBase<'table', TableContent>;
 export type FigureBlock = BlockBase<'figure', FigureContent>;
 export type AsideBlock = BlockBase<'aside', AsideContent>;
+export type EquationBlock = BlockBase<'equation', EquationContent>;
+export type QuoteBlock = BlockBase<'quote', QuoteContent>;
+export type CompareBlock = BlockBase<'compare', CompareContent>;
 export type WorkedExampleBlock = BlockBase<'worked-example', WorkedExampleContent>;
 export type QuestionsBlock = BlockBase<'questions', QuestionsContent>;
 export type ChoicesBlock = BlockBase<'choices', ChoicesContent>;
@@ -164,6 +199,9 @@ export type DocumentBlock =
 	| TableBlock
 	| FigureBlock
 	| AsideBlock
+	| EquationBlock
+	| QuoteBlock
+	| CompareBlock
 	| WorkedExampleBlock
 	| QuestionsBlock
 	| ChoicesBlock

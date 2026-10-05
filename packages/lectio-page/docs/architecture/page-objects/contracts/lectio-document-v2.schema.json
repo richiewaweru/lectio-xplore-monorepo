@@ -55,7 +55,7 @@
           "additionalProperties": false,
           "required": ["type", "children"],
           "properties": {
-            "type": { "enum": ["strong", "emphasis", "small-caps"] },
+            "type": { "enum": ["strong", "emphasis", "small-caps", "subscript", "superscript"] },
             "children": {
               "type": "array",
               "items": { "$ref": "#/$defs/inline-node" }
@@ -167,7 +167,7 @@
       "required": ["level", "text"],
       "properties": {
         "level": { "enum": [1, 2, 3, "1", "2", "3"] },
-        "text": { "type": "string", "minLength": 1 },
+        "text": { "$ref": "#/$defs/rich-text" },
         "number": { "type": ["string", "null"] }
       }
     },
@@ -220,7 +220,7 @@
             "required": ["id", "label"],
             "properties": {
               "id": { "type": "string", "minLength": 1 },
-              "label": { "type": "string" }
+              "label": { "$ref": "#/$defs/rich-text" }
             }
           }
         },
@@ -239,7 +239,7 @@
             }
           }
         },
-        "caption": { "type": ["string", "null"] },
+        "caption": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] },
         "presentation": { "enum": ["standard", "comparison", "timeline"] }
       }
     },
@@ -259,7 +259,7 @@
             "request_id": { "type": "string" }
           }
         },
-        "caption": { "type": ["string", "null"] },
+        "caption": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] },
         "alt_text": { "type": "string", "minLength": 1 },
         "width": { "enum": ["main", "span"] }
       }
@@ -269,8 +269,54 @@
       "additionalProperties": false,
       "required": ["body"],
       "properties": {
-        "label": { "type": ["string", "null"] },
-        "body": { "$ref": "#/$defs/rich-text" }
+        "label": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] },
+        "body": { "$ref": "#/$defs/rich-text" },
+        "variant": { "enum": ["key_idea", "note", "misconception", null] },
+        "belief": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] },
+        "evidence": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] },
+        "conclusion": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] },
+        "aside": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] }
+      }
+    },
+    "equation-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "outputs"],
+      "properties": {
+        "label": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] },
+        "inputs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/rich-text" } },
+        "condition": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] },
+        "outputs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/rich-text" } }
+      }
+    },
+    "quote-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "$ref": "#/$defs/rich-text" },
+        "attribution": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] }
+      }
+    },
+    "compare-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["title", "body"],
+            "properties": {
+            "label": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }] },
+              "title": { "$ref": "#/$defs/rich-text" },
+              "body": { "$ref": "#/$defs/rich-text" }
+            }
+          }
+        }
       }
     },
     "worked-example-content": {
@@ -378,7 +424,15 @@
                     },
                     "rubric": {
                       "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }]
-                    }
+                    },
+                    "feedback": {
+                      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }]
+                    },
+                    "option_notes": {
+                      "type": "object",
+                      "additionalProperties": { "$ref": "#/$defs/rich-text" }
+                    },
+                    "not_marked": { "type": "boolean" }
                   }
                 }
               }
@@ -470,6 +524,48 @@
         "layout": { "$ref": "#/$defs/layout-hint" }
       }
     },
+    "equation-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "equation" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/equation-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "quote-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "quote" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/quote-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "compare-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "compare" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/compare-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
     "worked-example-block": {
       "type": "object",
       "additionalProperties": false,
@@ -534,6 +630,9 @@
         { "$ref": "#/$defs/table-block" },
         { "$ref": "#/$defs/figure-block" },
         { "$ref": "#/$defs/aside-block" },
+        { "$ref": "#/$defs/equation-block" },
+        { "$ref": "#/$defs/quote-block" },
+        { "$ref": "#/$defs/compare-block" },
         { "$ref": "#/$defs/worked-example-block" },
         { "$ref": "#/$defs/questions-block" },
         { "$ref": "#/$defs/choices-block" },

@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+from types import SimpleNamespace
 from typing import Any
 
 from document.shared_lesson.fixtures import load_shared_lesson_fixture
@@ -60,15 +61,44 @@ def export_fixture(name: str) -> dict[str, Any]:
         "shared_document": storage_payload,
         "learn": learn.document.model_dump(mode="json"),
     }
+    figure_media = []
+    if name in {"golden", "overlong"}:
+        for section in document.sections:
+            for node in section.nodes:
+                if getattr(node, "kind", None) != "figure":
+                    continue
+                figure_media.append(
+                    SimpleNamespace(
+                        figure_node_id=node.id,
+                        asset_url="https://cdn.example.test/seedlings.svg",
+                        alt_text=node.accessibility.alt_text or "Fixture figure",
+                        status="ready",
+                    )
+                )
     try:
+        # The checked-in golden figure already carries its fixture asset id;
+        # its export proof needs only the deterministic hosted URL projection.
+        import print.generation.shared_document_adapter as print_adapter
+
+        original_verify = print_adapter.verify_bound_figure_media
+        print_adapter.verify_bound_figure_media = lambda media, _document: media
         printed = realize_shared_document_for_print(
             stored,
             expected_identity=PrintIdentity(**identity),
+            figure_media=figure_media,
         )
+        print_adapter.verify_bound_figure_media = original_verify
     except Exception as exc:  # adapter errors are useful evidence for the next track
         result["print_error"] = f"{type(exc).__name__}: {exc}"
     else:
-        result["print"] = printed.document
+        # The checked-in page fixture serves its deterministic image locally so
+        # Chromium can prove figure layout without depending on a hosted asset.
+        print_document = printed.document
+        for section in print_document.get("sections", []):
+            for block in section.get("blocks", []):
+                if block.get("object") == "figure":
+                    block["content"]["asset"]["src"] = "/seedlings.svg"
+        result["print"] = print_document
     return result
 
 

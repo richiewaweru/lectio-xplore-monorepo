@@ -4,25 +4,34 @@
 	import BlockView from './BlockView.svelte';
 	import HeadingBinding from './HeadingBinding.svelte';
 
-	let { section }: { section: LectioSection } = $props();
+	let { section, index = 0 }: { section: LectioSection; index?: number } = $props();
 
 	/**
 	 * Array order is canonical after normalizeDocument.
 	 * section.title renders exactly once as the section h2; nested heading blocks remain structural h3+.
 	 */
-	const units = $derived(buildRenderUnits(section.blocks));
+	function numberedUnits() {
+		let figureNumber = 0;
+		return buildRenderUnits(section.blocks).map((unit) => {
+			const lead = unit.kind === 'heading-binding' ? unit.lead : unit.block;
+			const number = lead.object === 'figure' ? ++figureNumber : undefined;
+			return { ...unit, figureNumber: number };
+		});
+	}
+
+	const units = $derived(numberedUnits());
 </script>
 
 <section class="lectio-section" id={section.id}>
-	<h2 class="lectio-section-title">{section.title}</h2>
+	<h2 class="lectio-section-title"><span class="lectio-section-number" aria-hidden="true">{index + 1}</span><span>{section.title}</span></h2>
 	{#each units as unit (unit.kind === 'heading-binding' ? unit.heading.id : unit.block.id)}
 		{#if unit.kind === 'heading-binding'}
 			<HeadingBinding>
 				<BlockView block={unit.heading} />
-				<BlockView block={unit.lead} />
+				<BlockView block={unit.lead} figureNumber={unit.figureNumber} />
 			</HeadingBinding>
 		{:else}
-			<BlockView block={unit.block} />
+			<BlockView block={unit.block} figureNumber={unit.figureNumber} />
 		{/if}
 	{/each}
 </section>

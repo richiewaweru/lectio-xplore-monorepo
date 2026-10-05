@@ -1,0 +1,126 @@
+{
+  "document_version": 2,
+  "contract_version": "1.0.0",
+  "id": "print-doc36:doc36-track-c-photosynthesis-d656b71a6931:revision:1-r1",
+  "title": "How plants make food",
+  "language": "en",
+  "front_matter": {
+    "cover": false,
+    "contents": false,
+    "running_head": "How plants make food",
+    "fields": [
+      "Name",
+      "Date"
+    ]
+  },
+  "metadata": {
+    "catalogue_version": "1.2.0",
+    "resource_type": "lesson",
+    "source_document": {
+      "id": "doc36:doc36-track-c-photosynthesis-d656b71a6931:revision:1",
+      "revision": 1,
+      "content_hash": "18c1a0f0edfc4b48cc9b19d238d271d1fa1d06c02d96afa870fb756e23c6b237"
+    },
+    "shared_tasks": []
+  },
+  "sections": [
+    {
+      "id": "photosynthesis-section",
+      "title": "How plants make food",
+      "blocks": [
+        {
+          "id": "shared-node-014f83d5587a2a572750",
+          "object": "equation",
+          "intent": "explain",
+          "position": 0,
+          "content": {
+            "label": [
+              {
+                "type": "text",
+                "value": "Word equation for photosynthesis"
+              }
+            ],
+            "inputs": [
+              [
+                {
+                  "type": "text",
+                  "value": "light energy"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "water"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "carbon dioxide"
+                }
+              ]
+            ],
+            "condition": [
+              {
+                "type": "text",
+                "value": "in the presence of chlorophyll"
+              }
+            ],
+            "outputs": [
+              [
+                {
+                  "type": "text",
+                  "value": "glucose"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "oxygen"
+                }
+              ]
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "shared-node-662591cfeeed5c8aadd7",
+          "object": "aside",
+          "intent": "emphasise",
+          "position": 1,
+          "content": {
+            "body": [
+              {
+                "type": "strong",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Chlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose."
+                  }
+                ]
+              }
+            ],
+            "label": [
+              {
+                "type": "text",
+                "value": "Chlorophyll captures the light"
+              }
+            ],
+            "variant": "key_idea",
+            "aside": [
+              {
+                "type": "text",
+                "value": "Water and carbon dioxide supply the atoms for that glucose, and oxygen leaves the plant as a gas.\n\nThe light is not kept as light. It is transferred into the sugar the plant builds, so the plant holds that energy in a chemical form it can use later."
+              }
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        }
+      ]
+    }
+  ]
+}

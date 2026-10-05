@@ -7,7 +7,8 @@ import type {
 	HeadingBlock,
 	ProseBlock,
 	QuestionsBlock,
-	AnswerKeyBlock
+	AnswerKeyBlock,
+	RichText
 } from './document';
 
 type Assert<T extends true> = T;
@@ -30,7 +31,7 @@ if (block.object === 'prose') {
 	void _paragraphs;
 }
 if (block.object === 'heading') {
-	const _text: string = block.content.text;
+	const _text: string | RichText = block.content.text;
 	void _text;
 }
 

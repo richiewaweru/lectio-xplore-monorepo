@@ -38,7 +38,8 @@
     "compare": [
       "table",
       "prose",
-      "questions"
+      "questions",
+      "compare"
     ],
     "sequence": [
       "list",
@@ -49,12 +50,16 @@
     "explain": [
       "prose",
       "figure",
-      "table"
+      "table",
+      "equation",
+      "quote",
+      "compare"
     ],
     "explain-cause": [
       "prose",
       "figure",
       "table",
+      "equation",
       "questions"
     ],
     "trace-flow": [
@@ -230,6 +235,17 @@
       "emphasise",
       "memory-aid"
     ],
+    "equation": [
+      "explain",
+      "explain-cause"
+    ],
+    "quote": [
+      "explain"
+    ],
+    "compare": [
+      "compare",
+      "explain"
+    ],
     "worked-example": [
       "demonstrate",
       "model-thinking",
@@ -303,7 +319,8 @@
     "compare": [
       "table",
       "prose",
-      "questions"
+      "questions",
+      "compare"
     ],
     "sequence": [
       "list",
@@ -314,12 +331,16 @@
     "explain": [
       "prose",
       "figure",
-      "table"
+      "table",
+      "equation",
+      "quote",
+      "compare"
     ],
     "explain-cause": [
       "prose",
       "figure",
       "table",
+      "equation",
       "questions"
     ],
     "trace-flow": [

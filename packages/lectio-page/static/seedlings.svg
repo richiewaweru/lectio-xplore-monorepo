@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120" viewBox="0 0 240 120" role="img" aria-labelledby="title desc">
+  <title id="title">Two seedlings under different light conditions</title>
+  <desc id="desc">A green seedling leans toward the sun beside a pale seedling that has stopped growing.</desc>
+  <g transform="translate(0 0)">
+    <circle cx="98" cy="22" r="13" fill="#F2B01E"/>
+    <path d="M60 74 C60 58 66 44 80 32" fill="none" stroke="#2F7D4F" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="88" cy="28" rx="13" ry="6" transform="rotate(-35 88 28)" fill="#2F7D4F"/>
+    <ellipse cx="58" cy="48" rx="12" ry="5.5" transform="rotate(25 58 48)" fill="#2F7D4F"/>
+    <ellipse cx="78" cy="54" rx="11" ry="5" transform="rotate(-20 78 54)" fill="#2F7D4F"/>
+    <rect x="34" y="72" width="52" height="9" rx="2" fill="#9A5230"/>
+    <path d="M38 81 H82 L76 112 H44 Z" fill="#B5673E"/>
+  </g>
+  <g transform="translate(120 0)">
+    <path d="M60 74 C60 64 59 58 57 52" fill="none" stroke="#B9B27A" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="50" cy="56" rx="9" ry="4" transform="rotate(40 50 56)" fill="#CFC98F"/>
+    <ellipse cx="66" cy="60" rx="8" ry="3.5" transform="rotate(-40 66 60)" fill="#CFC98F"/>
+    <rect x="34" y="72" width="52" height="9" rx="2" fill="#9A5230"/>
+    <path d="M38 81 H82 L76 112 H44 Z" fill="#B5673E"/>
+  </g>
+</svg>
