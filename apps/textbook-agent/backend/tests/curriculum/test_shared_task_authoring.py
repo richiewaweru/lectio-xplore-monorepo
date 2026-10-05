@@ -10,6 +10,7 @@ from curriculum.shared_task_authoring import (
     SharedTaskAuthoringError,
     SharedTaskDraftEnvelope,
     author_shared_tasks,
+    task_presentation_advisories,
 )
 from curriculum.teaching_plan.models import (
     LearnerActionBrief,
@@ -153,6 +154,36 @@ async def test_author_shared_tasks_binds_exact_lineage_and_ids() -> None:
     assert "classify-items" in instructions and "correct_placements" in instructions
     assert "order-items and reconstruct-order" in instructions
     assert "enter-number" in instructions and "enter-text" in instructions
+    assert "short display_prompt" in instructions
+    assert "predict task" in instructions and "option_notes" in instructions
+
+
+@pytest.mark.asyncio
+async def test_presentation_targets_are_advisory_and_do_not_repair_or_change_text() -> None:
+    plan = _plan()
+    payload = _task(prompt="A full context task prompt that is intentionally retained.")
+    payload["tasks"][0].update(
+        {
+            "display_prompt": "This is a deliberately long display prompt with more than twenty five words so the advisory can record the exact authored path without changing any learner-facing text in the accepted task.",
+            "feedback": {
+                "correct": "This deliberately long explanatory feedback remains intact and is only reported as a presentation advisory for the teacher to review later while preserving the provider wording exactly for learner and teacher views across every rendered output and future teacher review record.",
+            },
+        }
+    )
+    provider = ScriptedProvider(payload)
+
+    tasks = await author_shared_tasks(
+        plan,
+        _sourcebook(plan),
+        approved_item_snapshot=_items_snapshot(plan),
+        provider=provider,
+    )
+
+    advisories = task_presentation_advisories(tasks)
+    assert len(provider.calls) == 1
+    assert tasks[0].display_prompt == payload["tasks"][0]["display_prompt"]
+    assert {item["path"] for item in advisories} == {"display_prompt", "feedback.correct"}
+    assert all(item["severity"] == "advisory" for item in advisories)
 
 
 @pytest.mark.asyncio

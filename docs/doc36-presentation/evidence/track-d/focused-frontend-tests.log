@@ -1,0 +1,12 @@
+
+ RUN  v3.2.7 C:/Users/richi/.codex/worktrees/doc36-tasks/lectio/apps/textbook-agent/frontend
+
+ ✓ src/lib/learn/interactions/local-eval.test.ts (1 test) 4ms
+ ✓ src/lib/learn/interactions/feedback.test.ts (2 tests) 6ms
+ ✓ src/lib/learn/interactions/InteractionShell.test.ts (1 test) 202ms
+
+ Test Files  3 passed (3)
+      Tests  4 passed (4)
+   Start at  18:47:55
+   Duration  27.73s (transform 1.67s, setup 0ms, collect 8.25s, tests 213ms, environment 55.86s, prepare 1.63s)
+

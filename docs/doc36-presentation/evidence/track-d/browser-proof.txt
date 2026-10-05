@@ -1,0 +1,9 @@
+# Track D browser proof — 2026-10-05
+
+Local Vite preview: `http://127.0.0.1:5184/dev/shared-lesson/golden?dev=1`
+
+- Learn golden fixture rendered after the development preview path was made public to the shell guard.
+- Prediction option “The plant captures its growing energy from the light, using its leaves.” was selected; the control showed selected state and the button label was `Lock in my prediction`.
+- After submit, the rendered result showed `Prediction saved. Keep it in mind — Part 2 will test it.` and no `Correct.` or `Not yet` result.
+- Legacy fixture `http://127.0.0.1:5184/dev/shared-lesson/legacy?dev=1` rendered the role-absent task with the legacy `Check` button. Selecting the same answer and submitting showed `Correct.`; this confirms the legacy answer path remains active.
+- The browser AX tree showed the authored prediction prompt, preceding explanatory paragraph, key idea, and check task in order. Print and teacher numbering remain pending the B projection integration.

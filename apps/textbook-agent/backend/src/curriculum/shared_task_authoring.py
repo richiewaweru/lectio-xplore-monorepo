@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from collections.abc import Mapping
 from typing import Any, Literal
 
@@ -41,6 +42,11 @@ class SharedTaskAuthoringError(ValueError):
     """An approved shared-task input or result cannot satisfy the contract."""
 
 
+logger = logging.getLogger(__name__)
+DISPLAY_PROMPT_WORD_TARGET = 25
+FEEDBACK_WORD_TARGET = 40
+
+
 class ApprovedItemSnapshot(BaseModel):
     """Revision-bound approved item records supplied to task authoring."""
 
@@ -59,6 +65,42 @@ class SharedTaskDraftEnvelope(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     tasks: list[SharedTaskDraft] = Field(default_factory=list)
+
+
+def task_presentation_advisories(tasks: list[SharedTaskSpec]) -> list[dict[str, Any]]:
+    """Return non-blocking prompt/feedback target warnings for teacher evidence.
+
+    These targets describe presentation shape only. They never enter the
+    authoring validator or repair loop, and the returned task strings remain
+    byte-for-byte unchanged.
+    """
+    advisories: list[dict[str, Any]] = []
+
+    def check(task: SharedTaskSpec, path: str, value: object, target: int) -> None:
+        if not isinstance(value, str):
+            return
+        actual = len(value.split())
+        if actual > target:
+            advisories.append(
+                {
+                    "task_id": task.id,
+                    "path": path,
+                    "actual_words": actual,
+                    "target_words": target,
+                    "severity": "advisory",
+                }
+            )
+
+    for task in tasks:
+        check(task, "display_prompt", task.display_prompt, DISPLAY_PROMPT_WORD_TARGET)
+        feedback = task.feedback or {}
+        for key, value in feedback.items():
+            if isinstance(value, str):
+                check(task, f"feedback.{key}", value, FEEDBACK_WORD_TARGET)
+            elif isinstance(value, Mapping):
+                for nested_key, nested_value in value.items():
+                    check(task, f"feedback.{key}.{nested_key}", nested_value, FEEDBACK_WORD_TARGET)
+    return advisories
 
 
 def _jsonable(value: Any) -> Any:
@@ -336,7 +378,29 @@ def _definition() -> AuthoringDefinition:
             "use response {type: text} and evaluation {type: accepted_answers, "
             "accepted_answers}, {type: teacher_review, review_guidance}, "
             "{type: exact_match, answer}, or {type: rubric, criteria}. Include only "
-            "fields allowed for the selected response and evaluation types."
+            "fields allowed for the selected response and evaluation types. "
+            "Every task object must include prompt, response, evaluation, "
+            "expected_evidence and difficulty; response and evaluation are required "
+            "objects, never omit them. A complete select-one task has the shape "
+            "{prompt, role?, display_prompt?, response: {type: single_choice, options: [...]}, "
+            "evaluation: {type: exact_match, correct_option_id}, feedback?, option_notes?, "
+            "expected_evidence, difficulty}. "
+            "For every task, write a short display_prompt containing only the question "
+            "the learner should answer; it may omit a repeated scenario from prompt. "
+            "The 25-word display_prompt and 40-word feedback targets are advisory only: "
+            "exceedances must be logged for review and never repaired, truncated, padded, "
+            "or used to change readiness. "
+            "Set role to predict, practice, or check when the learner action supplies "
+            "that role; role may be omitted only for legacy-compatible tasks. For a "
+            "predict task, feedback must contain only saved with a learner-facing "
+            "message that confirms the prediction was recorded and will be revisited; "
+            "never write correct or incorrect prediction feedback. For practice and "
+            "check tasks, correct feedback must explain why the answer is supported and "
+            "incorrect feedback must direct the learner to what to look for without "
+            "giving away the answer. For each declared wrong choice, option_notes may "
+            "contain exactly one concise teacher-facing reason keyed by that option ID; "
+            "never expose option_notes as learner feedback and never add a note for a "
+            "correct choice."
         ),
         payload_schema=SharedTaskDraftEnvelope.model_json_schema(),
         required_inputs=(
@@ -486,9 +550,12 @@ async def author_shared_tasks(
     if [task.id for task in tasks] != expected_ids:
         raise SharedTaskAuthoringError("shared task authoring produced non-canonical task IDs")
     try:
-        return finalize_shared_tasks(plan, tasks, sourcebook=sourcebook)
+        finalized = finalize_shared_tasks(plan, tasks, sourcebook=sourcebook)
     except ValueError as exc:
         raise SharedTaskAuthoringError(str(exc)) from exc
+    for advisory in task_presentation_advisories(finalized):
+        logger.warning("shared task presentation advisory", extra={"advisory": advisory})
+    return finalized
 
 
 __all__ = [
@@ -497,4 +564,5 @@ __all__ = [
     "SharedTaskDraftEnvelope",
     "approved_item_snapshot_hash",
     "author_shared_tasks",
+    "task_presentation_advisories",
 ]

@@ -63,6 +63,7 @@ class SharedDocumentLearnRealization:
 
 
 _DEFAULT_FEEDBACK = {"correct": "Correct.", "incorrect": "Not yet — try again."}
+_DEFAULT_PREDICTION_FEEDBACK = "Prediction saved."
 _DEFAULT_ATTEMPT_POLICY = {
     "max_attempts": None,
     "show_feedback_after_submit": True,
@@ -321,7 +322,15 @@ def _task_contract(
         "kind": interaction_kind,
         "prompt": task.prompt,
         "config": config,
-        "feedback": dict(task.feedback) if task.role is not None and task.feedback else dict(_DEFAULT_FEEDBACK),
+        "feedback": (
+            dict(task.feedback)
+            if task.role is not None and task.feedback
+            else (
+                {"saved": _DEFAULT_PREDICTION_FEEDBACK}
+                if task.role == "predict"
+                else dict(_DEFAULT_FEEDBACK)
+            )
+        ),
         "assessment_mode": "graded" if task.mode == "assessment" else "practice",
         "attempt_policy": dict(_DEFAULT_ATTEMPT_POLICY),
         "completion": dict(_DEFAULT_COMPLETION),

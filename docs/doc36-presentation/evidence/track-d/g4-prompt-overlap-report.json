@@ -1,0 +1,82 @@
+[
+ {
+  "source": "live-run vs sourcebook+plan",
+  "task": "task-predict-light",
+  "display_prompt": "What is the role of light in photosynthesis?",
+  "context_sentences": 5,
+  "repeated_sentences": 1,
+  "ok": true
+ },
+ {
+  "source": "live-run vs sourcebook+plan",
+  "task": "task-practice-carbon",
+  "display_prompt": "Which option correctly identifies the reactants and the carbohydrate product of photosynthesis?",
+  "context_sentences": 5,
+  "repeated_sentences": 0,
+  "ok": true
+ },
+ {
+  "source": "live-run vs sourcebook+plan",
+  "task": "task-check-respiration",
+  "display_prompt": "Which statement best distinguishes photosynthesis from cellular respiration?",
+  "context_sentences": 5,
+  "repeated_sentences": 0,
+  "ok": true
+ },
+ {
+  "source": "golden shared doc vs paragraph above",
+  "task": "task-predict",
+  "display_prompt": "Where does the energy a plant uses to grow come from?",
+  "context_sentences": 4,
+  "repeated_sentences": 0,
+  "ok": true
+ },
+ {
+  "source": "golden shared doc vs paragraph above",
+  "task": "task-check",
+  "display_prompt": "Which observation would best challenge the student's idea?",
+  "context_sentences": 3,
+  "repeated_sentences": 0,
+  "ok": true
+ },
+ {
+  "source": "legacy shared doc vs paragraph above",
+  "task": "task-orient-b2",
+  "display_prompt": "Two pots hold identical soil, are watered the same amount, and stand in the same room at the same temperature. One sits on a sunny windowsill: its seedling is green and leans toward the window. The other is shut in a dark cupboard: its seedling has turned pale and stopped growing. Before we explain anything, commit to your prediction. Where does the energy a plant uses to grow come from?",
+  "context_sentences": 10,
+  "repeated_sentences": 0,
+  "ok": true
+ },
+ {
+  "source": "legacy shared doc vs paragraph above",
+  "task": "task-check-b1",
+  "display_prompt": "A student says, \"Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.\" Which observation would best challenge this idea?",
+  "context_sentences": 5,
+  "repeated_sentences": 0,
+  "ok": true
+ },
+ {
+  "source": "live shared doc vs paragraph above",
+  "task": "task-predict-light",
+  "display_prompt": "What is the role of light in photosynthesis?",
+  "context_sentences": 4,
+  "repeated_sentences": 0,
+  "ok": true
+ },
+ {
+  "source": "live shared doc vs paragraph above",
+  "task": "task-practice-carbon",
+  "display_prompt": "Which option correctly identifies the reactants and the carbohydrate product of photosynthesis?",
+  "context_sentences": 4,
+  "repeated_sentences": 0,
+  "ok": true
+ },
+ {
+  "source": "live shared doc vs paragraph above",
+  "task": "task-check-respiration",
+  "display_prompt": "Which statement best distinguishes photosynthesis from cellular respiration?",
+  "context_sentences": 3,
+  "repeated_sentences": 0,
+  "ok": true
+ }
+]

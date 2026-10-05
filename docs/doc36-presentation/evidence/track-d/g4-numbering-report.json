@@ -1,0 +1,120 @@
+{
+ "documents": {
+  "golden": {
+   "learn": [
+    "Q1",
+    "Q2"
+   ],
+   "print_learner": [
+    "Q1",
+    "Q2"
+   ],
+   "print_teacher_answer_key": [
+    "Q1",
+    "Q2"
+   ],
+   "print_task_metadata": [
+    "Q1",
+    "Q2"
+   ],
+   "learn_detail": [
+    {
+     "q": 1,
+     "node_id": "observe-task-anchor",
+     "interaction": null
+    },
+    {
+     "q": 2,
+     "node_id": "check-task-anchor",
+     "interaction": null
+    }
+   ],
+   "print_anchor_ids": [
+    "observe-task-anchor",
+    "check-task-anchor"
+   ],
+   "match": true
+  },
+  "legacy": {
+   "learn": [
+    "Q1",
+    "Q2"
+   ],
+   "print_learner": [
+    "Q1",
+    "Q2"
+   ],
+   "print_teacher_answer_key": [
+    "Q1",
+    "Q2"
+   ],
+   "print_task_metadata": [
+    "Q1",
+    "Q2"
+   ],
+   "learn_detail": [
+    {
+     "q": 1,
+     "node_id": "shared-task-anchor-7cb468d182fda7b2e968",
+     "interaction": null
+    },
+    {
+     "q": 2,
+     "node_id": "shared-task-anchor-6e75dcdbcc26c575163c",
+     "interaction": null
+    }
+   ],
+   "print_anchor_ids": [
+    "shared-task-anchor-7cb468d182fda7b2e968",
+    "shared-task-anchor-6e75dcdbcc26c575163c"
+   ],
+   "match": true
+  },
+  "live": {
+   "learn": [
+    "Q1",
+    "Q2",
+    "Q3"
+   ],
+   "print_learner": [
+    "Q1",
+    "Q2",
+    "Q3"
+   ],
+   "print_teacher_answer_key": [
+    "Q1",
+    "Q2",
+    "Q3"
+   ],
+   "print_task_metadata": [
+    "Q1",
+    "Q2",
+    "Q3"
+   ],
+   "learn_detail": [
+    {
+     "q": 1,
+     "node_id": "anchor-task-predict-light",
+     "interaction": null
+    },
+    {
+     "q": 2,
+     "node_id": "anchor-task-practice-carbon",
+     "interaction": null
+    },
+    {
+     "q": 3,
+     "node_id": "anchor-task-check-respiration",
+     "interaction": null
+    }
+   ],
+   "print_anchor_ids": [
+    "anchor-task-predict-light",
+    "anchor-task-practice-carbon",
+    "anchor-task-check-respiration"
+   ],
+   "match": true
+  }
+ },
+ "all_match": true
+}

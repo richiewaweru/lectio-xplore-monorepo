@@ -1,0 +1,556 @@
+{
+ "schema_version": 1,
+ "id": "shared-document:g4-live-photosynthesis:revision:1",
+ "revision": 1,
+ "content_hash": "8d9d584eb2b34ea380ed7076ef644dd8dda041c46496b419479a3764c96eb2d4",
+ "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+ "teaching_plan_revision": 1,
+ "teaching_plan_hash": "0993847b4c4d71428592075432e92ea15cca4605c755dd30d25686a3639679be",
+ "title": "How Plants Get the Energy to Grow",
+ "sections": [
+  {
+   "id": "orient",
+   "title": "Two Pots, One Difference",
+   "position": 0,
+   "nodes": [
+    {
+     "id": "observe-paragraph",
+     "teaching_block_id": "observe-paragraph-block",
+     "kind": "paragraph",
+     "display": {
+      "text": "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is **where each pot sits**."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "anchor-task-predict-light",
+     "kind": "task_anchor",
+     "task_spec_id": "task-predict-light",
+     "teaching_block_id": "predict-light",
+     "role": null
+    },
+    {
+     "id": "observe-question",
+     "teaching_block_id": "observe-question-block",
+     "kind": "paragraph",
+     "display": {
+      "text": "A plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question:\n\n**Where does the energy a plant uses to grow actually come from?**"
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "observe-known-heading",
+     "teaching_block_id": "observe-known-heading-block",
+     "kind": "heading",
+     "display": {
+      "text": "What you already know",
+      "level": 3
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "observe-known-list",
+     "teaching_block_id": "observe-known-list-block",
+     "kind": "list",
+     "display": {
+      "ordered": false,
+      "items": [
+       "Plants are living things that need light and water to grow.",
+       "Every living thing needs energy to stay alive."
+      ]
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "observe-answers-heading",
+     "teaching_block_id": "observe-answers-heading-block",
+     "kind": "heading",
+     "display": {
+      "text": "Two possible answers",
+      "level": 3
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "observe-answers-paragraph",
+     "teaching_block_id": "observe-answers-paragraph-block",
+     "kind": "paragraph",
+     "display": {
+      "text": "Where the growing energy comes from is exactly what people disagree about."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "observe-answers-compare",
+     "teaching_block_id": "observe-answers-compare-block",
+     "kind": "compare",
+     "display": {
+      "items": [
+       {
+        "label": "Answer A",
+        "title": "From the soil",
+        "body": "The energy is taken in together with the water the roots draw up."
+       },
+       {
+        "label": "Answer B",
+        "title": "From the light",
+        "body": "The energy is captured from the light by the plant's leaves."
+       }
+      ]
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "observe-prediction-paragraph",
+     "teaching_block_id": "observe-prediction-paragraph-block",
+     "kind": "paragraph",
+     "display": {
+      "text": "Neither answer is settled yet. Take the one you think is more likely and hold it as a **prediction**, not a fact. Evidence, not preference, is what settles a question like this."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "anchor-task-practice-carbon",
+     "kind": "task_anchor",
+     "task_spec_id": "task-practice-carbon",
+     "teaching_block_id": "practice-carbon",
+     "role": null
+    }
+   ],
+   "provenance": {
+    "source_ids": [],
+    "source_hashes": {}
+   }
+  },
+  {
+   "id": "explain",
+   "title": "Where the Growing Energy Comes From",
+   "position": 1,
+   "nodes": [
+    {
+     "id": "explain-key-idea",
+     "teaching_block_id": "explain-key-idea-block",
+     "kind": "callout",
+     "display": {
+      "tone": "important",
+      "title": "Key idea",
+      "body": "The energy a plant grows on is captured from light, not taken in from the soil.",
+      "variant": "key_idea"
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-paragraph-one",
+     "teaching_block_id": "explain-paragraph-one-block",
+     "kind": "paragraph",
+     "display": {
+      "text": "The green parts of a plant \u2014 mostly its leaves \u2014 absorb **light energy**. The leaf uses that energy to make the plant's own **food**: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-equation",
+     "teaching_block_id": "explain-equation-block",
+     "kind": "equation",
+     "display": {
+      "label": "In one line",
+      "inputs": [
+       "water",
+       "carbon dioxide (CO~2~)"
+      ],
+      "condition": "light energy",
+      "outputs": [
+       "sugar (the plant's food)"
+      ]
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-paragraph-two",
+     "teaching_block_id": "explain-paragraph-two-block",
+     "kind": "paragraph",
+     "display": {
+      "text": "The energy stored inside that sugar is what the plant spends on building new leaves, stem and roots."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-steps-heading",
+     "teaching_block_id": "explain-steps-heading-block",
+     "kind": "heading",
+     "display": {
+      "text": "Follow the energy, step by step",
+      "level": 3
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-steps",
+     "teaching_block_id": "explain-steps-block",
+     "kind": "list",
+     "display": {
+      "ordered": true,
+      "items": [
+       "Sunlight reaches the leaf.",
+       "The leaf's green parts capture that light energy.",
+       "The captured energy is used to build sugar from water and carbon dioxide. The energy is now stored inside food the plant has made for itself.",
+       "The plant breaks some of that sugar down again and uses the released energy to build new leaves, stem and roots. That is growth."
+      ]
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-misconception",
+     "teaching_block_id": "explain-misconception-block",
+     "kind": "callout",
+     "display": {
+      "tone": "note",
+      "title": "Notice two things",
+      "body": "The energy enters the plant through the leaf, never through the soil. The only things arriving from the soil are water and dissolved minerals. Leaf area can be measured in m^2^.",
+      "variant": "note"
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-soil-heading",
+     "teaching_block_id": "explain-soil-heading-block",
+     "kind": "heading",
+     "display": {
+      "text": "So what is the soil for?",
+      "level": 3
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-paragraph",
+     "teaching_block_id": "explain-paragraph-block",
+     "kind": "paragraph",
+     "display": {
+      "text": "Soil does a real job. It holds the plant firmly in place, and it holds water and dissolved minerals, which the roots take in and which then travel up to the leaves. Minerals are raw materials. They are not food, and they carry no usable energy."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-table",
+     "teaching_block_id": "explain-table-block",
+     "kind": "table",
+     "display": {
+      "headers": [
+       "What the plant takes in",
+       "Where from",
+       "Is it energy?"
+      ],
+      "rows": [
+       [
+        "Water",
+        "Soil, through the roots",
+        "No. A raw material for making sugar."
+       ],
+       [
+        "Dissolved minerals",
+        "Soil, through the roots",
+        "No. Raw materials for building the plant's body."
+       ],
+       [
+        "Light",
+        "Captured by the leaves",
+        "Yes. It ends up stored in sugar."
+       ]
+      ],
+      "caption": ""
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "explain-closing",
+     "teaching_block_id": "explain-closing-block",
+     "kind": "paragraph",
+     "display": {
+      "text": "So a plant standing in rich soil with plenty of water, but kept in the dark, cannot make its own food and cannot grow, however well watered it is."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    }
+   ],
+   "provenance": {
+    "source_ids": [],
+    "source_hashes": {}
+   }
+  },
+  {
+   "id": "contrast",
+   "title": "Two Beliefs That Fail the Evidence",
+   "position": 2,
+   "nodes": [
+    {
+     "id": "contrast-belief",
+     "teaching_block_id": "contrast-belief-block",
+     "kind": "callout",
+     "display": {
+      "tone": "warning",
+      "title": "Common belief 1",
+      "variant": "misconception",
+      "belief": "*The soil feeds the plant. A plant kept in the dark will keep growing as long as it is watered.*",
+      "evidence": "Both pots held the same soil and got the same water. If the soil were supplying food and energy, the cupboard plant should have grown just as well. It stopped growing and turned pale.",
+      "conclusion": "Soil supplies only water and dissolved minerals. The plant's food is made in its own leaves, using light energy.",
+      "aside": "Why did the cupboard plant keep going for a while? It was living on food it had already made and stored. Once that store ran down, it stopped growing and lost its green colour."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "contrast-belief-two",
+     "teaching_block_id": "contrast-belief-two-block",
+     "kind": "callout",
+     "display": {
+      "tone": "warning",
+      "title": "Common belief 2",
+      "variant": "misconception",
+      "belief": "Light only keeps a plant warm or makes it look healthy. The energy for growth comes from the water and the minerals.",
+      "evidence": "Both pots stood in the same room at the same temperature. The cupboard was not cold, so the cupboard plant lacked no warmth. It still did not grow.",
+      "conclusion": "Light is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    }
+   ],
+   "provenance": {
+    "source_ids": [],
+    "source_hashes": {}
+   }
+  },
+  {
+   "id": "check",
+   "title": "Which Observation Challenges the Soil Idea?",
+   "position": 3,
+   "nodes": [
+    {
+     "id": "check-quote",
+     "teaching_block_id": "check-quote-block",
+     "kind": "quote",
+     "display": {
+      "text": "Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.",
+      "attribution": "A student says"
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "check-paragraph",
+     "teaching_block_id": "check-paragraph-block",
+     "kind": "paragraph",
+     "display": {
+      "text": "That claim is wrong. The strong move is not to repeat the explanation, but to point to **evidence the claim cannot explain**."
+     },
+     "accessibility": {
+      "description": ""
+     }
+    },
+    {
+     "id": "anchor-task-check-respiration",
+     "kind": "task_anchor",
+     "task_spec_id": "task-check-respiration",
+     "teaching_block_id": "check-respiration",
+     "role": null
+    }
+   ],
+   "provenance": {
+    "source_ids": [],
+    "source_hashes": {}
+   }
+  }
+ ],
+ "tasks": [
+  {
+   "id": "task-predict-light",
+   "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+   "teaching_plan_revision": 1,
+   "teaching_plan_hash": "0993847b4c4d71428592075432e92ea15cca4605c755dd30d25686a3639679be",
+   "teaching_block_id": "predict-light",
+   "mode": "formative",
+   "action": "select-one",
+   "purpose": "Surface a prediction before explanation",
+   "prompt": "Based on the sourcebook evidence, what is the role of light in photosynthesis?",
+   "role": "predict",
+   "display_prompt": "What is the role of light in photosynthesis?",
+   "difficulty": "guided",
+   "sourcebook_refs": [
+    "plant-light"
+   ],
+   "expected_evidence": "Learner selects the role that matches the source evidence.",
+   "response": {
+    "type": "single_choice",
+    "options": [
+     {
+      "id": "light-captured",
+      "text": "Light energy is captured by chloroplasts and used to make food."
+     },
+     {
+      "id": "light-not-used",
+      "text": "Light is not involved; roots provide the energy for food production."
+     },
+     {
+      "id": "light-heats",
+      "text": "Light only heats the plant; it is not captured for food production."
+     }
+    ]
+   },
+   "evaluation": {
+    "type": "exact_match",
+    "correct_option_id": "light-captured"
+   },
+   "feedback": {
+    "saved": "Your prediction has been recorded and will be revisited as we explore how plants use light."
+   },
+   "option_notes": {
+    "light-not-used": "Ignores chloroplast light capture and misattributes energy to roots.",
+    "light-heats": "Treats light as heat rather than captured energy."
+   },
+   "approved_source_ids": []
+  },
+  {
+   "id": "task-practice-carbon",
+   "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+   "teaching_plan_revision": 1,
+   "teaching_plan_hash": "0993847b4c4d71428592075432e92ea15cca4605c755dd30d25686a3639679be",
+   "teaching_block_id": "practice-carbon",
+   "mode": "formative",
+   "action": "select-one",
+   "purpose": "Connect the equation to meaning",
+   "prompt": "According to the photosynthesis equation, which substances are the reactants and which is the main carbohydrate product?",
+   "role": "practice",
+   "display_prompt": "Which option correctly identifies the reactants and the carbohydrate product of photosynthesis?",
+   "difficulty": "guided",
+   "sourcebook_refs": [
+    "photosynthesis-equation"
+   ],
+   "expected_evidence": "Learner identifies carbon dioxide and glucose in the process.",
+   "response": {
+    "type": "single_choice",
+    "options": [
+     {
+      "id": "co2-water-to-glucose",
+      "text": "Reactants: carbon dioxide and water; product: glucose"
+     },
+     {
+      "id": "glucose-water-to-co2",
+      "text": "Reactants: glucose and water; product: carbon dioxide"
+     },
+     {
+      "id": "oxygen-water-to-glucose",
+      "text": "Reactants: oxygen and water; product: glucose"
+     }
+    ]
+   },
+   "evaluation": {
+    "type": "exact_match",
+    "correct_option_id": "co2-water-to-glucose"
+   },
+   "feedback": {
+    "correct": "Correct. The equation shows carbon dioxide and water combining with light to produce glucose and oxygen.",
+    "incorrect": "Look at the photosynthesis equation and identify what goes into the reaction and what carbohydrate is produced."
+   },
+   "option_notes": {
+    "glucose-water-to-co2": "Reverses the overall process; glucose is a product, not a reactant.",
+    "oxygen-water-to-glucose": "Oxygen is released as a byproduct, not consumed as a reactant."
+   },
+   "approved_source_ids": []
+  },
+  {
+   "id": "task-check-respiration",
+   "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+   "teaching_plan_revision": 1,
+   "teaching_plan_hash": "0993847b4c4d71428592075432e92ea15cca4605c755dd30d25686a3639679be",
+   "teaching_block_id": "check-respiration",
+   "mode": "assessment",
+   "action": "select-one",
+   "purpose": "Check the causal distinction",
+   "prompt": "Which statement distinguishes photosynthesis from cellular respiration?",
+   "role": "check",
+   "display_prompt": "Which statement best distinguishes photosynthesis from cellular respiration?",
+   "difficulty": "independent",
+   "sourcebook_refs": [
+    "respiration-energy"
+   ],
+   "expected_evidence": "Learner distinguishes glucose-making from glucose-breaking.",
+   "response": {
+    "type": "single_choice",
+    "options": [
+     {
+      "id": "photosynthesis-stores-respiration-releases",
+      "text": "Photosynthesis stores light energy in glucose, while cellular respiration breaks down glucose to release usable energy."
+     },
+     {
+      "id": "both-release-energy",
+      "text": "Both processes break down glucose to release usable energy."
+     },
+     {
+      "id": "respiration-stores-photosynthesis-releases",
+      "text": "Cellular respiration stores light energy in glucose, while photosynthesis releases energy from glucose."
+     }
+    ]
+   },
+   "evaluation": {
+    "type": "exact_match",
+    "correct_option_id": "photosynthesis-stores-respiration-releases"
+   },
+   "feedback": {
+    "correct": "Correct. Photosynthesis builds glucose and stores energy, while respiration breaks glucose down to release energy carried by ATP.",
+    "incorrect": "Compare the overall inputs and outputs of each process: one stores energy in glucose, the other releases it."
+   },
+   "option_notes": {
+    "both-release-energy": "Ignores that photosynthesis stores energy rather than releasing it.",
+    "respiration-stores-photosynthesis-releases": "Reverses the roles of the two processes."
+   },
+   "approved_source_ids": [
+    "approved-resp-q"
+   ]
+  }
+ ],
+ "provenance": {
+  "source_ids": [],
+  "source_hashes": {}
+ },
+ "created_at": "2026-10-05T08:00:00Z",
+ "diagnostics": []
+}

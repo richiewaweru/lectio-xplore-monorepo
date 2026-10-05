@@ -413,20 +413,35 @@ def evaluate_interaction(contract: Mapping[str, Any], response: Any) -> Evaluati
     response_map = response if isinstance(response, dict) else {}
 
     if kind in {"choice", "image-hotspot"}:
-        return evaluate_choice(config, response_map, feedback)
-    if kind == "multi-select":
-        return evaluate_multi_select(config, response_map, feedback)
-    if kind == "fill-blank":
-        return evaluate_fill_blank(config, response_map, feedback)
-    if kind == "numeric":
-        return evaluate_numeric(config, response_map, feedback)
-    if kind == "short-response":
-        return evaluate_short_response(config, response_map, feedback)
-    if kind in {"match-pairs", "classify", "drag-label"}:
-        return evaluate_match_pairs(config, response_map, feedback)
-    if kind == "sequence":
-        return evaluate_sequence(config, response_map, feedback)
-    raise InteractionConfigError(f"Unsupported interaction kind: {kind}")
+        result = evaluate_choice(config, response_map, feedback)
+    elif kind == "multi-select":
+        result = evaluate_multi_select(config, response_map, feedback)
+    elif kind == "fill-blank":
+        result = evaluate_fill_blank(config, response_map, feedback)
+    elif kind == "numeric":
+        result = evaluate_numeric(config, response_map, feedback)
+    elif kind == "short-response":
+        result = evaluate_short_response(config, response_map, feedback)
+    elif kind in {"match-pairs", "classify", "drag-label"}:
+        result = evaluate_match_pairs(config, response_map, feedback)
+    elif kind == "sequence":
+        result = evaluate_sequence(config, response_map, feedback)
+    else:
+        raise InteractionConfigError(f"Unsupported interaction kind: {kind}")
+
+    # A prediction still validates the submitted response, but it is an
+    # ungraded commitment. Reuse the existing pending-review representation so
+    # no learner-facing right/wrong state or score is produced.
+    if contract.get("role") == "predict":
+        saved = str(feedback.get("saved") or "Prediction saved.")
+        return EvaluationResult(
+            outcome="pending-review",
+            score_earned=0.0,
+            score_possible=0.0,
+            feedback=saved,
+            details={"mode": "prediction"},
+        )
+    return result
 
 
 def is_complete(result: EvaluationResult, rule: Mapping[str, Any] | None) -> bool:
@@ -476,11 +491,17 @@ def contract_from_v2_node(node: Mapping[str, Any]) -> dict[str, Any]:
             "attempt_policy": node.get("attempt_policy"),
             "assessment_mode": node.get("assessment_mode"),
             "completion": node.get("completion"),
+            "role": node.get("role"),
+            "display_prompt": node.get("display_prompt"),
+            "option_notes": node.get("option_notes"),
         }
     else:
         contract = dict(contract)
         contract.setdefault("id", node.get("id"))
         contract.setdefault("kind", node.get("interaction_type"))
+        for field in ("role", "display_prompt", "option_notes"):
+            if field not in contract and node.get(field) is not None:
+                contract[field] = node[field]
     return contract
 
 

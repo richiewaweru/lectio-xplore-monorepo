@@ -1,0 +1,320 @@
+{
+  "run_id": "g4-d-live-photosynthesis-20261005-1852",
+  "mode": "prompted_json",
+  "teaching_plan": {
+    "arc": "Connect light capture, carbon input, and cellular energy release.",
+    "anchor_usage": [],
+    "misconception_focus_ids": [],
+    "sections": [
+      {
+        "slot_id": "photosynthesis-sequence",
+        "specific_purpose": "Build a causal model from light capture to energy release.",
+        "transition": null,
+        "blocks": [
+          {
+            "id": "predict-light",
+            "position": 1,
+            "intent": "predict",
+            "brief": "Predict the role of light in plant food production.",
+            "evidence_refs": [],
+            "evidence": "Learner predicts the role of light.",
+            "departure_reason": null,
+            "source_question_ids": [],
+            "task_mode": "formative",
+            "sourcebook_needs": [],
+            "sourcebook_refs": [
+              "plant-light"
+            ],
+            "stimulus_dependencies": [],
+            "learner_action": {
+              "action": "select-one",
+              "target": "the role of light in photosynthesis",
+              "purpose": "Surface a prediction before explanation",
+              "expected_evidence": "Learner selects the role that matches the source evidence.",
+              "difficulty": "guided"
+            }
+          },
+          {
+            "id": "practice-carbon",
+            "position": 2,
+            "intent": "practice",
+            "brief": "Practice the reactants and products of photosynthesis.",
+            "evidence_refs": [],
+            "evidence": "Learner identifies the carbon input and sugar product.",
+            "departure_reason": null,
+            "source_question_ids": [],
+            "task_mode": "formative",
+            "sourcebook_needs": [],
+            "sourcebook_refs": [
+              "photosynthesis-equation"
+            ],
+            "stimulus_dependencies": [],
+            "learner_action": {
+              "action": "select-one",
+              "target": "the reactants and products of photosynthesis",
+              "purpose": "Connect the equation to meaning",
+              "expected_evidence": "Learner identifies carbon dioxide and glucose in the process.",
+              "difficulty": "guided"
+            }
+          },
+          {
+            "id": "check-respiration",
+            "position": 3,
+            "intent": "check",
+            "brief": "Check the distinction between photosynthesis and cellular respiration.",
+            "evidence_refs": [],
+            "evidence": "Learner distinguishes energy capture from energy release.",
+            "departure_reason": null,
+            "source_question_ids": [
+              "approved-resp-q"
+            ],
+            "task_mode": "assessment",
+            "sourcebook_needs": [],
+            "sourcebook_refs": [
+              "respiration-energy"
+            ],
+            "stimulus_dependencies": [],
+            "learner_action": {
+              "action": "select-one",
+              "target": "the relationship between photosynthesis and respiration",
+              "purpose": "Check the causal distinction",
+              "expected_evidence": "Learner distinguishes glucose-making from glucose-breaking.",
+              "difficulty": "independent"
+            }
+          }
+        ],
+        "display_title": "Photosynthesis and respiration",
+        "entry_state": [
+          "Learner can name sunlight as an energy source."
+        ],
+        "must_establish": [
+          "Learner can trace carbon and energy through the two processes."
+        ],
+        "avoid_repeating": [],
+        "bridge_from_previous": null,
+        "exit_state": [
+          "Learner can explain photosynthesis and distinguish it from respiration."
+        ]
+      }
+    ],
+    "contract_version": 2,
+    "learner_title": "How plants turn light into usable energy",
+    "starting_state": [
+      "Learner can name sunlight as an energy source."
+    ],
+    "target_state": [
+      "Learner can explain photosynthesis and distinguish it from respiration."
+    ],
+    "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+    "revision": 1,
+    "preparation_hash": null,
+    "approval_status": "approved"
+  },
+  "sourcebook": {
+    "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+    "teaching_plan_revision": 1,
+    "teaching_plan_hash": "0993847b4c4d71428592075432e92ea15cca4605c755dd30d25686a3639679be",
+    "entries": [
+      {
+        "id": "plant-light",
+        "type": "fact_set",
+        "purpose": "Ground the role of light and chloroplasts.",
+        "content": {
+          "facts": [
+            "Green plants capture light energy in chloroplasts.",
+            "Roots absorb water and minerals; soil is not the chemical energy source."
+          ]
+        },
+        "provenance_refs": [
+          "OpenStax Biology 2e 8.1"
+        ]
+      },
+      {
+        "id": "photosynthesis-equation",
+        "type": "definition",
+        "purpose": "Ground the photosynthesis transformation.",
+        "content": {
+          "definition": "Photosynthesis uses light to combine carbon dioxide and water into glucose and releases oxygen.",
+          "equation": "6CO2 + 6H2O + light -> C6H12O6 + 6O2"
+        },
+        "provenance_refs": [
+          "OpenStax Biology 2e 8.2"
+        ]
+      },
+      {
+        "id": "respiration-energy",
+        "type": "comparison_case",
+        "purpose": "Ground the contrast with cellular respiration.",
+        "content": {
+          "photosynthesis": "stores light energy in glucose",
+          "respiration": "breaks glucose with oxygen and releases usable energy carried by ATP"
+        },
+        "provenance_refs": [
+          "OpenStax Biology 2e 7.3"
+        ]
+      }
+    ]
+  },
+  "approved_item_snapshot": {
+    "schema_version": 1,
+    "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+    "teaching_plan_revision": 1,
+    "teaching_plan_hash": "0993847b4c4d71428592075432e92ea15cca4605c755dd30d25686a3639679be",
+    "items": {
+      "approved-resp-q": {
+        "id": "approved-resp-q",
+        "prompt": "Which statement distinguishes photosynthesis from cellular respiration?",
+        "source": "OpenStax Biology 2e 7.3 and 8.2"
+      }
+    }
+  },
+  "provider": "live DeepSeek prompted JSON",
+  "status": "accepted",
+  "tasks": [
+    {
+      "id": "task-predict-light",
+      "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+      "teaching_plan_revision": 1,
+      "teaching_plan_hash": "0993847b4c4d71428592075432e92ea15cca4605c755dd30d25686a3639679be",
+      "teaching_block_id": "predict-light",
+      "mode": "formative",
+      "action": "select-one",
+      "purpose": "Surface a prediction before explanation",
+      "prompt": "Based on the sourcebook evidence, what is the role of light in photosynthesis?",
+      "role": "predict",
+      "display_prompt": "What is the role of light in photosynthesis?",
+      "difficulty": "guided",
+      "sourcebook_refs": [
+        "plant-light"
+      ],
+      "expected_evidence": "Learner selects the role that matches the source evidence.",
+      "response": {
+        "type": "single_choice",
+        "options": [
+          {
+            "id": "light-captured",
+            "text": "Light energy is captured by chloroplasts and used to make food."
+          },
+          {
+            "id": "light-not-used",
+            "text": "Light is not involved; roots provide the energy for food production."
+          },
+          {
+            "id": "light-heats",
+            "text": "Light only heats the plant; it is not captured for food production."
+          }
+        ]
+      },
+      "evaluation": {
+        "type": "exact_match",
+        "correct_option_id": "light-captured"
+      },
+      "feedback": {
+        "saved": "Your prediction has been recorded and will be revisited as we explore how plants use light."
+      },
+      "option_notes": {
+        "light-not-used": "Ignores chloroplast light capture and misattributes energy to roots.",
+        "light-heats": "Treats light as heat rather than captured energy."
+      },
+      "approved_source_ids": []
+    },
+    {
+      "id": "task-practice-carbon",
+      "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+      "teaching_plan_revision": 1,
+      "teaching_plan_hash": "0993847b4c4d71428592075432e92ea15cca4605c755dd30d25686a3639679be",
+      "teaching_block_id": "practice-carbon",
+      "mode": "formative",
+      "action": "select-one",
+      "purpose": "Connect the equation to meaning",
+      "prompt": "According to the photosynthesis equation, which substances are the reactants and which is the main carbohydrate product?",
+      "role": "practice",
+      "display_prompt": "Which option correctly identifies the reactants and the carbohydrate product of photosynthesis?",
+      "difficulty": "guided",
+      "sourcebook_refs": [
+        "photosynthesis-equation"
+      ],
+      "expected_evidence": "Learner identifies carbon dioxide and glucose in the process.",
+      "response": {
+        "type": "single_choice",
+        "options": [
+          {
+            "id": "co2-water-to-glucose",
+            "text": "Reactants: carbon dioxide and water; product: glucose"
+          },
+          {
+            "id": "glucose-water-to-co2",
+            "text": "Reactants: glucose and water; product: carbon dioxide"
+          },
+          {
+            "id": "oxygen-water-to-glucose",
+            "text": "Reactants: oxygen and water; product: glucose"
+          }
+        ]
+      },
+      "evaluation": {
+        "type": "exact_match",
+        "correct_option_id": "co2-water-to-glucose"
+      },
+      "feedback": {
+        "correct": "Correct. The equation shows carbon dioxide and water combining with light to produce glucose and oxygen.",
+        "incorrect": "Look at the photosynthesis equation and identify what goes into the reaction and what carbohydrate is produced."
+      },
+      "option_notes": {
+        "glucose-water-to-co2": "Reverses the overall process; glucose is a product, not a reactant.",
+        "oxygen-water-to-glucose": "Oxygen is released as a byproduct, not consumed as a reactant."
+      },
+      "approved_source_ids": []
+    },
+    {
+      "id": "task-check-respiration",
+      "teaching_plan_id": "g4-photosynthesis-20261005-1852",
+      "teaching_plan_revision": 1,
+      "teaching_plan_hash": "0993847b4c4d71428592075432e92ea15cca4605c755dd30d25686a3639679be",
+      "teaching_block_id": "check-respiration",
+      "mode": "assessment",
+      "action": "select-one",
+      "purpose": "Check the causal distinction",
+      "prompt": "Which statement distinguishes photosynthesis from cellular respiration?",
+      "role": "check",
+      "display_prompt": "Which statement best distinguishes photosynthesis from cellular respiration?",
+      "difficulty": "independent",
+      "sourcebook_refs": [
+        "respiration-energy"
+      ],
+      "expected_evidence": "Learner distinguishes glucose-making from glucose-breaking.",
+      "response": {
+        "type": "single_choice",
+        "options": [
+          {
+            "id": "photosynthesis-stores-respiration-releases",
+            "text": "Photosynthesis stores light energy in glucose, while cellular respiration breaks down glucose to release usable energy."
+          },
+          {
+            "id": "both-release-energy",
+            "text": "Both processes break down glucose to release usable energy."
+          },
+          {
+            "id": "respiration-stores-photosynthesis-releases",
+            "text": "Cellular respiration stores light energy in glucose, while photosynthesis releases energy from glucose."
+          }
+        ]
+      },
+      "evaluation": {
+        "type": "exact_match",
+        "correct_option_id": "photosynthesis-stores-respiration-releases"
+      },
+      "feedback": {
+        "correct": "Correct. Photosynthesis builds glucose and stores energy, while respiration breaks glucose down to release energy carried by ATP.",
+        "incorrect": "Compare the overall inputs and outputs of each process: one stores energy in glucose, the other releases it."
+      },
+      "option_notes": {
+        "both-release-energy": "Ignores that photosynthesis stores energy rather than releasing it.",
+        "respiration-stores-photosynthesis-releases": "Reverses the roles of the two processes."
+      },
+      "approved_source_ids": [
+        "approved-resp-q"
+      ]
+    }
+  ]
+}

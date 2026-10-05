@@ -12,7 +12,8 @@
 		evalNumeric,
 		evalPairs,
 		evalSequence,
-		evalShortResponse
+		evalShortResponse,
+		savePrediction
 	} from './local-eval';
 	import type { InteractionSubmitHandler, ServerEvaluation } from './types';
 	import InlineMarkup from '$lib/learn/document/renderers/InlineMarkup.svelte';
@@ -37,7 +38,7 @@
 	const role = $derived(node.role ?? (node.assessment_mode === 'practice' ? 'practice' : 'check'));
 	const submitLabel = $derived(role === 'predict' ? 'Lock in my prediction' : 'Check my answer');
 	const config = $derived((node.config ?? {}) as Record<string, unknown>);
-	const feedback = $derived(normalizeFeedback(node.feedback));
+	const feedback = $derived(normalizeFeedback(node.feedback, role));
 	const type = $derived(node.interaction_type as InteractionType);
 	const modeLabel = $derived(
 		role === 'predict' ? 'Prediction — not marked' : role === 'practice' ? 'Practice' : type === 'choice' ? 'Check — choose one' : 'Check'
@@ -64,7 +65,7 @@
 	$effect(() => {
 		if (initialEvaluation) {
 			submitted = true;
-			serverResult = initialEvaluation;
+			serverResult = role === 'predict' ? savePrediction(feedback) : initialEvaluation;
 		}
 	});
 
@@ -157,6 +158,7 @@
 	const display = $derived.by((): ServerEvaluation | null => {
 		if (serverResult) return serverResult;
 		if (!submitted || onSubmit) return null;
+		if (role === 'predict') return savePrediction(feedback);
 		switch (type) {
 			case 'choice':
 				return selectedOne
@@ -223,7 +225,8 @@
 		if (onSubmit) {
 			submitting = true;
 			try {
-				serverResult = await onSubmit(buildResponse());
+				const result = await onSubmit(buildResponse());
+				serverResult = role === 'predict' ? savePrediction(feedback) : result;
 				submitted = true;
 			} catch (err) {
 				error = err instanceof Error ? err.message : 'Submit failed';

@@ -1,0 +1,6 @@
+g4-d-live-photosynthesis-20261005-1852-json.json task-predict-light saved 'Your prediction has been recorded and will be revisited as we explore how plants use light.' ok (not legacy generic string)
+g4-d-live-photosynthesis-20261005-1852-json.json task-practice-carbon correct 'Correct. The equation shows carbon dioxide and water combining with light to produce glucose and oxygen.' ok (not legacy generic string)
+g4-d-live-photosynthesis-20261005-1852-json.json task-practice-carbon incorrect 'Look at the photosynthesis equation and identify what goes into the reaction and what carbohydrate is produced.' ok (not legacy generic string)
+g4-d-live-photosynthesis-20261005-1852-json.json task-check-respiration correct 'Correct. Photosynthesis builds glucose and stores energy, while respiration breaks glucose down to release energy carried by ATP.' ok (not legacy generic string)
+g4-d-live-photosynthesis-20261005-1852-json.json task-check-respiration incorrect 'Compare the overall inputs and outputs of each process: one stores energy in glucose, the other releases it.' ok (not legacy generic string)
+raw occurrences of exact feedback value "Correct.": 0 ; "Not yet" anywhere: 0
