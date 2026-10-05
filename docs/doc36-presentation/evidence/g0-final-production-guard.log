@@ -1,0 +1,4 @@
+STATUS=200 URL=http://127.0.0.1:4175/
+STATUS=404 URL=http://127.0.0.1:4175/dev/shared-lesson/golden
+STATUS=404 URL=http://127.0.0.1:4175/dev/shared-lesson-asset/seedlings.svg
+EXIT_CODE=0
