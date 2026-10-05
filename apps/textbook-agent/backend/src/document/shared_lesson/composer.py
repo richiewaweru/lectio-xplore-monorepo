@@ -15,7 +15,16 @@ from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSecti
 
 #: Figures are placed by code from the Teaching Plan visual spec; the composer
 #: never chooses one.
-OrdinaryNodeKind = Literal["paragraph", "heading", "list", "table", "callout"]
+OrdinaryNodeKind = Literal[
+    "paragraph",
+    "heading",
+    "list",
+    "table",
+    "callout",
+    "equation",
+    "quote",
+    "compare",
+]
 SemanticRole = Literal[
     "bridge",
     "explanation",
@@ -50,7 +59,18 @@ class SectionCompositionDraft(_ClosedModel):
 
 class CompositionItem(_ClosedModel):
     id: str = Field(min_length=1)
-    kind: Literal["paragraph", "heading", "list", "figure", "table", "callout", "task_anchor"]
+    kind: Literal[
+        "paragraph",
+        "heading",
+        "list",
+        "figure",
+        "table",
+        "callout",
+        "equation",
+        "quote",
+        "compare",
+        "task_anchor",
+    ]
     teaching_block_id: str = Field(min_length=1)
     semantic_role: SemanticRole | None = None
     task_spec_id: str | None = None
@@ -68,9 +88,8 @@ class CompositionItem(_ClosedModel):
 class SectionCompositionPlan(_ClosedModel):
     section_slot_id: str = Field(min_length=1)
     items: tuple[CompositionItem, ...] = Field(min_length=1)
-    #: Soft-issue (code, sanitized path) pairs accepted and auto-fixed rather
-    #: than failed. Every code here is a member of ``SOFT_COMPOSITION_ISSUE_CODES``;
-    #: never provider output or learner text.
+    #: Shape findings accepted as advisory records. Every code here is a member
+    #: of ``SOFT_COMPOSITION_ISSUE_CODES``; never provider output or learner text.
     warnings: tuple[tuple[str, str], ...] = Field(default=(), exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
@@ -116,8 +135,9 @@ COMPOSITION_ISSUE_CODES = frozenset(
     }
 )
 
-#: HARD issue codes always fail closed: raise, drive at most one bounded
-#: repair call, and fail the WorkItem if the repair does not clear them.
+#: HARD issue codes protect the accepted document contract. Shape targets such
+#: as counts, runs, and preferred forms remain advisory and never trigger a
+#: repair or alter the provider's chosen content.
 HARD_COMPOSITION_ISSUE_CODES = frozenset(
     {
         "duplicate_block_ids",
@@ -133,10 +153,8 @@ HARD_COMPOSITION_ISSUE_CODES = frozenset(
     }
 )
 
-#: SOFT issue codes still drive the one bounded repair call, but if that is
-#: the only kind of issue left afterward, the composer deterministically
-#: auto-fixes and accepts the result instead of failing forever, recording a
-#: warning rather than dropping the condition silently.
+#: Advisory findings are persisted on the section plan and in telemetry. They
+#: never drive a repair call or rewrite a provider choice.
 SOFT_COMPOSITION_ISSUE_CODES = COMPOSITION_ISSUE_CODES - HARD_COMPOSITION_ISSUE_CODES
 
 _MAX_COMPOSITION_PATH_LENGTH = 80
@@ -190,7 +208,10 @@ _KIND_ROLES: dict[str, set[str]] = {
     "heading": {"subsection"},
     "list": {"sequence", "evidence"},
     "table": {"comparison", "evidence"},
-    "callout": {"misconception", "safety_guidance"},
+    "callout": {"explanation", "summary", "misconception", "safety_guidance"},
+    "equation": {"worked_example", "explanation", "sequence"},
+    "quote": {"interpretation", "evidence", "misconception"},
+    "compare": {"comparison"},
 }
 #: Role of the code-inserted figure item for a block that carries a visual spec.
 _FIGURE_ROLE: SemanticRole = "visual_model"
@@ -198,6 +219,9 @@ _SUBSECTION_CUES = ("subsection", "subtopic", "case study", "phase", "stage", "c
 _KIND_CUES: dict[str, tuple[str, ...]] = {
     "table": ("compare", "contrast", "relationship", "data", "evidence"),
     "list": ("sequence", "step", "stage", "set", "category", "example", "evidence", "sort"),
+    "equation": ("equation", "formula", "input", "output", "process", "calculate"),
+    "quote": ("claim", "quote", "says", "assert"),
+    "compare": ("compare", "contrast", "alternative", "option", "rival"),
 }
 
 
@@ -225,7 +249,15 @@ def _has_genuine_subsection_cue(block: TeachingPlanBlock) -> bool:
     return any(cue in text for cue in _SUBSECTION_CUES)
 
 
-_CALLOUT_CUES = ("misconception", "mistake", "warning", "safety", "caution")
+_CALLOUT_CUES = (
+    "key idea",
+    "explain",
+    "misconception",
+    "mistake",
+    "warning",
+    "safety",
+    "caution",
+)
 
 
 def _eligible_non_paragraph_kinds(block: TeachingPlanBlock) -> tuple[tuple[str, str], ...]:
@@ -255,19 +287,6 @@ def _format_eligible_kinds(block_id: str, eligible: Sequence[tuple[str, str]]) -
     return f"block {block_id!r} is eligible for {parts}"
 
 
-def _paragraph_run_guidance(run_blocks: Sequence[TeachingPlanBlock]) -> str:
-    descriptions = [
-        _format_eligible_kinds(block.id, _eligible_non_paragraph_kinds(block))
-        for block in run_blocks
-    ]
-    return (
-        " "
-        + "; ".join(descriptions)
-        + ". Merging two consecutive blocks' content into fewer paragraphs is not"
-        " allowed; each block needs at least one ordinary node."
-    )
-
-
 def _kind_missing_cue_guidance(block: TeachingPlanBlock) -> str:
     eligible = _eligible_non_paragraph_kinds(block)
     return " " + _format_eligible_kinds(block.id, eligible) + "; paragraph is always eligible."
@@ -293,21 +312,20 @@ def _evaluate_composition(
 ]:
     """One deterministic pass over ``draft_items``.
 
-    When ``soft_bounds`` is False every ceiling/run check fails closed at its
-    original threshold (this is the strict, backward-compatible pass). When
-    ``soft_bounds`` is True, three specific soft checks (paragraph runs, and
-    the per-block/section node ceilings) accept a single unit of overage as a
-    recorded warning and only fail closed beyond that -- everything else
-    (including HARD codes such as ``kind_role_mismatch``) is unaffected by
-    ``soft_bounds`` and always fails closed.
+    ``soft_bounds`` is retained for compatibility with persisted callers.
+    All shaping findings are advisory on every pass; only identity, schema,
+    and contract violations are returned as errors.
     """
     errors: list[str] = []
     issues: list[tuple[str, str]] = []
     warnings: list[tuple[str, str]] = []
 
     def _fail(code: str, path: str, message: str) -> None:
-        errors.append(message)
-        issues.append((code, path))
+        if code in HARD_COMPOSITION_ISSUE_CODES:
+            errors.append(message)
+            issues.append((code, path))
+        else:
+            warnings.append((code, path))
 
     def _warn(code: str, path: str) -> None:
         warnings.append((code, path))
@@ -316,9 +334,8 @@ def _evaluate_composition(
     last_block_index = -1
     ordinary_count = 0
     paragraph_run = 0
-    paragraph_run_block_ids: list[str] = []
-    paragraph_run_warned = False
     callout_count = 0
+    callout_choice_paths: list[str] = []
 
     for choice_index, choice in enumerate(draft_items):
         block = block_by_id.get(choice.teaching_block_id)
@@ -341,28 +358,14 @@ def _evaluate_composition(
         ordinary_count += 1
         if choice.kind == "paragraph":
             paragraph_run += 1
-            if block.id not in paragraph_run_block_ids:
-                paragraph_run_block_ids.append(block.id)
             if paragraph_run > 2:
-                run_blocks = [block_by_id[bid] for bid in paragraph_run_block_ids]
-                message = "more than two consecutive paragraphs" + _paragraph_run_guidance(
-                    run_blocks
-                )
                 path = f"choices[{choice_index}]"
-                if soft_bounds:
-                    if paragraph_run >= 5:
-                        _fail("paragraph_run_exceeded", path, message)
-                    elif not paragraph_run_warned:
-                        _warn("paragraph_run_exceeded", path)
-                        paragraph_run_warned = True
-                else:
-                    _fail("paragraph_run_exceeded", path, message)
+                _warn("paragraph_run_exceeded", path)
         else:
             paragraph_run = 0
-            paragraph_run_block_ids = []
-            paragraph_run_warned = False
         if choice.kind == "callout":
             callout_count += 1
+            callout_choice_paths.append(f"choices[{choice_index}].kind")
         if choice.semantic_role not in _KIND_ROLES[choice.kind]:
             _fail(
                 "kind_role_mismatch",
@@ -385,7 +388,12 @@ def _evaluate_composition(
             )
         if choice.kind == "callout":
             text = _block_text(block)
-            if not any(cue in text for cue in _CALLOUT_CUES):
+            callout_cues = (
+                _CALLOUT_CUES
+                if choice.semantic_role in {"explanation", "summary"}
+                else _CALLOUT_CUES[2:]
+            )
+            if not any(cue in text for cue in callout_cues):
                 _fail(
                     "callout_missing_cautionary_cue",
                     f"blocks/{block.id}",
@@ -399,8 +407,6 @@ def _evaluate_composition(
             # A TaskAnchor is inserted here (see below); it breaks the
             # paragraph run the same way code places it.
             paragraph_run = 0
-            paragraph_run_block_ids = []
-            paragraph_run_warned = False
 
     for block in blocks:
         count = len(choices_by_block[block.id])
@@ -412,100 +418,14 @@ def _evaluate_composition(
             )
         elif count > policy.max_nodes_per_block:
             path = f"blocks/{block.id}"
-            if soft_bounds and count == policy.max_nodes_per_block + 1:
-                _warn("block_exceeds_node_limit", path)
-            else:
-                _fail(
-                    "block_exceeds_node_limit",
-                    path,
-                    f"Teaching Plan block {block.id!r} exceeds {policy.max_nodes_per_block} ordinary nodes",
-                )
+            _warn("block_exceeds_node_limit", path)
     if ordinary_count > policy.max_ordinary_nodes:
         path = f"section/{section_slot_id}"
-        if soft_bounds and ordinary_count == policy.max_ordinary_nodes + 1:
-            _warn("section_exceeds_node_limit", path)
-        else:
-            _fail(
-                "section_exceeds_node_limit",
-                path,
-                f"section exceeds {policy.max_ordinary_nodes} ordinary nodes",
-            )
-    if callout_count > policy.max_callouts:
-        _fail(
-            "section_exceeds_callout_limit",
-            f"section/{section_slot_id}",
-            f"section exceeds {policy.max_callouts} callouts",
-        )
+        _warn("section_exceeds_node_limit", path)
+    for path in callout_choice_paths[policy.max_callouts :]:
+        _warn("section_exceeds_callout_limit", path)
 
     return errors, issues, warnings, choices_by_block, ordinary_count, callout_count
-
-
-def _auto_fix_soft_issues(
-    *,
-    draft_items: Sequence[CompositionChoice],
-    block_by_id: dict[str, TeachingPlanBlock],
-    policy: CompositionPolicy,
-) -> tuple[list[CompositionChoice], list[tuple[str, str]], list[str], list[tuple[str, str]]]:
-    """Deterministically convert fixable soft-issue items to ``paragraph``.
-
-    Returns the (possibly rewritten) choice list, the warnings recorded for
-    fixed items, and any ``fix_errors``/``fix_issues`` for an item that cannot
-    be fixed because ``paragraph`` does not accept its ``semantic_role`` --
-    that case stays HARD rather than silently changing the model's intent.
-    """
-    fixed = list(draft_items)
-    warnings: list[tuple[str, str]] = []
-    fix_errors: list[str] = []
-    fix_issues: list[tuple[str, str]] = []
-
-    for index, choice in enumerate(fixed):
-        block = block_by_id.get(choice.teaching_block_id)
-        if block is None:
-            continue
-        code: str | None = None
-        if choice.kind == "heading" and not _has_genuine_subsection_cue(block):
-            code = "heading_missing_subsection_cue"
-        elif choice.kind == "callout" and not any(
-            cue in _block_text(block) for cue in _CALLOUT_CUES
-        ):
-            code = "callout_missing_cautionary_cue"
-        else:
-            kind_cues = _KIND_CUES.get(choice.kind)
-            if kind_cues and not any(cue in _block_text(block) for cue in kind_cues):
-                code = "kind_missing_semantic_cue"
-        if code is None:
-            continue
-        path = f"choices[{index}].kind"
-        if choice.semantic_role not in _KIND_ROLES["paragraph"]:
-            fix_errors.append(
-                f"{choice.kind} for block {block.id!r} cannot auto-fix to paragraph because "
-                f"semantic role {choice.semantic_role!r} is not a paragraph role"
-            )
-            fix_issues.append((code, path))
-            continue
-        fixed[index] = choice.model_copy(update={"kind": "paragraph"})
-        warnings.append((code, path))
-
-    callout_seen = 0
-    for index, choice in enumerate(fixed):
-        if choice.kind != "callout":
-            continue
-        callout_seen += 1
-        if callout_seen <= policy.max_callouts:
-            continue
-        block = block_by_id.get(choice.teaching_block_id)
-        path = f"choices[{index}].kind"
-        if block is not None and choice.semantic_role not in _KIND_ROLES["paragraph"]:
-            fix_errors.append(
-                f"extra callout for block {block.id!r} cannot auto-fix to paragraph because "
-                f"semantic role {choice.semantic_role!r} is not a paragraph role"
-            )
-            fix_issues.append(("section_exceeds_callout_limit", path))
-            continue
-        fixed[index] = choice.model_copy(update={"kind": "paragraph"})
-        warnings.append(("section_exceeds_callout_limit", path))
-
-    return fixed, warnings, fix_errors, fix_issues
 
 
 def validate_and_build_composition(
@@ -518,12 +438,10 @@ def validate_and_build_composition(
 ) -> SectionCompositionPlan:
     """Validate model-selected form and build stable IDs plus fixed task anchors.
 
-    By default (``accept_soft_issues=False``) every issue -- HARD or SOFT --
-    fails closed, exactly as before. ``accept_soft_issues=True`` is used only
-    by the composer's final (post-repair) attempt: if every remaining issue
-    is a SOFT code, the composition is deterministically auto-fixed and
-    accepted instead, with a ``warnings`` record of what changed. Any HARD
-    issue, or a SOFT issue beyond its bounded overage, still fails closed.
+    Shape targets are advisory on every call. ``accept_soft_issues`` remains
+    accepted for durable callers that already pass it, but it no longer
+    changes provider choices or readiness. Identity, schema, and contract
+    violations still fail closed.
     """
     policy = policy or CompositionPolicy()
     draft_items = choices.items if isinstance(choices, SectionCompositionDraft) else tuple(choices)
@@ -556,7 +474,7 @@ def validate_and_build_composition(
     (
         pass_errors,
         pass_issues,
-        _pass_warnings,
+        pass_warnings,
         choices_by_block,
         _pass_ordinary_count,
         _pass_callout_count,
@@ -568,46 +486,15 @@ def validate_and_build_composition(
         task_owning_block_ids=task_owning_block_ids,
         policy=policy,
         section_slot_id=section.slot_id,
-        soft_bounds=False,
+        soft_bounds=accept_soft_issues,
     )
     errors.extend(pass_errors)
     issues.extend(pass_issues)
 
-    warnings: tuple[tuple[str, str], ...] = ()
+    warnings: tuple[tuple[str, str], ...] = tuple(pass_warnings)
 
     if errors:
-        hard_present = any(code in HARD_COMPOSITION_ISSUE_CODES for code, _path in issues)
-        if not accept_soft_issues or hard_present:
-            raise CompositionValidationError(errors, issues)
-
-        fixed_items, fix_warnings, fix_errors, fix_issues = _auto_fix_soft_issues(
-            draft_items=draft_items, block_by_id=block_by_id, policy=policy
-        )
-        if fix_errors:
-            raise CompositionValidationError(fix_errors, fix_issues)
-
-        (
-            final_errors,
-            final_issues,
-            final_warnings,
-            choices_by_block,
-            _final_ordinary_count,
-            _final_callout_count,
-        ) = _evaluate_composition(
-            draft_items=fixed_items,
-            blocks=blocks,
-            block_by_id=block_by_id,
-            block_order=block_order,
-            task_owning_block_ids=task_owning_block_ids,
-            policy=policy,
-            section_slot_id=section.slot_id,
-            soft_bounds=True,
-        )
-        if final_errors:
-            raise CompositionValidationError(final_errors, final_issues)
-
-        draft_items = fixed_items
-        warnings = tuple(fix_warnings) + tuple(final_warnings)
+        raise CompositionValidationError(errors, issues)
 
     tasks_by_block: dict[str, list[SharedTaskSpec]] = {block.id: [] for block in blocks}
     for task in tasks:
@@ -661,13 +548,8 @@ def validate_composition_plan(
                 semantic_role=item.semantic_role,
             )
         )
-    # ``plan`` may already embed soft-fixed choices (e.g. a converted kind, or
-    # a bounded run/node overage the composer previously accepted with a
-    # warning); recomputation must accept those the same way or a previously
-    # accepted composition would spuriously fail here. Warnings themselves are
-    # excluded from the equality check below since they cannot be losslessly
-    # re-derived from already-fixed choices (the condition that produced them
-    # no longer exists in the recomputed input).
+    # Warnings are excluded from the equality check below because they describe
+    # the provider's accepted shape rather than code-owned identity.
     expected = validate_and_build_composition(
         section=section, choices=choices, tasks=tasks, policy=policy, accept_soft_issues=True
     )
@@ -693,6 +575,25 @@ def _section_prompt_payload(
 ) -> dict[str, Any]:
     return {
         "section": section.model_dump(mode="json"),
+        "shaping_targets": {
+            "paragraph_words_max": 60,
+            "key_idea_words_max": 25,
+            "note_words_max": 50,
+            "misconception_words_max": {"belief": 30, "evidence": 45, "conclusion": 30},
+            "list_item_words_max": 30,
+            "table_cell_words_max": 12,
+            "equation_inputs_target_max": 4,
+            "equation_outputs_target_max": 3,
+            "compare_items_target_max": 3,
+            "prose_section_words_target": [150, 280],
+        },
+        "inline_vocabulary": {
+            "strong": "**text**",
+            "emphasis": "*text*",
+            "subscript": "~text~",
+            "superscript": "^text^",
+            "paragraph_break": "\\n\\n",
+        },
         "tasks": [
             {
                 "id": task.id,
@@ -742,15 +643,12 @@ async def compose_section(
 ) -> SectionCompositionPlan:
     """Compose with one initial call and at most one validation-directed repair.
 
-    The final (post-repair) attempt accepts SOFT-only issues (see
-    ``SOFT_COMPOSITION_ISSUE_CODES``) by deterministically auto-fixing them
-    instead of failing forever; the initial attempt does not, so the model
-    still sees every issue -- including SOFT ones -- as a concrete
-    ``repair_errors`` message on the one bounded repair call.
+    Shape findings are returned as warnings from the initial response and
+    never trigger a repair. Only hard identity/schema/contract findings are
+    sent through the bounded correction call.
     """
     dispatch = provider or _default_provider
     previous_errors: tuple[str, ...] = ()
-    previous_issues: tuple[tuple[str, str], ...] = ()
     for attempt in range(2):
         raw = await dispatch(_section_prompt_payload(section, tasks, previous_errors))
         try:
@@ -769,18 +667,19 @@ async def compose_section(
         except (ValidationError, CompositionValidationError) as exc:
             if isinstance(exc, CompositionValidationError):
                 previous_errors = exc.errors
-                previous_issues = exc.issues
             elif _draft_contains_figure(raw):
                 previous_errors = (
                     "figure is not a composer kind: figures are placed by code from the"
                     " Teaching Plan and must not be emitted",
                 )
-                previous_issues = (("provider_draft_schema_invalid", "items"),)
             else:
                 previous_errors = ("invalid closed schema",)
-                previous_issues = (("provider_draft_schema_invalid", "items"),)
             if attempt == 1:
-                raise CompositionValidationError(previous_errors, previous_issues) from exc
+                raise CompositionValidationError(
+                    previous_errors,
+                    exc.issues if isinstance(exc, CompositionValidationError)
+                    else (("provider_draft_schema_invalid", "items"),),
+                ) from exc
     raise AssertionError("bounded composer loop exhausted unexpectedly")
 
 

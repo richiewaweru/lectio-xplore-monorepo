@@ -6,8 +6,8 @@ preserving the supplied block order. Choose form and role only; do not write
 learner-facing prose, task wording, IDs, TaskAnchors, Learn widgets, Print
 layout, or path-specific content.
 
-Use only these ordinary kinds: `paragraph`, `heading`, `list`, `table`, and
-`callout`. Use only these semantic roles: `bridge`, `explanation`,
+Use only these ordinary kinds: `paragraph`, `heading`, `list`, `table`,
+`callout`, `equation`, `quote`, and `compare`. Use only these semantic roles: `bridge`, `explanation`,
 `worked_example`, `interpretation`, `summary`, `sequence`, `comparison`,
 `evidence`, `misconception`, `safety_guidance`, and `subsection`.
 Figures are placed by code from the teaching plan and must not be emitted. A
@@ -26,9 +26,17 @@ always eligible. Specialized form eligibility is exact:
   `relationship`, `data`, or `evidence`.
 - `list` / `sequence` or `evidence`: it contains `sequence`, `step`, `stage`,
   `set`, `category`, `example`, `evidence`, or `sort`.
-- `callout` with role `misconception` or `safety_guidance`: the same block text
-  contains `misconception`, `mistake`, `warning`, `safety`, or `caution`. Use no
-  more than one callout in the whole section.
+- `callout` with role `explanation`, `summary`, `misconception`, or
+  `safety_guidance`: an explaining block may carry a `key idea`; the same block
+  text contains `key idea`, `explain`, `misconception`, `mistake`, `warning`,
+  `safety`, or `caution`. Use no more than one callout in the whole section.
+- `equation` with role `worked_example`, `explanation`, or `sequence`: the
+  block text contains `equation`, `formula`, `input`, `output`, `process`, or
+  `calculate`.
+- `quote` with role `interpretation`, `evidence`, or `misconception`: the
+  block text contains `claim`, `quote`, `says`, or `assert`.
+- `compare` with role `comparison`: the block text contains `compare`,
+  `contrast`, `alternative`, `option`, or `rival`.
 
 A `misconception` semantic role does not by itself authorize a `callout`.
 The same block's `intent`, `brief`, or `evidence` must contain one of the literal
@@ -39,8 +47,20 @@ Match roles to kinds exactly: paragraphs allow `bridge`, `explanation`,
 `worked_example`, `interpretation`, `summary`, `evidence`, `misconception`, and
 `safety_guidance`; headings allow only `subsection`; lists allow only `sequence`
 and `evidence`; tables allow only `comparison` and `evidence`; callouts allow only `misconception`
-and `safety_guidance`. Keep paragraph runs to at most two, each block to at most
-two ordinary nodes, and the section to ten ordinary nodes.
+and `safety_guidance`; equations allow `worked_example`, `explanation`, and
+`sequence`; quotes allow `interpretation`, `evidence`, and `misconception`;
+compares allow only `comparison`. Keep paragraph runs to at most two, each
+block to at most two ordinary nodes, and the section to ten ordinary nodes as
+writer targets. If a target is exceeded, preserve the selected form and all
+content; the validator records an advisory warning and never repairs it.
+
+Shape the eventual writing deliberately: a paragraph is one idea in three or
+four sentences and up to 60 words; a section changes job with a subsection
+heading (especially beyond 120 prose words); an explaining section opens with
+one key idea; and a specialized form must earn its place from the block cue.
+Use `**term**` once for key terms, `*emphasis*` for emphasis, `~subscript~`,
+`^superscript^`, and blank lines for paragraph breaks. These inline tokens are
+literal content, not Markdown or HTML.
 
 Paragraph runs are counted across block boundaries, not just within one block:
 choosing a paragraph for block A and then another paragraph for the next block

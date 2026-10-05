@@ -82,6 +82,11 @@ class VerifiedSharedLessonInputs(BaseModel):
     #: for a section whose writer output carried no warnings. Never provider
     #: output or learner text -- see ``writer.SOFT_SECTION_WRITE_ISSUE_CODES``.
     section_warnings: dict[str, tuple[tuple[str, str], ...]] = Field(default_factory=dict)
+    #: Composer shape findings are persisted independently so they can be
+    #: surfaced as advisory quality flags without entering semantic review.
+    composition_warnings: dict[str, tuple[tuple[str, str], ...]] = Field(
+        default_factory=dict, exclude_if=lambda value: not value
+    )
 
     @model_validator(mode="after")
     def _bind_and_freeze(self) -> VerifiedSharedLessonInputs:
@@ -116,10 +121,13 @@ class VerifiedSharedLessonInputs(BaseModel):
             raise ValueError("work_item_ids must cover the exact compose/write work-item keys")
         if set(self.section_warnings) - set(section_ids):
             raise ValueError("section_warnings must only name approved sections")
+        if set(self.composition_warnings) - set(section_ids):
+            raise ValueError("composition_warnings must only name approved sections")
         object.__setattr__(self, "composition_hashes", _FrozenMap(self.composition_hashes))
         object.__setattr__(self, "section_hashes", _FrozenMap(self.section_hashes))
         object.__setattr__(self, "work_item_ids", _FrozenMap(self.work_item_ids))
         object.__setattr__(self, "section_warnings", _FrozenMap(self.section_warnings))
+        object.__setattr__(self, "composition_warnings", _FrozenMap(self.composition_warnings))
         return self
 
 
@@ -242,7 +250,15 @@ def _parse_writer(
         raise SharedLessonInputError(
             f"writer output for section {section.slot_id!r} is stale or invalid"
         ) from exc
-    if verified != result:
+    # Older accepted writer rows predate advisory shape warnings and may omit
+    # ``warnings``. Preserve those rows while requiring every persisted
+    # warning to be reproducible from the same immutable nodes.
+    if (
+        verified.section_slot_id != result.section_slot_id
+        or verified.title != result.title
+        or verified.nodes != result.nodes
+        or any(warning not in verified.warnings for warning in result.warnings)
+    ):
         _fail(f"writer output for section {section.slot_id!r} differs from its verified shape")
     return (
         result.as_shared_section(section_id=section.slot_id, position=position),
@@ -375,6 +391,7 @@ async def load_verified_shared_lesson_inputs(
     section_hashes: dict[str, str] = {}
     work_item_ids: dict[str, str] = {}
     section_warnings: dict[str, tuple[tuple[str, str], ...]] = {}
+    composition_warnings: dict[str, tuple[tuple[str, str], ...]] = {}
     for position, section in enumerate(plan_sections):
         compose_item = active_by_key[f"compose:{section.slot_id}"]
         write_item = active_by_key[f"write:{section.slot_id}"]
@@ -399,6 +416,8 @@ async def load_verified_shared_lesson_inputs(
         work_item_ids[f"write:{section.slot_id}"] = write_item.id
         if warnings:
             section_warnings[section.slot_id] = warnings
+        if composition.warnings:
+            composition_warnings[section.slot_id] = composition.warnings
 
     return VerifiedSharedLessonInputs(
         run_id=run.id,
@@ -413,6 +432,7 @@ async def load_verified_shared_lesson_inputs(
         section_hashes=section_hashes,
         work_item_ids=work_item_ids,
         section_warnings=section_warnings,
+        composition_warnings=composition_warnings,
     )
 
 

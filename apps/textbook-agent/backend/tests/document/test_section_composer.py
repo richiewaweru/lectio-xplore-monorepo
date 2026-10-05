@@ -179,22 +179,22 @@ def test_rejects_too_many_consecutive_paragraphs_and_unsuitable_forms() -> None:
         CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="summary"),
         CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="bridge"),
     ]
-    with pytest.raises(CompositionValidationError, match="consecutive paragraphs"):
-        validate_and_build_composition(section=section, choices=choices, tasks=[])
+    plan = validate_and_build_composition(section=section, choices=choices, tasks=[])
+    assert ("paragraph_run_exceeded", "choices[2]") in plan.warnings
     with pytest.raises(CompositionValidationError, match="unsuitable"):
         validate_and_build_composition(
             section=section,
             choices=[CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="summary")],
             tasks=[],
         )
-    with pytest.raises(CompositionValidationError, match="suitable semantic cues"):
-        validate_and_build_composition(
-            section=_section(_block("b0", "explain the topic")),
-            choices=[
-                CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison")
-            ],
-            tasks=[],
-        )
+    plan = validate_and_build_composition(
+        section=_section(_block("b0", "explain the topic")),
+        choices=[
+            CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison")
+        ],
+        tasks=[],
+    )
+    assert ("kind_missing_semantic_cue", "choices[0].kind") in plan.warnings
 
 
 def test_task_anchor_breaks_paragraph_run_across_block_boundary() -> None:
@@ -218,7 +218,7 @@ def test_task_anchor_breaks_paragraph_run_across_block_boundary() -> None:
     ]
 
 
-def test_three_consecutive_paragraphs_with_no_anchor_still_fail() -> None:
+def test_three_consecutive_paragraphs_with_no_anchor_are_advisory() -> None:
     section = _section(
         _block("b0", "explain the model"),
         _block("b1", "compare the results"),
@@ -230,12 +230,8 @@ def test_three_consecutive_paragraphs_with_no_anchor_still_fail() -> None:
         CompositionChoice(teaching_block_id="b2", kind="paragraph", semantic_role="summary"),
     ]
 
-    with pytest.raises(CompositionValidationError, match="consecutive paragraphs") as excinfo:
-        validate_and_build_composition(section=section, choices=choices, tasks=[])
-
-    assert "paragraph_run_exceeded" in _issue_codes(excinfo.value)
-    message = "; ".join(excinfo.value.errors)
-    assert "block 'b1' is eligible for table (cue 'compare')" in message
+    plan = validate_and_build_composition(section=section, choices=choices, tasks=[])
+    assert ("paragraph_run_exceeded", "choices[2]") in plan.warnings
 
 
 def test_soft_paragraph_run_is_auto_fixed_and_accepted_with_a_warning() -> None:
@@ -250,10 +246,6 @@ def test_soft_paragraph_run_is_auto_fixed_and_accepted_with_a_warning() -> None:
         CompositionChoice(teaching_block_id="b2", kind="paragraph", semantic_role="summary"),
     ]
 
-    # Default (accept_soft_issues=False) still fails closed, unchanged.
-    with pytest.raises(CompositionValidationError, match="consecutive paragraphs"):
-        validate_and_build_composition(section=section, choices=choices, tasks=[])
-
     plan = validate_and_build_composition(
         section=section, choices=choices, tasks=[], accept_soft_issues=True
     )
@@ -263,7 +255,7 @@ def test_soft_paragraph_run_is_auto_fixed_and_accepted_with_a_warning() -> None:
     assert all(code in SOFT_COMPOSITION_ISSUE_CODES for code, _path in plan.warnings)
 
 
-def test_five_or_more_consecutive_paragraphs_stays_hard_even_with_soft_acceptance() -> None:
+def test_five_or_more_consecutive_paragraphs_remain_advisory() -> None:
     section = _section(
         *[_block(f"b{index}", "explain why it happens") for index in range(5)]
     )
@@ -272,14 +264,13 @@ def test_five_or_more_consecutive_paragraphs_stays_hard_even_with_soft_acceptanc
         for index in range(5)
     ]
 
-    with pytest.raises(CompositionValidationError, match="consecutive paragraphs") as excinfo:
-        validate_and_build_composition(
-            section=section, choices=choices, tasks=[], accept_soft_issues=True
-        )
-    assert "paragraph_run_exceeded" in _issue_codes(excinfo.value)
+    plan = validate_and_build_composition(
+        section=section, choices=choices, tasks=[], accept_soft_issues=True
+    )
+    assert len([warning for warning in plan.warnings if warning[0] == "paragraph_run_exceeded"]) == 3
 
 
-def test_node_ceiling_soft_accepts_one_over_but_two_over_stays_hard() -> None:
+def test_node_ceiling_is_advisory_for_any_overage() -> None:
     section = _section(_block("b0", "compare the evidence"))
     one_over = [
         CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
@@ -299,15 +290,14 @@ def test_node_ceiling_soft_accepts_one_over_but_two_over_stays_hard() -> None:
     two_over = one_over + [
         CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="worked_example")
     ]
-    with pytest.raises(CompositionValidationError, match="exceeds 2 ordinary nodes") as excinfo:
-        validate_and_build_composition(
-            section=section,
-            choices=two_over,
-            tasks=[],
-            policy=CompositionPolicy(max_nodes_per_block=2),
-            accept_soft_issues=True,
-        )
-    assert "block_exceeds_node_limit" in _issue_codes(excinfo.value)
+    plan = validate_and_build_composition(
+        section=section,
+        choices=two_over,
+        tasks=[],
+        policy=CompositionPolicy(max_nodes_per_block=2),
+        accept_soft_issues=True,
+    )
+    assert ("block_exceeds_node_limit", "blocks/b0") in plan.warnings
 
 
 def test_soft_cue_issues_convert_to_paragraph_with_a_warning() -> None:
@@ -323,22 +313,21 @@ def test_soft_cue_issues_convert_to_paragraph_with_a_warning() -> None:
         section=section, choices=choices, tasks=[], accept_soft_issues=True
     )
 
-    assert plan.items[0].kind == "paragraph"
+    assert plan.items[0].kind == "list"
     assert plan.items[0].semantic_role == "evidence"
     assert ("kind_missing_semantic_cue", "choices[0].kind") in plan.warnings
 
 
-def test_soft_cue_conversion_refused_when_paragraph_does_not_allow_the_role_stays_hard() -> None:
+def test_soft_cue_issue_is_advisory_even_when_form_is_specialized() -> None:
     section = _section(_block("b0", "explain why this happens"))
     choices = [
         CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison")
     ]
 
-    with pytest.raises(CompositionValidationError, match="cannot auto-fix") as excinfo:
-        validate_and_build_composition(
-            section=section, choices=choices, tasks=[], accept_soft_issues=True
-        )
-    assert "kind_missing_semantic_cue" in _issue_codes(excinfo.value)
+    plan = validate_and_build_composition(
+        section=section, choices=choices, tasks=[], accept_soft_issues=True
+    )
+    assert ("kind_missing_semantic_cue", "choices[0].kind") in plan.warnings
 
 
 def test_extra_callouts_beyond_ceiling_convert_to_paragraph_with_a_warning() -> None:
@@ -355,7 +344,7 @@ def test_extra_callouts_beyond_ceiling_convert_to_paragraph_with_a_warning() -> 
         section=section, choices=choices, tasks=[], accept_soft_issues=True
     )
 
-    assert [item.kind for item in plan.items] == ["callout", "paragraph"]
+    assert [item.kind for item in plan.items] == ["callout", "callout"]
     assert ("section_exceeds_callout_limit", "choices[1].kind") in plan.warnings
 
 
@@ -374,23 +363,21 @@ def test_hard_codes_still_fail_closed_even_with_soft_acceptance() -> None:
 
 
 @pytest.mark.asyncio
-async def test_compose_section_repair_accepts_soft_only_result_with_warning() -> None:
+async def test_compose_section_accepts_shape_issue_without_repair() -> None:
     section = _section(_block("b0", "explain why this happens"))
     calls: list[dict[str, Any]] = []
 
     async def provider(payload: dict[str, Any]) -> Any:
-        # A SOFT issue (uncued list) on both attempts: the first attempt
-        # still fails and drives the one bounded repair call, but the repair
-        # (post-repair) attempt auto-fixes and accepts it instead of failing
-        # forever, since no HARD issue is present.
+        # A shape issue is accepted on the first response and recorded as an
+        # advisory warning; it must never trigger a correction call.
         calls.append(payload)
         return {"items": [_choice("b0", "list", "evidence")]}
 
     plan = await compose_section(section=section, tasks=[], provider=provider)
 
-    assert len(calls) == 2
-    assert calls[1]["repair_errors"]
-    assert plan.items[0].kind == "paragraph"
+    assert len(calls) == 1
+    assert not calls[0]["repair_errors"]
+    assert plan.items[0].kind == "list"
     assert ("kind_missing_semantic_cue", "choices[0].kind") in plan.warnings
 
 
@@ -406,56 +393,56 @@ def test_list_accepts_explicit_sorting_but_rejects_uncued_unrelated_block() -> N
     assert sorting_plan.items[0].kind == "list"
 
     unrelated_section = _section(_block("b0", "explain", "Describe why the principle matters."))
-    with pytest.raises(CompositionValidationError, match="suitable semantic cues"):
-        validate_and_build_composition(
-            section=unrelated_section,
-            choices=[CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence")],
-            tasks=[],
-        )
+    plan = validate_and_build_composition(
+        section=unrelated_section,
+        choices=[CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence")],
+        tasks=[],
+    )
+    assert ("kind_missing_semantic_cue", "choices[0].kind") in plan.warnings
 
 
 def test_rejects_block_node_ceiling_callout_ceiling_and_false_subsection() -> None:
     section = _section(_block("b0", "compare the evidence"))
-    with pytest.raises(CompositionValidationError, match="exceeds 2 ordinary nodes"):
-        validate_and_build_composition(
-            section=section,
-            choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
-                ),
-                CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison"),
-                CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence"),
-            ],
-            tasks=[],
-        )
-    with pytest.raises(CompositionValidationError, match="genuine subsection"):
-        validate_and_build_composition(
-            section=section,
-            choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="heading", semantic_role="subsection"
-                )
-            ],
-            tasks=[],
-        )
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+            ),
+            CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison"),
+            CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence"),
+        ],
+        tasks=[],
+    )
+    assert ("block_exceeds_node_limit", "blocks/b0") in plan.warnings
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="heading", semantic_role="subsection"
+            )
+        ],
+        tasks=[],
+    )
+    assert ("heading_missing_subsection_cue", "blocks/b0") in plan.warnings
 
     warning_section = _section(
         _block("b0", "warning: avoid the common misconception"),
         _block("b1", "safety warning about this misconception"),
     )
-    with pytest.raises(CompositionValidationError, match="callouts"):
-        validate_and_build_composition(
-            section=warning_section,
-            choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="callout", semantic_role="misconception"
-                ),
-                CompositionChoice(
-                    teaching_block_id="b1", kind="callout", semantic_role="safety_guidance"
-                ),
-            ],
-            tasks=[],
-        )
+    plan = validate_and_build_composition(
+        section=warning_section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="callout", semantic_role="misconception"
+            ),
+            CompositionChoice(
+                teaching_block_id="b1", kind="callout", semantic_role="safety_guidance"
+            ),
+        ],
+        tasks=[],
+    )
+    assert ("section_exceeds_callout_limit", "choices[1].kind") in plan.warnings
 
 
 def test_misconception_role_does_not_authorize_callout_without_block_cue() -> None:
@@ -470,16 +457,16 @@ def test_misconception_role_does_not_authorize_callout_without_block_cue() -> No
             "Show the reasoning behind the result.",
         )
     )
-    with pytest.raises(CompositionValidationError, match="lacks cautionary semantics"):
-        validate_and_build_composition(
-            section=section,
-            choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="callout", semantic_role="misconception"
-                )
-            ],
-            tasks=[],
-        )
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="callout", semantic_role="misconception"
+            )
+        ],
+        tasks=[],
+    )
+    assert ("callout_missing_cautionary_cue", "blocks/b0") in plan.warnings
 
     plan = validate_and_build_composition(
         section=section,
@@ -509,8 +496,8 @@ def test_rejects_more_than_ten_ordinary_nodes_even_when_block_caps_hold() -> Non
             ),
         )
     ]
-    with pytest.raises(CompositionValidationError, match="exceeds 10 ordinary nodes"):
-        validate_and_build_composition(section=section, choices=choices, tasks=[])
+    plan = validate_and_build_composition(section=section, choices=choices, tasks=[])
+    assert ("section_exceeds_node_limit", f"section/{section.slot_id}") in plan.warnings
 
 
 def test_rejects_anchor_removal_invention_and_reordering() -> None:
@@ -648,21 +635,20 @@ def test_each_rejects_test_case_reports_expected_issue_code() -> None:
     assert ("item_unknown_block", "choices[0]") in unknown_block_excinfo.value.issues
 
     paragraph_section = _section(_block("b0", "explain comparison evidence"))
-    with pytest.raises(CompositionValidationError) as paragraph_excinfo:
-        validate_and_build_composition(
-            section=paragraph_section,
-            choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
-                ),
-                CompositionChoice(
-                    teaching_block_id="b0", kind="paragraph", semantic_role="summary"
-                ),
-                CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="bridge"),
-            ],
-            tasks=[],
-        )
-    assert "paragraph_run_exceeded" in _issue_codes(paragraph_excinfo.value)
+    paragraph_plan = validate_and_build_composition(
+        section=paragraph_section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+            ),
+            CompositionChoice(
+                teaching_block_id="b0", kind="paragraph", semantic_role="summary"
+            ),
+            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="bridge"),
+        ],
+        tasks=[],
+    )
+    assert "paragraph_run_exceeded" in {code for code, _path in paragraph_plan.warnings}
 
     with pytest.raises(CompositionValidationError) as role_mismatch_excinfo:
         validate_and_build_composition(
@@ -675,58 +661,54 @@ def test_each_rejects_test_case_reports_expected_issue_code() -> None:
     assert ("kind_role_mismatch", "choices[0].kind") in role_mismatch_excinfo.value.issues
 
     cueless_section = _section(_block("b0", "explain the topic"))
-    with pytest.raises(CompositionValidationError) as cue_excinfo:
-        validate_and_build_composition(
-            section=cueless_section,
-            choices=[
-                CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison")
-            ],
-            tasks=[],
-        )
-    assert ("kind_missing_semantic_cue", "choices[0].kind") in cue_excinfo.value.issues
+    cue_plan = validate_and_build_composition(
+        section=cueless_section,
+        choices=[
+            CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison")
+        ],
+        tasks=[],
+    )
+    assert ("kind_missing_semantic_cue", "choices[0].kind") in cue_plan.warnings
 
     heading_section = _section(_block("b0", "compare the evidence"))
-    with pytest.raises(CompositionValidationError) as heading_excinfo:
-        validate_and_build_composition(
-            section=heading_section,
-            choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="heading", semantic_role="subsection"
-                )
-            ],
-            tasks=[],
-        )
-    assert ("heading_missing_subsection_cue", "blocks/b0") in heading_excinfo.value.issues
+    heading_plan = validate_and_build_composition(
+        section=heading_section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="heading", semantic_role="subsection"
+            )
+        ],
+        tasks=[],
+    )
+    assert ("heading_missing_subsection_cue", "blocks/b0") in heading_plan.warnings
 
     callout_section = _section(
         _block("b0", "explain why one result follows", "Show the reasoning behind the result.")
     )
-    with pytest.raises(CompositionValidationError) as callout_excinfo:
-        validate_and_build_composition(
-            section=callout_section,
-            choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="callout", semantic_role="misconception"
-                )
-            ],
-            tasks=[],
-        )
-    assert ("callout_missing_cautionary_cue", "blocks/b0") in callout_excinfo.value.issues
+    callout_plan = validate_and_build_composition(
+        section=callout_section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="callout", semantic_role="misconception"
+            )
+        ],
+        tasks=[],
+    )
+    assert ("callout_missing_cautionary_cue", "blocks/b0") in callout_plan.warnings
 
     ceiling_section = _section(_block("b0", "compare the evidence"))
-    with pytest.raises(CompositionValidationError) as node_ceiling_excinfo:
-        validate_and_build_composition(
-            section=ceiling_section,
-            choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
-                ),
-                CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison"),
-                CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence"),
-            ],
-            tasks=[],
-        )
-    assert ("block_exceeds_node_limit", "blocks/b0") in node_ceiling_excinfo.value.issues
+    node_ceiling_plan = validate_and_build_composition(
+        section=ceiling_section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="paragraph", semantic_role="explanation"
+            ),
+            CompositionChoice(teaching_block_id="b0", kind="table", semantic_role="comparison"),
+            CompositionChoice(teaching_block_id="b0", kind="list", semantic_role="evidence"),
+        ],
+        tasks=[],
+    )
+    assert ("block_exceeds_node_limit", "blocks/b0") in node_ceiling_plan.warnings
 
     section_ceiling_section = _section(
         *[_block(f"b{index}", "compare evidence") for index in range(6)]
@@ -743,34 +725,35 @@ def test_each_rejects_test_case_reports_expected_issue_code() -> None:
             ),
         )
     ]
-    with pytest.raises(CompositionValidationError) as section_ceiling_excinfo:
-        validate_and_build_composition(section=section_ceiling_section, choices=choices, tasks=[])
+    section_ceiling_plan = validate_and_build_composition(
+        section=section_ceiling_section, choices=choices, tasks=[]
+    )
     assert (
         "section_exceeds_node_limit",
         f"section/{section_ceiling_section.slot_id}",
-    ) in section_ceiling_excinfo.value.issues
+    ) in section_ceiling_plan.warnings
 
     callout_ceiling_section = _section(
         _block("b0", "warning: avoid the common misconception"),
         _block("b1", "safety warning about this misconception"),
     )
-    with pytest.raises(CompositionValidationError) as callout_ceiling_excinfo:
-        validate_and_build_composition(
-            section=callout_ceiling_section,
-            choices=[
-                CompositionChoice(
-                    teaching_block_id="b0", kind="callout", semantic_role="misconception"
-                ),
-                CompositionChoice(
-                    teaching_block_id="b1", kind="callout", semantic_role="safety_guidance"
-                ),
-            ],
-            tasks=[],
-        )
+    callout_ceiling_plan = validate_and_build_composition(
+        section=callout_ceiling_section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="b0", kind="callout", semantic_role="misconception"
+            ),
+            CompositionChoice(
+                teaching_block_id="b1", kind="callout", semantic_role="safety_guidance"
+            ),
+        ],
+        tasks=[],
+    )
     assert (
         "section_exceeds_callout_limit",
         f"section/{callout_ceiling_section.slot_id}",
-    ) in callout_ceiling_excinfo.value.issues
+    ) not in callout_ceiling_plan.warnings
+    assert ("section_exceeds_callout_limit", "choices[1].kind") in callout_ceiling_plan.warnings
 
 
 def test_anchor_mismatch_and_plan_divergence_report_stable_issue_codes() -> None:

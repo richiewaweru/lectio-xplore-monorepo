@@ -19,7 +19,26 @@ write planning language or identifiers for learners, mention Learn or Print
 implementation, add placeholders, or include unsupported numeric values.
 Lists need meaningful non-empty items;
 tables need non-empty headers and rows with matching column counts; callouts
-need a meaningful body.
+need a meaningful body. Key ideas use one bold sentence, notes stay concise,
+and misconceptions use belief / evidence / conclusion fields. Equations keep
+every input and output term, even when there are more than the display target;
+comparison nodes keep every card, even when there are more than three.
+
+Shape prose rather than compressing it into one block: each paragraph holds
+one idea in three or four sentences and is normally at most 60 words; add a
+subheading when a section changes job or exceeds about 120 prose words; an
+explaining section opens with exactly one key idea. Use lists only for steps
+in order or parallel items of the same kind, and keep each list item near 30
+words. Keep table cells near 12 words, key ideas near 25 words, note bodies
+near 50 words, and misconception belief / evidence / conclusion near 30 / 45
+/ 30 words. These are advisory targets: preserve all written words and every
+term/card if a target is exceeded. Never pad, truncate, rewrite, or retry to
+hit a target.
+
+All learner-facing strings may use the shared inline vocabulary: `**term**`
+for one key term, `*emphasis*`, `~subscript~`, `^superscript^`, and blank lines
+for paragraph breaks. Do not emit HTML, links, headings, lists, or unknown
+markup inside strings.
 
 Figures are placed by code from the block's `visual` spec in the section
 contract; never add, remove, or move one. For a `figure` node write only

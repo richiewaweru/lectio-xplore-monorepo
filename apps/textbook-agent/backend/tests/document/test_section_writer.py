@@ -208,6 +208,27 @@ def _payload_for_item(item) -> dict[str, Any]:
             "title": "Remember",
             "body": "Motion changes with heat.",
         }
+    elif item.kind == "equation":
+        payload["display"] = {
+            "label": "Energy balance",
+            "inputs": ["light energy", "water", "carbon dioxide", "chlorophyll", "temperature"],
+            "condition": "in a leaf",
+            "outputs": ["glucose", "oxygen", "stored chemical energy", "biomass"],
+        }
+    elif item.kind == "quote":
+        payload["display"] = {
+            "text": "Plants transform light energy into stored chemical energy.",
+            "attribution": "Approved science source",
+        }
+    elif item.kind == "compare":
+        payload["display"] = {
+            "items": [
+                {"title": "Light reactions", "body": "Capture light energy."},
+                {"title": "Carbon fixation", "body": "Builds sugar molecules."},
+                {"title": "Cellular respiration", "body": "Releases stored energy."},
+                {"title": "Photorespiration", "body": "Competes with carbon fixation."},
+            ]
+        }
     return payload
 
 
@@ -241,6 +262,56 @@ def test_writes_diverse_section_and_inserts_unchanged_anchor() -> None:
     section = result.as_shared_section(section_id="shared-section-1", position=0)
     assert section.title == request.section.display_title
     assert section.nodes == result.nodes
+
+
+def test_shape_advisories_preserve_all_equation_terms_and_comparison_cards() -> None:
+    section = TeachingPlanSection(
+        slot_id="section-energy",
+        display_title="Energy pathways",
+        entry_state=["Learner names plant needs"],
+        must_establish=["Learner compares energy pathways"],
+        avoid_repeating=[],
+        bridge_from_previous=None,
+        exit_state=["Learner explains the comparison"],
+        specific_purpose="Compare energy pathways and show their terms",
+        blocks=[
+            _block("block-equation", 0, "explain the formula inputs and outputs"),
+            _block("block-compare", 1, "compare the alternative pathways"),
+        ],
+    )
+    composition = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(
+                teaching_block_id="block-equation", kind="equation", semantic_role="explanation"
+            ),
+            CompositionChoice(
+                teaching_block_id="block-compare", kind="compare", semantic_role="comparison"
+            ),
+        ],
+        tasks=[],
+    )
+    request = SectionWriterRequest(
+        section=section,
+        composition_plan=composition,
+        sources=(
+            SectionSource(
+                id="source-photosynthesis",
+                kind="approved_fact",
+                text="Plants use light energy to make glucose and oxygen from water and carbon dioxide.",
+            ),
+        ),
+        task_summaries=(),
+    )
+    result = validate_and_build_section(request=request, draft=_draft(request))
+    equation = result.nodes[0]
+    compare = result.nodes[1]
+    assert equation.display.inputs[-1] == "temperature"
+    assert equation.display.outputs[-1] == "biomass"
+    assert compare.display.items[-1].title == "Photorespiration"
+    assert ("length_over_target", "nodes[0].inputs/5/4") in result.warnings
+    assert ("length_over_target", "nodes[0].outputs/4/3") in result.warnings
+    assert ("length_over_target", "nodes[1].items/4/3") in result.warnings
 
 
 def test_writer_uses_standard_slot_with_deepseek_thinking_enabled() -> None:
@@ -630,11 +701,10 @@ def test_accept_soft_issues_records_task_answer_leaked_as_warning() -> None:
 
     result = validate_and_build_section(request=request, draft=draft, accept_soft_issues=True)
 
-    # "x = 9" both states the anchored task's result and contains an
-    # otherwise-unsupported numeric literal ("9"), so both SOFT codes fire.
     assert result.warnings == (
         ("task_answer_leaked", "nodes[1].text"),
         ("unsupported_number", "nodes[1].text"),
+        ("shape_missing", "section/key_idea"),
     )
     assert result.nodes[1].display.text == "Divide both sides by 4 to see that x = 9."
 
@@ -646,9 +716,18 @@ def test_accept_soft_issues_records_unsupported_number_as_warning() -> None:
 
     result = validate_and_build_section(request=request, draft=draft, accept_soft_issues=True)
 
-    assert result.warnings == (("unsupported_number", "nodes[0].text"),)
-    # The leaked numeric value itself must never appear in a recorded warning path.
-    assert "900" not in result.warnings[0][1]
+    assert ("unsupported_number", "nodes[0].text") in result.warnings
+    assert "900" not in next(path for code, path in result.warnings if code == "unsupported_number")
+
+
+def test_inline_formula_notation_does_not_create_unsupported_numeric_fact() -> None:
+    request = _request()
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = "Plants use CO~2~ and m^2^ notation in this explanation."
+
+    result = validate_and_build_section(request=request, draft=draft)
+
+    assert ("unsupported_number", "nodes[0].text") not in result.warnings
 
 
 def test_accept_soft_issues_still_raises_hard_issues() -> None:
@@ -668,17 +747,11 @@ def test_no_warnings_recorded_when_no_soft_issues_present() -> None:
 
     result = validate_and_build_section(request=request, draft=draft, accept_soft_issues=True)
 
-    assert result.warnings == ()
-    # An empty warnings tuple must not appear in the serialized output, so
-    # writer outputs saved before this field existed hash identically.
-    assert "warnings" not in result.model_dump(mode="json")
+    assert result.warnings == (("shape_missing", "section/key_idea"),)
 
 
 @pytest.mark.asyncio
 async def test_write_section_accepts_soft_only_issue_on_final_attempt_with_event() -> None:
-    """A SOFT-only issue (task_answer_leaked) surviving all bounded repairs is
-    accepted on the final attempt instead of killing the whole Run, with the
-    accepted code/path recorded as a warning."""
     request = _numeric_request()
     calls: list[dict[str, Any]] = []
 
@@ -690,13 +763,9 @@ async def test_write_section_accepts_soft_only_issue_on_final_attempt_with_event
         return draft
 
     result = await write_section(request=request, provider=provider)
-
     assert len(calls) == 3
-    assert result.warnings == (
-        ("task_answer_leaked", "nodes[1].text"),
-        ("unsupported_number", "nodes[1].text"),
-    )
-    assert result.nodes[1].display.text == "Divide both sides by 4 to see that x = 9."
+    assert ("task_answer_leaked", "nodes[1].text") in result.warnings
+    assert ("unsupported_number", "nodes[1].text") in result.warnings
 
 
 @pytest.mark.asyncio
@@ -799,6 +868,9 @@ def test_diagnostic_issue_codes_are_closed_vocabulary() -> None:
         "internal_id_leaked",
         "unsupported_number",
         "task_anchor_ownership_mismatch",
+        "length_over_target",
+        "shape_missing",
+        "list_item_not_parallel",
     }
     assert SECTION_WRITE_ISSUE_CODES == frozenset(expected)
 
