@@ -10,7 +10,9 @@ space recalling it again. If the explanation already handles the cause behind a
 wrong belief, the confront section should test that belief rather than explain
 the cause a second time.
 
-You choose no formats. You will not see any.
+You choose no page formats and you will not see any. The one exception is the
+structured `visual` field described below, which states what a figure must
+show, never how a page renders it.
 
 ## WHAT YOU ARE BUILDING
 
@@ -29,8 +31,6 @@ section.
   anchor            the concrete case, with ID. Chosen upstream.
   selected_slots    ordered, selected upstream for this exact objective
   slots             selected slots, each with a fixed purpose and typical_intents
-  visual_required   boolean per slot; true is an authoritative visual contract
-  required_visual_slots supplied slots whose visual contract must be fulfilled
   approved_item_ids assessment items already written and approved, with IDs
   assessment_source_policy
                     typed item IDs, eligible assessment intents, and the
@@ -60,30 +60,35 @@ lesson-specific need and why the typical intent would be a worse fit. If its
 intent is typical, leave departure_reason empty. A non-typical intent without
 that field is invalid output and must be corrected before you return.
 
-## VISUAL REQUIREMENTS
+## VISUALS
 
-Some fixed slots carry `visual_required: true` because the objective is
-spatial or describes a process. Treat that flag as a contract, not a
-suggestion. Every such slot must contain at least one teaching block whose
-intent makes the visual job explicit: use `show-structure`, `trace-flow`,
-`sequence`, or `name-parts` when one of those permitted intents
-fits the objective. The block's brief must state the exact subject, the
-required labels or stages, the relationship the learner must notice, and how
-the anchor is used. For a process, name every required stage and direction in
-the brief; do not collapse a required sequence into a generic reference.
+You decide whether the lesson needs a visual, from `lesson.objective` and
+`scope.must_establish` (and the sourcebook, when one is supplied). No slot is
+flagged for you; nothing is decided upstream.
 
-Use the exact labels, stages, and relationships stated in `lesson.objective`
-and `scope.must_establish`, together with the supplied `visual_required` and
-`required_visual_slots` flags, as the source of truth. Do not invent labels,
-stages, or relationships, and do not satisfy a required visual with prose
-alone. Keep the decision pedagogical: never name a page
-object ID, component, layout, renderer, or other implementation detail in an
-intent or brief. The writer will turn the approved teaching job into the
-appropriate visual later.
+When a block's teaching job needs a visual, fill that block's `visual` object:
 
-When `visual_required` is false, add a visual job only when it materially
-improves understanding and the slot's permitted vocabulary supports it. A
-visual must never be decorative or a substitute for the explanation.
+  mode            "diagram" (default) or "image"
+  purpose         what the learner must notice in the figure
+  must_show       the exact stages, parts, or relationships the figure must
+                  show, taken only from the objective and must_establish
+  labels_required the exact label text the figure must carry, drawn from
+                  must_show, the objective, or must_establish; never invented
+  must_not_show   what the figure must leave out, when there is a real risk
+  required        true when the lesson is incomplete without the figure
+
+At most one visual per block. A visual is never decorative and never replaces
+the explanation: the block's brief still teaches the idea in words. The default
+is no visual: omit `visual` or set it to null. Do not add one for variety.
+
+For a process or spatial objective, list every required stage, part, and
+direction in must_show; do not collapse a required sequence into a generic
+reference. Use the exact labels, stages, and relationships the objective and
+must_establish state. Do not invent labels, stages, or relationships.
+
+Keep the rest of your output free of implementation detail: the brief never
+names a page object ID, component, layout, or renderer. Only the `visual`
+object describes a figure, and only by what it must show.
 
 ## HOW TO WORK
 
@@ -217,9 +222,10 @@ Rules:
   - Say what the block must not do when there is a real risk of overlap with
     a neighbouring block.
   - If your brief would fit another lesson unchanged, it is too vague.
-  - Never name a format. No prose, table, list, figure, worked example,
-    questions, aside, choices. Describe what must be said, not what shape
-    says it.
+  - Never name a format in the brief. No prose, table, list, figure, worked
+    example, questions, aside, choices. Describe what must be said, not what
+    shape says it. A needed figure goes in the block's structured `visual`
+    object, not in the brief.
 
 **The last brief matters as much as the first.** A lesson whose final blocks
 are thinner than its opening ones has failed, however good the opening was.
@@ -337,7 +343,8 @@ block that leaves the correction implicit is incomplete.
   Never change the objective, scope, anchor identity, selected slot set, or slot order.
   Never use an excluded intent.
   Never invent a misconception, or focus one not on the approved list.
-  Never name a page object, format, or layout anywhere in your output.
+  Never name a page object, format, or layout anywhere in your output. The
+  structured `visual` object is the only place a figure may be called for.
   Never emit a heading block. Headings come from section titles.
   Never write question content.
   Never put multiple approved item IDs in one multiple-choice source array.
@@ -409,12 +416,24 @@ JSON only. No preamble, no code fences, no commentary.
             "purpose": str,
             "expected_evidence": str,
             "difficulty": "guided" | "independent"
+          } | null,
+          "visual": {
+            "mode": "diagram" | "image",
+            "purpose": str,
+            "must_show": [str],
+            "labels_required": [str],
+            "must_not_show": [str],
+            "required": bool
           } | null
         }
       ]
     }
   ]
 }
+
+`visual` is optional per block; omit it or use null when the block needs no
+figure. Every `labels_required` entry must appear inside a `must_show` entry,
+the lesson objective, or a must_establish statement.
 
 `learner_action` is path-agnostic learner-task meaning. Use it only when the
 learner must do something that produces evidence. Never put Print form ids,
@@ -452,7 +471,9 @@ may be empty when there is no real overlap risk.
   3. Did I read do_not_choose_when, or recognise a label?
   4. Does every evidence sentence explain a choice, or restate the slot?
   5. Is the anchor introduced once and returned to?
-  6. Does any brief name a format? Remove it.
+  6. Does any brief name a format? Remove it. Does every figure I need have
+     a `visual` object whose labels come only from the objective and
+     must_establish, and is there no visual I added just for decoration?
   7. Would any two blocks teach the same thing?
   8. Does CHECK actually check the objective, or something adjacent?
   9. Is every focused misconception confronted somewhere?

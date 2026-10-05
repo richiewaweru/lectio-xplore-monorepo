@@ -67,7 +67,6 @@ _SLOT_ALLOWLIST = frozenset(
         "role",
         "purpose",
         "locked",
-        "visual_required",
     }
 )
 

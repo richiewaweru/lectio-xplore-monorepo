@@ -8,15 +8,13 @@ from curriculum.prompts import (
     LESSON_APPROACH_PROMPT_V1_SHA256,
     LESSON_APPROACH_PROMPT_V2,
     LESSON_APPROACH_PROMPT_V2_SHA256,
-    VISUAL_REQUIRED_INTENTS,
     lesson_approach_planner_prompt,
     lesson_approach_planner_v1_prompt,
     prompt_text,
 )
-from print.generation.whole_lesson.validation import SPATIAL_PROCESS_REPRESENTATION_INTENTS
 
 V1_SHA256 = "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
-V2_SHA256 = "87eee1cf4f272474657538fab2b80d34a47acca584c1801f556fd85de8650c26"
+V2_SHA256 = "8824f2063933dd9e09c554024e2ae305a4faf9ff52e8b329f014f27da64654eb"
 
 
 def _sha256(text: str) -> str:
@@ -38,16 +36,21 @@ def test_lesson_approach_prompt_checksums_are_authoritative() -> None:
     assert LESSON_APPROACH_PROMPT_V2_SHA256 == V2_SHA256
 
 
-def test_active_v2_prompt_requires_visual_teaching_jobs_without_object_ids() -> None:
+def test_active_v2_prompt_makes_plan_visual_the_sole_figure_authority() -> None:
     prompt = lesson_approach_planner_prompt()
-    assert VISUAL_REQUIRED_INTENTS == SPATIAL_PROCESS_REPRESENTATION_INTENTS
-    for intent in VISUAL_REQUIRED_INTENTS:
-        assert intent in prompt
-    assert "visual_required: true" in prompt
-    assert "visual_requirement" not in prompt
-    assert "required_visual_slots" in prompt
-    assert "object ID, component, layout, renderer" in prompt
-    assert "or `compare`" not in prompt
+    assert "visual_required" not in prompt
+    assert "required_visual_slots" not in prompt
+    assert "## VISUALS" in prompt
+    for field in ("mode", "purpose", "must_show", "labels_required", "must_not_show", "required"):
+        assert field in prompt
+    normalized = " ".join(prompt.split())
+    assert "You decide whether the lesson needs a visual" in normalized
+    assert "At most one visual per block" in normalized
+    assert "The default is no visual" in normalized
+    assert "never invented" in normalized
+    output_schema = prompt.split("## OUTPUT", 1)[1].split("## SELF-CHECK", 1)[0]
+    assert '"visual": {' in output_schema
+    assert '"labels_required": [str]' in output_schema
     for object_id in ("diagram-block", "figure-block", "section-writer"):
         assert object_id not in prompt
 

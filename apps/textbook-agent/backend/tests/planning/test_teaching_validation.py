@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from print.generation.page_blocks import PageBlockPlanError, validate_intent_departure
+from curriculum.teaching_plan.models import VisualSpec
 from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ApprovedItemRef,
@@ -314,31 +315,85 @@ def test_slot_order_exact_packet_order_passes_slot_check() -> None:
     assert not any(issue.code == "SLOT_ORDER" for issue in report.issues)
 
 
-def test_required_visual_slot_needs_spatial_process_intent() -> None:
-    slots = ("orient", "model")
-    packet = _slot_order_packet(slots, knowledge_type="procedural")
-    packet.slots[1].visual_required = True
+def _visual_report(visual: VisualSpec | None):
+    slots = ("orient", "explain")
+    packet = _slot_order_packet(slots)
     plan = _slot_order_plan(slots)
-
-    report = validate_teaching_plan(
+    plan.sections[1].blocks[0].visual = visual
+    return validate_teaching_plan(
         plan,
         packet,
-        permitted_intents={"orient", "explain", "show-structure"},
+        permitted_intents={"orient", "explain"},
         excluded_intents=set(),
         typical_by_slot={slot: {"orient", "explain"} for slot in slots},
     )
 
-    assert any(issue.code == "REQUIRED_VISUAL_INTENT" for issue in report.issues)
 
-    plan.sections[1].blocks[0].intent = "show-structure"
-    report = validate_teaching_plan(
-        plan,
-        packet,
-        permitted_intents={"orient", "explain", "show-structure"},
-        excluded_intents=set(),
-        typical_by_slot={slot: {"orient", "explain"} for slot in slots},
+def _visual_codes(visual: VisualSpec | None) -> list[str]:
+    return [issue.code for issue in _visual_report(visual).issues]
+
+
+def test_plan_without_visual_raises_no_visual_issue() -> None:
+    assert "VISUAL_SPEC_INVALID" not in _visual_codes(None)
+    assert "REQUIRED_VISUAL_INTENT" not in _visual_codes(None)
+
+
+def test_valid_visual_spec_passes() -> None:
+    visual = VisualSpec(
+        purpose="See that light reaches the leaf before food is made.",
+        must_show=["light reaches the leaf", "food is made"],
+        labels_required=["Light", "food is made", "plants need light"],
     )
-    assert not any(issue.code == "REQUIRED_VISUAL_INTENT" for issue in report.issues)
+    report = _visual_report(visual)
+    assert "VISUAL_SPEC_INVALID" not in [issue.code for issue in report.issues]
+    assert report.ok
+
+
+def test_visual_spec_with_empty_must_show_is_rejected() -> None:
+    report = _visual_report(VisualSpec(purpose="See the cause.", must_show=[" ", ""]))
+    issues = [i for i in report.issues if i.code == "VISUAL_SPEC_INVALID"]
+    assert issues and all(i.blocking for i in issues)
+    assert not report.ok
+    assert "must_show" in issues[0].message
+    assert issues[0].path == "sections.explain.blocks[0].visual"
+
+
+def test_visual_spec_with_blank_purpose_is_rejected() -> None:
+    report = _visual_report(VisualSpec(purpose="  ", must_show=["light reaches the leaf"]))
+    assert any(
+        i.code == "VISUAL_SPEC_INVALID" and "purpose" in i.message for i in report.issues
+    )
+
+
+def test_visual_spec_with_invented_label_is_rejected() -> None:
+    report = _visual_report(
+        VisualSpec(
+            purpose="See the cause.",
+            must_show=["light reaches the leaf"],
+            labels_required=["chlorophyll"],
+        )
+    )
+    issues = [i for i in report.issues if i.code == "VISUAL_SPEC_INVALID"]
+    assert len(issues) == 1
+    assert "chlorophyll" in issues[0].message
+
+
+def test_visual_label_match_ignores_case_and_whitespace() -> None:
+    visual = VisualSpec(
+        purpose="See the cause.",
+        must_show=["light reaches the leaf"],
+        labels_required=["  LIGHT   reaches the LEAF "],
+    )
+    assert "VISUAL_SPEC_INVALID" not in _visual_codes(visual)
+
+
+def test_visual_vocabulary_does_not_trigger_object_leak() -> None:
+    visual = VisualSpec(
+        purpose="A labelled figure shows the table of stages.",
+        must_show=["figure", "table", "list"],
+        labels_required=["figure"],
+    )
+    assert "OBJECT_LEAK" not in _visual_codes(visual)
 
 
 def test_anchor_usage_accepts_active_contrast_slot() -> None:

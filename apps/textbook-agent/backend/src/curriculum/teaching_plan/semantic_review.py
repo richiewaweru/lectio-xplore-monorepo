@@ -19,7 +19,11 @@ SemanticFindingCode = Literal[
     "assessment_item_reused",
     "misconception_unresolved",
     "factual_inaccuracy",
+    "visual_missing_for_figure_objective",
 ]
+
+# Reviewer codes that are warnings only: they are flagged, never block or repair.
+ADVISORY_ONLY_SEMANTIC_CODES: frozenset[str] = frozenset({"visual_missing_for_figure_objective"})
 
 # Codes that must cite exactly one section and exactly one block.
 _SINGLE_SECTION_SINGLE_BLOCK_CODES = frozenset(
@@ -127,6 +131,12 @@ def _validate_finding_bindings(
                 raise TeachingPlanSemanticReviewProtocolError(
                     "factual_inaccuracy must cite exactly one section and at most one block"
                 )
+        elif finding.code == "visual_missing_for_figure_objective":
+            # Lesson-level: cite the section(s) that should carry the figure; no block.
+            if finding.block_ids:
+                raise TeachingPlanSemanticReviewProtocolError(
+                    "visual_missing_for_figure_objective must use an empty block_ids list"
+                )
         elif finding.block_ids:
             raise TeachingPlanSemanticReviewProtocolError(
                 f"{finding.code} must use an empty block_ids list"
@@ -225,6 +235,7 @@ async def review_teaching_plan_draft(
 
 
 __all__ = [
+    "ADVISORY_ONLY_SEMANTIC_CODES",
     "SemanticFindingCode",
     "TeachingPlanSemanticFinding",
     "TeachingPlanSemanticReviewDraft",

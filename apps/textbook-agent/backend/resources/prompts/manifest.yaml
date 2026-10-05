@@ -132,7 +132,7 @@ prompts:
     file: teaching-plan-semantic-reviewer.md
     stage_label: Reviews Teaching Plan progression
     editable: false
-    version: 2
+    version: 3
 
   - id: targeted-lesson-repair
     file: targeted-lesson-repair.md

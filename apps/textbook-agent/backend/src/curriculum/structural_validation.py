@@ -43,7 +43,6 @@ def validate_path_structural_result(
     plan: PathStructuralPlan | PathStructuralPagePlan,
     *,
     expected_slots: list[str],
-    expected_visual_required: Mapping[str, bool] | None = None,
     legal_slots: Mapping[str, Mapping[str, object]] | None = None,
     max_slots: int | None = None,
 ) -> list[str]:
@@ -81,9 +80,6 @@ def validate_path_structural_result(
                 recommended_slots=expected_slots,
                 legal_slots=legal_slots,
                 max_slots=max_slots or len(expected_slots),
-                required_visual_slots=[
-                    slot for slot, required in (expected_visual_required or {}).items() if required
-                ],
             )
         )
 
@@ -127,15 +123,6 @@ def validate_path_structural_result(
     for index, section in enumerate(plan.sections):
         if not (section.title or "").strip():
             errors.append(f"sections[{index}].title: must not be blank")
-
-        if expected_visual_required is not None:
-            expected = bool(expected_visual_required.get(section.id, False))
-            if bool(section.visual_required) != expected:
-                errors.append(
-                    f"sections[{index}].visual_required: must echo the fixed "
-                    f"slot flag {expected} for {section.id!r}, got "
-                    f"{bool(section.visual_required)}"
-                )
 
     if plan.sections and (plan.sections[0].transition_note or "").strip():
         errors.append("sections[0].transition_note: must be null for the first section")

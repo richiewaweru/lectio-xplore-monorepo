@@ -200,24 +200,87 @@ def _walk(value: Any) -> Iterable[Mapping[str, Any]]:
             yield from _walk(child)
 
 
+_FAILED_FIGURE_STATUSES = frozenset({"failed", "failed_terminal", "omitted", "omitted_quality"})
+
+
+def _is_figure_node(node: Mapping[str, Any]) -> bool:
+    kind = _text(node.get("object")) or _text(node.get("kind"))
+    return kind in {"figure", "visual"} or "figure" in kind.lower()
+
+
+def _plan_visual_blocks(states: Sequence[Mapping[str, Any]]) -> list[tuple[str, bool]]:
+    """(block id, required) for every teaching-plan block that declares a ``visual``."""
+    for state in states:
+        plan = state.get("teaching_plan")
+        if not isinstance(plan, Mapping):
+            continue
+        found: list[tuple[str, bool]] = []
+        for section in plan.get("sections") or []:
+            if not isinstance(section, Mapping):
+                continue
+            for block in section.get("blocks") or []:
+                if not isinstance(block, Mapping):
+                    continue
+                visual = block.get("visual")
+                block_id = _text(block.get("id"))
+                if isinstance(visual, Mapping) and block_id:
+                    found.append((block_id, visual.get("required") is not False))
+        return found
+    return []
+
+
+def _plan_visual_issues(
+    path: ArtifactPath,
+    documents: Sequence[Mapping[str, Any]],
+    plan_visual_blocks: Sequence[tuple[str, bool]],
+) -> Iterable[LessonIssue]:
+    """The teaching plan is the sole authority for figures: every planned visual
+    needs a figure node bound to its block, and that figure must not have failed."""
+    figures_by_block: dict[str, list[Mapping[str, Any]]] = {}
+    for document in documents:
+        for node in _walk(document):
+            block_id = _text(node.get("teaching_block_id"))
+            if block_id and _is_figure_node(node):
+                figures_by_block.setdefault(block_id, []).append(node)
+    for block_id, required in plan_visual_blocks:
+        figures = figures_by_block.get(block_id, [])
+        if not figures:
+            message = "A teaching block planned a visual but the document has no figure for it."
+        elif all(
+            _text(node.get("status") or node.get("media_status")).lower()
+            in _FAILED_FIGURE_STATUSES
+            for node in figures
+        ):
+            message = "The figure planned for this teaching block failed to generate."
+        else:
+            continue
+        issue = _as_issue(
+            path=path,
+            raw={
+                "code": "REQUIRED_FIGURE_MISSING",
+                "message": message,
+                "severity": "error" if required else "warning",
+                "target_id": block_id,
+                "repairable": True,
+                "repair_action": "retry",
+            },
+            source="media_pipeline",
+            default_category="figure",
+        )
+        if issue:
+            yield issue
+
+
 def _media_issues(
     path: ArtifactPath, documents: Sequence[Mapping[str, Any]]
 ) -> Iterable[LessonIssue]:
-    def is_figure_node(node: Mapping[str, Any]) -> bool:
-        kind = _text(node.get("object")) or _text(node.get("kind"))
-        return kind in {"figure", "visual"} or "figure" in kind.lower()
-
     for document in documents:
         media = document.get("media")
         media_ids = set(media) if isinstance(media, Mapping) else set()
         for node in _walk(document):
             kind = _text(node.get("object")) or _text(node.get("kind"))
             status = _text(node.get("status") or node.get("media_status")).lower()
-            required = bool(
-                node.get("required")
-                or node.get("visual_required")
-                or node.get("media_required")
-            )
+            required = bool(node.get("required") or node.get("media_required"))
             is_figure = kind in {"figure", "visual"} or "figure" in kind.lower()
             has_asset = bool(
                 node.get("src")
@@ -246,40 +309,6 @@ def _media_issues(
                 )
                 if issue:
                     yield issue
-            elif required and bool(node.get("visual_required")) and not is_figure:
-                children = next(
-                    (
-                        node.get(key)
-                        for key in ("blocks", "components", "nodes")
-                        if isinstance(node.get(key), list)
-                    ),
-                    None,
-                )
-                has_figure_child = (
-                    any(
-                        is_figure_node(child)
-                        for child in children
-                        if isinstance(child, Mapping)
-                    )
-                    if isinstance(children, list)
-                    else False
-                )
-                if isinstance(children, list) and not has_figure_child:
-                    issue = _as_issue(
-                        path=path,
-                        raw={
-                            "code": "REQUIRED_FIGURE_MISSING",
-                            "message": "A section marked visual_required has no figure or media asset.",
-                            "severity": "error",
-                            "target_id": _target(node),
-                            "repairable": True,
-                            "repair_action": "retry",
-                        },
-                        source="media_pipeline",
-                        default_category="figure",
-                    )
-                    if issue:
-                        yield issue
 
 
 def _document_contract_issues(
@@ -359,6 +388,9 @@ def collect_lesson_issues(
             add(issue)
     for issue in _media_issues(path, documents):
         add(issue)
+    if realization and documents:
+        for issue in _plan_visual_issues(path, documents, _plan_visual_blocks(states)):
+            add(issue)
     for issue in _document_contract_issues(path, documents):
         add(issue)
     for raw in booklet_issues:

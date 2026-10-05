@@ -399,11 +399,6 @@ async def run_path_structural_planner(
         for slot in (fixed_context.get("legal_slots") or [])
         if isinstance(slot, dict) and slot.get("slot_id")
     }
-    expected_visual_required = {
-        str(slot["slot_id"]): bool(slot.get("visual_required"))
-        for slot in (fixed_context.get("slots") or [])
-        if isinstance(slot, dict) and slot.get("slot_id")
-    }
     tid = trace_id or str(uuid.uuid4())
     errors: list[str] = []
     previous_output: dict[str, Any] | None = None
@@ -418,7 +413,7 @@ async def run_path_structural_planner(
                     "errors name. Return one semantic section payload for each "
                     "supplied slot, in the supplied order. Do not add or remove "
                     "sections. Do not output objective, concept/card identity, "
-                    "slot identity, card_id, or visual_required; code owns those fields."
+                    "slot identity, or card_id; code owns those fields."
                 )
             else:
                 repair_instruction = (
@@ -426,8 +421,6 @@ async def run_path_structural_planner(
                     "the complete corrected JSON. Change only what the listed "
                     "errors name. Section ids and roles must match selected_slots: "
                     "do not invent slot roles, and preserve the objective and concept id exactly."
-                    " Echo each supplied slot's visual_required flag exactly; "
-                    "do not clear an authoritative true flag."
                 )
             payload = {
                 **fixed_context,
@@ -467,7 +460,6 @@ async def run_path_structural_planner(
         errors = validate_path_structural_result(
             plan,
             expected_slots=expected_slots,
-            expected_visual_required=expected_visual_required,
             legal_slots=legal_slots or None,
             max_slots=int(fixed_context.get("max_slots") or len(expected_slots)),
         )

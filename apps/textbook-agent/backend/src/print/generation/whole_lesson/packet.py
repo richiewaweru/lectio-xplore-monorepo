@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ScopeEntry(BaseModel):
@@ -62,10 +62,14 @@ class SlotRecord(BaseModel):
     typical_intents: list[str] = Field(default_factory=list)
     min_blocks: int = 1
     max_blocks: int = 3
-    visual_required: bool = Field(
-        default=False,
-        description="Authoritative structural requirement for a visual in this slot.",
-    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _ignore_retired_visual_required(cls, data: Any) -> Any:
+        # Packets persisted before the flag was retired may still carry it.
+        if isinstance(data, dict) and "visual_required" in data:
+            return {key: value for key, value in data.items() if key != "visual_required"}
+        return data
 
 
 class ApprovedItemRef(BaseModel):
@@ -109,9 +113,6 @@ class ImmutableLessonPacket(BaseModel):
     def approved_item_ids(self) -> list[str]:
         return [item.id for item in self.approved_items]
 
-    def required_visual_slots(self) -> tuple[str, ...]:
-        return tuple(slot.slot_id for slot in self.slots if slot.visual_required)
-
     def planner_payload(self) -> dict[str, Any]:
         """Subset visible to the teaching planner (fixed identities only)."""
         return {
@@ -121,7 +122,6 @@ class ImmutableLessonPacket(BaseModel):
             "misconceptions": [m.model_dump(mode="json") for m in self.misconceptions],
             "prior_established": [p.model_dump(mode="json") for p in self.prior_established],
             "slots": [s.model_dump(mode="json") for s in self.slots],
-            "required_visual_slots": list(self.required_visual_slots()),
             "required_assessment_slots": list(self.required_assessment_slots),
             "approved_item_ids": self.approved_item_ids(),
             "limits": self.limits.model_dump(mode="json"),

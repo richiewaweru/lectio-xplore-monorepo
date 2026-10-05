@@ -20,7 +20,8 @@ scope, and section/block identity map as evidence. `lesson_context` includes
 approved for this lesson — treat each one as immutable check content that must
 never reappear, in substance, as teaching content elsewhere in the plan. Judge
 meaning; do not use keyword overlap as proof.
-Report only concrete blocking defects that the planner can repair. Do not
+Report only concrete blocking defects that the planner can repair, plus the
+single advisory code `visual_missing_for_figure_objective` when it applies. Do not
 rewrite the draft. When no blocking defect remains, return an empty findings
 array and `reviewed: true`.
 
@@ -71,6 +72,14 @@ Allowed codes are exactly:
   identify exactly one section, and the one block if the defect is inside a
   block's brief, or no block when the defect is in a section-level field.
 
+- `visual_missing_for_figure_objective`: the lesson objective (or a
+  must_establish statement) names a diagram, labelled figure or process
+  picture, and no block in the plan has a `visual` object. This is a warning,
+  not a blocking defect. Judge meaning, not keywords. Cite the section or
+  sections that should carry the figure and use an empty block_ids list. Do
+  not raise it when any block already has a `visual`, or when the objective
+  only uses the word incidentally.
+
 Every finding must cite only exact IDs from the supplied identity map and give
-a useful repair instruction. Do not return warnings, unsupported codes, extra
+a useful repair instruction. Do not return warnings beyond the one advisory code above, unsupported codes, extra
 fields, or findings with no repairable semantic defect.

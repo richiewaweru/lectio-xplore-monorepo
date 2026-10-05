@@ -50,6 +50,46 @@ class LearnerActionBrief(BaseModel):
     difficulty: Difficulty
 
 
+# Subset of media.generation.contracts.VisualMode. Defined locally: the
+# curriculum layer must not import the media package.
+VisualSpecMode = Literal["diagram", "image"]
+
+
+def _clean_text_list(values: list[str]) -> list[str]:
+    cleaned = [value.strip() for value in values if isinstance(value, str)]
+    return [value for value in cleaned if value]
+
+
+class VisualSpec(BaseModel):
+    """Plan-owned figure contract for one block.
+
+    The reasoning planner is the sole authority for whether a block needs a
+    figure. Absence (``None`` on the block) means no figure.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: VisualSpecMode = "diagram"
+    purpose: str = Field(description="What the learner must notice in the figure.")
+    must_show: list[str] = Field(
+        description="Exact stages, parts or relationships the figure must show.",
+    )
+    labels_required: list[str] = Field(
+        default_factory=list,
+        description="Exact label text the figure must carry.",
+    )
+    must_not_show: list[str] = Field(default_factory=list)
+    required: bool = True
+
+    @model_validator(mode="after")
+    def _normalize(self) -> VisualSpec:
+        self.purpose = self.purpose.strip()
+        self.must_show = _clean_text_list(self.must_show)
+        self.labels_required = _clean_text_list(self.labels_required)
+        self.must_not_show = _clean_text_list(self.must_not_show)
+        return self
+
+
 class TeachingPlanBlock(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -76,6 +116,7 @@ class TeachingPlanBlock(BaseModel):
         description="Stimulus or content asset ids this block's learner task depends on.",
     )
     learner_action: LearnerActionBrief | None = None
+    visual: VisualSpec | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def _normalize_and_check_provenance(self) -> TeachingPlanBlock:
@@ -294,6 +335,7 @@ class TeachingPlanDraftBlock(BaseModel):
         description="Stimulus or content asset ids this block's learner task depends on.",
     )
     learner_action: LearnerActionBrief | None = None
+    visual: VisualSpec | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def _reject_duplicate_refs(self) -> TeachingPlanDraftBlock:
@@ -470,6 +512,7 @@ def materialize_teaching_plan(
                         sourcebook_needs=list(block.sourcebook_needs),
                         sourcebook_refs=list(block.sourcebook_refs),
                         learner_action=block.learner_action,
+                        visual=block.visual,
                     )
                     for position, block in enumerate(section.blocks)
                 ],
@@ -494,5 +537,6 @@ __all__ = [
     "TeachingPlanDraftV2",
     "TeachingPlanSection",
     "TeachingRevisionRecord",
+    "VisualSpec",
     "materialize_teaching_plan",
 ]

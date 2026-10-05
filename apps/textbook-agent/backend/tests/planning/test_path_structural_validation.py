@@ -23,15 +23,9 @@ def _plan(sections: list[dict] | None = None, **overrides: object) -> PathStruct
                 "id": slot,
                 "role": slot,
                 "title": f"{slot} section",
-                "visual_required": False,
                 "transition_note": None if index == 0 else f"follows {SLOTS[index - 1]}",
             }
             for index, slot in enumerate(SLOTS)
-        ]
-    else:
-        sections = [
-            {**section, "visual_required": section.get("visual_required", False)}
-            for section in sections
         ]
     payload: dict = {
         "anchor": {"description": "two basil plants", "source": "new"},
@@ -48,7 +42,7 @@ def test_well_formed_plan_has_no_violations() -> None:
     assert validate_path_structural_result(_plan(), expected_slots=SLOTS) == []
 
 
-def test_rejects_visual_flag_drift_against_fixed_slots() -> None:
+def test_stored_structural_plan_with_retired_visual_required_still_loads() -> None:
     sections = [
         {
             "id": slot,
@@ -60,12 +54,8 @@ def test_rejects_visual_flag_drift_against_fixed_slots() -> None:
         for index, slot in enumerate(SLOTS)
     ]
     plan = _plan(sections)
-    errors = validate_path_structural_result(
-        plan,
-        expected_slots=SLOTS,
-        expected_visual_required={"explain": False},
-    )
-    assert any("visual_required" in error and "explain" in error for error in errors)
+    assert all("visual_required" not in section.model_dump() for section in plan.sections)
+    assert validate_path_structural_result(plan, expected_slots=SLOTS) == []
 
 
 def test_rejects_wrong_section_order() -> None:

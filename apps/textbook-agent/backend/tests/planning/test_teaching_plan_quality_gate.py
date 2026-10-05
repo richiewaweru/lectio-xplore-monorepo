@@ -229,3 +229,27 @@ async def test_blocking_mode_rejects_advisory_validator_issues_and_has_no_flags(
     )
     assert len(planner_calls) == 2  # attempt 1 blocked, attempt 2 clean
     assert result.flags == []
+
+
+@pytest.mark.asyncio
+async def test_visual_missing_finding_is_only_a_flag_even_in_blocking_mode(
+    monkeypatch, blocking_gate
+) -> None:
+    review = TeachingPlanSemanticReviewResult(
+        content_hash=_candidate_hash(),
+        findings=[_finding("visual_missing_for_figure_objective", ["explain"])],
+    )
+    planner_calls, reviewer_calls = _install(monkeypatch, reviews=[review])
+    result = await run_lesson_approach_planner(
+        _packet(), legality=_make_snapshot(), require_items=False
+    )
+    assert len(planner_calls) == len(reviewer_calls) == 1  # no repair round
+    flags = [flag for flag in result.flags if flag["code"] == "visual_missing_for_figure_objective"]
+    assert len(flags) == 1
+    assert flags[0]["source"] == "reviewer" and flags[0]["severity"] == "warning"
+    assert flags[0]["section_ids"] == ["explain"] and flags[0]["block_ids"] == []
+
+
+def test_visual_spec_invalid_is_a_hard_plan_issue() -> None:
+    assert "VISUAL_SPEC_INVALID" in HARD_PLAN_ISSUE_CODES
+    assert is_hard_plan_issue("VISUAL_SPEC_INVALID")

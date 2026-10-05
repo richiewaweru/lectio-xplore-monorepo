@@ -19,7 +19,6 @@ def validate_flow_choice(
     recommended_slots: Sequence[str],
     legal_slots: Mapping[str, Mapping[str, object]],
     max_slots: int,
-    required_visual_slots: Sequence[str] = (),
 ) -> list[str]:
     """Return structural flow violations; an empty list means the choice is legal."""
     selected = list(choice.selected_slots or recommended_slots)
@@ -38,9 +37,6 @@ def validate_flow_choice(
         errors.append("selected_slots must retain the final verification/check capability")
     elif selected[-1] != "check":
         errors.append("selected_slots must place the final verification/check capability last")
-    for visual_slot in required_visual_slots:
-        if visual_slot not in selected:
-            errors.append(f"required visual slot {visual_slot!r} was removed")
     if choice.recommended_slots and list(choice.recommended_slots) != list(recommended_slots):
         errors.append("recommended_slots must echo the code-owned recommendation")
     if selected != list(recommended_slots) and not choice.rationale.strip():

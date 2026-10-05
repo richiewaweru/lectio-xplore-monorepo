@@ -725,7 +725,6 @@ JSON only, matching StructuralPlan.
     "title": str,
     "role": str,                  // = slot id, given to you
     "card_id": str | null,
-    "visual_required": bool,
     "transition_note": str,
     "components": [ ... ]         // from the component selector
   } ],

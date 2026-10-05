@@ -11,8 +11,6 @@ from application.unit_lesson.teaching_plan_service import slot_ids_from_structur
 
 def _packet_for_slots(
     slot_ids: tuple[str, ...],
-    *,
-    visual_required_by_slot: dict[str, bool] | None = None,
 ):
     return build_lesson_packet(
         path_lesson_id="lesson-1",
@@ -30,7 +28,6 @@ def _packet_for_slots(
         prior_established=[],
         approved_items=[],
         slot_ids=slot_ids,
-        visual_required_by_slot=visual_required_by_slot,
     )
 
 
@@ -103,11 +100,14 @@ def test_packet_slots_preserve_plan_order_not_alphabetical() -> None:
     assert [slot.slot_id for slot in packet.slots] == list(expected)
 
 
-def test_packet_slots_preserve_authoritative_visual_flags() -> None:
-    packet = _packet_for_slots(
-        ("orient", "recall", "model", "guided", "check"),
-        visual_required_by_slot={"model": True},
-    )
-    assert packet.required_visual_slots() == ("model",)
-    assert packet.planner_payload()["required_visual_slots"] == ["model"]
-    assert packet.slots[2].visual_required is True
+def test_packet_has_no_visual_flags_and_ignores_stored_ones() -> None:
+    packet = _packet_for_slots(("orient", "recall", "model", "guided", "check"))
+    assert "required_visual_slots" not in packet.planner_payload()
+    assert "visual_required" not in packet.slots[2].model_dump()
+    assert not hasattr(packet, "required_visual_slots")
+
+    stored = packet.model_dump(mode="json")
+    stored["slots"][2]["visual_required"] = True
+    reloaded = type(packet).model_validate(stored)
+    assert [slot.slot_id for slot in reloaded.slots] == [slot.slot_id for slot in packet.slots]
+    assert "visual_required" not in reloaded.slots[2].model_dump()
