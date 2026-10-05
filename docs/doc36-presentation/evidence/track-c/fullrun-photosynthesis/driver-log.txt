@@ -1,0 +1,5 @@
+[21:44:44] resume unit 28164ffa-d703-466c-9aa2-ef4bbe30bff0 lesson 73f7f657-b87b-43f3-96b0-dd0bc7065780 title=Light, water and carbon dioxide make the food the plant needs to grow
+[21:44:44] resume generation bdac0c31-68ee-4b12-b2b4-47f4d9e719fa
+[21:44:44] stage awaiting_teaching_approval/awaiting_review
+[21:44:44] teaching approve 200 {"generation_id":"bdac0c31-68ee-4b12-b2b4-47f4d9e719fa","status":"teaching_approved","path":"learn","queued":false,"next":"generate_learn","teaching_plan_identity":{"revision":2,"pending_content_hash":null,"pending_hash_verified":false,"approved_revision":1,"approved_content_hash":"cde52d8ec7bf4653d
+[21:44:45] generate-learn 202 after 1s

@@ -1,0 +1,14 @@
+{
+  "ts": 1791226510.0569139,
+  "spec": {
+    "subject": "Mathematics",
+    "grade_level": "Grade 6",
+    "title": "Area of Rectangles and Compound Shapes",
+    "topic": "Area of rectangles and compound shapes",
+    "destination_objective": "Use the formula area = length x width to find the area of rectangles and of compound shapes made from rectangles.",
+    "starting_knowledge": [
+      "can multiply whole numbers",
+      "know that area is measured in square units"
+    ]
+  }
+}

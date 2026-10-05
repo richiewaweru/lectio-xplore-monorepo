@@ -1,0 +1,334 @@
+{
+ "run": "fullrun-area",
+ "document_id": "shared-document:944478b3-89f4-4d1b-8be3-4305a100799f:revision:1",
+ "sections": [
+  {
+   "id": "orient",
+   "title": "A room that is not one rectangle",
+   "node_sequence": [
+    "paragraph",
+    "figure"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-c372ca37a234ac8ff6fd",
+     "segments": 1,
+     "words_per_segment": [
+      83
+     ],
+     "total_words": 83
+    }
+   ]
+  },
+  {
+   "id": "recall",
+   "title": "What we already know about rectangles",
+   "node_sequence": [
+    "paragraph",
+    "task_anchor",
+    "callout:misconception"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-366c6e25cd443b0fc787",
+     "segments": 1,
+     "words_per_segment": [
+      60
+     ],
+     "total_words": 60
+    }
+   ]
+  },
+  {
+   "id": "model",
+   "title": "Splitting the floor plan and adding the parts",
+   "node_sequence": [
+    "paragraph",
+    "figure",
+    "equation",
+    "figure",
+    "callout:misconception",
+    "figure"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-13309311b76feee40819",
+     "segments": 2,
+     "words_per_segment": [
+      16,
+      56
+     ],
+     "total_words": 72
+    }
+   ]
+  },
+  {
+   "id": "guided",
+   "title": "Your turn, with the split supplied",
+   "node_sequence": [
+    "paragraph",
+    "figure",
+    "task_anchor",
+    "callout:misconception",
+    "figure",
+    "paragraph"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-1232bbdb937783c0bb2d",
+     "segments": 1,
+     "words_per_segment": [
+      66
+     ],
+     "total_words": 66
+    },
+    {
+     "id": "shared-node-98918b2efa72f643b511",
+     "segments": 2,
+     "words_per_segment": [
+      54,
+      32
+     ],
+     "total_words": 86
+    }
+   ]
+  },
+  {
+   "id": "check",
+   "title": "Check: choosing the calculation",
+   "node_sequence": [
+    "paragraph",
+    "task_anchor"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-de29f59a1337f2019e9c",
+     "segments": 2,
+     "words_per_segment": [
+      13,
+      38
+     ],
+     "total_words": 51
+    }
+   ]
+  }
+ ],
+ "totals": {
+  "paragraph_nodes": 6,
+  "paragraph_over80_segments": 1,
+  "strong_spans": 5,
+  "sub_spans": 0,
+  "sup_spans": 34,
+  "unicode_subsup": 0,
+  "bare_formula_or_unit": 0,
+  "literal_fallbacks": 0,
+  "equations": 1,
+  "tables": 0,
+  "compares": 0,
+  "lists": 0,
+  "misconception_callouts": 3,
+  "misconceptions_three_part": 3,
+  "key_idea_callouts": 0,
+  "figures": 6
+ },
+ "list_items_review": [],
+ "list_summary_marker_hits": [],
+ "literal_markup_fallbacks": [],
+ "bare_formulas_or_units": [],
+ "advisory_event_codes": {
+  "composition_style_warning": {
+   "callout_missing_cautionary_cue": 1,
+   "kind_missing_semantic_cue": 1
+  },
+  "section_write_warning": {
+   "length_over_target": 3,
+   "shape_missing": 2
+  },
+  "document_qa_advisory_flags": {
+   "callout_missing_cautionary_cue": 1,
+   "kind_missing_semantic_cue": 1,
+   "length_over_target": 1,
+   "shape_missing": 1
+  }
+ },
+ "diagnostics_in_document": [],
+ "retried_work_items": [
+  {
+   "item": "boundary:recall->model",
+   "attempt": "2"
+  },
+  {
+   "item": "write:check",
+   "attempt": "2"
+  },
+  {
+   "item": "media:shared-media-12bf88ddbb332b8225e1d7208fae15ed372318d19e39c57cfcd383d6e0026813",
+   "attempt": "2"
+  }
+ ],
+ "failure_events": [
+  {
+   "seq": "10",
+   "type": "work_item_failed",
+   "stage": "section_writing",
+   "code": "database_transient",
+   "payload": {
+    "retryable": true,
+    "error_class": "provider_transport",
+    "safe_summary": "A transient database error interrupted the section.",
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "11",
+   "type": "section_writer_failure_diagnostic",
+   "stage": "section_writing",
+   "code": "database_transient",
+   "payload": {
+    "original_exception_type": "DBAPIError"
+   }
+  },
+  {
+   "seq": "19",
+   "type": "work_item_retry_queued",
+   "stage": "section_writing",
+   "code": "None",
+   "payload": {
+    "attempt": 2,
+    "from_attempt": 1,
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "20",
+   "type": "auto_retry_scheduled",
+   "stage": "section_writing",
+   "code": "None",
+   "payload": {
+    "attempts": [
+     1
+    ],
+    "error_codes": [
+     "database_transient"
+    ],
+    "work_item_ids": [
+     "79084908-0fd3-4169-b513-20a1b1d98f5b"
+    ]
+   }
+  },
+  {
+   "seq": "22",
+   "type": "work_item_failed",
+   "stage": "continuity_validation",
+   "code": "database_transient",
+   "payload": {
+    "retryable": true,
+    "error_class": "provider_transport",
+    "safe_summary": "A transient database error interrupted boundary validation.",
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "23",
+   "type": "boundary_failure_diagnostic",
+   "stage": "continuity_validation",
+   "code": "database_transient",
+   "payload": {
+    "original_exception_type": "DBAPIError"
+   }
+  },
+  {
+   "seq": "27",
+   "type": "work_item_retry_queued",
+   "stage": "continuity_validation",
+   "code": "None",
+   "payload": {
+    "attempt": 2,
+    "from_attempt": 1,
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "28",
+   "type": "auto_retry_scheduled",
+   "stage": "continuity_validation",
+   "code": "None",
+   "payload": {
+    "attempts": [
+     1
+    ],
+    "error_codes": [
+     "database_transient"
+    ],
+    "work_item_ids": [
+     "07b76227-3f70-4bde-8982-39dbf1104e2d"
+    ]
+   }
+  },
+  {
+   "seq": "33",
+   "type": "work_item_failed",
+   "stage": "media_generation",
+   "code": "database_transient",
+   "payload": {
+    "retryable": true,
+    "error_class": "provider_transport",
+    "safe_summary": "A transient database error interrupted figure media work.",
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "44",
+   "type": "work_item_retry_queued",
+   "stage": "media_generation",
+   "code": "None",
+   "payload": {
+    "attempt": 2,
+    "from_attempt": 1,
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "45",
+   "type": "auto_retry_scheduled",
+   "stage": "media_generation",
+   "code": "None",
+   "payload": {
+    "attempts": [
+     1
+    ],
+    "error_codes": [
+     "database_transient"
+    ],
+    "work_item_ids": [
+     "38e8087a-fa90-4852-8673-b16b493304cc"
+    ]
+   }
+  }
+ ]
+}

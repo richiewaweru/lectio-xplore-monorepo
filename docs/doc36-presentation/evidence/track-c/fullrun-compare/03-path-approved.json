@@ -1,0 +1,168 @@
+{
+  "id": "2a9594cc-ba29-4e67-b894-48f4282d4ad2",
+  "unit_id": "1bc74518-cd5a-4fb8-bba7-ad088ecbced4",
+  "version": 1,
+  "revision": 2,
+  "status": "approved",
+  "generated_by": "path_planner",
+  "merge_critic_results": [
+    {
+      "reason": "These adjacent lessons overlap in what they establish.",
+      "source": "deterministic",
+      "verdict": "review_suggested",
+      "lesson_a": "b3eaec8d-d292-415f-91b4-0e377b813268",
+      "lesson_b": "0d2403be-725d-4a14-b6cd-9b1f6e8daafa",
+      "diagnostic_cost": null,
+      "merged_objective": null
+    }
+  ],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": "2026-10-05T18:39:00.119035",
+  "created_at": "2026-10-05T18:38:59.777849",
+  "lessons": [
+    {
+      "id": "b3eaec8d-d292-415f-91b4-0e377b813268",
+      "concept_id": "d0a8e50e-c948-4c09-a338-c3ce022f3aed",
+      "concept_slug": "science.inputs.and.outputs.of.photosynthesis",
+      "title": "Inputs and outputs of photosynthesis",
+      "objective": "Identify the raw materials and products of photosynthesis and state the role of light and chlorophyll.",
+      "objective_hash": "b90c4484cf88ad08e9c8e12b3d4a69591d11a496187751dbb5142df5cd38f435",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "photosynthesis uses carbon dioxide and water",
+        "photosynthesis produces glucose and oxygen",
+        "light is required as an energy source",
+        "chlorophyll absorbs light"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "0d2403be-725d-4a14-b6cd-9b1f6e8daafa",
+      "concept_id": "843c96dc-2516-4da1-afc4-0a281f9c744c",
+      "concept_slug": "science.inputs.and.outputs.of.respiration",
+      "title": "Inputs and outputs of respiration",
+      "objective": "Identify the raw materials and products of respiration.",
+      "objective_hash": "d184c3d0610b40f9873083469712a6d25206632051831de88f5f484235bb4223",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "respiration uses glucose and oxygen",
+        "respiration produces carbon dioxide and water",
+        "respiration releases energy from food"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "9c26130e-8526-4d3a-81b6-be1e15f779ae",
+      "concept_id": "3517cdd6-3a19-4fc1-9f21-97afed7bed92",
+      "concept_slug": "science.cellular.locations.of.photosynthesis.and.respiration",
+      "title": "Cellular locations of photosynthesis and respiration",
+      "objective": "State where in the cell photosynthesis and respiration take place.",
+      "objective_hash": "1218fa177e80485884fc35bf66a76eb304eae4fd4ac446a41558648e5026d61d",
+      "prerequisites": [
+        "b3eaec8d-d292-415f-91b4-0e377b813268",
+        "0d2403be-725d-4a14-b6cd-9b1f6e8daafa"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "photosynthesis occurs in chloroplasts",
+        "respiration occurs in mitochondria"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": "39b2b011-8b53-4853-a9a7-837fdc9de3fc"
+    },
+    {
+      "id": "0d590bef-e5a7-4f64-9316-143405713ea8",
+      "concept_id": "a2a6a526-0660-418a-8705-ffb5ca0aa5b0",
+      "concept_slug": "science.timing.of.photosynthesis.and.respiration.in.plants",
+      "title": "Timing of photosynthesis and respiration in plants",
+      "objective": "Explain when photosynthesis and respiration occur in a plant and how light availability affects each.",
+      "objective_hash": "45e907cbf05cf269ae4310cbb53d8bfaec943beef5f9ba36350f70dfc084028a",
+      "prerequisites": [
+        "b3eaec8d-d292-415f-91b4-0e377b813268",
+        "0d2403be-725d-4a14-b6cd-9b1f6e8daafa"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "photosynthesis occurs only in the presence of light",
+        "respiration occurs continuously, day and night"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "de9bfb9f-f1a9-4cc5-b28d-bce71f8c4a86",
+      "concept_id": "040347f8-5631-4076-9471-b0b8579e7dc8",
+      "concept_slug": "science.complementary.relationship.between.photosynthesis.and.respiration",
+      "title": "Complementary relationship between photosynthesis and respiration",
+      "objective": "Explain how the products of photosynthesis are used in respiration and how the products of respiration are used in photosynthesis.",
+      "objective_hash": "e4b1fb088b53d462d75af98d9fbdb0e6fa5e4d13e78cd059e4e4e388f126032b",
+      "prerequisites": [
+        "b3eaec8d-d292-415f-91b4-0e377b813268",
+        "0d2403be-725d-4a14-b6cd-9b1f6e8daafa",
+        "9c26130e-8526-4d3a-81b6-be1e15f779ae",
+        "0d590bef-e5a7-4f64-9316-143405713ea8"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "the glucose and oxygen produced in photosynthesis are used in respiration",
+        "the carbon dioxide and water produced in respiration are used in photosynthesis",
+        "the two processes form a cycle that supports life"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 4,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": "f8099d04-fd37-4fa1-9616-40fc689e2957"
+    }
+  ]
+}

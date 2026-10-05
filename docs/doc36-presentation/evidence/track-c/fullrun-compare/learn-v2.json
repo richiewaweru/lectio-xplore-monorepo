@@ -1,0 +1,316 @@
+{
+  "version": 2,
+  "id": "fullrun:compare",
+  "title": "How photosynthesis and respiration feed each other",
+  "subject": "Science",
+  "source": "shared_document",
+  "source_generation_id": null,
+  "nodes": [
+    {
+      "id": "shared-node-8db81c2aad956244b743",
+      "teaching_block_id": "orient-b1",
+      "kind": "paragraph",
+      "text": "**In this sealed glass tank, nothing can get in and nothing can get out.** A small green plant and a small animal share the tank, and we watch them for 24 hours, through both a light phase and a dark phase. With the lid sealed, no gases, water, or food can enter or leave during that time.\n\nThat means the plant and the animal must meet all their needs using only what is already inside the tank. So ask yourself: what does the plant need, and what does the animal need? Each one must also depend on what the other gives off. How can both keep getting what they need in a closed system?"
+    },
+    {
+      "id": "shared-figure-node-c636a419002a7fcd3257",
+      "teaching_block_id": "orient-b1",
+      "kind": "figure",
+      "asset_id": null,
+      "caption": "A sealed glass tank containing a small green plant and a small animal, observed over 24 hours, including a light phase and a dark phase.",
+      "alt": ""
+    },
+    {
+      "id": "shared-node-7462b6b3696539942ba6",
+      "teaching_block_id": "explain-b1",
+      "kind": "paragraph",
+      "text": "**Photosynthesis and respiration form a cycle: each process's products are the other's inputs, and the plant respires too.**\n\nInside the sealed tank, carbon dioxide and water enter the chloroplasts in the plant's cells. There, light energy drives photosynthesis, which builds glucose and releases oxygen.\n\nThat glucose and oxygen reach mitochondria in the plant's own cells and in the animal's cells. Respiration in those mitochondria uses glucose and oxygen, releasing carbon dioxide and water. Those products travel back to the chloroplasts, ready to be used again.\n\nThe oxygen made in photosynthesis is not released only to the animal. It is also available to the plant's own mitochondria, which use it alongside glucose made in the chloroplasts. Because each process supplies what the other needs, the tank's materials keep cycling, and the plant respires on its own products."
+    },
+    {
+      "id": "shared-figure-node-cd0d85c7876b5990ede5",
+      "teaching_block_id": "explain-b1",
+      "kind": "figure",
+      "asset_id": null,
+      "caption": "Diagram: carbon dioxide and water entering chloroplasts in the plant's cells, with light energy driving photosynthesis in chloroplasts to produce glucose and oxygen. Glucose and oxygen are used in mitochondria in the plant's cells and in the animal's cells, and respiration produces carbon dioxide and water, which return to the chloroplasts. Oxygen from photosynthesis is available to the plant's own mitochondria as well as to the animal.",
+      "alt": ""
+    },
+    {
+      "id": "shared-node-3a25673ba0c441f5415c",
+      "teaching_block_id": "explain-b2",
+      "kind": "callout",
+      "tone": "warning",
+      "title": "Does respiration stop in the light?",
+      "variant": "misconception",
+      "belief": "When light is available, respiration shuts down; the plant only respires in the dark.",
+      "evidence": "Follow a plant's cells through a bright day: the mitochondria keep taking in oxygen and releasing carbon dioxide while the chloroplasts go on making glucose and oxygen.",
+      "conclusion": "Respiration never stops — it runs in light and dark, while photosynthesis runs only when light is available."
+    },
+    {
+      "id": "shared-figure-node-da97809d175b54895719",
+      "teaching_block_id": "explain-b2",
+      "kind": "figure",
+      "asset_id": null,
+      "caption": "Diagram: a timeline covering a full day, with a light phase and a dark phase. Respiration is active during both the light phase and the dark phase; photosynthesis is active only during the light phase.",
+      "alt": ""
+    },
+    {
+      "id": "shared-node-f0d44dd2415d61bbdfd4",
+      "teaching_block_id": "contrast-b1",
+      "kind": "compare",
+      "items": [
+        {
+          "label": null,
+          "title": "Plant cell in light",
+          "body": "**In a plant cell, respiration runs continuously while photosynthesis runs only when light is present.**\n\nIn the light, **chloroplasts** and **mitochondria** are both active, so photosynthesis and respiration occur at the same time. Glucose and oxygen made by photosynthesis are available to the mitochondria, and the carbon dioxide and water released by respiration are available to the chloroplasts."
+        },
+        {
+          "label": null,
+          "title": "Plant cell in darkness",
+          "body": "With no light, chloroplasts cannot carry out photosynthesis, but that is the only loss. Mitochondria keep respiring in the dark, using glucose and oxygen still present in the cell and releasing carbon dioxide and water.\n\nThe dark cell has not switched off respiration; it has only lost the photosynthesis contribution."
+        }
+      ]
+    },
+    {
+      "id": "shared-figure-node-dc0d5a021ecf27ece901",
+      "teaching_block_id": "contrast-b1",
+      "kind": "figure",
+      "asset_id": null,
+      "caption": "On the left, a plant cell in light with active chloroplasts and active mitochondria, showing glucose and oxygen from photosynthesis available to mitochondria in the light cell and carbon dioxide and water from respiration available to chloroplasts in the light cell. On the right, a plant cell in darkness with inactive chloroplasts and active mitochondria, with mitochondria in the dark cell continuing to use glucose and oxygen and release carbon dioxide and water.",
+      "alt": ""
+    },
+    {
+      "id": "shared-node-c6b5d1f1b4ccefa3da57",
+      "teaching_block_id": "confront-b1",
+      "kind": "callout",
+      "tone": "warning",
+      "title": "The take-turns belief",
+      "variant": "misconception",
+      "belief": "Photosynthesis happens in sunlight and respiration happens in darkness, so a plant switches from one process to the other.",
+      "evidence": "Dark-chamber gas changes look like the opposite of bright-light changes, which makes the take-turns idea feel right. Yet a plant cell in bright light shows mitochondria using glucose and O~2~ at the same time as chloroplasts photosynthesise.",
+      "conclusion": "Respiration is continuous, day and night, while photosynthesis runs whenever light is available, so both processes run together in the light."
+    },
+    {
+      "id": "shared-node-2184881ac796004269cb",
+      "teaching_block_id": "confront-b2",
+      "kind": "callout",
+      "tone": "warning",
+      "title": "The 'only for animals' belief",
+      "variant": "misconception",
+      "belief": "The O~2~ made by photosynthesis is only for other organisms; the plant does not use the oxygen it makes itself.",
+      "evidence": "Textbooks often describe plants releasing O~2~ for animals, so the plant's own oxygen use is easy to miss. In the same plant cell, oxygen made in the chloroplasts diffuses to that cell's mitochondria and is used in respiration.",
+      "conclusion": "The O~2~ from photosynthesis is available to the plant's own respiration as well as to other organisms, and the plant also uses oxygen from the air."
+    },
+    {
+      "id": "shared-node-de29f59a1337f2019e9c",
+      "teaching_block_id": "check-b1",
+      "kind": "paragraph",
+      "text": "**In a healthy plant, photosynthesis and respiration run at the same time, day and night.** Read the student's explanation, then choose the one correction that would make it accurate. Weigh how each product is used and when each process happens, rather than the order in which the student lists them."
+    },
+    {
+      "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+      "kind": "interaction",
+      "interaction_type": "choice",
+      "teaching_block_id": "check-b1",
+      "prompt": "A student writes: \"A plant's cells make glucose and oxygen during photosynthesis. The oxygen is released for animals, and the glucose is stored as starch. At night, the plant respires and uses the glucose and oxygen it stored during the day.\" Which correction should be made to this explanation?",
+      "config": {
+        "options": [
+          {
+            "id": "a",
+            "text": "Photosynthesis also supplies oxygen for the plant's own respiration, and respiration occurs continuously, not only at night."
+          },
+          {
+            "id": "b",
+            "text": "The correction is that photosynthesis produces carbon dioxide and water, while respiration produces glucose and oxygen."
+          },
+          {
+            "id": "c",
+            "text": "The correction is that the plant respires only during the day, because respiration requires the light energy captured by photosynthesis."
+          },
+          {
+            "id": "d",
+            "text": "The correction is that oxygen made in photosynthesis is only for the plant itself, and no oxygen is available to other organisms."
+          }
+        ],
+        "correct_option_id": "a"
+      },
+      "feedback": {
+        "correct": "Correct. Respiration runs continuously, using glucose and oxygen, and the oxygen made by the plant's own photosynthesis is available to the plant's own mitochondria as well as to other organisms."
+      },
+      "assessment_mode": "graded",
+      "attempt_policy": {
+        "max_attempts": null,
+        "show_feedback_after_submit": true,
+        "allow_retry_after_correct": true
+      },
+      "completion": {
+        "type": "submitted"
+      },
+      "role": "check",
+      "display_prompt": null,
+      "option_notes": {
+        "a": "Accurate correction: states that oxygen from photosynthesis serves the plant's own respiration and that respiration is continuous rather than night-only.",
+        "b": "Reverses the inputs and outputs of photosynthesis and respiration.",
+        "c": "Retains the misconception that respiration happens only when photosynthesis is possible.",
+        "d": "Retains a misconception about ownership of oxygen, claiming no oxygen is available to other organisms."
+      },
+      "contract": {
+        "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+        "kind": "choice",
+        "prompt": "A student writes: \"A plant's cells make glucose and oxygen during photosynthesis. The oxygen is released for animals, and the glucose is stored as starch. At night, the plant respires and uses the glucose and oxygen it stored during the day.\" Which correction should be made to this explanation?",
+        "config": {
+          "options": [
+            {
+              "id": "a",
+              "text": "Photosynthesis also supplies oxygen for the plant's own respiration, and respiration occurs continuously, not only at night."
+            },
+            {
+              "id": "b",
+              "text": "The correction is that photosynthesis produces carbon dioxide and water, while respiration produces glucose and oxygen."
+            },
+            {
+              "id": "c",
+              "text": "The correction is that the plant respires only during the day, because respiration requires the light energy captured by photosynthesis."
+            },
+            {
+              "id": "d",
+              "text": "The correction is that oxygen made in photosynthesis is only for the plant itself, and no oxygen is available to other organisms."
+            }
+          ],
+          "correct_option_id": "a"
+        },
+        "feedback": {
+          "correct": "Correct. Respiration runs continuously, using glucose and oxygen, and the oxygen made by the plant's own photosynthesis is available to the plant's own mitochondria as well as to other organisms."
+        },
+        "assessment_mode": "graded",
+        "attempt_policy": {
+          "max_attempts": null,
+          "show_feedback_after_submit": true,
+          "allow_retry_after_correct": true
+        },
+        "completion": {
+          "type": "submitted"
+        },
+        "ai_config_rule": "config-only",
+        "teaching_block_id": "check-b1",
+        "shared_task": {
+          "id": "task-check-b1",
+          "action": "select-one",
+          "mode": "assessment",
+          "purpose": "check whether learners can correct an explanation that contains the alternating-process and oxygen-only-for-animals errors",
+          "prompt": "A student writes: \"A plant's cells make glucose and oxygen during photosynthesis. The oxygen is released for animals, and the glucose is stored as starch. At night, the plant respires and uses the glucose and oxygen it stored during the day.\" Which correction should be made to this explanation?",
+          "difficulty": "independent",
+          "expected_evidence": "the learner selects the correction that states respiration uses glucose and oxygen continuously, including oxygen made by the plant's own photosynthesis, rather than only at night or only for animals",
+          "response": {
+            "type": "single_choice",
+            "options": [
+              {
+                "id": "a",
+                "text": "Photosynthesis also supplies oxygen for the plant's own respiration, and respiration occurs continuously, not only at night."
+              },
+              {
+                "id": "b",
+                "text": "The correction is that photosynthesis produces carbon dioxide and water, while respiration produces glucose and oxygen."
+              },
+              {
+                "id": "c",
+                "text": "The correction is that the plant respires only during the day, because respiration requires the light energy captured by photosynthesis."
+              },
+              {
+                "id": "d",
+                "text": "The correction is that oxygen made in photosynthesis is only for the plant itself, and no oxygen is available to other organisms."
+              }
+            ]
+          },
+          "evaluation": {
+            "type": "exact_match",
+            "correct_option_id": "a"
+          },
+          "sourcebook_refs": [],
+          "approved_source_ids": [
+            "f8099d04-fd37-4fa1-9616-40fc689e2957:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8.i5"
+          ],
+          "teaching_plan_id": "af070978-797b-4c21-b744-29f404128830",
+          "teaching_plan_revision": 1,
+          "teaching_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "role": "check",
+          "option_notes": {
+            "a": "Accurate correction: states that oxygen from photosynthesis serves the plant's own respiration and that respiration is continuous rather than night-only.",
+            "b": "Reverses the inputs and outputs of photosynthesis and respiration.",
+            "c": "Retains the misconception that respiration happens only when photosynthesis is possible.",
+            "d": "Retains a misconception about ownership of oxygen, claiming no oxygen is available to other organisms."
+          }
+        },
+        "source_document": {
+          "id": "shared-document:f23841a2-eab1-43cc-aa02-ce2c41b692d2:revision:1",
+          "revision": 1,
+          "content_hash": "0a0510a31b4789798dbf4c6865cdb0d67c131fa83ddb07e42ee529c4e12b7f1a"
+        },
+        "role": "check",
+        "option_notes": {
+          "a": "Accurate correction: states that oxygen from photosynthesis serves the plant's own respiration and that respiration is continuous rather than night-only.",
+          "b": "Reverses the inputs and outputs of photosynthesis and respiration.",
+          "c": "Retains the misconception that respiration happens only when photosynthesis is possible.",
+          "d": "Retains a misconception about ownership of oxygen, claiming no oxygen is available to other organisms."
+        }
+      }
+    }
+  ],
+  "sections": [
+    {
+      "id": "orient",
+      "title": "A sealed tank and a 24-hour puzzle",
+      "position": 0,
+      "transition": null,
+      "node_ids": [
+        "shared-node-8db81c2aad956244b743",
+        "shared-figure-node-c636a419002a7fcd3257"
+      ]
+    },
+    {
+      "id": "explain",
+      "title": "The product-to-input cycle",
+      "position": 1,
+      "transition": null,
+      "node_ids": [
+        "shared-node-7462b6b3696539942ba6",
+        "shared-figure-node-cd0d85c7876b5990ede5",
+        "shared-node-3a25673ba0c441f5415c",
+        "shared-figure-node-da97809d175b54895719"
+      ]
+    },
+    {
+      "id": "contrast",
+      "title": "Light and dark in the plant cell",
+      "position": 2,
+      "transition": null,
+      "node_ids": [
+        "shared-node-f0d44dd2415d61bbdfd4",
+        "shared-figure-node-dc0d5a021ecf27ece901"
+      ]
+    },
+    {
+      "id": "confront",
+      "title": "Why the 'take turns' and 'only for animals' ideas fail",
+      "position": 3,
+      "transition": null,
+      "node_ids": [
+        "shared-node-c6b5d1f1b4ccefa3da57",
+        "shared-node-2184881ac796004269cb"
+      ]
+    },
+    {
+      "id": "check",
+      "title": "Check: correcting an explanation of gas exchange",
+      "position": 4,
+      "transition": null,
+      "node_ids": [
+        "shared-node-de29f59a1337f2019e9c",
+        "shared-task-anchor-6e75dcdbcc26c575163c"
+      ]
+    }
+  ],
+  "created_at": "2026-10-05T19:11:05.381110+00:00",
+  "updated_at": "2026-10-05T19:11:05.381110+00:00",
+  "teaching_plan_id": "af070978-797b-4c21-b744-29f404128830",
+  "teaching_plan_revision": 1
+}

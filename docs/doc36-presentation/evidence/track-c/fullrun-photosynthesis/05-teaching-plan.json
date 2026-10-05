@@ -1,0 +1,830 @@
+{
+  "generation_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa",
+  "teaching_plan": {
+    "arc": "This lesson opens on two identical plants that were given the same soil and the same water but grew differently, and uses that pair to isolate light as what the cupboard plant was missing. It then builds the leaf's side of the story \u2014 light energy joining water and carbon dioxide into sugar, the plant's food \u2014 and turns the two tempting accounts (food from the soil; light only for warmth) against that same pair. It closes by taking one input away at a time, so the learner fixes the boundary that all three must be present together, and then checks the whole account on a case the lesson never discussed.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Open on the two plants: the same kind, the same size, planted in the same soil in the same sort of pot, and watered the same amount on the same days. One sits on a sunny windowsill; the other sits in a dark cupboard. After two weeks the windowsill plant is green and taller, while the cupboard plant is pale, limp and has produced no new growth. End on the puzzle, unanswered: the cupboard plant had the same soil and the same water, so what was the light doing for the windowsill plant? Do not say that light is used to make food, and do not mention the leaf making anything yet.",
+            "intent": "orient",
+            "evidence": "The anchor is a matched pair \u2014 the same plant, soil and water with only light differing \u2014 so this block isolates light as the variable the lesson must explain; a general statement about plants needing light would not give the learner that single-difference case to hold.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "slot.orient.purpose",
+              "anchor.anchor-1",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "orient-b2",
+            "brief": "Retrieve where each of the three inputs reaches the plant, before any mechanism is given: water is taken in by the roots from the soil and carried up the stem to the leaves; carbon dioxide is taken in from the air through openings in the leaves; light energy from the sun is absorbed by the leaves. Also retrieve that a plant needs all three of these. Do not say what happens to them once they are inside the leaf.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The next section has to treat the leaf as the meeting point of all three inputs; unless the learner has first fixed that water arrives from the roots, carbon dioxide through the leaf openings and light energy on the leaf, 'joined inside the leaf' is a claim with nothing behind it.",
+            "position": 1,
+            "task_mode": "formative",
+            "evidence_refs": [
+              "slot.orient.purpose",
+              "prior-7",
+              "prior-8",
+              "prior-9",
+              "prior-13"
+            ],
+            "learner_action": {
+              "action": "match-pairs",
+              "target": "each of the three inputs matched to the way it reaches the plant",
+              "purpose": "confirm the route of each input so the leaf can be used as the place where all three come together",
+              "difficulty": "guided",
+              "expected_evidence": "water matched to roots taking it from the soil and the stem carrying it to the leaves; carbon dioxide matched to leaf openings taking it from the air; light energy matched to the leaves absorbing it from sunlight"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "orient",
+        "exit_state": [
+          "Hold the anchor pair as a case with a single difference \u2014 light \u2014 and can say what was held the same",
+          "Can name the three things a plant takes in \u2014 light, water and carbon dioxide \u2014 and where each one reaches the plant"
+        ],
+        "transition": null,
+        "entry_state": [
+          "Know that plants have roots, stems and leaves",
+          "Know that living things need food to grow",
+          "Know that a plant kept in the dark loses colour and fails to grow"
+        ],
+        "display_title": "Two plants, one difference",
+        "must_establish": [
+          "The windowsill plant and the cupboard plant were the same kind, in the same soil, watered the same way",
+          "The one thing that differed between them was the light the windowsill plant received",
+          "The open question the lesson will answer: what was the light doing for the windowsill plant?"
+        ],
+        "avoid_repeating": [],
+        "specific_purpose": "Open on the anchor's pair so the learner holds a concrete, puzzling case \u2014 same soil, same water, different light \u2014 and wants to know what the light was doing for the windowsill plant.",
+        "bridge_from_previous": null
+      },
+      {
+        "blocks": [
+          {
+            "id": "explain-b1",
+            "brief": "State the mechanism inside the leaf. The light energy absorbed by the leaf is used to join the water (which arrived from the roots) with the carbon dioxide (which arrived through the leaf openings), and the result is sugar. This sugar is the plant's food, and oxygen is released as the sugar is made. Make two things explicit: the energy now held in the sugar is the light energy the leaf took in, and the plant is making this food itself rather than taking food in ready-made. Do not yet describe what happens to the sugar once it has been made.",
+            "intent": "explain-cause",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "The learner must see that the leaf is where light energy, water and carbon dioxide come together, and that the light energy is what drives them to join into the food the plant makes.",
+              "required": true,
+              "must_show": [
+                "light energy arriving at the leaf",
+                "water arriving at the leaf",
+                "carbon dioxide arriving at the leaf",
+                "light energy, water and carbon dioxide joined inside the leaf to make food (sugar)",
+                "oxygen released as the food is made"
+              ],
+              "must_not_show": [
+                "the soil shown as supplying the plant's food",
+                "light shown only as warmth"
+              ],
+              "labels_required": [
+                "light energy",
+                "water",
+                "carbon dioxide",
+                "leaf",
+                "food (sugar)",
+                "oxygen"
+              ]
+            },
+            "evidence": "The objective asks how a plant makes the food it needs, and the decisive step \u2014 light energy driving water and carbon dioxide to join into sugar \u2014 happens invisibly inside the leaf, so it has to be stated as a cause connecting the inputs the learner already knows to the food they have never seen made.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.explain.purpose",
+              "prior-14",
+              "prior-15",
+              "prior-16",
+              "prior-18"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "explain-b2",
+            "brief": "Follow the sugar the leaf has made. It leaves the leaf and is carried to the parts that are growing \u2014 new leaves, stem and roots \u2014 where it is used to build new plant material, which is why the plant gets bigger. Some of the sugar is not used straight away but is stored in the plant for later use, so the energy kept in that store is the light energy the leaf captured. Keep the anchor present: making and using this sugar is what the windowsill plant was doing, while the cupboard plant, whose leaf receives no light energy, builds no new food at all. Do not re-explain how the sugar is made.",
+            "intent": "trace-flow",
+            "evidence": "The objective names two destinations for the food \u2014 the plant grows, and energy is stored for later use \u2014 and those are what happens to the sugar after it exists, so the block follows the sugar onward rather than explaining its formation a second time.",
+            "position": 1,
+            "task_mode": "none",
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.explain.purpose",
+              "prior-15",
+              "prior-18",
+              "anchor.anchor-1"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "explain",
+        "exit_state": [
+          "Can state the full sequence up to the food: light energy, water and carbon dioxide joined in the leaf into sugar, with oxygen released",
+          "Can say that the food is used to grow and that some is stored, carrying light energy for later use"
+        ],
+        "transition": "With the mechanism and the destinations of the food in place, the lesson can now put the two everyday accounts of the anchor \u2014 food from the soil, light as warmth \u2014 against that same case.",
+        "entry_state": [
+          "Have confirmed that water arrives from the roots, carbon dioxide through the leaf openings and light energy on the leaves",
+          "Hold the anchor question of what the light was doing for the windowsill plant"
+        ],
+        "display_title": "What the leaf does with the light",
+        "must_establish": [
+          "Water and carbon dioxide are joined inside the leaf, using light energy, to make sugar, the plant's food",
+          "Oxygen is released as the food is made",
+          "The energy now held in the sugar came from the light",
+          "The sugar is used to build new plant material and some of it is stored for later use"
+        ],
+        "avoid_repeating": [
+          "Do not re-state where each input enters the plant \u2014 the orient retrieval already established that",
+          "Do not name or refute the soil belief or the light-is-only-warmth belief \u2014 the confront section does that"
+        ],
+        "specific_purpose": "Build the mechanism: inside the leaf light energy joins water and carbon dioxide into sugar, the plant's food, and that food is then used for growth or stored for later.",
+        "bridge_from_previous": "The orient retrieval put water from the roots, carbon dioxide through the leaf openings and light energy from the sun into the learner's hands, so the leaf can now be treated as the place where all three come together."
+      },
+      {
+        "blocks": [
+          {
+            "id": "confront-b1",
+            "brief": "Take the belief that light only keeps the plant warm and healthy, and show first why it feels right: the windowsill plant sits in warm sun, and warmth does feel like the thing that keeps a plant thriving. Then show the belief failing on the anchor. State the correct understanding plainly: light is an energy input the leaf uses, and the energy held in the sugar the plant makes is light energy, not warmth; the cupboard plant was no colder than the room around it, yet it built no new food and did not grow, because being warm in the dark supplies no energy for joining water and carbon dioxide. Make the failure of the belief visible on the cupboard plant rather than only naming the belief as wrong.",
+            "intent": "diagnose-misconception",
+            "evidence": "The belief is on the card, a learner can hold it confidently, and the anchor supplies the deciding case: a plant that was warm but dark still failed, so the belief has to be put to that case instead of merely being corrected in the abstract.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "light-is-only-warmth",
+              "anchor.anchor-1",
+              "prior-18",
+              "slot.confront.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "confront-b2",
+            "brief": "Take the belief that the plant's food comes ready-made from the soil, with the water we give it counted as that food, and show first why it feels right: the plant is rooted in soil, we water it, and the plant we watered was the one that thrived. Then show the belief failing on the anchor: the cupboard plant had the same soil and the same water as the windowsill plant, so if soil and water were its food it should have grown just as well \u2014 and it did not. State the correct understanding plainly: the soil supplies water and minerals, not food; the plant's food is made in the leaf from water and carbon dioxide using light energy, so nothing is taken ready-made from the soil. Make the failure of the belief visible on the matched soil-and-water pair rather than only naming the belief as wrong.",
+            "intent": "diagnose-misconception",
+            "evidence": "The card names this as a held model rather than a slip, and only the anchor's pair of plants with identical soil and identical water can falsify it on the spot; saying again that the plant makes its own food would leave the belief untested.",
+            "position": 1,
+            "task_mode": "none",
+            "evidence_refs": [
+              "soil-is-the-food",
+              "anchor.anchor-1",
+              "prior-6",
+              "slot.confront.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "confront",
+        "exit_state": [
+          "Can say why 'light just keeps the plant warm' fails on the cupboard plant",
+          "Can say why 'the soil is the plant's food' fails on the cupboard plant, and states that the soil supplies water and minerals only"
+        ],
+        "transition": "Both wrong accounts are now contradicted on the anchor, but a learner can accept all of this and still treat the three inputs as a list that two of them will satisfy; the next section tests that boundary.",
+        "entry_state": [
+          "Can state that the leaf makes sugar from water and carbon dioxide using light energy",
+          "Can state that the sugar is used for growth and that some is stored for later use"
+        ],
+        "display_title": "Two tempting explanations that fail the cupboard plant",
+        "must_establish": [
+          "Warmth without light supplies no energy for making food: the cupboard plant was not cold and still built no new food and did not grow",
+          "The food is not taken ready-made from the soil: the cupboard plant had the same soil and the same water and still failed",
+          "The correct understanding: the soil supplies water and minerals only, and the plant makes its own food in the leaf"
+        ],
+        "avoid_repeating": [
+          "Do not re-explain how water and carbon dioxide are joined \u2014 the explain section did that",
+          "Do not introduce plants that are missing a single input \u2014 the contrast section does that"
+        ],
+        "specific_purpose": "Name the two beliefs learners bring \u2014 that light only keeps the plant warm, and that the plant's food comes ready-made from the soil \u2014 and show each one failing on the anchor case.",
+        "bridge_from_previous": "The explain section gave the learner a correct account of where the plant's food comes from; the two beliefs named here are the accounts that account replaces, so they can now be tested directly against the anchor."
+      },
+      {
+        "blocks": [
+          {
+            "id": "contrast-b1",
+            "brief": "Take three plants. Plant A is on a bright windowsill with clean leaves, watered regularly, so light energy, water and carbon dioxide are all reaching its leaf. Plant B sits in the same bright place and is watered the same, but its leaves have been coated so that air cannot reach the leaf openings, and carbon dioxide therefore cannot get in. Plant C has clean leaves in the same bright place, but its soil has been left dry for over a week, so no water is reaching the leaf. Ask the learner to judge each plant in turn: can its leaf make food, and which of the three inputs is missing? Do not reveal which judgments are right in this block; the next block settles the three cases.",
+            "intent": "classify",
+            "evidence": "The card's third belief is that the three inputs work independently, and the only way to test it is a case where two inputs keep arriving while one is absent \u2014 the coated-leaf plant and the unwatered plant do that without repeating the anchor.",
+            "position": 0,
+            "task_mode": "formative",
+            "evidence_refs": [
+              "one-input-is-enough",
+              "lesson.objective",
+              "slot.contrast.purpose",
+              "prior-10"
+            ],
+            "learner_action": {
+              "action": "classify-items",
+              "target": "the three plants sorted by whether their leaf can make food, with the missing input named for each",
+              "purpose": "expose whether the learner treats the three inputs as independent, so that two of the three seems sufficient",
+              "difficulty": "guided",
+              "expected_evidence": "Plant A can make food because all three inputs reach the leaf; Plant B cannot, because carbon dioxide cannot reach the leaf; Plant C cannot, because no water reaches the leaf"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "contrast-b2",
+            "brief": "Settle the three cases and state the boundary. Plant A makes food because light energy, water and carbon dioxide are all present in its leaf at the same time. Plant B has water and light energy but no carbon dioxide reaching the leaf, so there is nothing to join the water to and no sugar can be built. Plant C has carbon dioxide and light energy but no water arriving, so the joining cannot happen there either. State the rule plainly: the three inputs are not alternatives and not independent; the leaf needs all three at once, because the food is built by joining water and carbon dioxide and light energy is what drives that joining. Add that a plant missing one input does not stop at once \u2014 it keeps drawing on food it made earlier and stored, which is why it fades over days. Do not re-open the soil or warmth beliefs.",
+            "intent": "explain-cause",
+            "evidence": "The learner has just judged three near-miss plants, and only the causal reason \u2014 a missing input means the joining cannot happen \u2014 turns that judgment into the boundary of the idea instead of a rule to be remembered.",
+            "position": 1,
+            "task_mode": "none",
+            "evidence_refs": [
+              "one-input-is-enough",
+              "prior-14",
+              "prior-10",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": "The near-miss cases have to be resolved by the mechanism that explains why a single missing input stops the joining, because the boundary here is a causal one; the typical 'compare' and 'show-structure' intents would set the three plants beside each other again without answering the judgments the learner has just made.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "contrast",
+        "exit_state": [
+          "Can say, for a plant missing carbon dioxide or missing water, why the leaf makes no food even though the other two inputs are present",
+          "Hold the rule that light energy, water and carbon dioxide must all be present together in the leaf"
+        ],
+        "transition": "With the boundary fixed on cases the learner has just judged, the lesson can check the same account on a case it has never discussed.",
+        "entry_state": [
+          "Hold the correct account of food-making and of the food's destinations",
+          "Have seen the soil account and the warmth-only account contradicted on the anchor"
+        ],
+        "display_title": "Take one input away",
+        "must_establish": [
+          "Missing any single input stops the leaf making food, even though the other two keep arriving",
+          "The three inputs are not alternatives and not independent: water, carbon dioxide and light energy must be present together in the leaf",
+          "A plant missing an input keeps going for a while on food it made earlier and stored, which is why it declines over days rather than stopping at once"
+        ],
+        "avoid_repeating": [
+          "Do not re-join water and carbon dioxide \u2014 that mechanism was the explain section's job",
+          "Do not re-test the soil belief or the warmth-only belief \u2014 the confront section did that"
+        ],
+        "specific_purpose": "Put the idea against near-misses: three plants, each with two of the three inputs and one missing, so the learner sees that the inputs are not independent and that removing any single one stops food-making.",
+        "bridge_from_previous": "Both tempting accounts have been contradicted, but a learner can hold the correct account and still treat the three inputs as a list in which two out of three will do; the three near-miss plants test exactly that boundary."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Put the approved case to the learner unchanged, with no hint added: a farmer grows tomato plants in a greenhouse and supplies them with plenty of water and carbon dioxide, but the greenhouse roof blocks almost all sunlight. Ask the learner to predict what will most likely happen to the plants' growth and to choose the explanation that fits. Do not mention light's role, and do not refer back to the anchor plants before the learner answers.",
+            "intent": "check-understanding",
+            "evidence": "The check has to read transfer, and this item supplies water and carbon dioxide while removing light, which is the boundary the lesson taught and the one input the anchor plant had to do without.",
+            "position": 0,
+            "task_mode": "assessment",
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.check.purpose",
+              "item.bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25.i2"
+            ],
+            "learner_action": {
+              "action": "select-one",
+              "target": "which outcome and explanation fit plants that have plenty of water and carbon dioxide but almost no sunlight",
+              "purpose": "read whether the learner applies the full account, that light is needed for the leaf to make food, on an unfamiliar case",
+              "difficulty": "independent",
+              "expected_evidence": "a choice that says the plants cannot make food without light, so growth stops and the plants decline even though water and carbon dioxide are supplied"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [
+              "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25.i2"
+            ],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "check",
+        "exit_state": [
+          "A learner who answers correctly leaves able to explain that without light the leaf cannot make food from the water and carbon dioxide it has, so growth stops and the plants decline"
+        ],
+        "transition": "The check closes the lesson on a case that tests transfer, so the account the learner leaves with is one they can use on plants they have not met.",
+        "entry_state": [
+          "Hold the rule that light energy, water and carbon dioxide must all be present together in the leaf",
+          "Have seen a single missing input stop food-making"
+        ],
+        "display_title": "Check: the greenhouse with no sun",
+        "must_establish": [
+          "Whether the learner predicts and explains the fate of plants that have water and carbon dioxide but almost no light, using the full account rather than water or carbon dioxide alone"
+        ],
+        "avoid_repeating": [
+          "Do not re-teach the mechanism here",
+          "Do not reuse the lesson's plants or the contrast section's plants"
+        ],
+        "specific_purpose": "The shared diagnostic: read whether the learner applies the complete account \u2014 light, water and carbon dioxide must all be present before the leaf can make food \u2014 on a case the lesson has not discussed.",
+        "bridge_from_previous": "The contrast section fixed the boundary on plants the learner judged directly; this check applies the same account to an unfamiliar case in which water and carbon dioxide are supplied and light is removed."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Introduced here: the windowsill plant and the cupboard plant, same kind, same soil, same water, differing only in the light they receive, with the puzzle left open \u2014 what was the light doing for the windowsill plant?",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Explained here: the windowsill plant's leaf is where light energy joins water and carbon dioxide into sugar; the cupboard plant's leaf receives water and carbon dioxide but no light energy, so no new food is built, and the food the windowsill plant makes is what pays for its growth.",
+        "slot_id": "explain"
+      },
+      {
+        "usage": "Tested here: the cupboard plant had the same soil and the same water, which falsifies the ready-made-from-soil account, and it was not cold, which falsifies the light-is-only-warmth account.",
+        "slot_id": "confront"
+      },
+      {
+        "usage": "Extended here: the anchor's missing input (light) is placed beside cases missing carbon dioxide and missing water, so the learner sees that any single missing input stops food-making.",
+        "slot_id": "contrast"
+      },
+      {
+        "usage": "Not reused: the check puts an unfamiliar case in front of the learner so that the account has to transfer rather than be recognised from the anchor.",
+        "slot_id": "check"
+      }
+    ],
+    "target_state": [
+      "Explain, in sequence, that the leaf joins water and carbon dioxide using light energy to make sugar, the plant's food, with oxygen released as it is made",
+      "Explain that the sugar is used to build new growth and that some is stored, holding light energy for later use",
+      "Reject the accounts that the plant's food comes ready-made from the soil and that light only warms the plant, and say what is wrong with each",
+      "Judge a case in which one of the three inputs is missing and explain why the leaf can make no food there"
+    ],
+    "learner_title": "How a plant makes its own food from light, water and air",
+    "starting_state": [
+      "Know that plants have roots, stems and leaves and that living things need food to grow",
+      "Know that a plant kept in the dark loses its colour and fails to grow",
+      "Know that light energy is absorbed by the leaves, water is taken in by the roots from the soil, and carbon dioxide is taken in from the air through the leaves",
+      "Bring the everyday belief that the soil feeds the plant and that light only keeps it warm"
+    ],
+    "approval_status": "pending",
+    "contract_version": 2,
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "29721f01-7bad-4c18-9d38-290819f85711",
+    "misconception_focus_ids": [
+      "light-is-only-warmth",
+      "soil-is-the-food",
+      "one-input-is-enough"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [
+    {
+      "code": "TEACHING_PLAN_SEMANTIC_REVIEW_PASS",
+      "content_hash": "cde52d8ec7bf4653d3543faf0841b1dee401d14ed411d441942cb7321a074a2f"
+    }
+  ],
+  "teaching_flags": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "teaching_plan_identity": {
+    "revision": 1,
+    "pending_content_hash": "cde52d8ec7bf4653d3543faf0841b1dee401d14ed411d441942cb7321a074a2f",
+    "pending_hash_verified": true,
+    "approved_revision": null,
+    "approved_content_hash": null,
+    "approved_hash_verified": false,
+    "approval_hash_binding": null,
+    "recovery_action": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ]
+      },
+      {
+        "purpose": "Build the idea itself. State it, ground it, make it usable.",
+        "slot_id": "explain",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "explain-cause",
+          "explain",
+          "define",
+          "show-structure",
+          "trace-flow",
+          "compare",
+          "name-parts"
+        ]
+      },
+      {
+        "purpose": "Name the wrong belief, show why it feels right, then show it failing on a case. Correct exposition alone does not count.\n",
+        "slot_id": "confront",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "diagnose-misconception",
+          "warn",
+          "compare",
+          "explain"
+        ]
+      },
+      {
+        "purpose": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.\n",
+        "slot_id": "contrast",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "compare",
+          "classify",
+          "explain",
+          "warn",
+          "show-structure"
+        ]
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ]
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A plant on a sunny windowsill versus an identical plant kept in a dark cupboard; after two weeks the cupboard plant is pale, limp and has not grown, even though it was watered the same. The learner must explain what the light was doing for the windowsill plant."
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "Explain, in a complete sequence, how a plant uses light, water and carbon dioxide to make the food it needs to grow and store energy for later use.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25.i1",
+        "stem": "A student places a healthy potted bean plant in a dark closet but continues to water it every day. The plant slowly turns yellow, stops growing, and eventually dies. Which statement best explains why the plant could not survive in the dark?",
+        "card_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25",
+        "options": [
+          {
+            "key": "a",
+            "text": "Without light, the plant could not carry out the process that builds its food, so it had no energy source to grow.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Without light, the plant stayed too cold to make the food it had already absorbed from the wet soil.",
+            "correct": false,
+            "diagnoses": "soil-is-the-food",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Without light, the plant's health declined because light is only needed to keep the leaves warm and comfortable.",
+            "correct": false,
+            "diagnoses": "light-is-only-warmth",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Without light, the plant lacked warmth and water, so providing either one alone would have kept it alive.",
+            "correct": false,
+            "diagnoses": "one-input-is-enough",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "soil-is-the-food",
+          "c": "light-is-only-warmth",
+          "d": "one-input-is-enough"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25.i2",
+        "stem": "A farmer grows tomato plants in a greenhouse and supplies them with plenty of water and carbon dioxide, but the greenhouse roof blocks almost all sunlight. Predict what will most likely happen to the plants' growth, and explain why.",
+        "card_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25",
+        "options": [
+          {
+            "key": "a",
+            "text": "Growth will be poor because the plants cannot use water and carbon dioxide to make food without light energy from the sun.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Growth will be normal because the plants get enough water and carbon dioxide, which are the two things they need to make food.",
+            "correct": false,
+            "diagnoses": "one-input-is-enough",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Growth will be normal because the plants can absorb ready-made food from the soil as long as water is present.",
+            "correct": false,
+            "diagnoses": "soil-is-the-food",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Growth will be poor only if the greenhouse also becomes too cool, since light mainly matters for warmth.",
+            "correct": false,
+            "diagnoses": "light-is-only-warmth",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "one-input-is-enough",
+          "c": "soil-is-the-food",
+          "d": "light-is-only-warmth"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25.i3",
+        "stem": "A student sets up two sealed clear containers with identical bean plants. Container 1 receives light, water, and carbon dioxide. Container 2 is identical but receives no light. After two weeks, the plant in Container 2 has lost mass. Which explanation best accounts for the mass loss?",
+        "card_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25",
+        "options": [
+          {
+            "key": "a",
+            "text": "The plant in Container 2 used up stored food because it could not make new food without light energy.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The plant in Container 2 used up the food it had taken from the soil and could not replace it.",
+            "correct": false,
+            "diagnoses": "soil-is-the-food",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The plant in Container 2 lost mass because darkness kept it from staying warm enough to keep its tissues healthy.",
+            "correct": false,
+            "diagnoses": "light-is-only-warmth",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The plant in Container 2 lost mass because it lacked water and carbon dioxide, which are the only inputs needed for growth.",
+            "correct": false,
+            "diagnoses": "one-input-is-enough",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "soil-is-the-food",
+          "c": "light-is-only-warmth",
+          "d": "one-input-is-enough"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25.i4",
+        "stem": "A student writes: 'Plants get their food from the soil. They use water from the soil as that food, and light just keeps them warm so they stay healthy.' Which correction should the student make?",
+        "card_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25",
+        "options": [
+          {
+            "key": "a",
+            "text": "Plants make their own food using light, water, and carbon dioxide; the soil provides water and minerals, not ready-made food.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Plants get their food from the soil, but water is only a carrier for that food, not the food itself.",
+            "correct": false,
+            "diagnoses": "soil-is-the-food",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Plants make food using water and carbon dioxide, and light is only needed to keep the plant warm while it does so.",
+            "correct": false,
+            "diagnoses": "light-is-only-warmth",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Plants make food as long as they have water and carbon dioxide, since those are the two ingredients they combine.",
+            "correct": false,
+            "diagnoses": "one-input-is-enough",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "soil-is-the-food",
+          "c": "light-is-only-warmth",
+          "d": "one-input-is-enough"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25.i5",
+        "stem": "A plant is given water and carbon dioxide but is kept in a sealed dark box. Another identical plant is given light, water, and carbon dioxide. Which comparison is correct?",
+        "card_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa:d346f70f-fbe0-4cc5-95a2-2505e1540d25",
+        "options": [
+          {
+            "key": "a",
+            "text": "The plant in the light will make food and grow, while the plant in the dark cannot make food and will not grow.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Both plants will grow equally because both receive water and carbon dioxide, the only ingredients needed for food.",
+            "correct": false,
+            "diagnoses": "one-input-is-enough",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Both plants will grow equally because the dark plant can take ready-made food from the soil in the box.",
+            "correct": false,
+            "diagnoses": "soil-is-the-food",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Both plants will grow equally because light only affects how warm the plant is, not whether it makes food.",
+            "correct": false,
+            "diagnoses": "light-is-only-warmth",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "one-input-is-enough",
+          "c": "soil-is-the-food",
+          "d": "light-is-only-warmth"
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "soil-is-the-food",
+        "statement": "{'id': 'soil-is-the-food', 'description': 'The plant takes its food ready-made from the soil, and water is the same thing as that food.', 'source': 'drafted'}"
+      },
+      {
+        "id": "light-is-only-warmth",
+        "statement": "{'id': 'light-is-only-warmth', 'description': 'Light is just a condition that keeps the plant warm and healthy, not an energy input that becomes part of the food.', 'source': 'drafted'}"
+      },
+      {
+        "id": "one-input-is-enough",
+        "statement": "{'id': 'one-input-is-enough', 'description': 'The three inputs work independently, so supplying the two the plant visibly needs (water and carbon dioxide) is enough.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "plants have roots, stems and leaves"
+      },
+      {
+        "id": "prior-2",
+        "statement": "living things need food to grow"
+      },
+      {
+        "id": "prior-3",
+        "statement": "plants do not eat food the way animals do"
+      },
+      {
+        "id": "prior-4",
+        "statement": "plants need light to grow and stay healthy"
+      },
+      {
+        "id": "prior-5",
+        "statement": "a plant kept in the dark loses health and colour, showing it cannot grow without light"
+      },
+      {
+        "id": "prior-6",
+        "statement": "the soil supplies water and minerals, not the plant's food"
+      },
+      {
+        "id": "prior-7",
+        "statement": "light energy is taken in by the leaves from sunlight"
+      },
+      {
+        "id": "prior-8",
+        "statement": "water is taken in by the roots from the soil and carried up the stem to the leaves"
+      },
+      {
+        "id": "prior-9",
+        "statement": "carbon dioxide is taken in from the air by the leaves"
+      },
+      {
+        "id": "prior-10",
+        "statement": "all three inputs must be present for the plant to make food"
+      },
+      {
+        "id": "prior-11",
+        "statement": "leaves are broad and flat to catch light"
+      },
+      {
+        "id": "prior-12",
+        "statement": "leaves are green and this colour is linked to trapping light energy"
+      },
+      {
+        "id": "prior-13",
+        "statement": "leaves have openings that let carbon dioxide in and oxygen out"
+      },
+      {
+        "id": "prior-14",
+        "statement": "water arriving at the leaf is joined with carbon dioxide using light energy"
+      },
+      {
+        "id": "prior-15",
+        "statement": "the plant makes a sugar (glucose) that serves as its food"
+      },
+      {
+        "id": "prior-16",
+        "statement": "oxygen is given off during food-making"
+      },
+      {
+        "id": "prior-17",
+        "statement": "inputs (light, water, carbon dioxide) are different from outputs (sugar, oxygen)"
+      },
+      {
+        "id": "prior-18",
+        "statement": "the sugar made contains stored energy that came from light"
+      }
+    ],
+    "required_assessment_slots": [
+      "check"
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

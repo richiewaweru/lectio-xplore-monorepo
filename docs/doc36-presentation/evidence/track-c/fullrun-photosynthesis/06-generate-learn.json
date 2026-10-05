@@ -1,0 +1,15 @@
+{
+  "status": "queued",
+  "path": "learn",
+  "output_id": "learn-out-5b3ea4d2d29e486a",
+  "editable_lesson_id": null,
+  "realization_id": "12d33e07-dafa-40ec-b7b6-e79e0e8d365b",
+  "realization_revision": 1,
+  "teaching_plan_id": "29721f01-7bad-4c18-9d38-290819f85711",
+  "teaching_plan_hash": "cde52d8ec7bf4653d3543faf0841b1dee401d14ed411d441942cb7321a074a2f",
+  "teaching_plan_revision": 1,
+  "open_href": "/builder/from-native-learn/learn-out-5b3ea4d2d29e486a",
+  "workspace_href": "/units/28164ffa-d703-466c-9aa2-ef4bbe30bff0/lessons/73f7f657-b87b-43f3-96b0-dd0bc7065780/learn",
+  "error_summary": null,
+  "replayed": false
+}

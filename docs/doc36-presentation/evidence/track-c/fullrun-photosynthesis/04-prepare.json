@@ -1,0 +1,24 @@
+{
+  "generation_id": "bdac0c31-68ee-4b12-b2b4-47f4d9e719fa",
+  "path_lesson_id": "73f7f657-b87b-43f3-96b0-dd0bc7065780",
+  "objective": "Explain, in a complete sequence, how a plant uses light, water and carbon dioxide to make the food it needs to grow and store energy for later use.",
+  "objective_hash": "ab9e0900dbfe30aed4f7373adeb46aebb58320db2c85c05890caa63536870cb4",
+  "skeleton_id": "conceptual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "explain",
+    "confront",
+    "contrast",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "explain",
+    "confront",
+    "contrast",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

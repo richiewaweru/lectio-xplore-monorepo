@@ -1,0 +1,940 @@
+{
+  "generation_id": "77754f15-82b2-4934-b00a-22781415beb1",
+  "teaching_plan": {
+    "arc": "The lesson opens on an L-shaped room floor plan that no single length-by-width pair describes. It recalls the rectangle rule and the rule that a split's parts must not overlap, then works the floor plan end to end: cut it into a top strip and a lower rectangle, derive the unlabelled 4 m from the 7 m left edge, and add 24 m\u00b2 + 20 m\u00b2 = 44 m\u00b2. It then tests the belief that overall length times overall width gives the area \u2014 8 m \u00d7 7 m = 56 m\u00b2 counts a 3 m by 4 m region that is not floor \u2014 and hands the learner a fresh stage floor with the split already supplied, followed by a plausible split of the same floor plan whose two parts overlap and double count 15 m\u00b2. It closes on the shared check, where the learner must pick the calculation for a compound shape on their own.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Open on the anchor: a room whose floor plan is L-shaped and is built from two rectangles, with the top edge 8 m, the depth of the top strip 3 m, the overall left edge 7 m, and the lower rectangle's width 5 m. Direct attention to the fact that the 8 m edge and the 7 m edge are not the two sides of one rectangle: the corner region at the bottom right of that outline is not part of the floor. Ask the learner to notice the two rectangular parts the floor is made of. State no area value and name no method for finding the area.",
+            "intent": "orient",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Let the learner see that the L-shaped floor is two rectangles whose labeled measurements can be read off, and that the overall width and overall height are not the sides of one rectangle.",
+              "required": true,
+              "must_show": [
+                "an L-shaped floor plan made from two rectangles",
+                "the top edge labelled 8 m",
+                "the depth of the top rectangle labelled 3 m",
+                "the overall left vertical edge labelled 7 m",
+                "the lower rectangle's width labelled 5 m",
+                "the bottom-right corner of the enclosing outline that is not part of the floor"
+              ],
+              "must_not_show": [
+                "any area value or product",
+                "the lower rectangle's depth labelled as 4 m, which is to be derived later",
+                "the enclosing 8 m by 7 m rectangle drawn as if the floor filled it"
+              ],
+              "labels_required": [
+                "8 m",
+                "3 m",
+                "7 m",
+                "5 m"
+              ]
+            },
+            "evidence": "The objective is about a compound shape made of rectangles, and the anchor floor plan is the only concrete instance available; the learner must see that the plan is two rectangles and that its outline is not one before any summing method can mean anything.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "slot.orient.purpose",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "orient",
+        "exit_state": [
+          "has seen the floor plan with 8 m, 3 m, 7 m and 5 m labelled and no area value",
+          "notices the floor is two rectangular parts and that no single length-by-width pair describes it"
+        ],
+        "transition": "With the floor plan in view, the lesson restores the two prior facts it will lean on: the area rule for a rectangle and the requirement that the parts of a split do not overlap.",
+        "entry_state": [
+          "can multiply whole numbers from earlier lessons (prior-1)",
+          "can read dimension labels written along the sides of a plan (prior-3, prior-12)"
+        ],
+        "display_title": "A room that is not one rectangle",
+        "must_establish": [
+          "the floor plan is L-shaped and is made from two rectangles",
+          "the overall width of 8 m and the overall height of 7 m do not belong to one rectangle, because a region inside that 8 m by 7 m outline is not part of the floor"
+        ],
+        "avoid_repeating": [
+          "any statement of the rectangle area rule (recall's job)",
+          "any area value, any summing method, and any split of the floor (model's job)"
+        ],
+        "specific_purpose": "Open on the anchor floor plan and make its compound nature visible: the floor is two rectangular parts, and its overall width and overall height are not the sides of a single rectangle.",
+        "bridge_from_previous": null
+      },
+      {
+        "blocks": [
+          {
+            "id": "recall-b1",
+            "brief": "Bring back the rectangle area rule on a single plain rectangle 6 m by 4 m: the area is the length multiplied by the width, and the answer counts unit squares, so it is written with a square-unit label. Have the learner choose the area of that rectangle, with the square-unit label included, so both the multiplication and the unit convention are live again. Keep the work on this one rectangle: do not mention compound shapes, do not split anything, and do not use the room's floor plan.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The summing method is a sum of rectangle areas, so a learner who cannot produce length \u00d7 width with a square-unit label will fail every later step; recall is the last point where that gap can surface without competing with new content.",
+            "position": 0,
+            "task_mode": "formative",
+            "evidence_refs": [
+              "prior-6",
+              "prior-5",
+              "slot.recall.purpose"
+            ],
+            "learner_action": {
+              "action": "select-one",
+              "target": "the area of a 6 m by 4 m rectangle, stated with its square-unit label",
+              "purpose": "surface whether the rectangle rule and the square-unit convention are still available before the compound case is built on them",
+              "difficulty": "guided",
+              "expected_evidence": "the learner selects 24 m\u00b2 rather than 10 m, 24 m, or 24 without a unit"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "recall-b2",
+            "brief": "Bring back the requirement that governs any split: the parts must not overlap and must together cover the shape exactly, so that every region of the shape is counted once and no region is counted twice. State this as a property the split must satisfy, and say plainly that adding overlapping parts would count the shared region more than once. Do not apply it to the room's floor plan, do not cut any shape, and do not compute any area.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "Adding part-areas is only valid when the parts partition the shape, so the no-overlap requirement must be available before the learner meets any split; the model then applies it to the floor plan instead of stating it again.",
+            "position": 1,
+            "task_mode": "none",
+            "evidence_refs": [
+              "prior-11",
+              "slot.recall.purpose",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "recall",
+        "exit_state": [
+          "selects 24 m\u00b2 for a 6 m by 4 m rectangle rather than a bare number or a length",
+          "states that the parts of a split must not overlap and must leave no part of the shape uncovered"
+        ],
+        "transition": "Those two facts are now applied to the floor plan itself: where the single cut falls, what each part measures, and what the parts add to.",
+        "entry_state": [
+          "has the L-shaped floor plan in view and has been given no area value for it",
+          "was not told in the opening how the area will be found"
+        ],
+        "display_title": "What we already know about rectangles",
+        "must_establish": [
+          "the area of a rectangle is length \u00d7 width, and the result is a count of unit squares, so it is reported in square units",
+          "the parts of a split must not overlap and must together cover the shape exactly, so that every region is counted once"
+        ],
+        "avoid_repeating": [
+          "applying the rectangle rule to the floor plan (model's job)",
+          "cutting the floor plan or deriving a part's missing dimension (model's job)",
+          "any demonstration that different splits give the same total"
+        ],
+        "specific_purpose": "Reactivate exactly the two prior facts this lesson depends on: the area of a rectangle is its length multiplied by its width, reported in square units; and a shape can be split into rectangles that do not overlap and together cover it exactly.",
+        "bridge_from_previous": "The opening established that the floor is not one rectangle, so the only route to its area is the rectangle rule applied to parts; the learner must therefore have the rectangle rule and the no-overlap requirement ready before the floor plan is cut."
+      },
+      {
+        "blocks": [
+          {
+            "id": "model-b1",
+            "brief": "Work on the anchor floor plan and establish the single straight cut that separates it into two rectangles: a top strip and a lower rectangle. Fix each part's dimensions from the labels \u2014 the top strip runs the full 8 m across and is 3 m deep; the lower rectangle is 5 m wide, and its depth is not labelled because it is whatever remains of the 7 m left edge below the top strip, so 7 m \u2212 3 m = 4 m. Say why the cut is legitimate: the two parts share only the cut line and together cover the whole floor. Do not multiply anything and give no area value.",
+            "intent": "show-structure",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Show where the single cut falls and which measurements belong to each of the two parts, including the depth that has to be worked out.",
+              "required": true,
+              "must_show": [
+                "the L-shaped floor plan",
+                "the single cut that separates the floor into two rectangles",
+                "the top rectangle running 8 m across and 3 m deep",
+                "the lower rectangle 5 m wide",
+                "the lower rectangle's depth obtained as 7 m \u2212 3 m = 4 m"
+              ],
+              "must_not_show": [
+                "the area of either part or of the whole floor",
+                "any cut that leaves a part of the floor uncovered or that makes the two parts overlap"
+              ],
+              "labels_required": [
+                "8 m",
+                "3 m",
+                "7 m",
+                "5 m",
+                "4 m"
+              ]
+            },
+            "evidence": "prior-12 says a part's dimensions are read from the shape's given side lengths, and this plan withholds the lower rectangle's depth; without seeing that the depth is 7 m \u2212 3 m, the learner would have nothing correct to multiply.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "prior-12",
+              "slot.model.purpose",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": "The model slot lists no typical intents; show-structure is chosen because the difficulty at this point is arrangement \u2014 where the one cut falls and which measurements belong to which part \u2014 rather than the arithmetic that follows.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "model-b2",
+            "brief": "Carry the method through on the floor plan from the cut to the final value. The top rectangle's area is 8 m \u00d7 3 m = 24 m\u00b2; the lower rectangle's area is 5 m \u00d7 4 m = 20 m\u00b2; the room's area is the sum of the parts, 24 m\u00b2 + 20 m\u00b2 = 44 m\u00b2, reported in square metres because it counts unit squares. Keep the cut in view so it stays clear that the two parts share only an edge, and keep each part's area attached to that part before the parts are added. Do not raise the overall-length-by-overall-width error here, and do not work a second shape.",
+            "intent": "demonstrate",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Let the learner see each part's area attached to that part before the two areas are added into the floor's area.",
+              "required": true,
+              "must_show": [
+                "the floor plan split into the top rectangle and the lower rectangle",
+                "the top rectangle carrying 24 m\u00b2 from 8 m \u00d7 3 m",
+                "the lower rectangle carrying 20 m\u00b2 from 5 m \u00d7 4 m",
+                "the two part-areas added to give the whole floor, 44 m\u00b2"
+              ],
+              "must_not_show": [
+                "8 m \u00d7 7 m or 56 m\u00b2",
+                "any statement that multiplying the overall sides gives the area"
+              ],
+              "labels_required": [
+                "8 m",
+                "3 m",
+                "5 m",
+                "4 m",
+                "24 m\u00b2",
+                "20 m\u00b2",
+                "44 m\u00b2"
+              ]
+            },
+            "evidence": "The objective is a calculation to be carried out, and this is the only place in the lesson where the learner watches the method run end to end; skipping it would leave the guided work as guesswork about which numbers to multiply.",
+            "position": 1,
+            "task_mode": "none",
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.model.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": "The model slot lists no typical intents; demonstrate is chosen because the method is unambiguous once it is seen, and the learner has not yet watched it performed on a real instance.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "model-b3",
+            "brief": "Confront the belief that the area comes from multiplying the overall length by the overall width. State the correct understanding first: the floor is exactly the two rectangles, so its area is the two part-areas added, 44 m\u00b2. Then show that belief failing on the same plan: 8 m \u00d7 7 m = 56 m\u00b2, and the extra 56 m\u00b2 \u2212 44 m\u00b2 = 12 m\u00b2 is exactly the 3 m by 4 m region at the bottom right, which is not part of the floor at all. The learner must see the counted region lying outside the floor, not merely be told the answer is wrong. Do not introduce another shape, and do not ask the learner to choose between the two methods.",
+            "intent": "diagnose-misconception",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Show that the overall 8 m by 7 m rectangle includes a 3 m by 4 m region that is not part of the floor, so its product is larger than the floor's area.",
+              "required": true,
+              "must_show": [
+                "the L-shaped floor plan",
+                "the enclosing 8 m by 7 m rectangle drawn around the floor",
+                "the 3 m by 4 m bottom-right region of that rectangle shaded as not part of the floor",
+                "56 m\u00b2 compared with the correct 44 m\u00b2"
+              ],
+              "must_not_show": [
+                "the overall-sides product presented as the correct method",
+                "any overlapping split of the floor"
+              ],
+              "labels_required": [
+                "8 m",
+                "7 m",
+                "3 m",
+                "4 m",
+                "56 m\u00b2",
+                "44 m\u00b2"
+              ]
+            },
+            "evidence": "multiply_all_sides is the belief that overall length times overall width gives the area, and this floor plan is the one shape in the lesson whose enclosing rectangle visibly contains a region the floor does not occupy, so the belief can be shown failing with the lesson's own numbers instead of being asserted.",
+            "position": 2,
+            "task_mode": "none",
+            "evidence_refs": [
+              "multiply_all_sides",
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.model.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": "The model slot lists no typical intents; diagnose-misconception is chosen over warn because this is a held belief with a confident wrong answer (56 m\u00b2), not a slip that a flag would prevent.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "model",
+        "exit_state": [
+          "can say why the chosen cut is valid: the two parts share only the cut line and cover the whole floor",
+          "can carry out 8 m \u00d7 3 m = 24 m\u00b2, 5 m \u00d7 4 m = 20 m\u00b2 and 24 m\u00b2 + 20 m\u00b2 = 44 m\u00b2",
+          "can say why 56 m\u00b2 is too large for this floor"
+        ],
+        "transition": "With the method shown on the floor plan, the learner takes over: a fresh shape with the split still supplied, then a return to the floor plan where a plausible split breaks the no-overlap rule.",
+        "entry_state": [
+          "has the rectangle rule and the no-overlap split requirement",
+          "has the floor plan with 8 m, 3 m, 7 m and 5 m labelled and still no area value"
+        ],
+        "display_title": "Splitting the floor plan and adding the parts",
+        "must_establish": [
+          "the floor cuts into a top strip 8 m by 3 m and a lower rectangle 5 m by 4 m",
+          "the lower rectangle's depth is not labelled: it is the rest of the 7 m left edge, so it is 7 m \u2212 3 m = 4 m",
+          "the area is 24 m\u00b2 + 20 m\u00b2 = 44 m\u00b2",
+          "8 m \u00d7 7 m = 56 m\u00b2 is wrong because it counts the 3 m by 4 m bottom-right region that is not part of the floor"
+        ],
+        "avoid_repeating": [
+          "restating the rectangle rule or the square-unit convention (recall's job)",
+          "the learner computing a fresh shape's area or repairing an overlapping split (guided's job)"
+        ],
+        "specific_purpose": "Show the complete method on the anchor: choose a non-overlapping cut, read each part's dimensions and derive the unlabelled one, multiply each part, sum the parts, and then use the same plan to show why overall length times overall width fails.",
+        "bridge_from_previous": "The recalled rectangle rule and the no-overlap requirement are exactly the tools needed to turn the L-shaped floor into two rectangles and add their areas, so the method can now be run on the anchor from start to finish."
+      },
+      {
+        "blocks": [
+          {
+            "id": "guided-b1",
+            "brief": "Give the learner a fresh compound shape to work with support still in place: a stage floor made from a main rectangle 12 m by 5 m and an extension rectangle 2 m by 6 m joined along an edge, with nothing shared between the two parts. The split is shown to the learner. Have them work out each part's area (60 m\u00b2 and 12 m\u00b2) and the whole stage floor (72 m\u00b2), while a prompt asks whether the two parts overlap and whether any part of the stage is left uncovered. Keep the room's floor plan out of this block, and do not carry out the steps for the learner.",
+            "intent": "practise-guided",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Show the stage floor as two rectangles joined along an edge, with the dimensions each part needs and the join visible.",
+              "required": true,
+              "must_show": [
+                "the compound stage floor as two rectangles joined along an edge",
+                "the main rectangle labelled 12 m by 5 m",
+                "the extension rectangle labelled 2 m by 6 m",
+                "the join between the two rectangles with no shared region"
+              ],
+              "must_not_show": [
+                "the part-areas or the total area of the stage floor"
+              ],
+              "labels_required": [
+                "12 m",
+                "5 m",
+                "2 m",
+                "6 m"
+              ]
+            },
+            "evidence": "The slot's purpose is rehearsal with scaffolding present, and the learner has just watched one full run; supplying the split holds attention on reading the dimensions, multiplying and summing, which is exactly the objective, rather than on finding where to cut.",
+            "position": 0,
+            "task_mode": "formative",
+            "evidence_refs": [
+              "slot.guided.purpose",
+              "prior-11",
+              "lesson.objective"
+            ],
+            "learner_action": {
+              "action": "complete-missing-values",
+              "target": "the two part-areas and the total area of the stage floor",
+              "purpose": "rehearse the summing method with the split still supplied, so the learner reads the dimensions, multiplies and adds while the decomposition is scaffolded",
+              "difficulty": "guided",
+              "expected_evidence": "60 m\u00b2 and 12 m\u00b2 for the two parts and 72 m\u00b2 for the whole stage floor"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": "The guided slot lists no typical intents; practise-guided fits because the learner can begin with the split shown but would stall without the prompts that ask about overlap and coverage.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "guided-b2",
+            "brief": "Test the belief that any split of a shape can simply be added, even when the parts sit on top of one another. State the correct understanding plainly: the parts of a split must not overlap, because every region of the shape has to be counted exactly once. Then show the belief failing on the floor plan with a split that looks reasonable: a left column read as 5 m by 7 m, giving 35 m\u00b2, and a top strip read as 8 m by 3 m, giving 24 m\u00b2. The two parts share the top-left 5 m by 3 m region, so 35 + 24 = 59 m\u00b2 counts that 15 m\u00b2 twice and is 15 m\u00b2 larger than the floor; the non-overlapping split gave 44 m\u00b2. Keep the learner's attention on the region counted twice. Do not restate the whole method and do not bring in another shape.",
+            "intent": "diagnose-misconception",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Show the two proposed parts sitting on top of one another, with the shared region visible as the region that would be counted twice.",
+              "required": true,
+              "must_show": [
+                "the floor plan with a 5 m by 7 m left column and an 8 m by 3 m top strip drawn as the two proposed parts",
+                "the 5 m by 3 m region where those two parts overlap, marked as the region counted twice",
+                "the resulting 35 m\u00b2 + 24 m\u00b2 = 59 m\u00b2 compared with the correct 44 m\u00b2"
+              ],
+              "must_not_show": [
+                "the overlapping split presented as correct",
+                "any new shape"
+              ],
+              "labels_required": [
+                "5 m",
+                "7 m",
+                "8 m",
+                "3 m",
+                "5 m by 3 m",
+                "59 m\u00b2",
+                "44 m\u00b2"
+              ]
+            },
+            "evidence": "overlap_double_count says a split can be added whatever its parts do, and the floor plan supports a split of 5 m by 7 m with 8 m by 3 m whose shared region is exactly 15 m\u00b2, so a confident wrong total of 59 m\u00b2 can be produced and then shown to overcount.",
+            "position": 1,
+            "task_mode": "none",
+            "evidence_refs": [
+              "overlap_double_count",
+              "anchor.anchor-1",
+              "prior-11",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": "The guided slot lists no typical intents; diagnose-misconception is used because reading the plan this way is a belief that produces a definite wrong total, which a warning would only flag without testing.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "guided-b3",
+            "brief": "Mark the one statement to keep about the written answer: area is a count of unit squares, so the floor's area is 44 m\u00b2 and the stage floor's area is 72 m\u00b2, each with square units attached. Show the belief that the unit does not matter failing: a bare 44 or 72 does not say what was counted, and a bare 44 could just as well be a length of the room's edge. Keep this to the single statement about the unit; do not reopen the summing method, do not return to the overlapping split, and do not add another shape.",
+            "intent": "emphasise",
+            "evidence": "forget_square_units is a belief about the written answer rather than a step inside the method, so it belongs immediately after the learner has produced real totals (72 m\u00b2 in this section, 44 m\u00b2 in the model), where a bare number actually appears and can be shown to be unreadable.",
+            "position": 2,
+            "task_mode": "none",
+            "evidence_refs": [
+              "forget_square_units",
+              "prior-5",
+              "prior-8"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": "The guided slot lists no typical intents; emphasise is chosen because the statement to retain is positive \u2014 area is a count of unit squares \u2014 and this error is a named belief on the card rather than a slip, so the block states the correct understanding and shows the bare-number answer failing.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "guided",
+        "exit_state": [
+          "computes the two part-areas and their sum on a supplied split",
+          "rejects the overlapping split of the floor plan and explains that the shared 5 m by 3 m region was counted twice",
+          "reports an area with square units and says why the unit cannot be dropped"
+        ],
+        "transition": "The learner is now asked to pick the calculation for a compound shape in the shared check, with no split supplied and no prompts.",
+        "entry_state": [
+          "has watched the method carried out on the floor plan from cut to total",
+          "knows that a split's parts must not overlap and must cover the shape"
+        ],
+        "display_title": "Your turn, with the split supplied",
+        "must_establish": [
+          "the stage floor's parts are 60 m\u00b2 and 12 m\u00b2, and the whole stage floor is 72 m\u00b2",
+          "the floor plan read as a 5 m by 7 m column and an 8 m by 3 m strip double counts the 5 m by 3 m region, so 35 + 24 = 59 m\u00b2 is 15 m\u00b2 too large and 44 m\u00b2 is right",
+          "the area of the floor is 44 m\u00b2 and the area of the stage floor is 72 m\u00b2, each reported in square units, because a bare number does not say what was counted"
+        ],
+        "avoid_repeating": [
+          "re-deriving the floor plan's own total from the beginning (done in the model)",
+          "measuring whether the method has landed without help (the check's job)",
+          "showing different valid splits of one shape"
+        ],
+        "specific_purpose": "The learner computes part-areas and their sum on a fresh shape with the split already supplied, then returns to the floor plan to test a plausible split whose parts overlap, and finally fixes the unit convention for the answer.",
+        "bridge_from_previous": "The model left the learner able to do the steps with the reasoning spoken for them; the guided work removes that narration but keeps the split supplied, then returns to the floor plan where a reasonable-looking split breaks the no-overlap rule."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "The shared diagnostic for this lesson: the learner works the approved item's compound shape, made from two rectangles joined along an edge with no overlap, and selects the calculation that gives its area. Nothing is taught here and no split or prompt is supplied. Do not restate the room's floor plan, do not restate the stage floor, and do not supply any part-area.",
+            "intent": "check-understanding",
+            "evidence": "The objective's core is choosing to add the rectangular parts of a compound shape, and this approved item measures exactly that choice for two rectangles joined with no overlap, rather than an adjacent skill such as deriving a missing dimension or subtracting a removed region.",
+            "position": 0,
+            "task_mode": "assessment",
+            "evidence_refs": [
+              "slot.check.purpose",
+              "lesson.objective",
+              "item.77754f15-82b2-4934-b00a-22781415beb1:77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a.i3"
+            ],
+            "learner_action": {
+              "action": "select-one",
+              "target": "the area calculation for the compound shape in the approved check item",
+              "purpose": "measure whether the sum-of-parts method is available without the split being supplied",
+              "difficulty": "independent",
+              "expected_evidence": "the learner selects the calculation that adds the two rectangles' areas"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [
+              "77754f15-82b2-4934-b00a-22781415beb1:77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a.i3"
+            ],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "check",
+        "exit_state": [
+          "the learner's selection shows whether the summing method is available without scaffolding"
+        ],
+        "transition": "With the summing method in place, later work can extend the same idea to compound shapes handled by other means, such as a shape with a rectangular region removed.",
+        "entry_state": [
+          "can compute two part-areas and their sum on a supplied split",
+          "can reject a split whose parts overlap and explain the double count"
+        ],
+        "display_title": "Check: choosing the calculation",
+        "must_establish": [
+          "whether the learner selects the sum-of-parts calculation for a compound shape made from two rectangles joined along an edge with no overlap"
+        ],
+        "avoid_repeating": [
+          "teaching or re-explaining the method",
+          "the room's floor plan",
+          "the stage floor"
+        ],
+        "specific_purpose": "Run the shared diagnostic: can the learner select the calculation that sums the rectangular parts of a compound shape, with no split supplied and no prompts?",
+        "bridge_from_previous": "Guided practice supplied the split and the prompts; the check removes both and asks only for the calculation, so the learner's choice shows whether the method is available unaided."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "The anchor is introduced here as the concrete case: the L-shaped room floor plan with the top edge 8 m, the top strip's depth 3 m, the overall left edge 7 m and the lower rectangle's width 5 m, and no area value anywhere.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "The anchor is deliberately held back. Recall uses a single plain 6 m by 4 m rectangle and a plain statement of the no-overlap requirement, so the floor plan stays untouched until the method is worked on it.",
+        "slot_id": "recall"
+      },
+      {
+        "usage": "The anchor carries the whole method: it is cut into a top strip (8 m by 3 m) and a lower rectangle (5 m by 4 m, with the 4 m derived from 7 m \u2212 3 m), the parts are added to 44 m\u00b2, and the same plan is then used to show 8 m \u00d7 7 m = 56 m\u00b2 counting a 3 m by 4 m region that is not floor.",
+        "slot_id": "model"
+      },
+      {
+        "usage": "The anchor returns as the test case for an overlapping split: a left column read as 5 m by 7 m and a top strip read as 8 m by 3 m share the 5 m by 3 m region, so 35 + 24 = 59 m\u00b2 double counts 15 m\u00b2. The learner's own practice shape is a different object, the stage floor.",
+        "slot_id": "guided"
+      },
+      {
+        "usage": "The anchor is not used. The check is the approved item's own compound shape, so the learner meets the method on material that was not taught with.",
+        "slot_id": "check"
+      }
+    ],
+    "target_state": [
+      "splits a compound shape made from rectangles into rectangular parts that do not overlap and that cover the shape exactly",
+      "reads each part's length and width from the shape's labels, deriving a dimension when it is not labelled",
+      "finds the area of the compound shape by adding the parts' areas and reporting the answer in square units",
+      "explains why multiplying the overall length by the overall width overcounts when part of the enclosing rectangle is not part of the shape",
+      "explains why a split whose parts overlap counts the shared region twice and gives too large an area"
+    ],
+    "learner_title": "Finding the Area of a Compound Shape by Adding Its Rectangular Parts",
+    "starting_state": [
+      "can multiply whole numbers and can find the area of a single rectangle from its length and width (prior-6)",
+      "reports a rectangle's area with a square-unit label (prior-5, prior-8)",
+      "knows a compound rectangular shape can be partitioned into rectangles that do not overlap and cover the whole shape (prior-11)",
+      "can read a part's dimensions from the given side lengths of a compound shape (prior-12)",
+      "has not yet combined the areas of rectangular parts to find the area of a whole compound shape"
+    ],
+    "approval_status": "pending",
+    "contract_version": 2,
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "73ad71e2-c888-45b7-a733-e2985afbab07",
+    "misconception_focus_ids": [
+      "multiply_all_sides",
+      "overlap_double_count",
+      "forget_square_units"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [
+    {
+      "code": "TEACHING_PLAN_SEMANTIC_REVIEW_PASS",
+      "content_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2"
+    }
+  ],
+  "teaching_flags": [
+    {
+      "code": "factual_inaccuracy",
+      "source": "reviewer",
+      "message": "guided-b3's brief asserts that 'a bare 44 could just as well be a length of the room's edge', but the room's edges measure 8 m, 7 m, 5 m, 3 m and 4 m (total perimeter 30 m), so 44 m is not a length of any edge or any combination of edges. The example is mathematically false and therefore does not demonstrate that dropping the unit is a failure, even though the block's departure_reason claims it 'shows the bare-number answer failing'.",
+      "severity": "warning",
+      "block_ids": [
+        "guided-b3"
+      ],
+      "section_ids": [
+        "guided"
+      ],
+      "repair_instruction": "Rewrite the failing example so it is consistent with the plan's own measurements \u2014 for instance, state only that a bare 44 gives no indication of whether it counts square metres of floor or some other quantity \u2014 and delete the claim that a bare 44 could be a length of the room's edge."
+    }
+  ],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "teaching_plan_identity": {
+    "revision": 1,
+    "pending_content_hash": "6935cbe91c8cc35cfd127986578201734638a96a5d2b90b0175e2c1fa0f9f0c2",
+    "pending_hash_verified": true,
+    "approved_revision": null,
+    "approved_content_hash": null,
+    "approved_hash_verified": false,
+    "approval_hash_binding": null,
+    "recovery_action": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ]
+      },
+      {
+        "purpose": "Reactivate the specific prior knowledge this lesson depends on. Nothing else.",
+        "slot_id": "recall",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "activate-prior-knowledge",
+          "define",
+          "summarise"
+        ]
+      },
+      {
+        "purpose": "Show the method being carried out, with each step's reasoning visible.",
+        "slot_id": "model",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": []
+      },
+      {
+        "purpose": "Practice with scaffolding still present. Learner does the thinking, support stays.",
+        "slot_id": "guided",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": []
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ]
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A floor plan of a room that is an L-shape, formed from two rectangles, with each rectangle's length and width given in metres."
+    },
+    "lesson": {
+      "subject": "Mathematics",
+      "objective": "Calculate the area of a compound shape made from rectangles by summing the areas of its rectangular parts.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "77754f15-82b2-4934-b00a-22781415beb1"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "77754f15-82b2-4934-b00a-22781415beb1:77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a.i1",
+        "stem": "This L-shaped floor plan is made from two rectangles. What is its area?",
+        "card_id": "77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a",
+        "options": [
+          {
+            "key": "a",
+            "text": "Add the area of the 8 m by 3 m part to the area of the 4 m by 5 m part",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Multiply the total 12 m length by the total 8 m width",
+            "correct": false,
+            "diagnoses": "multiply_all_sides",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Add the areas of three rectangles drawn from overlapping regions",
+            "correct": false,
+            "diagnoses": "overlap_double_count",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Add the areas of the two rectangles and label the result 76",
+            "correct": false,
+            "diagnoses": "forget_square_units",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "multiply_all_sides",
+          "c": "overlap_double_count",
+          "d": "forget_square_units"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "77754f15-82b2-4934-b00a-22781415beb1:77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a.i2",
+        "stem": "A rectangular garden 10 m by 6 m has a rectangular paved path 4 m by 2 m removed from one corner. Which calculation gives the remaining garden area?",
+        "card_id": "77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a",
+        "options": [
+          {
+            "key": "a",
+            "text": "Split the remaining garden into two rectangles and add their areas",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Multiply 10 m by 6 m to get the whole garden's area",
+            "correct": false,
+            "diagnoses": "multiply_all_sides",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Add the garden area and the path area together",
+            "correct": false,
+            "diagnoses": "overlap_double_count",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Subtract the path area and report the result as 52",
+            "correct": false,
+            "diagnoses": "forget_square_units",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "multiply_all_sides",
+          "c": "overlap_double_count",
+          "d": "forget_square_units"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "77754f15-82b2-4934-b00a-22781415beb1:77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a.i3",
+        "stem": "A compound shape is formed by joining a 7 cm by 2 cm rectangle and a 3 cm by 4 cm rectangle along an edge with no overlap. Which method gives the area?",
+        "card_id": "77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a",
+        "options": [
+          {
+            "key": "a",
+            "text": "Sum the areas of the two edge-joined rectangles",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Multiply the overall length by the overall width of the joined shape",
+            "correct": false,
+            "diagnoses": "multiply_all_sides",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Count any shared edge region twice when adding the two rectangles",
+            "correct": false,
+            "diagnoses": "overlap_double_count",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Report the total as 26 square units without naming the unit",
+            "correct": false,
+            "diagnoses": "forget_square_units",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "multiply_all_sides",
+          "c": "overlap_double_count",
+          "d": "forget_square_units"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "77754f15-82b2-4934-b00a-22781415beb1:77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a.i4",
+        "stem": "A window is made from a 5 ft by 2 ft rectangle and a 3 ft by 3 ft rectangle that overlap in a 1 ft by 1 ft square. Which area calculation is correct?",
+        "card_id": "77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a",
+        "options": [
+          {
+            "key": "a",
+            "text": "Add the areas and subtract the overlapping unit square once",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Multiply the overall 8 ft length by the overall 5 ft height",
+            "correct": false,
+            "diagnoses": "multiply_all_sides",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Add the two rectangle areas without adjusting for the shared square",
+            "correct": false,
+            "diagnoses": "overlap_double_count",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Add the areas and write the total as 18",
+            "correct": false,
+            "diagnoses": "forget_square_units",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "multiply_all_sides",
+          "c": "overlap_double_count",
+          "d": "forget_square_units"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "77754f15-82b2-4934-b00a-22781415beb1:77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a.i5",
+        "stem": "A courtyard can be split into rectangular parts in two different ways, and both splits match the courtyard exactly. What must be true about the two area totals?",
+        "card_id": "77754f15-82b2-4934-b00a-22781415beb1:a327e1b2-26a4-457c-b968-19ed3f644e8a",
+        "options": [
+          {
+            "key": "a",
+            "text": "They are equal because both sum the same non-overlapping parts",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "They are equal to overall length times overall width",
+            "correct": false,
+            "diagnoses": "multiply_all_sides",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "They may differ if one split has overlapping parts",
+            "correct": false,
+            "diagnoses": "overlap_double_count",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "They are equal as numbers whether or not units are recorded",
+            "correct": false,
+            "diagnoses": "forget_square_units",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "multiply_all_sides",
+          "c": "overlap_double_count",
+          "d": "forget_square_units"
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "multiply_all_sides",
+        "statement": "{'id': 'multiply_all_sides', 'description': 'I can get the area by multiplying the overall length of the compound shape by the overall width.', 'source': 'drafted'}"
+      },
+      {
+        "id": "overlap_double_count",
+        "statement": "{'id': 'overlap_double_count', 'description': 'I can split the shape however I like and just add all the parts, even if the parts overlap.', 'source': 'drafted'}"
+      },
+      {
+        "id": "forget_square_units",
+        "statement": "{'id': 'forget_square_units', 'description': 'The answer is just a number; the unit does not matter.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "can multiply whole numbers"
+      },
+      {
+        "id": "prior-2",
+        "statement": "know that area is measured in square units"
+      },
+      {
+        "id": "prior-3",
+        "statement": "The length and width are the two perpendicular side measurements of a rectangle"
+      },
+      {
+        "id": "prior-4",
+        "statement": "The number of unit squares covering a rectangle is found by counting rows and columns"
+      },
+      {
+        "id": "prior-5",
+        "statement": "Area is reported in square units"
+      },
+      {
+        "id": "prior-6",
+        "statement": "The formula area = length x width gives the number of unit squares in a rectangle"
+      },
+      {
+        "id": "prior-7",
+        "statement": "Multiplication of the two side lengths replaces counting squares"
+      },
+      {
+        "id": "prior-8",
+        "statement": "The result is stated with square-unit labels"
+      },
+      {
+        "id": "prior-9",
+        "statement": "Area divided by a known side length gives the unknown side length"
+      },
+      {
+        "id": "prior-10",
+        "statement": "The relationship area = length x width can be rearranged to solve for a missing dimension"
+      },
+      {
+        "id": "prior-11",
+        "statement": "A compound rectangular shape can be partitioned into rectangles that do not overlap and cover the whole shape"
+      },
+      {
+        "id": "prior-12",
+        "statement": "The dimensions of each part can be read from the given side lengths of the compound shape"
+      },
+      {
+        "id": "prior-13",
+        "statement": "Different valid decompositions of the same shape are possible"
+      }
+    ],
+    "required_assessment_slots": [
+      "check"
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

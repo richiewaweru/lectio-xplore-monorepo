@@ -1,0 +1,551 @@
+[
+ {
+  "t": 1791225953.0525537,
+  "learn": {
+   "state": "queued",
+   "realization_id": "12d33e07-dafa-40ec-b7b6-e79e0e8d365b",
+   "output_id": "learn-out-5b3ea4d2d29e486a",
+   "open_href": "/builder/from-native-learn/learn-out-5b3ea4d2d29e486a",
+   "stale": false,
+   "legacy_ambiguous": false,
+   "error": null,
+   "shared_document_state": "pending",
+   "shared_document_run_id": "5441143d-a4cd-4d98-8293-a87591f74591",
+   "shared_document_id": null,
+   "shared_document_revision": null,
+   "shared_document_hash": null,
+   "run_id": null,
+   "recovery_action": null,
+   "progress": {
+    "steps": [
+     {
+      "key": "sourcebook",
+      "label": "Gathering source notes",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "shared_tasks",
+      "label": "Writing practice questions",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "compose",
+      "label": "Planning sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "write",
+      "label": "Writing sections",
+      "status": "active",
+      "done": 4,
+      "total": 5
+     },
+     {
+      "key": "boundary",
+      "label": "Checking how sections connect",
+      "status": "pending",
+      "done": 0,
+      "total": 4
+     },
+     {
+      "key": "document_qa",
+      "label": "Final quality check",
+      "status": "pending",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "realize",
+      "label": "Building the Learn lesson",
+      "status": "pending",
+      "done": null,
+      "total": null
+     }
+    ],
+    "current_label": "Writing sections (4/5)",
+    "started_at": "2026-10-05T18:44:45.273510"
+   }
+  }
+ },
+ {
+  "t": 1791225973.4288318,
+  "learn": {
+   "state": "queued",
+   "realization_id": "12d33e07-dafa-40ec-b7b6-e79e0e8d365b",
+   "output_id": "learn-out-5b3ea4d2d29e486a",
+   "open_href": "/builder/from-native-learn/learn-out-5b3ea4d2d29e486a",
+   "stale": false,
+   "legacy_ambiguous": false,
+   "error": null,
+   "shared_document_state": "pending",
+   "shared_document_run_id": "5441143d-a4cd-4d98-8293-a87591f74591",
+   "shared_document_id": null,
+   "shared_document_revision": null,
+   "shared_document_hash": null,
+   "run_id": null,
+   "recovery_action": null,
+   "progress": {
+    "steps": [
+     {
+      "key": "sourcebook",
+      "label": "Gathering source notes",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "shared_tasks",
+      "label": "Writing practice questions",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "compose",
+      "label": "Planning sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "write",
+      "label": "Writing sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "boundary",
+      "label": "Checking how sections connect",
+      "status": "active",
+      "done": 0,
+      "total": 4
+     },
+     {
+      "key": "document_qa",
+      "label": "Final quality check",
+      "status": "pending",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "realize",
+      "label": "Building the Learn lesson",
+      "status": "pending",
+      "done": null,
+      "total": null
+     }
+    ],
+    "current_label": "Checking how sections connect (0/4)",
+    "started_at": "2026-10-05T18:44:45.273510"
+   }
+  }
+ },
+ {
+  "t": 1791225983.5904822,
+  "learn": {
+   "state": "queued",
+   "realization_id": "12d33e07-dafa-40ec-b7b6-e79e0e8d365b",
+   "output_id": "learn-out-5b3ea4d2d29e486a",
+   "open_href": "/builder/from-native-learn/learn-out-5b3ea4d2d29e486a",
+   "stale": false,
+   "legacy_ambiguous": false,
+   "error": null,
+   "shared_document_state": "pending",
+   "shared_document_run_id": "5441143d-a4cd-4d98-8293-a87591f74591",
+   "shared_document_id": null,
+   "shared_document_revision": null,
+   "shared_document_hash": null,
+   "run_id": null,
+   "recovery_action": null,
+   "progress": {
+    "steps": [
+     {
+      "key": "sourcebook",
+      "label": "Gathering source notes",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "shared_tasks",
+      "label": "Writing practice questions",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "compose",
+      "label": "Planning sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "write",
+      "label": "Writing sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "boundary",
+      "label": "Checking how sections connect",
+      "status": "failed",
+      "done": 0,
+      "total": 4
+     },
+     {
+      "key": "document_qa",
+      "label": "Final quality check",
+      "status": "pending",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "realize",
+      "label": "Building the Learn lesson",
+      "status": "pending",
+      "done": null,
+      "total": null
+     }
+    ],
+    "current_label": "Checking how sections connect (0/4)",
+    "started_at": "2026-10-05T18:44:45.273510"
+   }
+  }
+ },
+ {
+  "t": 1791225993.9606335,
+  "learn": {
+   "state": "queued",
+   "realization_id": "12d33e07-dafa-40ec-b7b6-e79e0e8d365b",
+   "output_id": "learn-out-5b3ea4d2d29e486a",
+   "open_href": "/builder/from-native-learn/learn-out-5b3ea4d2d29e486a",
+   "stale": false,
+   "legacy_ambiguous": false,
+   "error": null,
+   "shared_document_state": "pending",
+   "shared_document_run_id": "5441143d-a4cd-4d98-8293-a87591f74591",
+   "shared_document_id": null,
+   "shared_document_revision": null,
+   "shared_document_hash": null,
+   "run_id": null,
+   "recovery_action": null,
+   "progress": {
+    "steps": [
+     {
+      "key": "sourcebook",
+      "label": "Gathering source notes",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "shared_tasks",
+      "label": "Writing practice questions",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "compose",
+      "label": "Planning sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "write",
+      "label": "Writing sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "boundary",
+      "label": "Checking how sections connect",
+      "status": "failed",
+      "done": 3,
+      "total": 4
+     },
+     {
+      "key": "document_qa",
+      "label": "Final quality check",
+      "status": "pending",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "realize",
+      "label": "Building the Learn lesson",
+      "status": "pending",
+      "done": null,
+      "total": null
+     }
+    ],
+    "current_label": "Checking how sections connect (3/4)",
+    "started_at": "2026-10-05T18:44:45.273510"
+   }
+  }
+ },
+ {
+  "t": 1791226004.161963,
+  "learn": {
+   "state": "queued",
+   "realization_id": "12d33e07-dafa-40ec-b7b6-e79e0e8d365b",
+   "output_id": "learn-out-5b3ea4d2d29e486a",
+   "open_href": "/builder/from-native-learn/learn-out-5b3ea4d2d29e486a",
+   "stale": false,
+   "legacy_ambiguous": false,
+   "error": null,
+   "shared_document_state": "pending",
+   "shared_document_run_id": "5441143d-a4cd-4d98-8293-a87591f74591",
+   "shared_document_id": null,
+   "shared_document_revision": null,
+   "shared_document_hash": null,
+   "run_id": null,
+   "recovery_action": null,
+   "progress": {
+    "steps": [
+     {
+      "key": "sourcebook",
+      "label": "Gathering source notes",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "shared_tasks",
+      "label": "Writing practice questions",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "compose",
+      "label": "Planning sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "write",
+      "label": "Writing sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "boundary",
+      "label": "Checking how sections connect",
+      "status": "done",
+      "done": 4,
+      "total": 4
+     },
+     {
+      "key": "media",
+      "label": "Creating figures",
+      "status": "done",
+      "done": 1,
+      "total": 1
+     },
+     {
+      "key": "document_qa",
+      "label": "Final quality check",
+      "status": "active",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "realize",
+      "label": "Building the Learn lesson",
+      "status": "pending",
+      "done": null,
+      "total": null
+     }
+    ],
+    "current_label": "Final quality check",
+    "started_at": "2026-10-05T18:44:45.273510"
+   }
+  }
+ },
+ {
+  "t": 1791226024.7661495,
+  "learn": {
+   "state": "queued",
+   "realization_id": "12d33e07-dafa-40ec-b7b6-e79e0e8d365b",
+   "output_id": "learn-out-5b3ea4d2d29e486a",
+   "open_href": "/builder/from-native-learn/learn-out-5b3ea4d2d29e486a",
+   "stale": false,
+   "legacy_ambiguous": false,
+   "error": null,
+   "shared_document_state": "pending",
+   "shared_document_run_id": "5441143d-a4cd-4d98-8293-a87591f74591",
+   "shared_document_id": null,
+   "shared_document_revision": null,
+   "shared_document_hash": null,
+   "run_id": null,
+   "recovery_action": null,
+   "progress": {
+    "steps": [
+     {
+      "key": "sourcebook",
+      "label": "Gathering source notes",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "shared_tasks",
+      "label": "Writing practice questions",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "compose",
+      "label": "Planning sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "write",
+      "label": "Writing sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "boundary",
+      "label": "Checking how sections connect",
+      "status": "done",
+      "done": 4,
+      "total": 4
+     },
+     {
+      "key": "media",
+      "label": "Creating figures",
+      "status": "done",
+      "done": 1,
+      "total": 1
+     },
+     {
+      "key": "document_qa",
+      "label": "Final quality check",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "realize",
+      "label": "Building the Learn lesson",
+      "status": "pending",
+      "done": null,
+      "total": null
+     }
+    ],
+    "current_label": null,
+    "started_at": "2026-10-05T18:44:45.273510"
+   }
+  }
+ },
+ {
+  "t": 1791226034.9561317,
+  "learn": {
+   "state": "failed_recoverable",
+   "realization_id": "12d33e07-dafa-40ec-b7b6-e79e0e8d365b",
+   "output_id": "learn-out-5b3ea4d2d29e486a",
+   "open_href": "/builder/from-native-learn/learn-out-5b3ea4d2d29e486a",
+   "stale": false,
+   "legacy_ambiguous": false,
+   "error": {
+    "code": "REALIZATION_FAILED",
+    "error_type": null,
+    "failure_class": null,
+    "message": "shared_document_post_section_blocked: The SharedDocument post-section stages could not produce a ready document.",
+    "retryable": true,
+    "stage": "failed_recoverable",
+    "work_item_id": null,
+    "attempt": null,
+    "recovery_action": "retry"
+   },
+   "shared_document_state": "failed",
+   "shared_document_run_id": "5441143d-a4cd-4d98-8293-a87591f74591",
+   "shared_document_id": null,
+   "shared_document_revision": null,
+   "shared_document_hash": null,
+   "run_id": null,
+   "recovery_action": "retry",
+   "progress": {
+    "steps": [
+     {
+      "key": "sourcebook",
+      "label": "Gathering source notes",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "shared_tasks",
+      "label": "Writing practice questions",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "compose",
+      "label": "Planning sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "write",
+      "label": "Writing sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "boundary",
+      "label": "Checking how sections connect",
+      "status": "done",
+      "done": 4,
+      "total": 4
+     },
+     {
+      "key": "media",
+      "label": "Creating figures",
+      "status": "done",
+      "done": 1,
+      "total": 1
+     },
+     {
+      "key": "document_qa",
+      "label": "Final quality check",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "realize",
+      "label": "Building the Learn lesson",
+      "status": "pending",
+      "done": null,
+      "total": null
+     }
+    ],
+    "current_label": null,
+    "started_at": "2026-10-05T18:44:45.273510"
+   }
+  }
+ }
+]

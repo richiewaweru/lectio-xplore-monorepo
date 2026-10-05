@@ -1,0 +1,14 @@
+{
+  "ts": 1791226510.0569139,
+  "spec": {
+    "subject": "Science",
+    "grade_level": "Grade 8",
+    "title": "Photosynthesis and Respiration Compared",
+    "topic": "Photosynthesis versus respiration",
+    "destination_objective": "Compare photosynthesis and respiration: what goes in, what comes out, where and when each happens, and how they connect.",
+    "starting_knowledge": [
+      "plants make food using light",
+      "living things release energy from food"
+    ]
+  }
+}
