@@ -1,0 +1,20 @@
+{
+  "shared-lesson-golden_student_pages": 5,
+  "shared-lesson-golden_student_files": [
+    "shared-lesson-golden-student.pdf"
+  ],
+  "shared-lesson-golden_teacher_pages": 6,
+  "shared-lesson-golden_teacher_files": [
+    "shared-lesson-golden-bg-on.pdf",
+    "shared-lesson-golden-bg-off.pdf"
+  ],
+  "phase5-photosynthesis-print_student_pages": 6,
+  "phase5-photosynthesis-print_student_files": [
+    "phase5-photosynthesis-print-student.pdf"
+  ],
+  "phase5-photosynthesis-print_teacher_pages": 7,
+  "phase5-photosynthesis-print_teacher_files": [
+    "phase5-photosynthesis-print-bg-on.pdf",
+    "phase5-photosynthesis-print-bg-off.pdf"
+  ]
+}
