@@ -55,4 +55,8 @@ Raw command output: [focused-tests.log](./focused-tests.log) and [ruff.log](./ru
 - [x] Every downgraded length/count/paragraph-run/callout check is advisory; no shape retry, failure, truncation, padding, or READY change occurred in the fresh calls.
 - [x] Hard identity/schema/leakage/task checks remain bounded and actionable.
 - [ ] Formula quality miss: the formula section explains a formula but has no key-idea callout (`shape_missing section/key_idea`). This remains an explicit advisory miss.
+- [ ] Fresh-generation subscript/superscript: all three accepted Learn exports have zero subscript/superscript elements. The golden fixture demonstrates renderer support but does not satisfy this fresh-generation requirement.
+- [ ] Fresh-generation misconception: none of the three accepted sections contains a misconception, so three-part authoring was not exercised by these runs.
 - [ ] G3 wording, formatting, misconception, and list-discipline proof on real rendered outputs: A/B renderer owners must load these accepted documents into their test previews. Renderer proof cannot clear the formula quality miss.
+
+Lead review: Track A commit `879b3cff` supplies verbatim Learn previews and desktop/mobile evidence for these accepted exports. Their bold terms, equations/compare blocks and absence of literal markup are visible. These are one-section generations; complete end-to-end lesson generation belongs to Phase 5. G3 is not accepted, and integration remains on hold. No accepted output was regenerated or rewritten to clear a shape finding.
