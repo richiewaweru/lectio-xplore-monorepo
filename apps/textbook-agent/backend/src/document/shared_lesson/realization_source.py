@@ -594,9 +594,8 @@ async def load_realization_source(
 
 
 __all__ = [
-    "FigureQcRecord",
-    "load_run_figure_qc",
     "FailedRealizationSource",
+    "FigureQcRecord",
     "NeedsReviewRealizationSource",
     "PendingRealizationSource",
     "ReadyRealizationSource",
@@ -610,4 +609,5 @@ __all__ = [
     "StaleRealizationSource",
     "ensure_shared_document_run",
     "load_realization_source",
+    "load_run_figure_qc",
 ]

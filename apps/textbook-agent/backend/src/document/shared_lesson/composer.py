@@ -772,8 +772,10 @@ async def compose_section(
                 previous_issues = exc.issues
             elif _draft_contains_figure(raw):
                 previous_errors = (
-                    "figure is not a composer kind: figures are placed by code from the"
-                    " Teaching Plan and must not be emitted",
+                    (
+                        "figure is not a composer kind: figures are placed by code from the"
+                        " Teaching Plan and must not be emitted"
+                    ),
                 )
                 previous_issues = (("provider_draft_schema_invalid", "items"),)
             else:

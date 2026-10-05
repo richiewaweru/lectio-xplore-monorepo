@@ -131,8 +131,10 @@ def test_avoid_repetition_does_not_reject_topic_terms_required_for_new_content()
         "section-1",
         title="Light and energy",
         avoid=[
-            "Do not re-recall what glucose, oxygen, carbon dioxide, water, or ATP are; "
-            "that recall happened in the opening section"
+            (
+                "Do not re-recall what glucose, oxygen, carbon dioxide, water, or ATP are; "
+                "that recall happened in the opening section"
+            )
         ],
         must=[
             "Glucose and oxygen are reactants, while carbon dioxide, water, and ATP are products"

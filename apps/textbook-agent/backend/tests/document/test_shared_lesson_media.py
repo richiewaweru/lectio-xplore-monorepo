@@ -749,8 +749,10 @@ def test_bound_alt_text_uses_the_alt_line() -> None:
 @pytest.mark.parametrize(
     "provider_text",
     [
-        "The generated diagram successfully meets all the pedagogical and visual "
-        "requirements. It is excellent for print.",
+        (
+            "The generated diagram successfully meets all the pedagogical and visual "
+            "requirements. It is excellent for print."
+        ),
         "ALT: The generated diagram successfully meets all the pedagogical requirements.",
         "A leaf under the sun.",
         "ALT: " + "word " * 100,
