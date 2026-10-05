@@ -1,0 +1,20 @@
+G4 browser proof 2026-10-05T18:15:07.408Z
+golden Q1 prompt: Where does the energy a plant uses to grow come from?
+  screenshot images/golden-predict-1-before.png
+  screenshot images/golden-predict-2-selected.png
+  submit label: "Lock in my prediction"; enabled after selecting: true
+  screenshot images/golden-predict-3-saved.png
+  after submit task text: "t takes in its growing energy from the soil, together with the water. The plant captures its growing energy from the light, using its leaves. Lock in my prediction Prediction saved. Keep it in mind — Part 2 will test it."
+  shows "Prediction saved": true
+  RESULT predict never shows Correct/Not yet: PASS
+  screenshot images/golden-predict-4-other-option-saved.png
+  other option -> saved: true; graded text present: false
+  RESULT predict (other option) neutral: PASS
+  screenshot images/legacy-1-before.png
+  screenshot images/legacy-2-correct-answer.png
+legacy Q1 correct answer -> contains "Correct.": true
+  screenshot images/legacy-3-wrong-answer.png
+legacy Q1 wrong answer -> contains "Not yet": true
+  RESULT legacy renders and answers: PASS
+Learn golden data-question-number sequence: ["Q1","Q2"]
+Learn legacy data-question-number sequence: ["Q1","Q2"]
