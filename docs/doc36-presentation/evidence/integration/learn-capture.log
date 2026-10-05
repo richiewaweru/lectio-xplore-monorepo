@@ -1,0 +1,31 @@
+golden @1280: images/golden-learn-1280.png
+golden @1280 data-question-number: ["1","2"]
+golden @1280 task headers: 2  horizontal overflow: false
+legacy @1280: images/legacy-learn-1280.png
+legacy @1280 data-question-number: ["1","2"]
+legacy @1280 task headers: 2  horizontal overflow: false
+golden @390: images/golden-learn-390.png
+golden @390 data-question-number: ["1","2"]
+golden @390 task headers: 2  horizontal overflow: false
+legacy @390: images/legacy-learn-390.png
+legacy @390 data-question-number: ["1","2"]
+legacy @390 task headers: 2  horizontal overflow: false
+KEYBOARD golden
+1. <button> "A The plant takes in its growing energy from the soil, toget" aria-pressed=false disabled=false role=null
+   (Space) -> <button> "A The plant takes in its growing energy from the soil, toget" aria-pressed=true disabled=false role=null
+2. <button> "B The plant captures its growing energy from the light, usin" aria-pressed=false disabled=false role=null
+3. <button> "Lock in my prediction" aria-pressed=null disabled=false role=null
+4. <button> "A A watered plant kept in darkness becomes pale and stops gr" aria-pressed=false disabled=false role=null
+   (Space) -> <button> "A A watered plant kept in darkness becomes pale and stops gr" aria-pressed=true disabled=false role=null
+5. <button> "B A watered plant in darkness grows taller because it stretc" aria-pressed=false disabled=false role=null
+6. <button> "C A watered plant in darkness stays cool, which proves it la" aria-pressed=false disabled=false role=null
+7. <button> "D A watered plant in darkness grows well when it is given pl" aria-pressed=false disabled=false role=null
+   (Space) -> <button> "D A watered plant in darkness grows well when it is given pl" aria-pressed=true disabled=false role=null
+8. <button> "Check my answer" aria-pressed=null disabled=false role=null
+9. <body> "Science How Plants Get the Energy to Grow All sections 1 Two" aria-pressed=null disabled=undefined role=null
+10. <button> "All sections" aria-pressed=null disabled=false role=null
+11. <button> "1 Two Pots, One Difference" aria-pressed=null disabled=false role=null
+12. <button> "2 Where the Growing Energy Comes From" aria-pressed=null disabled=false role=null
+13. <button> "3 Two Beliefs That Fail the Evidence" aria-pressed=null disabled=false role=null
+14. <button> "4 Which Observation Challenges the Soil Idea?" aria-pressed=null disabled=false role=null
+options with aria-pressed seen: 6; any radio role: false
