@@ -28,5 +28,6 @@ Worktree: `codex/doc36-tasks` (Phase 0 base `92973aa0`).
 
 ## Browser/rendered evidence
 
-Pending. Attach Learn prediction/check screenshots and Print/teacher projection output after the app check and fresh-task run.
+- [`browser-proof.txt`](browser-proof.txt) records the local Learn golden prediction save and role-absent legacy answer proof from the real browser. The Learn AX tree showed the authored question, paragraph context, saved prediction feedback, and no correctness feedback for prediction.
+- Print and teacher Q-number agreement remains unticked until B's projection and answer-key changes are integrated.
 
