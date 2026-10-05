@@ -6,6 +6,7 @@ import overlong from '$lib/learn/document/dev-fixtures/overlong.json';
 import g3Photosynthesis from '$lib/learn/document/dev-fixtures/g3-photosynthesis.json';
 import g3Formula from '$lib/learn/document/dev-fixtures/g3-formula.json';
 import g3Comparison from '$lib/learn/document/dev-fixtures/g3-comparison.json';
+import phase5Photosynthesis from '$lib/learn/document/dev-fixtures/phase5-photosynthesis.json';
 
 const FIXTURES = {
 	golden,
@@ -13,7 +14,8 @@ const FIXTURES = {
 	overlong,
 	'g3-photosynthesis': g3Photosynthesis,
 	'g3-formula': g3Formula,
-	'g3-comparison': g3Comparison
+	'g3-comparison': g3Comparison,
+	'phase5-photosynthesis': phase5Photosynthesis
 } as const;
 
 export function GET({ params }) {

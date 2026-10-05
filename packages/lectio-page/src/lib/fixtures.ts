@@ -9,6 +9,7 @@ import sharedLessonOverlong from '../../fixtures/shared-lesson-overlong.json';
 import trackCPhotosynthesis from '../../fixtures/track-c-photosynthesis-print.json';
 import trackCFormula from '../../fixtures/track-c-formula-print.json';
 import trackCComparison from '../../fixtures/track-c-comparison-print.json';
+import phase5Photosynthesis from '../../fixtures/phase5-photosynthesis-print.json';
 
 export const fixtureIndex = [
 	{
@@ -60,6 +61,11 @@ export const fixtureIndex = [
 		id: 'track-c-comparison-print',
 		title: 'Track C comparison Print projection',
 		description: 'Accepted Track C comparison document projected through the Print adapter.'
+	},
+	{
+		id: 'phase5-photosynthesis-print',
+		title: 'Phase 5 photosynthesis Print projection',
+		description: 'Phase 5 integration run draft projected through the Print adapter (figure image unavailable).'
 	}
 ] as const;
 
@@ -76,6 +82,7 @@ export function loadFixture(id: string): LectioDocument | null {
 	if (id === 'track-c-photosynthesis-print') return trackCPhotosynthesis as unknown as LectioDocument;
 	if (id === 'track-c-formula-print') return trackCFormula as unknown as LectioDocument;
 	if (id === 'track-c-comparison-print') return trackCComparison as unknown as LectioDocument;
+	if (id === 'phase5-photosynthesis-print') return phase5Photosynthesis as unknown as LectioDocument;
 	return null;
 }
 

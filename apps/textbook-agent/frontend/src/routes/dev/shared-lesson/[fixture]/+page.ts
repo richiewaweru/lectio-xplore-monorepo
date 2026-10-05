@@ -7,7 +7,8 @@ const FIXTURES = new Set([
 	'overlong',
 	'g3-photosynthesis',
 	'g3-formula',
-	'g3-comparison'
+	'g3-comparison',
+	'phase5-photosynthesis'
 ]);
 
 export const load = async ({ fetch, params }) => {

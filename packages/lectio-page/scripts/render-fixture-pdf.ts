@@ -249,7 +249,8 @@ const FIXTURES: Array<{ id: string; requireFullCoverage: boolean; editions: Arra
 	,
 	{ id: 'track-c-photosynthesis-print', requireFullCoverage: false, editions: ['student'] },
 	{ id: 'track-c-formula-print', requireFullCoverage: false, editions: ['student'] },
-	{ id: 'track-c-comparison-print', requireFullCoverage: false, editions: ['student'] }
+	{ id: 'track-c-comparison-print', requireFullCoverage: false, editions: ['student'] },
+	{ id: 'phase5-photosynthesis-print', requireFullCoverage: false, editions: ['student', 'teacher'] }
 ];
 
 const selectedFixtureIds = process.env.PDF_FIXTURES
