@@ -1,0 +1,62 @@
+[
+  {
+    "fixture": "golden",
+    "label": "desktop",
+    "url": "http://127.0.0.1:5181/dev/shared-lesson/golden",
+    "innerWidth": 1280,
+    "scrollWidth": 1280,
+    "ids": 0,
+    "internalText": false,
+    "textLength": 5298
+  },
+  {
+    "fixture": "golden",
+    "label": "mobile",
+    "url": "http://127.0.0.1:5181/dev/shared-lesson/golden",
+    "innerWidth": 390,
+    "scrollWidth": 390,
+    "ids": 0,
+    "internalText": false,
+    "textLength": 5298
+  },
+  {
+    "fixture": "legacy",
+    "label": "desktop",
+    "url": "http://127.0.0.1:5181/dev/shared-lesson/legacy",
+    "innerWidth": 1280,
+    "scrollWidth": 1280,
+    "ids": 0,
+    "internalText": false,
+    "textLength": 7163
+  },
+  {
+    "fixture": "legacy",
+    "label": "mobile",
+    "url": "http://127.0.0.1:5181/dev/shared-lesson/legacy",
+    "innerWidth": 390,
+    "scrollWidth": 390,
+    "ids": 0,
+    "internalText": false,
+    "textLength": 7163
+  },
+  {
+    "fixture": "overlong",
+    "label": "desktop",
+    "url": "http://127.0.0.1:5181/dev/shared-lesson/overlong",
+    "innerWidth": 1280,
+    "scrollWidth": 1280,
+    "ids": 0,
+    "internalText": false,
+    "textLength": 10218
+  },
+  {
+    "fixture": "overlong",
+    "label": "mobile",
+    "url": "http://127.0.0.1:5181/dev/shared-lesson/overlong",
+    "innerWidth": 390,
+    "scrollWidth": 390,
+    "ids": 0,
+    "internalText": false,
+    "textLength": 10218
+  }
+]

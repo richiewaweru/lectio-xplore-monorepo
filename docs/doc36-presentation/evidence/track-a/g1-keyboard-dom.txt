@@ -1,0 +1,9 @@
+Browser QA — golden fixture
+
+Route: http://127.0.0.1:5181/dev/shared-lesson/golden
+Viewport: default desktop browser; keyboard action performed with the first prediction radio's Space key.
+
+Before: first prediction radio had Value: 0 and “Lock in my prediction” was disabled.
+After: first prediction radio had Value: 1 and “Lock in my prediction” was enabled.
+
+The browser accessibility tree exposed the option as a radio button and the action as a button. The screenshot `golden-desktop.png` shows the selected option and dark task header.
