@@ -12,7 +12,7 @@
 
 {#each content.items as item, i}
 	<div class="lectio-question" id={item.id}>
-		<span class="lectio-question-number">{i + 1}.</span>
+		<span class="lectio-question-number">{item.id.startsWith('Q') ? item.id : i + 1}.</span>
 		{#if item.marks != null}
 			<span class="lectio-question-marks">[{item.marks}]</span>
 		{/if}

@@ -4,12 +4,12 @@
   "contract_version": "1.1.0",
   "intent_catalogue_version": "1.1.0",
   "object_catalogue_version": "1.2.0",
-  "generated_at": "2026-10-05T15:01:24.359Z",
+  "generated_at": "2026-10-05T15:41:13.738Z",
   "files": [
     {
       "path": "lectio-document-v2.schema.json",
-      "sha256": "d01dc0d731b2299423aa4aa953f33fc4555d82639f9c8889fad949d806ebc949",
-      "bytes": 21133
+      "sha256": "a887491b2aeb38bd21845bed60c8bf4f28dc7edf154027511e8d6944b5db2587",
+      "bytes": 22167
     },
     {
       "path": "object-catalogue.v1.json",
@@ -23,8 +23,8 @@
     },
     {
       "path": "base-print.css",
-      "sha256": "16fbda7b9cceeebc4d8bff7161ceb7f6a3c0d1906e3b6ccb75bab361bfeb6524",
-      "bytes": 10547
+      "sha256": "68a993cc9c2a1bebafe500962881543dfbddf9a8196c3cd12fac6b36524254b8",
+      "bytes": 12047
     },
     {
       "path": "authoring/instructions/answer-key-system-v1.txt",
@@ -98,8 +98,8 @@
     },
     {
       "path": "generated/form-writer-view.v1.json",
-      "sha256": "d638e4d3af01c68a7761af49dce3b69736356c197ed2a56e58d98584c229e018",
-      "bytes": 58783
+      "sha256": "d701577217759e212027917343adf377a8ecb20cec9b441c5da3b3ee8b72f12c",
+      "bytes": 59459
     },
     {
       "path": "generated/intent-object-map.v1.json",

@@ -6,10 +6,12 @@
 
 	let {
 		content,
-		spanning = false
+		spanning = false,
+		figureNumber
 	}: {
 		content: FigureContent;
 		spanning?: boolean;
+		figureNumber?: number;
 	} = $props();
 
 	const span = $derived(spanning || content.width === 'span');
@@ -53,7 +55,10 @@
 		<img src={content.asset.src} alt={content.alt_text} />
 	{/if}
 	{#if content.caption}
-		<figcaption class="lectio-caption"><InlineView nodes={asRichText(content.caption)} /></figcaption>
+		<figcaption class="lectio-caption">
+			{#if figureNumber}<span class="lectio-figure-number">Figure {figureNumber}: </span>{/if}
+			<InlineView nodes={asRichText(content.caption)} />
+		</figcaption>
 	{/if}
 </figure>
 

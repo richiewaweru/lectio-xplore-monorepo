@@ -17,17 +17,18 @@
   --aside-width: 46mm;
   --aside-gap: 6mm;
   --line: 17pt;
+  background: #FFFFFF;
 }
 
 html { font-family: var(--lectio-body, "Atkinson Hyperlegible", sans-serif); }
 body {
-  margin: 0; color: #111;
+  margin: 0; color: #111; background: #FFFFFF;
   font-size: 12pt; line-height: var(--line, 17pt);
   orphans: 3; widows: 3; hyphens: auto;
 }
 
 /* flow-root so a trailing margin float cannot escape the document body. */
-.lectio-main { max-width: var(--measure); display: flow-root; }
+.lectio-main { max-width: var(--measure); display: flow-root; counter-reset: figure; }
 
 .lectio-running-head,
 .lectio-page-footer {
@@ -99,34 +100,46 @@ p { margin: 0 0 var(--line); }
 }
 .lectio-aside--spanning { width: 100%; box-sizing: border-box; clear: both; }
 .lectio-aside--spanning.lectio-aside { border: 1pt solid #767676; padding: 7pt 9pt; }
+.lectio-aside--spanning:has(.lectio-misconception-grid).lectio-aside { border: 0; padding: 0; }
+.lectio-misconception-grid { border: 1pt solid #767676; padding: 7pt 9pt; break-inside: avoid; }
+.lectio-misconception-label { margin: -7pt -9pt 4pt; padding: 5pt 9pt; background: #f2f2f2; border-bottom: 1px solid #767676; }
 .lectio-aside--spanning .lectio-misconception-row { display: grid; grid-template-columns: 30mm 1fr; gap: 5pt; padding: 4pt 0; border-top: 1px solid #767676; break-inside: avoid; }
 .lectio-aside--spanning .lectio-misconception-row:first-of-type { border-top: 0; }
+.lectio-aside--spanning .lectio-misconception-row q { font-style: italic; }
 .lectio-aside-followup { margin-top: 8pt; }
+.lectio-aside--spanning:has(.lectio-misconception-grid) .lectio-aside-followup { margin: 8pt 0 var(--line); }
+.lectio-aside--key_idea { font-size: 12pt; line-height: 17pt; }
+.lectio-aside--key_idea .lectio-aside-label { font-size: 10pt; line-height: 14pt; }
+.lectio-aside--key_idea .lectio-aside-body { display: block; font-size: 18pt; line-height: 24pt; font-weight: 700; }
 
 /* ── List ────────────────────────────────────────────────────*/
 .lectio-list { margin: 0 0 var(--line); padding-left: 9mm; }
+.lectio-list { list-style-type: disc; list-style-position: outside; }
+.lectio-list:is(ol) { list-style-type: decimal; }
 .lectio-list > li { margin-bottom: 8pt; break-inside: avoid; }
 
 /* ── Table (FIX 4: span modifier) ────────────────────────────*/
 .lectio-table {
-  border-collapse: collapse; width: 100%; clear: right;
+  border-collapse: collapse; width: 100%; clear: right; border: 1px solid #767676;
   margin: 0 0 var(--line); font-size: 10.5pt;
 }
 /* --span is inert under a single measure. The authored intent
    ("wider than body text") no longer has a referent. Resemanticising it as
    "clears all floats" waits on the Placement reconciliation — see commit 5. */
 .lectio-table thead { display: table-header-group; }
-.lectio-table th, .lectio-table td { text-align: left; padding: 3pt 4pt; border-bottom: 1px solid #767676; }
-.lectio-table th { font-size: 9pt; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1pt solid #111; }
+.lectio-table th, .lectio-table td { text-align: left; padding: 3pt 4pt; border-bottom: 1px solid #767676; border-left: 1px solid #767676; }
+.lectio-table th:first-child, .lectio-table td:first-child { border-left: 0; }
+.lectio-table th { font-size: 9pt; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1pt solid #111; background: #f2f2f2; }
 .lectio-table tr { break-inside: avoid; }
 
 /* ── Figure (FIX 3: span derives from geometry) ──────────────*/
-.lectio-figure { width: 100%; clear: right; margin: 0 0 var(--line); break-inside: avoid; }
+.lectio-figure { width: 100%; clear: right; margin: 0 0 var(--line); break-inside: avoid; counter-increment: figure; }
 /* --span is inert under a single measure. The authored intent
    ("wider than body text") no longer has a referent. Resemanticising it as
    "clears all floats" waits on the Placement reconciliation — see commit 5. */
-.lectio-figure img, .lectio-figure svg { display: block; max-width: 100%; height: auto; }
+.lectio-figure img, .lectio-figure svg { display: block; max-width: 100%; height: auto; filter: grayscale(1); }
 .lectio-caption { margin-top: 4pt; font-size: 10pt; line-height: 14pt; }
+.lectio-figure-number { font-weight: 700; }
 
 /* ── Worked example ──────────────────────────────────────────*/
 .lectio-step { position: relative; padding-left: 12mm; margin-bottom: var(--line); }
@@ -146,8 +159,12 @@ p { margin: 0 0 var(--line); }
 
 /* ── Choices ─────────────────────────────────────────────────*/
 .lectio-choices { break-inside: avoid; }
+.lectio-choice-question-number { margin: 0 0 6pt; }
 .lectio-choice { position: relative; padding-left: 9mm; margin-bottom: 8pt; break-inside: avoid; }
-.lectio-choice-letter { position: absolute; left: 0; font-weight: 700; }
+.lectio-choice-mark { position: absolute; left: 0; font-size: 14pt; line-height: 12pt; }
+.lectio-choice-letter { position: absolute; left: 5mm; font-weight: 700; }
+.lectio-prediction-reason { margin-top: 8pt; }
+.lectio-prediction-reason + .lectio-answer-line { display: block; min-height: 18pt; width: 100%; }
 
 /* Doc 36 ordinary blocks. Each remains identifiable when printed without colour. */
 .lectio-equation,

@@ -1482,6 +1482,25 @@
                             "$ref": "#/$defs/rich-text"
                           }
                         ]
+                      },
+                      "feedback": {
+                        "oneOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "$ref": "#/$defs/rich-text"
+                          }
+                        ]
+                      },
+                      "option_notes": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "$ref": "#/$defs/rich-text"
+                        }
+                      },
+                      "not_marked": {
+                        "type": "boolean"
                       }
                     }
                   }
@@ -1526,7 +1545,7 @@
           "supplied_only"
         ]
       },
-      "definition_hash": "2a2207e2815db1c58c94dc5b02db7a915e899c390df574fb60a65c935afeafa7",
+      "definition_hash": "d3b98649bb98dd3d04af67d67041c335d1f7b95f6f4433d97307d01bec29f8c2",
       "fragmentation": "Split between entries. Entry keeps question reference with first answer line.",
       "emphasis": "Heading hierarchy, compact typography, rules. No card.",
       "placement": [

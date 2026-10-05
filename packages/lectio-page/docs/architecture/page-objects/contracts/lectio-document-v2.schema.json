@@ -424,7 +424,15 @@
                     },
                     "rubric": {
                       "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }]
-                    }
+                    },
+                    "feedback": {
+                      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }]
+                    },
+                    "option_notes": {
+                      "type": "object",
+                      "additionalProperties": { "$ref": "#/$defs/rich-text" }
+                    },
+                    "not_marked": { "type": "boolean" }
                   }
                 }
               }

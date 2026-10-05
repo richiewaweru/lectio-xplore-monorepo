@@ -1,0 +1,112 @@
+{
+  "document_version": 2,
+  "contract_version": "1.0.0",
+  "id": "print-doc36:doc36-track-c-comparison-0ed3c2ffa59a:revision:1-r1",
+  "title": "Photosynthesis and respiration",
+  "language": "en",
+  "front_matter": {
+    "cover": false,
+    "contents": false,
+    "running_head": "Photosynthesis and respiration",
+    "fields": [
+      "Name",
+      "Date"
+    ]
+  },
+  "metadata": {
+    "catalogue_version": "1.2.0",
+    "resource_type": "lesson",
+    "source_document": {
+      "id": "doc36:doc36-track-c-comparison-0ed3c2ffa59a:revision:1",
+      "revision": 1,
+      "content_hash": "853c9caddaff3200d31d365a7a37b40611b7dde82cd995d126f9e407db14387d"
+    },
+    "shared_tasks": []
+  },
+  "sections": [
+    {
+      "id": "comparison-section",
+      "title": "Photosynthesis and respiration",
+      "blocks": [
+        {
+          "id": "shared-node-88d372c6edc617a35179",
+          "object": "compare",
+          "intent": "explain",
+          "position": 0,
+          "content": {
+            "items": [
+              {
+                "label": null,
+                "title": [
+                  {
+                    "type": "text",
+                    "value": "Photosynthesis"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": "text",
+                    "value": "Inputs: carbon dioxide, water, and light energy. Outputs: glucose and oxygen. Role: stores light energy in glucose."
+                  }
+                ]
+              },
+              {
+                "label": null,
+                "title": [
+                  {
+                    "type": "text",
+                    "value": "Cellular respiration"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": "text",
+                    "value": "Inputs: glucose and oxygen. Outputs: carbon dioxide, water, and released energy. Role: releases the energy stored in glucose so the cell can use it."
+                  }
+                ]
+              }
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "shared-node-37f0fe66a0da924b4a99",
+          "object": "aside",
+          "intent": "emphasise",
+          "position": 1,
+          "content": {
+            "body": [
+              {
+                "type": "strong",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Photosynthesis stores energy in glucose, and cellular respiration releases that energy, so the two pathways feed each other's inputs and outputs."
+                  }
+                ]
+              }
+            ],
+            "label": [
+              {
+                "type": "text",
+                "value": "How the pathways connect"
+              }
+            ],
+            "variant": "key_idea",
+            "aside": [
+              {
+                "type": "text",
+                "value": "Cellular respiration uses glucose and oxygen and gives off carbon dioxide and water. Photosynthesis uses carbon dioxide and water and gives off glucose and oxygen. Because each pathway supplies what the other needs, matter cycles between them."
+              }
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        }
+      ]
+    }
+  ]
+}

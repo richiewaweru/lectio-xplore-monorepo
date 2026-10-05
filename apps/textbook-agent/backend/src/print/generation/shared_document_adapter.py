@@ -403,7 +403,14 @@ def _task_block(task: SharedTaskSpec, *, index: int, position: int, anchor: Task
         block = _object_block(block_id, position, "questions", {"items": [item]})
         answer = answer_entry["answer"]
 
-    entry: dict[str, Any] = {"question_id": block_id, "answer": answer}
+    if task.role:
+        block["role"] = task.role
+
+    # Predictions are learner commitments rather than right/wrong questions.
+    # Keep the learner options unchanged, but avoid exposing the selected
+    # option as a teacher answer.
+    answer_for_teacher = "Prediction (not marked)" if task.role == "predict" else answer
+    entry: dict[str, Any] = {"question_id": block_id, "answer": answer_for_teacher}
     if treatment == "questions":
         entry.update({key: value for key, value in answer_entry.items() if key != "answer"})
         entry["answer"] = _inline(answer)

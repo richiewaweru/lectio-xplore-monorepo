@@ -14,7 +14,29 @@
 	import ChoicesView from './objects/ChoicesView.svelte';
 	import AnswerKeyView from './objects/AnswerKeyView.svelte';
 
-	let { block }: { block: DocumentBlock } = $props();
+	let { block, figureNumber }: { block: DocumentBlock; figureNumber?: number } = $props();
+	const warnedUnknownKinds = new Set<string>();
+
+	function fallbackText(value: unknown): string {
+		if (typeof value === 'string') return value;
+		if (Array.isArray(value)) return value.map(fallbackText).filter(Boolean).join(' ');
+		if (!value || typeof value !== 'object') return '';
+		const record = value as Record<string, unknown>;
+		const preferred = ['text', 'body', 'title', 'label', 'caption', 'prompt', 'description'];
+		const selected = preferred.map((key) => record[key]).filter((entry) => entry != null);
+		if (selected.length) return selected.map(fallbackText).filter(Boolean).join(' ');
+		return Object.values(record).map(fallbackText).filter(Boolean).join(' ');
+	}
+
+	function renderUnknownBlock(): string {
+		const raw = block as unknown as { object?: unknown; content?: unknown };
+		const kind = String(raw.object ?? 'unknown');
+		if (!warnedUnknownKinds.has(kind)) {
+			warnedUnknownKinds.add(kind);
+			console.warn(`[Lectio Page] unknown block kind "${kind}" rendered as text`);
+		}
+		return fallbackText(raw.content);
+	}
 
 	/**
 	 * `aside` defaults to margin when placement is absent, preserving the
@@ -38,7 +60,7 @@
 {:else if block.object === 'table'}
 	<TableView content={block.content} {spanning} />
 {:else if block.object === 'figure'}
-	<FigureView content={block.content} {spanning} />
+	<FigureView content={block.content} {spanning} {figureNumber} />
 {:else if block.object === 'aside'}
 	<AsideView content={block.content} inMargin={inMargin && !spanning} spanning={spanning} />
 {:else if block.object === 'equation'}
@@ -52,7 +74,9 @@
 {:else if block.object === 'questions'}
 	<QuestionsView content={block.content} />
 {:else if block.object === 'choices'}
-	<ChoicesView content={block.content} />
+	<ChoicesView content={block.content} questionId={block.id} role={block.role ?? ''} />
 {:else if block.object === 'answer-key'}
 	<AnswerKeyView content={block.content} />
+{:else}
+	<p class="lectio-unknown-block">{renderUnknownBlock()}</p>
 {/if}

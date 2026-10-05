@@ -245,7 +245,12 @@ const FIXTURES: Array<{ id: string; requireFullCoverage: boolean; editions: Arra
 	{ id: 'margin-stress', requireFullCoverage: false, editions: ['teacher'] },
 	{ id: 'shared-lesson-legacy', requireFullCoverage: false, editions: ['student'] },
 	{ id: 'shared-lesson-golden', requireFullCoverage: false, editions: ['student', 'teacher'] },
-	{ id: 'oversized-stress', requireFullCoverage: true, editions: ['student', 'teacher'] }
+	{ id: 'oversized-stress', requireFullCoverage: true, editions: ['student', 'teacher'] },
+	{ id: 'shared-lesson-overlong', requireFullCoverage: false, editions: ['student', 'teacher'] }
+	,
+	{ id: 'track-c-photosynthesis-print', requireFullCoverage: false, editions: ['student'] },
+	{ id: 'track-c-formula-print', requireFullCoverage: false, editions: ['student'] },
+	{ id: 'track-c-comparison-print', requireFullCoverage: false, editions: ['student'] }
 ];
 
 const selectedFixtureIds = process.env.PDF_FIXTURES

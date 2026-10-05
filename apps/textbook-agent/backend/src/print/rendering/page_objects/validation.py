@@ -113,6 +113,11 @@ def validate_answer_key_integrity(
             if option.get("letter")
         }
         entry = next(e for e in answer_entries if str(e.get("question_id")) == block_id)
+        if entry.get("not_marked"):
+            # Prediction choices are recorded for discussion, not scored as a
+            # correct option; the neutral teacher answer may therefore be
+            # descriptive rather than one of the learner-facing letters.
+            continue
         answer = str(entry.get("answer") or "")
         # ``choices`` is also the closed Print treatment for a SharedTaskSpec
         # select-many response.  Its answer key is a comma-separated set of

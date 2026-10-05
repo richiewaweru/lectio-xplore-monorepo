@@ -7,7 +7,7 @@
 </script>
 
 <section class="lectio-answer-key">
-	<h2>Answer key</h2>
+	<h2>Teacher copy — answer key</h2>
 	{#each content.groups as group}
 		{#if group.title}
 			<h3>{group.title}</h3>

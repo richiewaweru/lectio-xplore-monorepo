@@ -310,7 +310,8 @@
                 ]
               }
             ]
-          }
+          },
+          "role": "predict"
         }
       ]
     },
@@ -912,7 +913,8 @@
                 ]
               }
             ]
-          }
+          },
+          "role": "check"
         }
       ]
     }
@@ -928,11 +930,46 @@
           "entries": [
             {
               "question_id": "Q1",
-              "answer": "B"
+              "answer": "Prediction (not marked)",
+              "option_notes": {
+                "soil": [
+                  {
+                    "type": "text",
+                    "value": "The evidence will test this idea."
+                  }
+                ]
+              },
+              "not_marked": true
             },
             {
               "question_id": "Q2",
-              "answer": "A"
+              "answer": "A",
+              "feedback": [
+                {
+                  "type": "text",
+                  "value": "That's the one. The soil idea says this plant should keep growing, because it still has soil and water. It does not, so the soil idea cannot be right."
+                }
+              ],
+              "option_notes": {
+                "b": [
+                  {
+                    "type": "text",
+                    "value": "A plant growing taller in the dark would fit the soil idea, not challenge it."
+                  }
+                ],
+                "c": [
+                  {
+                    "type": "text",
+                    "value": "Temperature is not the issue. In the two-pot comparison both plants were equally warm."
+                  }
+                ],
+                "d": [
+                  {
+                    "type": "text",
+                    "value": "Growing well on plant food in the dark would support the soil idea, not challenge it."
+                  }
+                ]
+              }
             }
           ]
         }
