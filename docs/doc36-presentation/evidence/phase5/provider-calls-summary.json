@@ -1,0 +1,19 @@
+{
+ "requests": 20,
+ "responses": 20,
+ "models": {
+  "deepseek-flash": 20
+ },
+ "http_status": {
+  "200": 20
+ },
+ "finish_reason": {
+  "stop": 20
+ },
+ "requests_with_tools": 0,
+ "requests_with_response_format": 0,
+ "authorization_in_saved_bodies": 0,
+ "urls": [
+  "https://api.deepseek.com/chat/completions"
+ ]
+}

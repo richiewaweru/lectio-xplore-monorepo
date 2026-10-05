@@ -1,0 +1,35 @@
+{
+  "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+  "document_id": "shared-document:f4a02de5-f74c-40df-827a-59e2fe87beb2:revision:1",
+  "content_hash": "d0c3f54f7cd7647a74842dd8f5ac5499390625e520278eb21d340cb774460cbf",
+  "deterministic_qa_ready": true,
+  "status": "ready",
+  "qa": {
+    "document_id": "shared-document:f4a02de5-f74c-40df-827a-59e2fe87beb2:revision:1",
+    "document_revision": 1,
+    "issues": [],
+    "advisory_issues": []
+  },
+  "section_writer_warnings": {
+    "orient": [
+      "('length_over_target', 'nodes[0].text/104/60')"
+    ],
+    "criteria": [
+      "('length_over_target', 'nodes[1].text/168/60')",
+      "('shape_missing', 'section/subheading')"
+    ],
+    "contrast": [
+      "('length_over_target', 'nodes[2].text/148/60')",
+      "('shape_missing', 'section/subheading')"
+    ],
+    "apply": [
+      "('shape_missing', 'section/key_idea')",
+      "('shape_missing', 'section/subheading')"
+    ]
+  },
+  "composition_warnings": {
+    "contrast": [
+      "('section_exceeds_callout_limit', 'choices[2].kind')"
+    ]
+  }
+}

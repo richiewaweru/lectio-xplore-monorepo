@@ -1,0 +1,9 @@
+[23:25:20] unit d6f28a62-b528-4ee9-af51-db9fa2a7b3b4
+[23:25:27] path lessons=['Plants make their own food', 'Light is needed to make food', 'Water and carbon dioxide as raw materials', 'Leaves are where food is made', 'What is produced: food and oxygen', 'Explaining how plants grow: putting the process together']
+[23:25:27] picked lesson score=7 title=Explaining how plants grow: putting the process together
+[23:25:34] generation 910bef47-fcc3-4eca-a8a4-845c986d2d99
+[23:25:34] stage stage2_running/planning
+[23:25:45] stage awaiting_review/planning
+[23:29:32] stage awaiting_teaching_approval/awaiting_review
+[23:29:32] teaching approve 200 {"generation_id":"910bef47-fcc3-4eca-a8a4-845c986d2d99","status":"teaching_approved","path":"learn","queued":false,"next":"generate_learn","teaching_plan_identity":{"revision":2,"pending_content_hash":null,"pending_hash_verified":false,"approved_revision":1,"approved_content_hash":"fe8cad10a4c223f73
+[23:29:33] generate-learn 202 after 0s

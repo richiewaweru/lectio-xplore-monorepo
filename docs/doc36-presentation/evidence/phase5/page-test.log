@@ -1,0 +1,8 @@
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m10 passed[39m[22m[90m (11)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m64 passed[39m[22m[90m (65)[39m
+[2m   Start at [22m 00:09:15
+[2m   Duration [22m 17.32s[2m (transform 4.61s, setup 70.93s, collect 12.52s, tests 7.64s, environment 36.51s, prepare 5.31s)[22m
+
+C:\Users\richi\.codex\worktrees\doc36-integration\lectio\packages\lectio-page:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @lectio/page@0.1.0-experimental.0 test: `vitest run`
+Exit status 1

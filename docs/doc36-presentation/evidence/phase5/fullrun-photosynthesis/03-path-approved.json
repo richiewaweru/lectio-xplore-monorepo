@@ -1,0 +1,189 @@
+{
+  "id": "6d71dc53-2f1d-48bf-b1dc-60a8eb77ae6d",
+  "unit_id": "d6f28a62-b528-4ee9-af51-db9fa2a7b3b4",
+  "version": 1,
+  "revision": 2,
+  "status": "approved",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": "2026-10-05T20:25:27.511473",
+  "created_at": "2026-10-05T20:25:27.239445",
+  "lessons": [
+    {
+      "id": "30b6a916-2436-4dad-9abe-c8fe496bb4f2",
+      "concept_id": "80fea0a4-71d9-42dc-beb5-74300cabb375",
+      "concept_slug": "science.plants.make.their.own.food",
+      "title": "Plants make their own food",
+      "objective": "Explain that green plants make their own food inside themselves, unlike animals which must take in food.",
+      "objective_hash": "eba99ebb7cde10d1d7d8e84d179bb57a3bbb8936b67c795cd42adcb95b83c81e",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "plants produce their own food rather than absorbing it from soil",
+        "soil supplies water and minerals, not food",
+        "the food a plant makes is used for growth"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "9994a8b9-4976-42df-8c02-f7f241f7ba55",
+      "concept_id": "45a871de-8eb9-46e2-afae-40ba9daef901",
+      "concept_slug": "science.light.is.needed.to.make.food",
+      "title": "Light is needed to make food",
+      "objective": "Explain, using evidence, that a plant needs light to make its food and that a plant without light cannot grow well.",
+      "objective_hash": "4eb85221b59e06c0ae684cac74b05f1ee0a56bf281e7dd6ea07e1da739c85b2d",
+      "prerequisites": [
+        "30b6a916-2436-4dad-9abe-c8fe496bb4f2"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "light is taken in by the plant and used as the energy source",
+        "a plant kept in the dark cannot make food and will not thrive",
+        "light energy is captured, not eaten"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "09396f16-b468-49a1-ad39-758085855a39",
+      "concept_id": "82b4d270-f860-4cb6-8745-0620ccf83951",
+      "concept_slug": "science.water.and.carbon.dioxide.as.raw.materials",
+      "title": "Water and carbon dioxide as raw materials",
+      "objective": "Identify water and carbon dioxide as the two raw materials a plant takes in to make food, and state where each is taken in.",
+      "objective_hash": "ebf797c92d401ed44bda9d450c0f96097e707a45d7869a1d3aa481e29d2dc353",
+      "prerequisites": [
+        "30b6a916-2436-4dad-9abe-c8fe496bb4f2"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "water is taken in by the roots and carried to the leaves",
+        "carbon dioxide is taken in from the air through the leaves",
+        "these materials are changed, not simply stored"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "951c061d-a695-4308-9ef1-4082857b0b23",
+      "concept_id": "ce26b085-651f-4ab6-8bf7-635a032f6a88",
+      "concept_slug": "science.leaves.are.where.food.is.made",
+      "title": "Leaves are where food is made",
+      "objective": "Explain that the leaves are the part of the plant where food is made, because they receive light, water and carbon dioxide.",
+      "objective_hash": "0e0f9e1b630adb113ca9a283623cd026ee9d0b927406318358757658e0f8d70f",
+      "prerequisites": [
+        "9994a8b9-4976-42df-8c02-f7f241f7ba55",
+        "09396f16-b468-49a1-ad39-758085855a39"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "leaves receive light and take in carbon dioxide",
+        "water reaches the leaves from the roots",
+        "food is made in the leaves and used or stored elsewhere"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "6c6ab8a7-3508-487d-a1dc-132a98d08206",
+      "concept_id": "9a44988e-26fa-4f8b-a269-082cb5e9ae08",
+      "concept_slug": "science.what.is.produced.food.and.oxygen",
+      "title": "What is produced: food and oxygen",
+      "objective": "Describe the outputs of the process \u2014 food (sugar) used for growth and oxygen released into the air.",
+      "objective_hash": "f723ee8491a2dafd16bedd6f7460e3d5f9074c0cd23badc5d1d3ab67caa2f5dc",
+      "prerequisites": [
+        "951c061d-a695-4308-9ef1-4082857b0b23"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "the food made is a sugar used for growth and energy",
+        "oxygen is produced and released",
+        "the process is named photosynthesis"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 4,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "cfe2697f-de31-4642-afe1-79a5be199868",
+      "concept_id": "9704c8b6-3b96-49d1-ade2-ad4c55329be1",
+      "concept_slug": "science.explaining.how.plants.grow.putting.the.process.together",
+      "title": "Explaining how plants grow: putting the process together",
+      "objective": "Explain how light, water and carbon dioxide combine in the leaves to make the food a plant needs to grow, naming the process as photosynthesis.",
+      "objective_hash": "908d6eee5636618d2e1ec30ad5e2b6b2d03801ac8034029ed6609678e8b1fe7b",
+      "prerequisites": [
+        "9994a8b9-4976-42df-8c02-f7f241f7ba55",
+        "09396f16-b468-49a1-ad39-758085855a39",
+        "951c061d-a695-4308-9ef1-4082857b0b23",
+        "6c6ab8a7-3508-487d-a1dc-132a98d08206"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "inputs: light, water, carbon dioxide",
+        "site: leaves",
+        "outputs: food (sugar) and oxygen",
+        "the food made is used by the plant to grow"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "evaluative",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 5,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

@@ -1,0 +1,731 @@
+{
+  "document_version": 2,
+  "contract_version": "1.0.0",
+  "id": "print-shared-document:f4a02de5-f74c-40df-827a-59e2fe87beb2:revision:1-r1",
+  "title": "How a plant makes its own food: light, water and air in the leaves",
+  "language": "en",
+  "front_matter": {
+    "cover": false,
+    "contents": true,
+    "running_head": "How a plant makes its own food: light, water and air in the leaves",
+    "fields": [
+      "Name",
+      "Date"
+    ]
+  },
+  "metadata": {
+    "catalogue_version": "1.2.0",
+    "resource_type": "lesson",
+    "source_document": {
+      "id": "shared-document:f4a02de5-f74c-40df-827a-59e2fe87beb2:revision:1",
+      "revision": 1,
+      "content_hash": "d0c3f54f7cd7647a74842dd8f5ac5499390625e520278eb21d340cb774460cbf"
+    },
+    "shared_tasks": [
+      {
+        "label": "Q1",
+        "anchor_id": "shared-task-anchor-7cb468d182fda7b2e968",
+        "task_spec_id": "task-orient-b2"
+      },
+      {
+        "label": "Q2",
+        "anchor_id": "shared-task-anchor-be51521b23581d0c80da",
+        "task_spec_id": "task-contrast-b1"
+      },
+      {
+        "label": "Q3",
+        "anchor_id": "shared-task-anchor-04f09b3df21b782567ac",
+        "task_spec_id": "task-apply-b1"
+      },
+      {
+        "label": "Q4",
+        "anchor_id": "shared-task-anchor-2de690ba39afe8ea62cf",
+        "task_spec_id": "task-apply-b2"
+      },
+      {
+        "label": "Q5",
+        "anchor_id": "shared-task-anchor-6e75dcdbcc26c575163c",
+        "task_spec_id": "task-check-b1"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "orient",
+      "title": "Two bean plants, one difference",
+      "blocks": [
+        {
+          "id": "shared-node-8db81c2aad956244b743",
+          "object": "prose",
+          "intent": "explain",
+          "position": 0,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "strong",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "Two bean plants kept the same way except for light grew very differently in two weeks."
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "value": " These two plants came from the same batch and stood in identical pots of the same soil. Both were watered the same amount on the same days. One stood on a sunny windowsill; its twin stood in a dark cupboard."
+                  }
+                ]
+              },
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "After two weeks, the windowsill plant was taller, greener and carrying new leaves. The cupboard plant was pale, short and had added no new leaves. Both plants received the same water and the same soil. What did the windowsill plant use to build its new stem and leaves?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "shared-node-6582509011cdc33ef8b1",
+          "object": "list",
+          "intent": "show-structure",
+          "position": 1,
+          "content": {
+            "style": "unordered",
+            "items": [
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "Water is taken in by the roots from the soil and carried up the stem to the leaves."
+                  }
+                ]
+              },
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "Carbon dioxide is taken in from the air through the leaves."
+                  }
+                ]
+              },
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "Light is captured by the leaves."
+                  }
+                ]
+              },
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "Soil supplies only water and minerals; it never supplies food."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "Q1",
+          "object": "questions",
+          "intent": "check-understanding",
+          "position": 2,
+          "content": {
+            "items": [
+              {
+                "id": "Q1",
+                "prompt": [
+                  {
+                    "type": "text",
+                    "value": "Match each thing the plant relies on with how it reaches or is captured by the plant.\nMatch each item to its pair. Items: water; carbon dioxide; light\nPossible matches: taken in by the roots from the soil and carried up the stem to the leaves; taken in from the air through the leaves; captured by the leaves"
+                  }
+                ]
+              }
+            ]
+          },
+          "role": "practice"
+        }
+      ]
+    },
+    {
+      "id": "criteria",
+      "title": "What photosynthesis is, and what a full answer must contain",
+      "blocks": [
+        {
+          "id": "shared-key-idea-7fe844430e59f5140b20",
+          "object": "aside",
+          "intent": "emphasise",
+          "position": 0,
+          "content": {
+            "body": [
+              {
+                "type": "strong",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Photosynthesis is the process in which leaves use light energy to combine water and carbon dioxide into sugar, the plant's food, releasing oxygen."
+                  }
+                ]
+              }
+            ],
+            "label": [
+              {
+                "type": "text",
+                "value": "Key idea"
+              }
+            ],
+            "variant": "key_idea"
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "shared-node-93018d86849e35fab26d",
+          "object": "prose",
+          "intent": "explain",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Photosynthesis is the process in which light energy captured in the leaves combines water with carbon dioxide to make sugar, the plant's food, and to release oxygen. The water is taken in by the roots and carried up the stem; carbon dioxide enters the leaves from the air. This sugar is the plant's food, used for growth and as an energy source."
+                  }
+                ]
+              },
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "A complete explanation of a plant's growth must meet a clear standard. It must name light, water and carbon dioxide as the three inputs, place the combining in the leaves, name the product as food, a sugar, used for growth, and name the process photosynthesis."
+                  }
+                ]
+              },
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "An explanation that credits the soil with supplying food, or with supplying the material of new growth, does not meet the standard. The soil supplies water and dissolved minerals; the sugar the plant uses for growth is made inside the leaf, from water and carbon dioxide, using light energy."
+                  }
+                ]
+              },
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "The bean-plant case from the opening is still waiting to be explained."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "shared-figure-node-7fe844430e59f5140b20",
+          "object": "figure",
+          "intent": "explain",
+          "position": 2,
+          "content": {
+            "asset": {
+              "kind": "image",
+              "status": "ready",
+              "src": "/phase5-figure-placeholder.svg"
+            },
+            "alt_text": "Figure placeholder",
+            "caption": [
+              {
+                "type": "text",
+                "value": "The diagram shows light reaching the leaf from the Sun, carbon dioxide in the air entering the leaf, and water travelling from the roots up the stem into the leaf. It also shows water and carbon dioxide combining inside the leaf, driven by light energy, to make sugar, the plant's food, sugar leaving the leaf to be used for growth and stored elsewhere in the plant, and oxygen being released from the leaf into the air as the sugar is made."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "contrast",
+      "title": "Explaining the two plants — and the accounts that fail",
+      "blocks": [
+        {
+          "id": "shared-key-idea-dc0d5a021ecf27ece901",
+          "object": "aside",
+          "intent": "emphasise",
+          "position": 0,
+          "content": {
+            "body": [
+              {
+                "type": "strong",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Soil supplies water and minerals only; the plant builds new growth from sugar made in its leaves, using carbon dioxide, water and light energy."
+                  }
+                ]
+              }
+            ],
+            "label": [
+              {
+                "type": "text",
+                "value": "Key idea"
+              }
+            ],
+            "variant": "key_idea"
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "shared-node-9eef5f7e8590911e8a8b",
+          "object": "aside",
+          "intent": "diagnose-misconception",
+          "position": 1,
+          "content": {
+            "body": [],
+            "label": [
+              {
+                "type": "text",
+                "value": "The soil account"
+              }
+            ],
+            "variant": "misconception",
+            "belief": [
+              {
+                "type": "text",
+                "value": "The new stem and leaves were built from material the soil supplied; water and light only helped the plant along."
+              }
+            ],
+            "evidence": [
+              {
+                "type": "text",
+                "value": "Both plants stood in the same soil and were watered exactly alike, yet only the windowsill plant produced new growth. If soil material built the new growth, the cupboard plant would have grown too."
+              }
+            ],
+            "conclusion": [
+              {
+                "type": "text",
+                "value": "Soil supplies water and minerals and nothing else. It does not supply food, and it does not supply the material of new growth."
+              }
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "Q2",
+          "object": "questions",
+          "intent": "check-understanding",
+          "position": 2,
+          "content": {
+            "items": [
+              {
+                "id": "Q2",
+                "prompt": [
+                  {
+                    "type": "text",
+                    "value": "Why can identical soil and identical watering not account for the difference between the two plants?"
+                  }
+                ]
+              }
+            ]
+          },
+          "role": "practice"
+        },
+        {
+          "id": "shared-node-dcfaa39ede0c1e623c54",
+          "object": "prose",
+          "intent": "explain",
+          "position": 3,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "The windowsill plant's leaves captured light energy. Inside those leaves, water drawn from the roots was combined with carbon dioxide from the air, and the result was sugar. That sugar was then used to build the taller stem, the greener leaves and the new growth that appeared."
+                  }
+                ]
+              },
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "The cupboard plant had the same soil and the same water, and carbon dioxide was present in the air around it. Without light, its leaves could not combine water and carbon dioxide, so no sugar was made and no new growth was built."
+                  }
+                ]
+              },
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Carbon dioxide is not a comfort condition: its atoms become part of the sugar. Light is not one either: it supplies the energy that drives the combining, and that energy is stored in the sugar. If light and carbon dioxide were only comfort conditions, the cupboard plant, which had soil, water and air, would have grown as well."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "shared-node-ff6c81d8bad6f602a745",
+          "object": "aside",
+          "intent": "diagnose-misconception",
+          "position": 4,
+          "content": {
+            "body": [],
+            "label": [
+              {
+                "type": "text",
+                "value": "The oxygen-intake account"
+              }
+            ],
+            "variant": "misconception",
+            "belief": [
+              {
+                "type": "text",
+                "value": "The plant breathes in oxygen through its leaves and uses that oxygen to make its food."
+              }
+            ],
+            "evidence": [
+              {
+                "type": "text",
+                "value": "In bright light, the leaves of a leafy plant give out oxygen. The air around such a plant therefore gains oxygen rather than losing it, which is the opposite of what the account predicts."
+              }
+            ],
+            "conclusion": [
+              {
+                "type": "text",
+                "value": "When water and carbon dioxide are combined into sugar in the leaves, oxygen is produced and released into the air. Making food gives oxygen out, not in."
+              }
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        }
+      ]
+    },
+    {
+      "id": "apply",
+      "title": "Using the idea somewhere new",
+      "blocks": [
+        {
+          "id": "shared-node-b8284177470216edc90b",
+          "object": "prose",
+          "intent": "explain",
+          "position": 0,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "strong",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "You have already worked out how the inputs become sugar and growth; now use that reasoning in two new situations."
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "value": " The first situation gives you prompts to guide your thinking. The second asks you to produce the explanation without prompts."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "shared-node-8cd71a77b870ea8ae553",
+          "object": "prose",
+          "intent": "explain",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Use the same reasoning you built earlier. Trace each input from where it enters the plant to where it is used in the leaves. Consider what else the leaves need in order to use the carbon dioxide and water. Then connect that leaf action to the growth you observe."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "Q3",
+          "object": "questions",
+          "intent": "check-understanding",
+          "position": 2,
+          "content": {
+            "items": [
+              {
+                "id": "Q3",
+                "prompt": [
+                  {
+                    "type": "text",
+                    "value": "Why does added carbon dioxide speed growth on a bright morning but not on a dull day?"
+                  }
+                ]
+              }
+            ]
+          },
+          "role": "practice"
+        },
+        {
+          "id": "shared-node-16ccb904f979e9db405c",
+          "object": "prose",
+          "intent": "explain",
+          "position": 3,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Now apply the same reasoning without prompts. The next case changes only the light reaching the leaves. Your explanation should trace that change through the chain of inputs, leaf action, and growth."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "Q4",
+          "object": "questions",
+          "intent": "check-understanding",
+          "position": 4,
+          "content": {
+            "items": [
+              {
+                "id": "Q4",
+                "prompt": [
+                  {
+                    "type": "text",
+                    "value": "Why has the dust-covered houseplant's growth slowed?"
+                  }
+                ]
+              }
+            ]
+          },
+          "role": "practice"
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "title": "Check: what explains a plant's growth",
+      "blocks": [
+        {
+          "id": "shared-node-de29f59a1337f2019e9c",
+          "object": "prose",
+          "intent": "explain",
+          "position": 0,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "One question follows. Read it carefully and choose the single explanation you think is best. Answer on your own, without looking back at earlier sections, and give the reason you actually believe rather than the one you think is wanted."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "Q5",
+          "object": "choices",
+          "intent": "check-understanding",
+          "position": 1,
+          "content": {
+            "stem": [
+              {
+                "type": "text",
+                "value": "Which statement best explains the plant's growth?"
+              }
+            ],
+            "options": [
+              {
+                "letter": "A",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "The leaves use light to combine water and carbon dioxide into food, and that food supplies the material for new growth."
+                  }
+                ]
+              },
+              {
+                "letter": "B",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "The water provides the material for new growth, while light merely helps the plant use that water."
+                  }
+                ]
+              },
+              {
+                "letter": "C",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "The plant takes in oxygen to build new tissue, so oxygen is the source of the added mass."
+                  }
+                ]
+              },
+              {
+                "letter": "D",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "The plant needs light only so it can feel comfortable, and water alone provides all the material for growth."
+                  }
+                ]
+              }
+            ]
+          },
+          "role": "check"
+        }
+      ]
+    }
+  ],
+  "answer_key": {
+    "id": "answer-key-print-shared-document:f4a02de5-f74c-40df-827a-59e2fe87beb2:revision:1-r1",
+    "object": "answer-key",
+    "intent": "answer-key",
+    "position": 0,
+    "content": {
+      "groups": [
+        {
+          "entries": [
+            {
+              "question_id": "Q1",
+              "answer": [
+                {
+                  "type": "text",
+                  "value": "water: taken in by the roots from the soil and carried up the stem to the leaves; carbon dioxide: taken in from the air through the leaves; light: captured by the leaves"
+                }
+              ],
+              "feedback": [
+                {
+                  "type": "text",
+                  "value": "Water enters through the roots and travels up the stem to the leaves, carbon dioxide enters the leaves from the air, and light is captured by the leaves."
+                }
+              ]
+            },
+            {
+              "question_id": "Q2",
+              "answer": [
+                {
+                  "type": "text",
+                  "value": "an explanation that identical soil and identical water rule the soil account out, so the difference must lie in something the windowsill plant had and the cupboard plant did not"
+                }
+              ],
+              "rubric": [
+                {
+                  "type": "text",
+                  "value": "an explanation that identical soil and identical water rule the soil account out, so the difference must lie in something the windowsill plant had and the cupboard plant did not"
+                }
+              ],
+              "feedback": [
+                {
+                  "type": "text",
+                  "value": "You showed that if soil and water were the same for both plants, they cannot explain why only one grew; something the windowsill plant had and the cupboard plant lacked must account for the difference."
+                }
+              ]
+            },
+            {
+              "question_id": "Q3",
+              "answer": [
+                {
+                  "type": "text",
+                  "value": "an explanation naming carbon dioxide entering the leaves, water from the roots, light energy captured in the leaves and sugar used for growth, and stating that with too little light the extra carbon dioxide cannot be combined"
+                }
+              ],
+              "rubric": [
+                {
+                  "type": "text",
+                  "value": "an explanation naming carbon dioxide entering the leaves, water from the roots, light energy captured in the leaves and sugar used for growth, and stating that with too little light the extra carbon dioxide cannot be combined"
+                }
+              ],
+              "feedback": [
+                {
+                  "type": "text",
+                  "value": "You named carbon dioxide entering the leaves, water from the roots, light captured in the leaves, and the making of sugar used for growth, and you explained that without enough light the extra carbon dioxide cannot be combined."
+                }
+              ]
+            },
+            {
+              "question_id": "Q4",
+              "answer": [
+                {
+                  "type": "text",
+                  "value": "an explanation that less light reaches the leaves, so less light energy is captured, less carbon dioxide and water are combined into sugar, and less food is available for new growth"
+                }
+              ],
+              "rubric": [
+                {
+                  "type": "text",
+                  "value": "an explanation that less light reaches the leaves, so less light energy is captured, less carbon dioxide and water are combined into sugar, and less food is available for new growth"
+                }
+              ],
+              "feedback": [
+                {
+                  "type": "text",
+                  "value": "You traced the chain: less light reaches the leaves, less light energy is captured, less carbon dioxide and water are combined into sugar, so less food is available for new growth."
+                }
+              ]
+            },
+            {
+              "question_id": "Q5",
+              "answer": [
+                {
+                  "type": "text",
+                  "value": "A — The leaves use light to combine water and carbon dioxide into food, and that food supplies the material for new growth."
+                }
+              ],
+              "feedback": [
+                {
+                  "type": "text",
+                  "value": "The leaves capture light energy and combine water from the roots with carbon dioxide from the air to make sugar, the plant's food, which is used for growth."
+                }
+              ],
+              "option_notes": {
+                "B": [
+                  {
+                    "type": "text",
+                    "value": "Credits water with providing the growth material and treats light as merely helping, which is the soil/water-source misconception (m1)."
+                  }
+                ],
+                "C": [
+                  {
+                    "type": "text",
+                    "value": "Claims the plant takes oxygen in to build tissue, reversing the direction of oxygen in food-making (m3)."
+                  }
+                ],
+                "D": [
+                  {
+                    "type": "text",
+                    "value": "Treats light as a mere comfort condition and water alone as the growth material (m2)."
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
