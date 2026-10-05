@@ -9,6 +9,7 @@ import { getContext, onDestroy, onMount } from 'svelte';
 	import type { LessonIssue, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Button, Dialog, InlineError, EmptyState, Tabs } from '$lib/ui';
 	import LessonProgressPanel from '$lib/curriculum/lessons/LessonProgressPanel.svelte';
+	import { autoRetryText } from '$lib/curriculum/lessons/lesson-progress';
 	import { createSerializedPoll, LESSON_STATUS_POLL_MS, LESSON_STATUS_POLL_OPTIONS } from '$lib/curriculum/lessons/serialized-poll';
 import { lessonArtifactUi, lessonWorkspaceHref, resolvePrintGenerationId, preparationIsApprovedAndFresh } from '$lib/curriculum/lessons/lesson-context';
 import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte';
@@ -181,7 +182,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 			{#snippet actions()}<a class="link" href={`/units/${encodeURIComponent(ctx.unitId)}/lessons/${encodeURIComponent(ctx.lessonId)}/review`}>Review flagged content</a><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
 	{:else if activeTab === 'preview'}
-		{#if pageDocumentV2}<div class="doc"><LectioPageDocumentView document={pageDocumentV2} edition="teacher" /></div>{:else}<EmptyState title="Print needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Print output is stale. Reprepare and review the lesson before creating another output.' : artifact.errorSummary || error || 'The Print document is unavailable.'}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Retry Print</Button>{/if}{#if ctx.statusFresh && artifact.regenerable && !artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Regenerate Print</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
+		{#if pageDocumentV2}<div class="doc"><LectioPageDocumentView document={pageDocumentV2} edition="teacher" /></div>{:else}<EmptyState title="Print needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Print output is stale. Reprepare and review the lesson before creating another output.' : [artifact.errorSummary || error || 'The Print document is unavailable.', autoRetryText(artifact.autoRetry)].filter(Boolean).join(' ')}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Retry Print</Button>{/if}{#if ctx.statusFresh && artifact.regenerable && !artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Regenerate Print</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
 	{/if}
 </div>
 

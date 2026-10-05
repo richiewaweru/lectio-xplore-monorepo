@@ -41,6 +41,13 @@
 				</li>
 			{/each}
 		</ol>
+		{#if view.figuresLine}<p class="figures" data-testid="lesson-progress-figures">{view.figuresLine}</p>{/if}
+		{#each view.failedFigures as figure (figure.id)}
+			<p class="figure-failed" data-testid="lesson-progress-figure-failed">
+				{figure.sectionTitle}: {figure.summary}{#if figure.retryable} You can retry this.{/if}
+			</p>
+		{/each}
+		{#if view.labelWarnings.length}<p class="note" data-testid="lesson-progress-warnings">Label check: {view.labelWarnings.join('; ')}</p>{/if}
 	{/if}
 	<p class="note">{PROGRESS_NOTE}</p>
 </section>
@@ -88,6 +95,16 @@
 	}
 	li.failed {
 		color: var(--danger);
+	}
+	.figures {
+		margin: 0;
+		color: var(--ink-2);
+		font-size: 0.875rem;
+	}
+	.figure-failed {
+		margin: 0;
+		color: var(--danger);
+		font-size: 0.8125rem;
 	}
 	.mark {
 		width: 1rem;

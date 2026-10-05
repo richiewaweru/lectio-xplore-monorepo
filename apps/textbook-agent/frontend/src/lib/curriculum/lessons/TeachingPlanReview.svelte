@@ -75,6 +75,10 @@
 					{#if block.sourcebook_needs?.length}<p><strong>Sourcebook needs:</strong> {block.sourcebook_needs.join(', ')}</p>{/if}
 					{#if block.sourcebook_refs?.length}<p><strong>Sourcebook references:</strong> {block.sourcebook_refs.join(', ')}</p>{/if}
 					{#if block.stimulus_dependencies?.length}<p><strong>Stimulus dependencies:</strong> {block.stimulus_dependencies.join(', ')}</p>{/if}
+					{#if block.visual?.purpose}
+						<p><strong>Figure planned:</strong> {block.visual.purpose}</p>
+						{#if block.visual.labels_required?.length}<p class="label">Labels: {block.visual.labels_required.join(', ')}</p>{/if}
+					{/if}
 					{#if block.learner_action}
 						<div class="learner-action">
 							<p class="label">Learner action · {block.learner_action.action}</p>
