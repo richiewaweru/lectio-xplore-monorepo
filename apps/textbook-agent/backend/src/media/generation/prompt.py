@@ -28,6 +28,27 @@ ALT_TEXT_INSTRUCTION = (
 )
 
 
+def provider_label_block(labels: list[str]) -> str:
+    """Closed text set for a provider that draws its own labels (Gemini).
+
+    Without it the model paraphrases MUST SHOW descriptions into extra labels.
+    """
+    if not labels:
+        return (
+            "TEXT IN THE IMAGE: none. Render no words, letters, or numbers anywhere "
+            "in the image; the document supplies all text."
+        )
+    quoted = "\n".join(f'- "{label}"' for label in labels)
+    return (
+        "TEXT IN THE IMAGE (closed set; this is the only text allowed):\n"
+        f"{quoted}\n"
+        "- Write each label exactly once, spelled exactly as given, in clear print letters.\n"
+        "- Place each label next to the part, stage, or arrow it names.\n"
+        "- Write no other words: no paraphrases or synonyms of the labels, no words "
+        "from PURPOSE or MUST SHOW, no title, caption, numbers, or sentences."
+    )
+
+
 def format_anchor_for_visual(order: VisualGeneratorWorkOrder) -> str:
     if order.visual.uses_anchor_id:
         return format_source_of_truth(order.source_of_truth)
@@ -106,7 +127,23 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
             if order.visual.print_requirements
             else "- high contrast; large readable labels; grayscale-safe"
         )
-    if is_precision:
+    is_diagram = order.visual.mode.startswith("diagram")
+    if provider_renders_labels:
+        if is_diagram:
+            style_requirements = (
+                "- clean, flat educational diagram in a textbook style\n"
+                "- white or very light background, high contrast, minimal shading\n"
+                "- simple shapes and bold, clear arrows that show direction or flow\n"
+                "- depict only what MUST SHOW needs: no photorealism, decorative scenery, or clutter\n"
+                "- PURPOSE and MUST SHOW describe what to draw; they are never text to write in the image"
+            )
+        else:
+            style_requirements = (
+                "- simple educational illustration with one clear subject\n"
+                "- plain, light background; high contrast; visually simple enough for print\n"
+                "- PURPOSE and MUST SHOW describe what to draw; they are never text to write in the image"
+            )
+    elif is_precision:
         style_requirements = (
             "- clean vector-style raster diagram, not SVG\n"
             "- white or very light background with high contrast\n"
@@ -123,8 +160,21 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
         )
 
     alt_instruction = ALT_TEXT_INSTRUCTION if provider_renders_labels else ""
+    if provider_renders_labels:
+        kind = "diagram" if is_diagram else "illustration"
+        text_constraint = ""
+        labels_block = provider_label_block(list(order.visual.labels_required))
+    else:
+        kind = "illustration"
+        text_constraint = "" if is_precision else NO_CAPTION_TEXT_CONSTRAINT
+        labels_block = (
+            "LABELS REQUIRED (draw each label exactly as written, spelled identically, "
+            "and no other text): " + ", ".join(order.visual.labels_required)
+            if not is_precision and order.visual.labels_required
+            else ""
+        )
 
-    return f"""Generate a clear educational illustration for print.
+    return f"""Generate a clear educational {kind} for print.
 
 MODE: {order.visual.mode}
 
@@ -132,7 +182,7 @@ VISUAL STYLE: {visual_style}
 
 STYLE REQUIREMENTS:
 {style_requirements}
-{'' if is_precision else NO_CAPTION_TEXT_CONSTRAINT}
+{text_constraint}
 
 PURPOSE: {order.visual.purpose}
 
@@ -142,7 +192,7 @@ MUST SHOW:
 MUST NOT SHOW:
 {must_not_block}
 
-{('LABELS REQUIRED (draw each label exactly as written, spelled identically, and no other text): ' + ', '.join(order.visual.labels_required)) if not is_precision and order.visual.labels_required else ''}
+{labels_block}
 {frame_lines}
 {source_block}{anchor_block}{qc_block}{continuity_block}
 
@@ -163,4 +213,5 @@ __all__ = [
     "NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT",
     "build_visual_prompt",
     "format_anchor_for_visual",
+    "provider_label_block",
 ]
