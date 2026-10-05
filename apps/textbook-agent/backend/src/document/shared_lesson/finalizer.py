@@ -589,6 +589,7 @@ def _verify_boundary_coverage(
                 section_slot_id=previous_plan.slot_id,
                 title=previous.title,
                 nodes=previous.nodes,
+                warnings=verified_inputs.section_warnings.get(previous_plan.slot_id, ()),
             ).model_dump(mode="json")
         )
         if (
@@ -606,6 +607,7 @@ def _verify_boundary_coverage(
                 section_slot_id=next_plan.slot_id,
                 title=next_.title,
                 nodes=next_.nodes,
+                warnings=verified_inputs.section_warnings.get(next_plan.slot_id, ()),
             ).model_dump(mode="json")
         )
         if (

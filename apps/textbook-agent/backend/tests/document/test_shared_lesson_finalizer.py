@@ -153,7 +153,7 @@ def _verified_qa(request, work_item_id):
     )
 
 
-def _boundary_fixture():
+def _boundary_fixture(*, previous_warnings=()):
     source = _boundary_source()
     previous = _boundary_section("s1", 0, "The first idea.")
     next_ = _boundary_section("s2", 1, "The second idea.")
@@ -202,7 +202,10 @@ def _boundary_fixture():
         section_hashes={
             "s1": content_hash(
                 SectionWriteResult(
-                    section_slot_id="s1", title=previous.title, nodes=previous.nodes
+                    section_slot_id="s1",
+                    title=previous.title,
+                    nodes=previous.nodes,
+                    warnings=previous_warnings,
                 ).model_dump(mode="json")
             ),
             "s2": content_hash(
@@ -211,6 +214,7 @@ def _boundary_fixture():
                 ).model_dump(mode="json")
             ),
         },
+        section_warnings={"s1": tuple(previous_warnings)} if previous_warnings else {},
     )
     previous_identity = _stable_hash(previous_composition.model_dump(mode="json"))
     next_identity = _stable_hash(next_composition.model_dump(mode="json"))
@@ -702,6 +706,21 @@ def test_document_qa_gate_rejects_non_pass_result() -> None:
 
 def test_boundary_gate_accepts_current_passing_adjacent_boundary() -> None:
     source, document, verified_inputs, item = _boundary_fixture()
+
+    _verify_boundary_coverage(
+        source=source,
+        document=document,
+        verified_inputs=verified_inputs,
+        active_items=(item,),
+    )
+
+
+def test_boundary_gate_accepts_section_with_advisory_writer_warnings() -> None:
+    # Advisory shape warnings are part of the accepted writer output hash; the
+    # finalizer must reproduce that hash from the persisted warnings.
+    source, document, verified_inputs, item = _boundary_fixture(
+        previous_warnings=(("length_over_target", "nodes[0].text/115/60"),)
+    )
 
     _verify_boundary_coverage(
         source=source,
