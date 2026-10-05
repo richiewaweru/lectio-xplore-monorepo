@@ -19,7 +19,7 @@ Status: pending track gates and Phase 5. An empty checkbox has no acceptance evi
 | Gate | Status | Evidence |
 | --- | --- | --- |
 | G0 | Accepted | RUNBOOK.md; committed regression logs and legacy PDF |
-| G1 | Visual review passed; final full keyboard traversal pending | A: `4525b64d`, `879b3cff`; six fixture screenshots and DOM checks |
+| G1 | Accepted | A: `4525b64d`, `879b3cff`, `856dc4c2`; six fixture screenshots, DOM checks and all-task keyboard traversal |
 | G2 | Corrections required | B: `eed18c86`; initial golden/stress PDFs reviewed; missing list markers, question numbering and prediction lines |
 | G3 | Evidence incomplete; quality misses retained | C: `087e3daf`; 122 focused tests, three live generations, accepted exports and Learn captures |
 | G4 | In progress | Track D |

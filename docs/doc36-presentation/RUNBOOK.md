@@ -8,7 +8,7 @@ Classification: major. Lead owns orchestration and gate review; Luna executors o
 - [x] Section 9 verified; start from committed `fix/media-truth-execution` (`901cce27`), preserve ongoing edits in its separate worktree.
 - [x] Phase 0: optional contracts, legacy-safe serialization, parsers and shared vectors, golden/legacy/overlong fixtures, dev-only preview/export entrypoints.
 - [x] G0: authentic stored legacy hash unchanged; golden validates; parsers pass identical vectors; existing suites green.
-- [ ] A/G1: Learn renderer and desktop/mobile/keyboard/legacy/overlong evidence.
+- [x] A/G1: Learn renderer and desktop/mobile/keyboard/legacy/overlong evidence.
 - [ ] B/G2: Print renderer and golden/legacy/overlong/greyscale/answer-separation evidence.
 - [ ] D/G4: task authoring/behaviour, legacy compatibility and numbering evidence.
 - [ ] C/G3: composer/writer and three live generation/advisory-log evidence.
@@ -41,3 +41,10 @@ Gate evidence will be recorded under `evidence/` and linked from each PR. An unc
 - Local stored-data audit: 49 of 51 rows retain identical payloads and hashes (`evidence/legacy-bulk-hashes.json`). Two rows already invalid on unchanged main: `63bfd8ce-af34-4058-a539-3f833e1c5837` has a stored hash mismatch; `6c0bc034-3d99-4935-85df-827a6c10c6ec` lacks wrong-option feedback. No stored row was edited or re-hashed.
 - Golden follows the four-section reference and block order. The added note "Leaf area can be measured in m^2^." supplies the mandatory superscript coverage absent from the artboard. The seedling SVG paths match the supplied artwork. Record these provenance details in the final visual-difference list.
 - Repository-wide lint has 30 pre-existing errors (`evidence/g0-backend-lint.log`): intentional compatibility imports/setup ordering and unused imports. Phase 5 must resolve these narrowly before final repository validation; they do not represent new Phase 0 failures. The five existing Svelte warnings also remain recorded.
+
+### G1 accepted
+
+- Track A commits `c34645b2`, `4525b64d`, `879b3cff`, `856dc4c2`. Golden desktop/mobile reviewed against the artboard; final quotation, below-box aside and mobile layout corrections are visible. Six golden/legacy/overlong screenshots and DOM checks show no horizontal page overflow, truncation or learner identifiers.
+- Real Chromium keyboard evidence reaches all six native option buttons and both enabled actions, with `aria-pressed` selection states (`track-a/g1-keyboard-dom.txt`).
+- Frontend suite: 284 tests passed; final focused checks: 14 passed; application check: zero errors and five pre-existing warnings; production build passed. Raw logs and screenshots are on Track A under `evidence/track-a/`.
+- Differences remain recorded: existing Fraunces serif, subject-only metadata where export context is unavailable, supplied SVG without the reference figure's labels/legend. Doc 35 retains figure decisions.
