@@ -81,6 +81,15 @@ At most one visual per block. A visual is never decorative and never replaces
 the explanation: the block's brief still teaches the idea in words. The default
 is no visual: omit `visual` or set it to null. Do not add one for variety.
 
+A visual is justified only when the learner must SEE something that words carry
+poorly: the objective or must_establish is about a spatial structure, a
+physical, biological, or geographic process with stages, the parts of a thing,
+a relationship between quantities best seen graphically, or it explicitly asks
+the learner to label, draw, or read a diagram. Discussion, values, reasoning,
+persuasion, vocabulary, arithmetic fluency, grammar, and most text-analysis
+lessons need no visual. A timeline or flowchart of ideas is not needed. When in
+doubt, omit it: most lessons have zero visuals.
+
 For a process or spatial objective, list every required stage, part, and
 direction in must_show; do not collapse a required sequence into a generic
 reference. Use the exact labels, stages, and relationships the objective and

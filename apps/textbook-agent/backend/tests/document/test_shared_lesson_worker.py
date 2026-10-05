@@ -1472,3 +1472,49 @@ async def test_blocked_post_section_with_active_leaf_is_backed_off_not_looped(
     assert run is not None
     await db_session.refresh(run)
     assert run.status != "failed_terminal"
+
+@pytest.mark.asyncio
+async def test_blocked_post_section_on_failed_recoverable_leaf_skips_poison_backoff(
+    db_session, monkeypatch
+):
+    """A Run blocked only on a retryable failed leaf must stay visible to auto-retry
+    (20s delay), not sit out the 300s poison dispatch backoff."""
+    generation, lesson, _provenance, source = await _prepared(db_session)
+    admission, _task = await _ready_semantic_dependencies(
+        db_session,
+        source=source,
+        lesson=lesson,
+        generation=generation,
+        request_key="worker-post-blocked-recoverable",
+    )
+    run_id = admission.run.id
+    await _ready_section_leaves_for_post_pipeline(db_session, admission)
+    db_session.add(
+        GenerationWorkItemModel(
+            run_id=run_id,
+            item_key="boundary:orient->practice",
+            stage="continuity_validation",
+            status="failed_recoverable",
+            error_code="database_transient",
+            error_class="provider_transport",
+            recovery_action="retry",
+            input_hash="i" * 64,
+            definition_hash="d" * 64,
+        )
+    )
+    await db_session.commit()
+    _bind_source_context(monkeypatch, source)
+
+    async def pipeline(_session_factory, **_kwargs):
+        return SimpleNamespace(state="blocked", stage="boundaries", error="leaf failed")
+
+    monkeypatch.setattr(worker, "run_post_section_pipeline", pipeline)
+    instance = worker.SharedDocumentWorker(
+        lambda: None,
+        worker_id="worker-post-blocked-recoverable",
+        auto_retry_enabled=False,
+    )
+
+    assert await instance.run_one(db_session)
+    assert run_id not in instance._dispatch_failure_skip_until
+    assert run_id not in instance._active_dispatch_skips(datetime.now(UTC).replace(tzinfo=None))

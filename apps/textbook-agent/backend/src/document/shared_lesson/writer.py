@@ -887,7 +887,6 @@ __all__ = [
     "SectionTaskSummary",
     "SectionWriteResult",
     "SectionWriteValidationError",
-    "ordinary_nodes_as_draft",
     "SectionWriterDraft",
     "SectionWriterRequest",
     "WrittenCallout",
@@ -897,6 +896,7 @@ __all__ = [
     "WrittenNode",
     "WrittenParagraph",
     "WrittenTable",
+    "ordinary_nodes_as_draft",
     "validate_and_build_section",
     "write_section",
 ]

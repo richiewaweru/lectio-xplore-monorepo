@@ -8,10 +8,17 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
+from curriculum.figure_progress import (
+    PlannedFigure,
+    active_leaves,
+    figures_label,
+    project_figures,
+)
 from curriculum.models import ArtifactProgressDTO, ArtifactProgressStepDTO
+from document.shared_lesson.run_failure import summarize_failed_leaves
 
 StepStatus = Literal["pending", "active", "done", "failed"]
 
@@ -21,6 +28,25 @@ class ProgressItem:
     item_key: str
     stage: str
     status: str
+    # Optional detail used for failure truth and per-figure records.
+    id: str = ""
+    replaces_work_item_id: str | None = None
+    attempt: int = 1
+    max_attempts: int = 3
+    error_code: str | None = None
+    error_class: str | None = None
+    error_summary: str | None = None
+    recovery_action: str | None = None
+    composition_identity: str | None = None
+
+
+def as_utc_iso(value: datetime | None) -> str | None:
+    """Timezone-aware UTC ISO-8601. DB datetimes are naive UTC by design."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC).isoformat()
+    return value.astimezone(UTC).isoformat()
 
 
 def _base_key(key: str) -> str:
@@ -75,11 +101,13 @@ def project_artifact_progress(
     realize_run_status: str | None = None,
     realize_items: Sequence[ProgressItem] = (),
     realize_started_at: datetime | None = None,
+    planned_figures: Sequence[PlannedFigure] = (),
 ) -> ArtifactProgressDTO | None:
     """Return ordered steps, or None when there is no Run to describe."""
     if shared_run_status is None and realize_run_status is None:
         return None
     steps: list[ArtifactProgressStepDTO] = []
+    figures: list = []
 
     def add(
         key: str,
@@ -122,9 +150,31 @@ def project_artifact_progress(
         if sections == 1 and not boundary:
             st, d, t = ("done" if write and all(s == "ready" for s in write.values()) else "pending"), 0, 0
         add("boundary", "Checking how sections connect", pick(st), d, t)
-        if media:
-            st, d, t = _counted(media, None)
-            add("media", "Creating figures", pick(st), d, t)
+        if media or planned_figures:
+            failure = summarize_failed_leaves(active_leaves(list(shared_items)))
+            figures = project_figures(
+                planned_figures,
+                shared_items,
+                run_auto_retrying=bool(failure and failure.auto_retrying),
+            )
+            ready = sum(1 for f in figures if f.status == "ready")
+            failed = sum(1 for f in figures if f.status == "failed")
+            total = len(figures)
+            if failed:
+                fig_status: StepStatus = "failed"
+            elif total and ready >= total:
+                fig_status = "done"
+            elif ready or any(f.status == "pending" for f in figures):
+                fig_status = "active"
+            else:
+                fig_status = "pending"
+            add(
+                "media",
+                figures_label(ready=ready, failed=failed, total=total),
+                pick(fig_status),
+                ready,
+                total,
+            )
         add("document_qa", "Final quality check", pick(_single(shared_items, "document-qa")))
 
     build_label = "Building the Learn lesson" if path == "learn" else "Building the Print booklet"
@@ -156,13 +206,17 @@ def project_artifact_progress(
     label = None
     if current is not None:
         label = current.label
-        if current.total:
+        if current.total and current.key != "media":
             label = f"{label} ({current.done or 0}/{current.total})"
     started = shared_started_at or realize_started_at
     return ArtifactProgressDTO(
         steps=steps,
         current_label=label,
-        started_at=started.isoformat() if started else None,
+        started_at=as_utc_iso(started),
+        figures=figures,
+        figures_planned=len(figures),
+        figures_ready=sum(1 for f in figures if f.status == "ready"),
+        figures_failed=sum(1 for f in figures if f.status == "failed"),
     )
 
 

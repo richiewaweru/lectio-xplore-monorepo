@@ -29,23 +29,21 @@ from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
 
 from document.shared_lesson.media import (
-    DeferredFigureMediaResult,
     ReadyFigureMediaResult,
     SharedFigureMediaError,
     SharedFigureMediaProviderFailed,
     SharedFigureWorkOrder,
-    bind_deferred_figure_media,
     bind_generated_figure,
     rebuild_figure_work_order,
 )
 from curriculum.teaching_plan.models import VisualSpec
+from media.generation.provider_errors import safe_summary_for_code
 from document.shared_lesson.models import FigureNode, SharedSection
 from document.shared_lesson.runtime import (
     TeachingPlanSource,
     rollback_for_failure_record,
     verify_teaching_plan_source,
 )
-from infra.config import settings
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.execution.leases import LeaseLostError
@@ -104,7 +102,7 @@ class MediaRuntimeOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     work_item_id: str
-    media: ReadyFigureMediaResult | DeferredFigureMediaResult | None = None
+    media: ReadyFigureMediaResult | None = None
     error_code: str | None = None
     error_summary: str | None = None
     preserved_ready: bool = False
@@ -175,18 +173,25 @@ def _composition_identity(work: SharedFigureWorkOrder) -> str:
     # digest in ``input_hash`` remains the compact equality check; this
     # canonical JSON lets a restarted worker reconstruct and verify the exact
     # accepted media input without consulting an in-memory section writer.
+    payload: dict[str, Any] = {
+        "source_plan_id": work.source_plan_id,
+        "source_plan_revision": work.source_plan_revision,
+        "source_plan_hash": work.source_plan_hash,
+        "section_id": work.section_id,
+        "section_output_hash": work.section_output_hash,
+        "figure_node_id": work.figure_node_id,
+        "figure_semantic_hash": work.figure_semantic_hash,
+        "required": work.required,
+        "work_order": work.work_order.model_dump(mode="json"),
+    }
+    if work.warnings:
+        # Warnings are part of ``input_hash``; persisting them (only when
+        # present, so existing identities stay byte-identical) lets a
+        # reconstructed work order reproduce that hash and lets progress
+        # surface them.
+        payload["warnings"] = list(work.warnings)
     return json.dumps(
-        {
-            "source_plan_id": work.source_plan_id,
-            "source_plan_revision": work.source_plan_revision,
-            "source_plan_hash": work.source_plan_hash,
-            "section_id": work.section_id,
-            "section_output_hash": work.section_output_hash,
-            "figure_node_id": work.figure_node_id,
-            "figure_semantic_hash": work.figure_semantic_hash,
-            "required": work.required,
-            "work_order": work.work_order.model_dump(mode="json"),
-        },
+        payload,
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
@@ -576,58 +581,12 @@ async def _fail_after_rollback(
     )
 
 
-async def _complete_as_deferred(
-    job: MediaWorkItemJob,
-    *,
-    item: GenerationWorkItemModel,
-    reason_code: str,
-    now: Any,
-) -> MediaRuntimeOutcome:
-    """Complete a media work item READY with a closed, asset-free deferred output.
-
-    Only reached when the local-only ``shared_document_media_optional``
-    switch is enabled and the failure is one of the two closed reasons the
-    switch may defer (see ``bind_deferred_figure_media``). No provider
-    diagnostic text is ever persisted, only the fixed ``reason_code``.
-    """
-    deferred = bind_deferred_figure_media(job.work, reason_code=reason_code)
-    output = deferred.model_dump(mode="json")
-    completed_item = await complete_work_item(
-        job.session,
-        work_item_id=item.id,
-        worker_id=job.worker_id,
-        lease_token=item.lease_token or 0,
-        output_json=output,
-        output_hash=content_hash(output),
-        now=now,
-    )
-    await append_event(
-        job.session,
-        run_id=completed_item.run_id,
-        work_item_id=completed_item.id,
-        event_type="media_deferred",
-        error_code=reason_code,
-        safe_payload={"media_status": "deferred", "reason_code": reason_code},
-    )
-    return MediaRuntimeOutcome(work_item_id=item.id, media=deferred)
-
-
 async def execute_figure_media_work_item(
     job: MediaWorkItemJob,
     *,
     now: Any = None,
-    media_optional: bool | None = None,
 ) -> MediaRuntimeOutcome:
-    """Claim, execute, and fenced-commit one figure work item.
-
-    ``media_optional`` defaults to the local-only ``shared_document_media_
-    optional`` setting when not given explicitly. When enabled, a media
-    provider failure or shared-media-contract violation completes the work
-    item READY with a deferred output instead of persisting a failure; the
-    lease-lost and checkpoint-integrity paths, and any other unexpected
-    executor error, are never affected by this switch.
-    """
-    optional_media = settings.shared_document_media_optional if media_optional is None else media_optional
+    """Claim, execute, and fenced-commit one figure work item."""
     identity = _identity(job.source)
     _verify_work_source(job.work, identity)
     _verify_accepted_section(job.work, job.accepted_section, job.source)
@@ -733,20 +692,17 @@ async def execute_figure_media_work_item(
         media = bind_generated_figure(job.work, blocks)
     except LeaseLostError:
         raise
-    except SharedFigureMediaProviderFailed:
-        if optional_media:
-            return await _complete_as_deferred(
-                job, item=item, reason_code="media_provider_failed", now=now
-            )
+    except SharedFigureMediaProviderFailed as provider_exc:
         # The executor itself reported a failed provider/transport call (for
         # example an unreachable image API). This is not a violation of the
         # shared media contract, so it must not be classified as invalid
         # hosted output. Only a safe, structured diagnostic is recorded -
         # never the provider's error_message, prompts, URLs, or keys.
+        provider_code = provider_exc.error_code
         failure = WorkItemFailure(
-            error_code="media_provider_failed",
+            error_code=provider_code,
             error_class=ErrorClass.PROVIDER_TRANSPORT,
-            safe_summary="Figure media provider call failed.",
+            safe_summary=safe_summary_for_code(provider_code),
             recovery_action=RecoveryAction.RETRY,
         )
         failed_item = await _fail_after_rollback(
@@ -772,10 +728,6 @@ async def execute_figure_media_work_item(
             error_summary=failure.safe_summary,
         )
     except SharedFigureMediaError:
-        if optional_media:
-            return await _complete_as_deferred(
-                job, item=item, reason_code="media_invalid_output", now=now
-            )
         failure = WorkItemFailure(
             error_code="media_invalid_output",
             error_class=ErrorClass.PROVIDER_OUTPUT,
@@ -836,7 +788,6 @@ async def execute_figure_media_work_items(
     jobs: Sequence[MediaWorkItemJob],
     *,
     concurrency: int = MAX_CONCURRENT_MEDIA,
-    media_optional: bool | None = None,
 ) -> tuple[MediaRuntimeOutcome, ...]:
     """Execute independent figures concurrently while preserving siblings."""
     if not jobs:
@@ -859,7 +810,7 @@ async def execute_figure_media_work_items(
             )
         async with semaphore:
             try:
-                outcome = await execute_figure_media_work_item(job, media_optional=media_optional)
+                outcome = await execute_figure_media_work_item(job)
             except LeaseLostError:
                 await job.session.rollback()
                 return MediaRuntimeOutcome(

@@ -90,11 +90,17 @@ def _workspace_error(
     work_item_id: str | None = None,
     attempt: object = None,
     recovery_action: str | None = None,
+    max_attempts: object = None,
+    auto_retrying: bool | None = None,
 ) -> WorkspaceErrorDTO | None:
     try:
         attempt_value = int(attempt) if attempt is not None else None
     except (TypeError, ValueError):
         attempt_value = None
+    try:
+        max_attempts_value = int(max_attempts) if max_attempts is not None else None
+    except (TypeError, ValueError):
+        max_attempts_value = None
     values = {
         "code": code,
         "error_type": error_type,
@@ -104,7 +110,9 @@ def _workspace_error(
         "stage": stage,
         "work_item_id": work_item_id,
         "attempt": attempt_value,
+        "max_attempts": max_attempts_value,
         "recovery_action": recovery_action,
+        "auto_retrying": auto_retrying,
     }
     if not any(value is not None for value in values.values()):
         return None
@@ -512,6 +520,12 @@ def _artifact_projection(
             stage=str(detail.get("stage") or status) or None,
             work_item_id=(str(detail.get("work_item_id")) if detail.get("work_item_id") else None),
             attempt=detail.get("attempt"),
+            max_attempts=detail.get("max_attempts"),
+            auto_retrying=(
+                detail.get("auto_retrying")
+                if isinstance(detail.get("auto_retrying"), bool)
+                else None
+            ),
             recovery_action=(
                 str(detail.get("recovery_action"))
                 if detail.get("recovery_action")

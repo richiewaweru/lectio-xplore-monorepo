@@ -117,7 +117,7 @@ export function lessonArtifactUi(
 			realizationId: null, outputId: null, openHref: null,
 			errorSummary: loadError ?? (status ? 'Path status is ambiguous. Refresh the lesson workspace.' : null),
 			retryable: false, regenerable: false, runId: null, recoveryAction: status ? 'reload_lesson' : null, legacyAmbiguous: Boolean(status),
-			sharedDocumentState: null
+			sharedDocumentState: null, autoRetry: null
 		};
 	}
 	const canonicalState = workspace.state;
@@ -152,7 +152,10 @@ export function lessonArtifactUi(
 		runId: derived.runId,
 		recoveryAction: state === 'needs_review' ? null : derived.recoveryAction,
 		legacyAmbiguous: Boolean(workspace.legacy_ambiguous),
-		sharedDocumentState: workspace.shared_document_state ?? null
+		sharedDocumentState: workspace.shared_document_state ?? null,
+		autoRetry: canonicalState === 'failed_recoverable' && workspace.error?.auto_retrying === true
+			? { attempt: workspace.error.attempt ?? null, maxAttempts: workspace.error.max_attempts ?? null }
+			: null
 	};
 }
 

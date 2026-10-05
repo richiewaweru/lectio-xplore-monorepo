@@ -27,6 +27,8 @@
 		if (Array.isArray(value)) return value.length > 0;
 		if (!value || typeof value !== 'object') return false;
 		const summary = value as Record<string, unknown>;
+		// 'unreviewed' (review did not run) is never treated as ready, but is not retryable either, so polling cannot loop forever.
+		if (summary.status === 'unreviewed') return false;
 		return (
 			summary.retryable === true ||
 			(typeof summary.flagged_count === 'number' && summary.flagged_count > 0) ||

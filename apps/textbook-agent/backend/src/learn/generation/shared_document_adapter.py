@@ -377,7 +377,9 @@ def _ordinary_node(node: Any) -> dict[str, Any]:
             **base,
             "asset_id": node.display.asset_id,
             "caption": node.display.caption,
-            "alt": node.accessibility.alt_text,
+            # Learn has no media path, so alt text is usually empty; fall back
+            # to the caption rather than shipping an unlabelled figure.
+            "alt": node.accessibility.alt_text.strip() or node.display.caption,
         }
     if isinstance(node, SharedTableNode):
         return {

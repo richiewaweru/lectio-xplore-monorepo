@@ -40,18 +40,13 @@ from document.shared_lesson.finalizer import (
 )
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import (
-    DeferredFigureMediaResult,
     ReadyFigureMediaResult,
-    bind_deferred_figure_media,
-    bind_deferred_figure_media_to_document,
-    build_figure_work_order,
 )
 from document.shared_lesson.models import build_shared_lesson_document
 from document.shared_lesson.qa_runtime import VerifiedDocumentQA
 from document.shared_lesson.runtime import _stable_hash
 from document.shared_lesson.semantic_inputs import VerifiedSemanticInputs
 from document.shared_lesson.writer import SectionSource, SectionWriteResult
-from infra.config import settings
 from infra.database.models import GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 
@@ -211,6 +206,7 @@ def _boundary_fixture():
                 ).model_dump(mode="json")
             ),
         },
+        section_warnings={},
     )
     previous_identity = _stable_hash(previous_composition.model_dump(mode="json"))
     next_identity = _stable_hash(next_composition.model_dump(mode="json"))
@@ -472,103 +468,6 @@ def test_media_evidence_must_match_ready_media_work_item() -> None:
         )
 
 
-def _deferred_binding(source, document, *, reason_code: str = "media_provider_failed"):
-    work = build_figure_work_order(
-        source,
-        document.sections[0],
-        figure_node_id="figure-1",
-        expected_shape=_expected_shapes(include_figure=True)["section-1"],
-    )
-    deferred = bind_deferred_figure_media(work, reason_code=reason_code)
-    return bind_deferred_figure_media_to_document(deferred, document)
-
-
-def _work_item_for(deferred_output: dict) -> GenerationWorkItemModel:
-    return GenerationWorkItemModel(
-        id="media-item-1",
-        run_id="run-1",
-        item_key=f"media:{deferred_output['work_order_id']}",
-        stage="media_generation",
-        status="ready",
-        input_hash="input",
-        definition_hash="definition",
-        output_json=deferred_output,
-        output_hash=content_hash(deferred_output),
-    )
-
-
-def test_media_evidence_accepts_deferred_output_when_media_optional_is_on(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "shared_document_media_optional", True)
-    source, document = _approved_source_and_document(include_figure=True)
-    bound = _deferred_binding(source, document)
-    unbound_payload = bound.model_dump(mode="json")
-    for key in ("source_document_id", "source_document_revision", "source_document_hash"):
-        unbound_payload.pop(key)
-    unbound = DeferredFigureMediaResult.model_validate(unbound_payload)
-    item = _work_item_for(unbound.model_dump(mode="json"))
-    output = VerifiedWorkItemOutput(
-        work_item_id=item.id,
-        output_json=item.output_json,
-        output_hash=item.output_hash,
-    )
-
-    _verify_media_matches_work_items(
-        document=document,
-        media_results=(bound,),
-        active_items=(item,),
-        loaded_outputs=(output,),
-    )
-
-
-def test_media_evidence_rejects_deferred_output_when_media_optional_is_off() -> None:
-    assert settings.shared_document_media_optional is False
-    source, document = _approved_source_and_document(include_figure=True)
-    bound = _deferred_binding(source, document)
-    unbound_payload = bound.model_dump(mode="json")
-    for key in ("source_document_id", "source_document_revision", "source_document_hash"):
-        unbound_payload.pop(key)
-    unbound = DeferredFigureMediaResult.model_validate(unbound_payload)
-    item = _work_item_for(unbound.model_dump(mode="json"))
-    output = VerifiedWorkItemOutput(
-        work_item_id=item.id,
-        output_json=item.output_json,
-        output_hash=item.output_hash,
-    )
-
-    with pytest.raises(SharedLessonFinalizationError, match="SHARED_DOCUMENT_MEDIA_OPTIONAL"):
-        _verify_media_matches_work_items(
-            document=document,
-            media_results=(bound,),
-            active_items=(item,),
-            loaded_outputs=(output,),
-        )
-
-
-def test_media_evidence_rejects_deferred_identity_mismatch_even_when_on(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "shared_document_media_optional", True)
-    source, document = _approved_source_and_document(include_figure=True)
-    bound = _deferred_binding(source, document)
-    unbound_payload = bound.model_dump(mode="json")
-    for key in ("source_document_id", "source_document_revision", "source_document_hash"):
-        unbound_payload.pop(key)
-    unbound = DeferredFigureMediaResult.model_validate(unbound_payload)
-    item = _work_item_for(unbound.model_dump(mode="json"))
-    output = VerifiedWorkItemOutput(
-        work_item_id=item.id,
-        output_json=item.output_json,
-        output_hash=item.output_hash,
-    )
-    forged = bound.model_copy(update={"reason_code": "media_invalid_output"})
-
-    with pytest.raises(SharedLessonFinalizationError, match="durable work-item output"):
-        _verify_media_matches_work_items(
-            document=document,
-            media_results=(forged,),
-            active_items=(item,),
-            loaded_outputs=(output,),
-        )
-
-
 def test_verified_work_item_output_rejects_tampered_hash() -> None:
     with pytest.raises(ValueError, match="hash"):
         VerifiedWorkItemOutput(
@@ -762,6 +661,29 @@ def test_boundary_gate_rejects_stale_current_section_hash() -> None:
             verified_inputs=verified_inputs,
             active_items=(item,),
         )
+
+
+def test_boundary_gate_accepts_section_whose_writer_output_carries_soft_warnings() -> None:
+    """A final-attempt SOFT writer issue is stored in the durable output (and hash)."""
+    source, document, verified_inputs, item = _boundary_fixture()
+    previous = verified_inputs.sections[0]
+    warnings = (("unsupported_number", "nodes[0].text"),)
+    verified_inputs.section_warnings["s1"] = warnings
+    verified_inputs.section_hashes["s1"] = content_hash(
+        SectionWriteResult(
+            section_slot_id="s1",
+            title=previous.title,
+            nodes=previous.nodes,
+            warnings=warnings,
+        ).model_dump(mode="json")
+    )
+
+    _verify_boundary_coverage(
+        source=source,
+        document=document,
+        verified_inputs=verified_inputs,
+        active_items=(item,),
+    )
 
 
 def test_boundary_gate_follows_replacement_chain_to_current_leaf() -> None:

@@ -233,44 +233,13 @@ def test_settings_require_google_client_id_in_production(monkeypatch) -> None:
         Settings(_env_file=None)
 
 
-def test_settings_reject_media_optional_switch_in_production(monkeypatch) -> None:
-    monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://textbook:textbook@db:5432/textbook_agent")
-    monkeypatch.setenv("JWT_SECRET_KEY", "super-secret-production-key")
-    monkeypatch.setenv("FRONTEND_ORIGIN", "https://app.example.com")
-    monkeypatch.setenv("LESSON_BUILDER_PUBLIC_URL", "https://app.example.com")
-    monkeypatch.setenv("GOOGLE_CLIENT_ID", "example-google-client-id")
-    monkeypatch.setenv("PDF_RENDER_BASE_URL", "https://app.example.com")
-    monkeypatch.setenv("SHARED_DOCUMENT_MEDIA_OPTIONAL", "true")
-
-    with pytest.raises(ValidationError, match="SHARED_DOCUMENT_MEDIA_OPTIONAL"):
-        Settings(_env_file=None)
-
-
-def test_settings_reject_media_optional_switch_in_staging(monkeypatch) -> None:
-    monkeypatch.setenv("APP_ENV", "staging")
-    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://textbook:textbook@db:5432/textbook_agent")
-    monkeypatch.setenv("JWT_SECRET_KEY", "super-secret-production-key")
-    monkeypatch.setenv("FRONTEND_ORIGIN", "https://app.example.com")
-    monkeypatch.setenv("LESSON_BUILDER_PUBLIC_URL", "https://app.example.com")
-    monkeypatch.setenv("GOOGLE_CLIENT_ID", "example-google-client-id")
-    monkeypatch.setenv("PDF_RENDER_BASE_URL", "https://app.example.com")
-    monkeypatch.setenv("SHARED_DOCUMENT_MEDIA_OPTIONAL", "true")
-
-    with pytest.raises(ValidationError, match="SHARED_DOCUMENT_MEDIA_OPTIONAL"):
-        Settings(_env_file=None)
-
-
-def test_settings_media_optional_switch_defaults_off_and_is_settable_locally(monkeypatch) -> None:
+def test_settings_ignore_removed_media_optional_env_var(monkeypatch) -> None:
     monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./textbook_agent.db")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-safe-development-key")
-    monkeypatch.delenv("SHARED_DOCUMENT_MEDIA_OPTIONAL", raising=False)
-
-    assert Settings(_env_file=None).shared_document_media_optional is False
-
     monkeypatch.setenv("SHARED_DOCUMENT_MEDIA_OPTIONAL", "true")
-    assert Settings(_env_file=None).shared_document_media_optional is True
+
+    assert not hasattr(Settings(_env_file=None), "shared_document_media_optional")
 
 
 def test_settings_accept_safe_production_configuration(monkeypatch) -> None:

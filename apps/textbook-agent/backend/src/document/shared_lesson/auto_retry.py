@@ -36,6 +36,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
+from media.generation.provider_errors import is_auth_provider_code
 from infra.generation_runtime import (
     AttemptLimitExceeded,
     ErrorClass,
@@ -80,6 +81,23 @@ def _leaf_failure_time(item: GenerationWorkItemModel) -> datetime:
     return _as_naive_utc(reference)
 
 
+def is_leaf_auto_retryable(item: GenerationWorkItemModel) -> bool:
+    """Whether one failed leaf is safe for the scan to requeue automatically."""
+    if item.status != "failed_recoverable":
+        return False
+    if item.recovery_action != RecoveryAction.RETRY.value:
+        return False
+    if item.error_class not in _AUTO_RETRY_ERROR_CLASSES:
+        return False
+    if item.error_code in _INELIGIBLE_ERROR_CODES:
+        return False
+    # A rejected key / missing model only recovers after an operator fix; a
+    # manual Retry (or the key fix) is the right path, not a timer.
+    if is_auth_provider_code(item.error_code):
+        return False
+    return item.attempt < item.max_attempts
+
+
 def _eligible_failed_leaves(
     active: tuple[GenerationWorkItemModel, ...],
 ) -> tuple[GenerationWorkItemModel, ...] | None:
@@ -95,17 +113,8 @@ def _eligible_failed_leaves(
     failed = tuple(item for item in active if item.status in _FAILED_STATUSES)
     if not failed:
         return None
-    for item in failed:
-        if item.status != "failed_recoverable":
-            return None
-        if item.recovery_action != RecoveryAction.RETRY.value:
-            return None
-        if item.error_class not in _AUTO_RETRY_ERROR_CLASSES:
-            return None
-        if item.error_code in _INELIGIBLE_ERROR_CODES:
-            return None
-        if item.attempt >= item.max_attempts:
-            return None
+    if not all(is_leaf_auto_retryable(item) for item in failed):
+        return None
     return failed
 
 
@@ -212,4 +221,4 @@ async def scan_and_auto_retry(
     return retried
 
 
-__all__ = ["scan_and_auto_retry"]
+__all__ = ["is_leaf_auto_retryable", "scan_and_auto_retry"]

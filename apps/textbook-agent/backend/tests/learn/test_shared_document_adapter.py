@@ -348,3 +348,16 @@ def test_rubric_text_task_rejects_empty_or_invalid_criteria(criteria) -> None:
     )
     with pytest.raises(SharedDocumentLearnMappingError, match="rubric evaluation requires"):
         _learn_config(rubric_task, "short-response")
+
+
+def test_learn_figure_with_empty_alt_falls_back_to_caption() -> None:
+    from learn.generation.shared_document_adapter import _ordinary_node
+
+    node = FigureNode(
+        id="figure-2",
+        teaching_block_id="block-1",
+        display=FigureDisplay(asset_id="asset-2", caption="Water cycle stages"),
+        accessibility=FigureAccessibility(alt_text=""),
+    )
+
+    assert _ordinary_node(node)["alt"] == "Water cycle stages"
