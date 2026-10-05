@@ -4,7 +4,7 @@
 	import BlockView from './BlockView.svelte';
 	import HeadingBinding from './HeadingBinding.svelte';
 
-	let { section }: { section: LectioSection } = $props();
+	let { section, index = 0 }: { section: LectioSection; index?: number } = $props();
 
 	/**
 	 * Array order is canonical after normalizeDocument.
@@ -23,7 +23,7 @@
 </script>
 
 <section class="lectio-section" id={section.id}>
-	<h2 class="lectio-section-title">{section.title}</h2>
+	<h2 class="lectio-section-title"><span class="lectio-section-number" aria-hidden="true">{index + 1}</span><span>{section.title}</span></h2>
 	{#each units as unit (unit.kind === 'heading-binding' ? unit.heading.id : unit.block.id)}
 		{#if unit.kind === 'heading-binding'}
 			<HeadingBinding>

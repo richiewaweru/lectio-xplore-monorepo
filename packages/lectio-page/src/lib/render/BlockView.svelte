@@ -72,7 +72,7 @@
 {:else if block.object === 'worked-example'}
 	<WorkedExampleView content={block.content} />
 {:else if block.object === 'questions'}
-	<QuestionsView content={block.content} />
+	<QuestionsView content={block.content} role={block.role ?? ''} />
 {:else if block.object === 'choices'}
 	<ChoicesView content={block.content} questionId={block.id} role={block.role ?? ''} />
 {:else if block.object === 'answer-key'}

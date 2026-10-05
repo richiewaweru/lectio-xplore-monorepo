@@ -61,8 +61,8 @@
 
 	<div class="lectio-page-flow">
 		<div class="lectio-main">
-			{#each doc.sections as section}
-				<SectionView {section} />
+			{#each doc.sections as section, index}
+				<SectionView {section} {index} />
 			{/each}
 		</div>
 	</div>

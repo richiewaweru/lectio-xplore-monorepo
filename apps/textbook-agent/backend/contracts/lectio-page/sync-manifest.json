@@ -21,12 +21,12 @@
     },
     "base-print.css": {
       "path": "base-print.css",
-      "sha256": "3c6b4c8a72dd788a1e6d56ff95b3768d7f932ef0b7cb7550c015719f2424f4c6",
-      "bytes": 12076
+      "sha256": "296bf6c12e81200a1e8d1a9358cd3025d500f106fc751ef6c9976364c38f231d",
+      "bytes": 14067
     },
     "manifest.json": {
       "path": "manifest.json",
-      "sha256": "9e15fa706d5b6f6a2ce4c8e9a4d2d47fc02c5f6d8ee898aff05a97bb81d18e46",
+      "sha256": "ce6b77555ab76db298a7c81dc9ba1f77bb79b5d3202b7d57de5246f39a8ada42",
       "bytes": 3710
     }
   }

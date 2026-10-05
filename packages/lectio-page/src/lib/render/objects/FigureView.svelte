@@ -31,6 +31,7 @@
 </script>
 
 <figure class={['lectio-figure', span && 'lectio-figure--span']}>
+	<div class="lectio-figure-frame">
 	{#if showPlaceholder}
 		<div class="lectio-figure-fallback" role="img" aria-label={legend}>
 			<svg class="lectio-figure-hatch" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -54,9 +55,10 @@
 	{:else if content.asset?.src}
 		<img src={content.asset.src} alt={content.alt_text} />
 	{/if}
+	</div>
 	{#if content.caption}
 		<figcaption class="lectio-caption">
-			{#if figureNumber}<span class="lectio-figure-number">Figure {figureNumber}: </span>{/if}
+			{#if figureNumber}<span class="lectio-figure-number">Figure {figureNumber}. </span>{/if}
 			<InlineView nodes={asRichText(content.caption)} />
 		</figcaption>
 	{/if}

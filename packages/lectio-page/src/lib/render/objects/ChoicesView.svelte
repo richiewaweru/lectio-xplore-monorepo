@@ -4,10 +4,18 @@
 	import InlineView from '../InlineView.svelte';
 
 	let { content, questionId = '', role = '' }: { content: ChoicesContent; questionId?: string; role?: string } = $props();
+	const taskNumber = $derived(/^Q(\d+)$/.exec(questionId)?.[1] ?? '');
+	const modeLabels: Record<string, string> = { predict: 'Predict', check: 'Check', practice: 'Practice' };
+	const mode = $derived(modeLabels[role] ?? '');
 </script>
 
-<div class="lectio-choices">
-	{#if questionId}<p class="lectio-choice-question-number"><strong>{questionId}.</strong></p>{/if}
+<div class={['lectio-choices', taskNumber && 'lectio-task']}>
+	{#if taskNumber}
+		<div class="lectio-task-header">Question {taskNumber}{#if mode}&nbsp;·&nbsp;{mode}{/if}</div>
+	{:else if questionId}
+		<p class="lectio-choice-question-number"><strong>{questionId}.</strong></p>
+	{/if}
+	<div class={taskNumber && 'lectio-task-body'}>
 	<p>
 		{#if content.marks != null}
 			<span class="lectio-question-marks">[{content.marks}]</span>
@@ -22,7 +30,9 @@
 		</div>
 	{/each}
 	{#if role === 'predict'}
-		<p class="lectio-prediction-reason"><strong>I think this because:</strong></p>
+		<p class="lectio-prediction-reason">I think this because</p>
+		<div class="lectio-answer-line"></div>
 		<div class="lectio-answer-line"></div>
 	{/if}
+	</div>
 </div>
