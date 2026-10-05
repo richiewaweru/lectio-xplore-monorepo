@@ -34,7 +34,7 @@ from document.shared_lesson.runtime import (
     verify_teaching_plan_source,
 )
 from document.shared_lesson.writer import (
-    SectionWriterDraft,
+    ordinary_nodes_as_draft,
     SectionWriteResult,
     SectionWriterRequest,
     SectionWriteValidationError,
@@ -186,13 +186,10 @@ def _validated_result(
 ) -> SectionWriteResult:
     if section.id != request.section.slot_id:
         raise WriterRepairRuntimeError("repair output belongs to a different section")
-    ordinary_nodes = tuple(
-        node.model_dump(mode="json") for node in section.nodes if node.kind != "task_anchor"
-    )
     try:
         result = validate_and_build_section(
             request=request,
-            draft=SectionWriterDraft.model_validate({"nodes": ordinary_nodes}),
+            draft=ordinary_nodes_as_draft(section.nodes),
         )
     except (TypeError, ValueError, SectionWriteValidationError) as exc:
         raise WriterRepairRuntimeError(

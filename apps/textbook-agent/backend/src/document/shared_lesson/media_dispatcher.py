@@ -29,7 +29,7 @@ from document.shared_lesson.section_sources import build_section_sources
 from document.shared_lesson.semantic_inputs import load_verified_semantic_inputs
 from document.shared_lesson.work_item_inputs import load_verified_shared_lesson_inputs
 from infra.database.models import GenerationWorkItemModel
-from infra.generation_runtime import SourceIdentity
+from infra.generation_runtime import SourceIdentity, append_event
 
 
 class SharedMediaDispatcherError(ValueError):
@@ -185,7 +185,6 @@ class SharedMediaDispatcher:
                     expected_shape=expected_shape,
                     approved_source_facts=facts,
                     approved_source_ids=approved_ids,
-                    required=True,
                 )
                 frozen_works.append((work, section))
 
@@ -200,6 +199,18 @@ class SharedMediaDispatcher:
                 accepted_section=section,
             )
             admissions.append((work, section, admitted.record))
+            if admitted.created and work.warnings:
+                # Non-blocking: surface label drift for Phase 2, never gate media.
+                await append_event(
+                    session,
+                    run_id=run_id,
+                    work_item_id=admitted.record.id,
+                    event_type="figure_label_missing",
+                    safe_payload={
+                        "figure_node_id": work.figure_node_id,
+                        "warnings": list(work.warnings),
+                    },
+                )
         await session.commit()
         # Stage sessions update these rows independently. Refresh the
         # admission-session view before deciding which queued/expired leaves

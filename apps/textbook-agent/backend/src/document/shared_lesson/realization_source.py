@@ -36,7 +36,6 @@ from document.shared_lesson.approved_source import (
 )
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.media import (
-    DeferredFigureMediaBinding,
     FigureMediaResult,
     SharedFigureMediaError,
     bind_durable_media_output,
@@ -50,6 +49,7 @@ from document.shared_lesson.repository import (
     load_shared_lesson_document,
 )
 from document.shared_lesson.run_admission import admit_shared_document_run
+from document.shared_lesson.run_failure import RunFailureSummary, summarize_failed_leaves
 from document.shared_lesson.runtime import verify_teaching_plan_source
 from infra.database.models import (
     GenerationBuildModel,
@@ -66,7 +66,9 @@ from infra.generation_runtime import (
     get_run_status,
 )
 
-RealizationState = Literal["ready", "pending", "needs_review", "stale", "failed"]
+RealizationState = Literal[
+    "ready", "pending", "needs_review", "recoverable", "stale", "failed"
+]
 
 _TERMINAL_RUN_STATUSES = frozenset({"failed_terminal", "cancelled"})
 _MAX_TERMINAL_ATTEMPTS = 3
@@ -100,7 +102,7 @@ class ReadyRealizationSource:
     plan_id: str
     plan_revision: int
     plan_hash: str
-    media_results: tuple[FigureMediaResult | DeferredFigureMediaBinding, ...]
+    media_results: tuple[FigureMediaResult, ...]
     #: Advisory-gate findings recorded on the document-QA WorkItem (never part
     #: of the document identity). Empty in blocking mode or when QA was clean.
     quality_flags: tuple[QualityFlag, ...] = ()
@@ -118,6 +120,18 @@ class PendingRealizationSource:
     run_id: str | None
     status: str
     stage: str
+
+
+@dataclass(frozen=True)
+class RecoverableRealizationSource:
+    """The Run is ``failed_recoverable`` on retryable leaves (not a QA review).
+
+    Reported honestly as a failure, with the safe error code of the failed leaf
+    and whether the worker's bounded auto-retry will requeue it on its own.
+    """
+
+    run_id: str
+    failure: RunFailureSummary
 
 
 @dataclass(frozen=True)
@@ -159,6 +173,7 @@ class RealizationSourceResult:
     ready: ReadyRealizationSource | None = None
     pending: PendingRealizationSource | None = None
     needs_review: NeedsReviewRealizationSource | None = None
+    recoverable: RecoverableRealizationSource | None = None
     stale: StaleRealizationSource | None = None
     failed: FailedRealizationSource | None = None
 
@@ -279,13 +294,13 @@ async def ensure_shared_document_run(
 def _document_media_results(
     document: SharedLessonDocument,
     active_items: Sequence[GenerationWorkItemModel],
-) -> tuple[FigureMediaResult | DeferredFigureMediaBinding, ...]:
+) -> tuple[FigureMediaResult, ...]:
     media_items = [
         item
         for item in active_items
         if item.stage == MEDIA_STAGE or item.item_key.startswith("media:")
     ]
-    results: list[FigureMediaResult | DeferredFigureMediaBinding] = []
+    results: list[FigureMediaResult] = []
     for item in media_items:
         if item.status != "ready" or item.output_json is None or not item.output_hash:
             raise SharedFigureMediaError(f"media WorkItem {item.id!r} is not ready")
@@ -293,6 +308,49 @@ def _document_media_results(
             raise SharedFigureMediaError(f"media WorkItem {item.id!r} output hash is stale")
         results.append(bind_durable_media_output(item.output_json, document))
     return tuple(results)
+
+
+@dataclass(frozen=True)
+class FigureQcRecord:
+    """Visual QC outcome of one shared-document figure media leaf."""
+
+    figure_node_id: str
+    qc_state: str  # passed | flagged | unavailable | unreviewed
+    failed: bool = False
+
+
+_MEDIA_FAILED_STATUSES = frozenset({"failed", "failed_recoverable", "failed_terminal"})
+
+
+async def load_run_figure_qc(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    owner_user_id: str,
+) -> tuple[FigureQcRecord, ...]:
+    """Read-only QC state of every active media leaf of a SharedDocument Run.
+
+    Print visual-quality reporting for shared-document-backed generations reads
+    this instead of the legacy chunked page-document state, which such
+    generations never populate.
+    """
+    run = await get_run_status(session, run_id=run_id, owner_user_id=owner_user_id)
+    if run is None:
+        return ()
+    records: list[FigureQcRecord] = []
+    for item in active_work_items(tuple(run.work_items)):
+        if item.stage != MEDIA_STAGE and not item.item_key.startswith("media:"):
+            continue
+        figure_id = str(item.item_key.removeprefix("media:"))
+        if item.status in _MEDIA_FAILED_STATUSES:
+            records.append(FigureQcRecord(figure_id, "unreviewed", failed=True))
+            continue
+        output = item.output_json if isinstance(item.output_json, dict) else {}
+        state = str(output.get("qc_state") or "unreviewed")
+        if state not in {"passed", "flagged", "unavailable", "unreviewed"}:
+            state = "unreviewed"
+        records.append(FigureQcRecord(str(output.get("figure_node_id") or figure_id), state))
+    return tuple(records)
 
 
 async def _latest_shared_document_run(
@@ -335,8 +393,10 @@ async def load_realization_source(
     do that.  It finds the most recently admitted SharedDocument Run for this
     path lesson and classifies it: ``ready`` with a hash-recomputed,
     lineage-verified document and bound media; ``pending`` while the Run is
-    still queued, running, awaiting review, bounded-retryable, or has never
-    been admitted at all; ``needs_review`` when an active document-QA leaf is
+    still queued, running, awaiting review, or has never
+    been admitted at all; ``recoverable`` when the Run is ``failed_recoverable``
+    on retryable leaves (reported as a failure with its safe error code and
+    whether auto-retry will requeue it); ``needs_review`` when an active document-QA leaf is
     blocked on a human reviewer decision; ``stale`` when a ready Run's output
     no longer matches the *current* approved Teaching Plan; and ``failed`` for
     a terminal Run. Owner/path-lesson scoping failures raise directly rather
@@ -366,12 +426,17 @@ async def load_realization_source(
             ),
         )
 
-    if run.status == "failed_recoverable":
+    if run.status in {"failed_recoverable", "queued", "running", "awaiting_review"}:
+        # A failed leaf is reported as a failure even while sibling leaves are
+        # still running: the Run aggregate prefers running/queued over
+        # failed_recoverable, but nothing may read queued/running as healthy
+        # while a step has failed.
         leaves = active_work_items(tuple(run.work_items))
         review_leaves = tuple(
             item
             for item in leaves
-            if item.stage == DOCUMENT_QA_STAGE
+            if run.status == "failed_recoverable"
+            and item.stage == DOCUMENT_QA_STAGE
             and item.status == "failed_recoverable"
             and item.recovery_action == "review"
         )
@@ -382,6 +447,12 @@ async def load_realization_source(
                 needs_review=NeedsReviewRealizationSource(
                     run_id=run.id, work_item_id=leaf.id, stage=leaf.stage
                 ),
+            )
+        failure = summarize_failed_leaves(leaves)
+        if failure is not None:
+            return RealizationSourceResult(
+                state="recoverable",
+                recoverable=RecoverableRealizationSource(run_id=run.id, failure=failure),
             )
         return RealizationSourceResult(
             state="pending",
@@ -524,6 +595,7 @@ async def load_realization_source(
 
 __all__ = [
     "FailedRealizationSource",
+    "FigureQcRecord",
     "NeedsReviewRealizationSource",
     "PendingRealizationSource",
     "ReadyRealizationSource",
@@ -533,7 +605,9 @@ __all__ = [
     "RealizationSourceNotFound",
     "RealizationSourceResult",
     "RealizationState",
+    "RecoverableRealizationSource",
     "StaleRealizationSource",
     "ensure_shared_document_run",
     "load_realization_source",
+    "load_run_figure_qc",
 ]

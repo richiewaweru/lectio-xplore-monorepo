@@ -264,6 +264,8 @@ export interface WorkspaceStateError {
 	stage?: string | null;
 	work_item_id?: string | null;
 	attempt?: number | null;
+	max_attempts?: number | null;
+	auto_retrying?: boolean | null;
 	recovery_action?: string | null;
 }
 
@@ -289,8 +291,29 @@ export interface ArtifactProgressStep {
 export interface ArtifactProgress {
 	steps: ArtifactProgressStep[];
 	current_label?: string | null;
-	/** ISO start of the build, for an elapsed timer. */
+	/** ISO start of the build, for an elapsed timer (UTC; offset-less values are treated as UTC). */
 	started_at?: string | null;
+	figures_planned?: number | null;
+	figures_ready?: number | null;
+	figures_failed?: number | null;
+	figures?: FigureProgress[] | null;
+}
+
+export interface FigureProgress {
+	figure_id: string;
+	section_id?: string | null;
+	section_title?: string | null;
+	block_id?: string | null;
+	status: 'planned' | 'pending' | 'ready' | 'failed';
+	required?: boolean;
+	error_code?: string | null;
+	error_summary?: string | null;
+	retryable?: boolean | null;
+	recovery_action?: string | null;
+	attempt?: number | null;
+	max_attempts?: number | null;
+	auto_retrying?: boolean | null;
+	warnings?: string[] | null;
 }
 
 export interface ArtifactWorkspaceStatus {
@@ -332,6 +355,8 @@ export interface LessonArtifactUi {
 	legacyAmbiguous: boolean;
 	/** Null when the backend carries no SharedLessonDocument identity yet (pre-P10B rows). */
 	sharedDocumentState: SharedDocumentState | null;
+	/** Backend is retrying automatically (failed_recoverable); null otherwise. */
+	autoRetry: { attempt: number | null; maxAttempts: number | null } | null;
 }
 
 export type LessonIssueSeverity = 'info' | 'warning' | 'error';
@@ -371,7 +396,6 @@ export interface SkeletonSlotPreview {
 	purpose: string;
 	allowed_components: string[];
 	locked: boolean;
-	visual_required: boolean;
 }
 
 export interface SkeletonDiffEntry {

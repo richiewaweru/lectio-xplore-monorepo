@@ -232,7 +232,6 @@ def _build_structural_plan(
     slot_instance_ids: list[str],
     selected_components: dict[str, list[str]],
     shared_preparation: bool = True,
-    visual_required_by_instance: dict[str, bool] | None = None,
 ) -> StructuralPlan:
     if generated.deviation_request is not None:
         raise PathPreparationBlocked("A skeleton deviation requires teacher approval")
@@ -277,20 +276,11 @@ def _build_structural_plan(
             # Instance id is code-owned; role is the pedagogical slot type.
             section_payload["id"] = instance_id
             section_payload["role"] = role
-            section_payload["visual_required"] = bool(
-                (visual_required_by_instance or {}).get(instance_id, False)
-            )
             section_payload["card_id"] = (
                 None if role in {"orient", "close"} else lesson.concept_id
             )
             section_payload["components"] = []
             section_payload["blocks"] = []
-        elif visual_required_by_instance is not None:
-            section_payload["visual_required"] = bool(
-                visual_required_by_instance.get(
-                    generated_section.role or generated_section.id, False
-                )
-            )
         title = section_payload.get("title")
         if isinstance(title, str):
             section_payload["title"] = _clip_advisory_text(title, limit=80)
@@ -411,7 +401,6 @@ def _materialize_variant_plan(
                 title=(slot.purpose.strip() or slot.role.replace("_", " ").title())[:80],
                 role=slot.slot_id,
                 card_id=base_plan.cards[0].id,
-                visual_required=slot.visual_required,
                 transition_note=None,
                 components=[],
                 blocks=[],
@@ -557,7 +546,6 @@ async def prepare_path_lesson(
                 "role": slot.role,
                 "purpose": slot.purpose,
                 "locked": slot.locked,
-                "visual_required": slot.visual_required,
             }
         )
     legal_slots = [
@@ -566,10 +554,6 @@ async def prepare_path_lesson(
             "role": str(slot.get("role") or slot_id),
             "purpose": str(slot.get("purpose") or ""),
             "locked": slot.get("locked") is True,
-            "visual_required": any(
-                item.slot_id == slot_id and item.visual_required
-                for item in preview.variants[0].slots
-            ),
         }
         for slot_id, slot in catalog.slots.items()
     ]
@@ -590,9 +574,6 @@ async def prepare_path_lesson(
         "max_slots": catalog.max_slots,
         "hard_constraints": {
             "verification_required": True,
-            "required_visual_slots": [
-                item.slot_id for item in preview.variants[0].slots if item.visual_required
-            ],
         },
         "scope_contract": scope_contract,
         "prior_established": prior_established,
@@ -638,17 +619,11 @@ async def prepare_path_lesson(
         recommended_slots=recommended_slots,
         legal_slots={item["slot_id"]: item for item in legal_slots},
         max_slots=catalog.max_slots,
-        required_visual_slots=[
-            item.slot_id for item in preview.variants[0].slots if item.visual_required
-        ],
     )
     if flow_errors:
         raise PathPreparationBlocked("Smart lesson flow is invalid: " + "; ".join(flow_errors))
     slot_roles = list(flow.selected_slots)
     slot_instance_ids = assign_slot_instance_ids(slot_roles)
-    visual_required_by_role = {
-        item.slot_id: item.visual_required for item in preview.variants[0].slots
-    }
     plan = _build_structural_plan(
         generated=generated,
         lesson=lesson,
@@ -658,10 +633,6 @@ async def prepare_path_lesson(
         slot_instance_ids=slot_instance_ids,
         selected_components={},
         shared_preparation=shared_preparation,
-        visual_required_by_instance={
-            instance_id: bool(visual_required_by_role.get(role, False))
-            for instance_id, role in zip(slot_instance_ids, slot_roles, strict=True)
-        },
     )
     misconception_count = min(len(plan.cards[0].misconceptions), 3)
     group_preview = catalog.preview(

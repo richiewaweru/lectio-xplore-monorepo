@@ -25,7 +25,6 @@ from document.shared_lesson.composer import (
 from document.shared_lesson.continuity import ContinuityIssue, ExpectedNodeShape
 from document.shared_lesson.document_semantic import DocumentSemanticValidator
 from document.shared_lesson.media import (
-    DeferredFigureMediaBinding,
     FigureMediaResult,
     SharedFigureMediaError,
     SharedFigureWorkOrder,
@@ -216,7 +215,7 @@ def _verify_media_inputs(
     *,
     document: SharedLessonDocument,
     required_media_by_section: Mapping[str, Sequence[str]] | None,
-    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
+    media_results: Sequence[FigureMediaResult],
 ) -> tuple[str, ...]:
     expected = _required_media(document)
     declared = {
@@ -233,12 +232,11 @@ def _verify_media_inputs(
     expected_ids = {
         (section_id, figure_id) for section_id, values in expected.items() for figure_id in values
     }
-    supplied: dict[tuple[str, str], FigureMediaResult | DeferredFigureMediaBinding] = {}
+    supplied: dict[tuple[str, str], FigureMediaResult] = {}
     for result in media_results:
-        if not isinstance(result, FigureMediaResult | DeferredFigureMediaBinding):
+        if not isinstance(result, FigureMediaResult):
             raise SharedDocumentQADispatchError(
-                "required media must use verified document-bound FigureMediaResult or "
-                "DeferredFigureMediaBinding values"
+                "required media must use verified document-bound FigureMediaResult values"
             )
         identity = (result.section_id, result.figure_node_id)
         if identity in supplied:
@@ -291,8 +289,8 @@ async def _load_durable_media_results(
     *,
     run_id: str,
     document: SharedLessonDocument,
-    supplied: Sequence[FigureMediaResult | DeferredFigureMediaBinding],
-) -> tuple[FigureMediaResult | DeferredFigureMediaBinding, ...]:
+    supplied: Sequence[FigureMediaResult],
+) -> tuple[FigureMediaResult, ...]:
     """Rebuild caller media evidence from active READY media WorkItems."""
     async with session_factory() as session:
         rows = tuple(
@@ -308,7 +306,7 @@ async def _load_durable_media_results(
             ).all()
         )
     leaves = active_work_items(rows)
-    durable: dict[tuple[str, str], FigureMediaResult | DeferredFigureMediaBinding] = {}
+    durable: dict[tuple[str, str], FigureMediaResult] = {}
     for item in leaves:
         if item.status != "ready" or item.output_json is None or not item.output_hash:
             raise SharedDocumentQADispatchError(
@@ -331,7 +329,7 @@ async def _load_durable_media_results(
             )
         durable[identity] = bound
 
-    caller: dict[tuple[str, str], FigureMediaResult | DeferredFigureMediaBinding] = {}
+    caller: dict[tuple[str, str], FigureMediaResult] = {}
     for result in supplied:
         identity = (result.section_id, result.figure_node_id)
         if identity in caller:
@@ -366,7 +364,7 @@ async def dispatch_shared_document_qa(
     provenance: Mapping[str, Any] | None = None,
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
+    media_results: Sequence[FigureMediaResult] = (),
     writer_warnings: Mapping[str, Sequence[tuple[str, str]]] | None = None,
     semantic_validator: DocumentSemanticValidator | None = None,
     worker_id: str = "shared-document-qa-dispatcher",
@@ -737,7 +735,7 @@ async def dispatch_reviewed_document_qa(
     leaf: GenerationWorkItemModel,
     compositions: Mapping[str, SectionCompositionPlan] | Sequence[SectionCompositionPlan],
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult | DeferredFigureMediaBinding] = (),
+    media_results: Sequence[FigureMediaResult] = (),
     semantic_validator: DocumentSemanticValidator | None = None,
     worker_id: str = "shared-document-qa-dispatcher",
 ) -> SharedDocumentQADispatchResult:

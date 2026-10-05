@@ -161,7 +161,7 @@ async def test_required_failure_preserves_healthy_figure_sibling(
             lease_expires_at=None,
         )
         records.append(record.id)
-        return SimpleNamespace(record=record)
+        return SimpleNamespace(record=record, created=True)
 
     async def execute(jobs, **_kwargs):
         return tuple(
@@ -207,7 +207,8 @@ async def test_duplicate_admission_reuses_frozen_figure_identity(
         identity = kwargs["work"].work_order.work_order_id
         calls.append(identity)
         return SimpleNamespace(
-            record=SimpleNamespace(id=f"id-{identity}", status="queued", lease_expires_at=None)
+            record=SimpleNamespace(id=f"id-{identity}", status="queued", lease_expires_at=None),
+            created=True,
         )
 
     async def execute(jobs, **_kwargs):
@@ -239,3 +240,55 @@ async def test_duplicate_admission_reuses_frozen_figure_identity(
         source_verifier=verifier,
     )
     assert tuple(calls) == first + first
+
+
+@pytest.mark.asyncio
+async def test_label_warnings_append_a_non_blocking_event_for_newly_admitted_figures(
+    db_session, db_session_factory, monkeypatch
+):
+    source = _source()
+    accepted = _accepted()
+    # Neither the caption nor any prose mentions the plan's required labels.
+    accepted.sections = (
+        _section("section-a", 0, caption="A picture"),
+        _section("section-b", 1),
+    )
+    readiness = media_dispatcher.MediaReadiness(ready=True, required_count=2, ready_count=2)
+    verifier = _bind(monkeypatch, accepted=accepted, source=source, readiness=readiness)
+    events = []
+
+    async def admit(*_args, **kwargs):
+        record = SimpleNamespace(
+            id=f"media-{kwargs['work'].figure_node_id}", status="queued", lease_expires_at=None
+        )
+        return SimpleNamespace(record=record, created=True)
+
+    async def append_event(_session, **kwargs):
+        events.append(kwargs)
+
+    async def execute(jobs, **_kwargs):
+        return tuple(
+            media_dispatcher.MediaRuntimeOutcome(work_item_id=job.work_item_id) for job in jobs
+        )
+
+    monkeypatch.setattr(media_dispatcher, "admit_figure_media_work_item", admit)
+    monkeypatch.setattr(media_dispatcher, "execute_figure_media_work_items", execute)
+    monkeypatch.setattr(media_dispatcher, "append_event", append_event)
+    dispatcher = media_dispatcher.SharedMediaDispatcher(
+        db_session_factory, worker_id="media-labels", executor=SimpleNamespace()
+    )
+    result = await dispatcher.run_one(
+        session=db_session,
+        run_id="media-run",
+        owner_user_id="media-owner",
+        source=source,
+        source_verifier=verifier,
+    )
+
+    assert result.readiness.ready is True  # never blocks
+    assert [event["event_type"] for event in events] == ["figure_label_missing"]
+    assert events[0]["work_item_id"] == "media-figure-a"
+    assert events[0]["safe_payload"] == {
+        "figure_node_id": "figure-a",
+        "warnings": ["label_missing:Sunlight", "label_missing:Leaf"],
+    }

@@ -12,6 +12,7 @@ class ImageGenerationResult:
     bytes: bytes
     format: ImageFormat
     mime_type: str
+    text: str | None = None
 
 
 class ImageModelClient(Protocol):

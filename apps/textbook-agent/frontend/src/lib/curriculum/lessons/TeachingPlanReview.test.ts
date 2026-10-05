@@ -14,7 +14,7 @@ describe('TeachingPlanReview', () => {
 					misconception_focus_ids: ['water-cycle-order'],
 					sections: [{ slot_id: 'orient', blocks: [{
 						id: 'b1', intent: 'orient', brief: 'Observe a covered leaf.', evidence: 'A relevant observation.',
-						evidence_refs: ['source-1'], source_question_ids: ['question-1'], task_mode: 'assessment',
+						evidence_refs: ['source-1'], visual: { mode: 'diagram', purpose: 'Show the water cycle', labels_required: ['evaporation'], required: true }, source_question_ids: ['question-1'], task_mode: 'assessment',
 						learner_action: { action: 'read-explanation', target: 'leaf', purpose: 'Notice water.', expected_evidence: 'Explain droplets.', difficulty: 'guided' }
 					}]}]
 				},
@@ -28,6 +28,8 @@ describe('TeachingPlanReview', () => {
 		expect(planRegion.textContent).toContain('Trace water through a plant.');
 		expect(planRegion.textContent).toContain('Explain droplets.');
 		expect(planRegion.textContent).toContain('source-1');
+		expect(planRegion.textContent).toContain('Figure planned: Show the water cycle');
+		expect(planRegion.textContent).toContain('evaporation');
 		expect(reviewRegion.textContent).toContain('Status: pending');
 		expect(reviewRegion.textContent).toContain('Revision: 5');
 		expect(reviewRegion.textContent).toContain('Verified pending content hash: pending-hash');

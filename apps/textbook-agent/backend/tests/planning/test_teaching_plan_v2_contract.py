@@ -281,3 +281,88 @@ def test_v2_materialization_rejects_duplicate_or_foreign_slot_ownership() -> Non
 
     with pytest.raises(ValueError, match="surrounding whitespace"):
         materialize_teaching_plan(draft, slot_ids=["orient ", "explain"])
+
+
+def _legacy_plan_with_visual(visual: dict) -> dict:
+    payload = deepcopy(LEGACY_PLAN)
+    payload["sections"][0]["blocks"][0]["visual"] = visual
+    return payload
+
+
+def test_plan_without_visual_serializes_without_visual_key_and_keeps_hash() -> None:
+    plan = TeachingPlan.model_validate(LEGACY_PLAN)
+    block = plan.sections[0].blocks[0]
+    assert block.visual is None
+    assert "visual" not in plan.model_dump(mode="json")["sections"][0]["blocks"][0]
+    assert teaching_plan_content_hash(plan) == LEGACY_HASH
+
+
+def test_adding_a_visual_changes_the_content_hash() -> None:
+    plan = TeachingPlan.model_validate(
+        _legacy_plan_with_visual(
+            {"purpose": "See the order of stages.", "must_show": ["evaporation", "condensation"]}
+        )
+    )
+    block = plan.sections[0].blocks[0]
+    assert block.visual is not None
+    assert block.visual.mode == "diagram"
+    assert block.visual.required is True
+    assert teaching_plan_content_hash(plan) != LEGACY_HASH
+
+
+def test_visual_spec_strips_text_and_drops_blank_entries() -> None:
+    plan = TeachingPlan.model_validate(
+        _legacy_plan_with_visual(
+            {
+                "purpose": "  See the order.  ",
+                "must_show": [" evaporation ", "  ", "condensation"],
+                "labels_required": ["", " Evaporation "],
+                "must_not_show": ["  "],
+            }
+        )
+    )
+    visual = plan.sections[0].blocks[0].visual
+    assert visual is not None
+    assert visual.purpose == "See the order."
+    assert visual.must_show == ["evaporation", "condensation"]
+    assert visual.labels_required == ["Evaporation"]
+    assert visual.must_not_show == []
+
+
+def test_visual_spec_rejects_unknown_fields_and_modes() -> None:
+    with pytest.raises(ValidationError):
+        TeachingPlan.model_validate(
+            _legacy_plan_with_visual({"purpose": "p", "must_show": ["a"], "style": "flat"})
+        )
+    with pytest.raises(ValidationError):
+        TeachingPlan.model_validate(
+            _legacy_plan_with_visual({"purpose": "p", "must_show": ["a"], "mode": "simulation"})
+        )
+
+
+def test_draft_block_visual_is_nullable_in_provider_schema_and_materializes() -> None:
+    schema = TeachingPlanDraftV2.model_json_schema(mode="validation")
+    visual = schema["$defs"]["TeachingPlanDraftBlock"]["properties"]["visual"]
+    assert {"type": "null"} in visual["anyOf"]
+    assert {"$ref": "#/$defs/VisualSpec"} in visual["anyOf"]
+    assert schema["$defs"]["VisualSpec"]["required"] == ["purpose", "must_show"]
+
+    payload = _v2_draft_payload()
+    payload["sections"][1]["blocks"] = [
+        {
+            "intent": "model",
+            "brief": "Walk the cycle in order.",
+            "evidence": "Learner traces the cycle.",
+            "visual": {"purpose": "See the order.", "must_show": ["evaporation"]},
+        }
+    ]
+    draft = TeachingPlanDraftV2.model_validate(payload)
+    plan = materialize_teaching_plan(
+        draft,
+        teaching_plan_id="plan-1",
+        revision=1,
+        preparation_hash="h",
+        slot_ids=["orient", "explain"],
+    )
+    visual = plan.sections[1].blocks[0].visual
+    assert visual is not None and visual.must_show == ["evaporation"]

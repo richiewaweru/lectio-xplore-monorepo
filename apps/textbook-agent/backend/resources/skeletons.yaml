@@ -430,13 +430,6 @@ toggles:
       Driven by the card, not the variant. A card with zero real
       misconceptions gets no confront slot and that is correct.
 
-  - id: visual.spatial_objective
-    priority: 60
-    when: {card.objective_is_spatial_or_process: true}
-    op: set_flag
-    flag: visual_required
-    on_slots: [explain, model, organise]
-
 
 # -----------------------------------------------------------------------------
 # 5. DEVIATION CHANNEL

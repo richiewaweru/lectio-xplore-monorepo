@@ -26,19 +26,24 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError
 
 from document.shared_lesson.media import (
-    DeferredFigureMediaResult,
     ReadyFigureMediaResult,
     SharedFigureMediaError,
     SharedFigureMediaProviderFailed,
     SharedFigureWorkOrder,
-    bind_deferred_figure_media,
     bind_generated_figure,
+    rebuild_figure_work_order,
 )
+from curriculum.teaching_plan.models import VisualSpec
+from media.generation.provider_errors import safe_summary_for_code
 from document.shared_lesson.models import FigureNode, SharedSection
-from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
-from infra.config import settings
+from document.shared_lesson.runtime import (
+    TeachingPlanSource,
+    rollback_for_failure_record,
+    verify_teaching_plan_source,
+)
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.execution.leases import LeaseLostError
@@ -65,7 +70,6 @@ from infra.generation_runtime import (
 from media.generation.contracts import (
     GeneratedVisualBlock,
     VisualGeneratorWorkOrder,
-    VisualPlanItem,
 )
 
 MEDIA_STAGE = "media_generation"
@@ -98,7 +102,7 @@ class MediaRuntimeOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     work_item_id: str
-    media: ReadyFigureMediaResult | DeferredFigureMediaResult | None = None
+    media: ReadyFigureMediaResult | None = None
     error_code: str | None = None
     error_summary: str | None = None
     preserved_ready: bool = False
@@ -169,18 +173,25 @@ def _composition_identity(work: SharedFigureWorkOrder) -> str:
     # digest in ``input_hash`` remains the compact equality check; this
     # canonical JSON lets a restarted worker reconstruct and verify the exact
     # accepted media input without consulting an in-memory section writer.
+    payload: dict[str, Any] = {
+        "source_plan_id": work.source_plan_id,
+        "source_plan_revision": work.source_plan_revision,
+        "source_plan_hash": work.source_plan_hash,
+        "section_id": work.section_id,
+        "section_output_hash": work.section_output_hash,
+        "figure_node_id": work.figure_node_id,
+        "figure_semantic_hash": work.figure_semantic_hash,
+        "required": work.required,
+        "work_order": work.work_order.model_dump(mode="json"),
+    }
+    if work.warnings:
+        # Warnings are part of ``input_hash``; persisting them (only when
+        # present, so existing identities stay byte-identical) lets a
+        # reconstructed work order reproduce that hash and lets progress
+        # surface them.
+        payload["warnings"] = list(work.warnings)
     return json.dumps(
-        {
-            "source_plan_id": work.source_plan_id,
-            "source_plan_revision": work.source_plan_revision,
-            "source_plan_hash": work.source_plan_hash,
-            "section_id": work.section_id,
-            "section_output_hash": work.section_output_hash,
-            "figure_node_id": work.figure_node_id,
-            "figure_semantic_hash": work.figure_semantic_hash,
-            "required": work.required,
-            "work_order": work.work_order.model_dump(mode="json"),
-        },
+        payload,
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
@@ -200,26 +211,10 @@ def accepted_section_output_hash(section: SharedSection) -> str:
 
 def frozen_figure_semantic_hash(work: SharedFigureWorkOrder, section: SharedSection) -> str:
     """Recompute the semantic identity without trusting caller-supplied hashes."""
-    node = next(
-        (candidate for candidate in section.nodes if candidate.id == work.figure_node_id), None
-    )
-    if not isinstance(node, FigureNode):
-        raise MediaSourceConflict("accepted section does not contain the frozen FigureNode")
-    payload = {
-        "source_plan_id": work.source_plan_id,
-        "source_plan_revision": work.source_plan_revision,
-        "source_plan_hash": work.source_plan_hash,
-        "section_output_hash": accepted_section_output_hash(section),
-        "section_id": section.id,
-        "figure_node_id": work.figure_node_id,
-        "caption": node.display.caption,
-        "alt_text": node.accessibility.alt_text,
-        "source_facts": [fact.model_dump(mode="json") for fact in work.work_order.source_of_truth],
-        "mode": work.work_order.visual.mode,
-        "required": work.required,
-    }
-    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    try:
+        return rebuild_figure_work_order(work, section).figure_semantic_hash
+    except SharedFigureMediaError as exc:
+        raise MediaSourceConflict(str(exc)) from exc
 
 
 def _item_request(
@@ -280,7 +275,30 @@ def _verify_work_source(work: SharedFigureWorkOrder, source: SourceIdentity) -> 
         raise MediaSourceConflict("figure work order is bound to a different Teaching Plan source")
 
 
-def _verify_accepted_section(work: SharedFigureWorkOrder, section: SharedSection) -> None:
+def _plan_visual_spec(
+    source: TeachingPlanSource | SourceIdentity | None, work: SharedFigureWorkOrder, node: FigureNode
+) -> VisualSpec | None:
+    """The approved plan block's authoritative spec, when the plan is available."""
+    if not isinstance(source, TeachingPlanSource):
+        return None
+    planned = next(
+        (item for item in source.plan.sections if item.slot_id == work.section_id), None
+    )
+    block = (
+        next((item for item in planned.blocks if item.id == node.teaching_block_id), None)
+        if planned is not None
+        else None
+    )
+    if block is None or block.visual is None:
+        raise MediaSourceConflict("figure node has no visual spec in the approved Teaching Plan")
+    return block.visual
+
+
+def _verify_accepted_section(
+    work: SharedFigureWorkOrder,
+    section: SharedSection,
+    source: TeachingPlanSource | SourceIdentity | None = None,
+) -> None:
     if section.id != work.section_id:
         raise MediaSourceConflict("figure work order section differs from the accepted section")
     if accepted_section_output_hash(section) != work.section_output_hash:
@@ -290,35 +308,21 @@ def _verify_accepted_section(work: SharedFigureWorkOrder, section: SharedSection
     )
     if not isinstance(node, FigureNode):
         raise MediaSourceConflict("accepted section does not contain the frozen FigureNode")
-    if work.work_order.visual.attaches_to != node.id:
-        raise MediaSourceConflict("figure work order attaches to a different FigureNode")
-    expected_purpose = node.display.caption.strip() or node.accessibility.alt_text.strip()
-    if work.work_order.visual.purpose != expected_purpose:
-        raise MediaSourceConflict("figure work order purpose differs from the accepted FigureNode")
-    if work.work_order.visual.must_show != [node.accessibility.alt_text.strip()]:
-        raise MediaSourceConflict("figure work order semantics differ from the accepted FigureNode")
-    semantic_hash = frozen_figure_semantic_hash(work, section)
-    if work.figure_semantic_hash != semantic_hash:
+    # One builder derives the expected order: re-run it from the accepted section
+    # (and the plan's authoritative spec when available) and require equality.
+    try:
+        expected = rebuild_figure_work_order(
+            work, section, spec=_plan_visual_spec(source, work, node)
+        )
+    except SharedFigureMediaError as exc:
+        raise MediaSourceConflict(f"figure work order cannot be re-derived: {exc}") from exc
+    if work.figure_semantic_hash != expected.figure_semantic_hash:
         raise MediaSourceConflict("figure work order semantic hash is stale or forged")
-    if work.work_order.visual.id != f"shared-figure-{semantic_hash[:24]}":
-        raise MediaSourceConflict("figure work order visual identity is stale or forged")
-    if work.work_order.work_order_id != f"shared-media-{semantic_hash}":
-        raise MediaSourceConflict("figure work order identity is stale or forged")
-    expected_order = VisualGeneratorWorkOrder(
-        work_order_id=work.work_order.work_order_id,
-        resource_type="shared_lesson_figure",
-        dependency="section_text",
-        visual=VisualPlanItem(
-            id=f"shared-figure-{semantic_hash[:24]}",
-            attaches_to=node.id,
-            mode=work.work_order.visual.mode,
-            purpose=expected_purpose,
-            must_show=[node.accessibility.alt_text.strip()],
-        ),
-        source_of_truth=list(work.work_order.source_of_truth),
-    )
-    if work.work_order != expected_order:
-        raise MediaSourceConflict("figure work order contains an unsupported or forged spec")
+    if work != expected:
+        raise MediaSourceConflict(
+            "figure work order differs from the work order derived from the plan spec "
+            "and accepted section"
+        )
 
 
 def find_active_figure_media_work_item(
@@ -393,7 +397,7 @@ async def admit_figure_media_work_item(
         raise ValueError("max_attempts must be positive")
     identity = _identity(source)
     _verify_work_source(work, identity)
-    _verify_accepted_section(work, accepted_section)
+    _verify_accepted_section(work, accepted_section, source)
     run = await _verify_run_source(
         session, run_id=run_id, owner_user_id=owner_user_id, source=identity, lock=True
     )
@@ -439,7 +443,7 @@ async def admit_repaired_figure_media_work_item(
         raise ValueError("max_attempts must be positive")
     identity = _identity(source)
     _verify_work_source(work, identity)
-    _verify_accepted_section(work, accepted_section)
+    _verify_accepted_section(work, accepted_section, source)
     predecessor = await session.get(GenerationWorkItemModel, predecessor_work_item_id)
     if predecessor is None:
         raise MediaRuntimeError("media replacement predecessor does not exist")
@@ -514,6 +518,14 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
             safe_summary="Figure media provider transport failed.",
             recovery_action=RecoveryAction.RETRY,
         )
+    if isinstance(exc, DBAPIError):
+        # Raw database faults are transient infrastructure errors; retryable.
+        return WorkItemFailure(
+            error_code="database_transient",
+            error_class=ErrorClass.PROVIDER_TRANSPORT,
+            safe_summary="A transient database error interrupted figure media work.",
+            recovery_action=RecoveryAction.RETRY,
+        )
     name = type(exc).__name__.casefold()
     if any(token in name for token in ("auth", "permission", "config", "program")):
         return WorkItemFailure(
@@ -530,61 +542,54 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
     )
 
 
-async def _complete_as_deferred(
+async def _fail_after_rollback(
     job: MediaWorkItemJob,
     *,
-    item: GenerationWorkItemModel,
-    reason_code: str,
+    identity: SourceIdentity,
+    lease_token: int,
+    lease_committed: bool,
+    failure: WorkItemFailure,
     now: Any,
-) -> MediaRuntimeOutcome:
-    """Complete a media work item READY with a closed, asset-free deferred output.
+) -> GenerationWorkItemModel | None:
+    """Roll the session back, then persist ``failure`` under a valid fence.
 
-    Only reached when the local-only ``shared_document_media_optional``
-    switch is enabled and the failure is one of the two closed reasons the
-    switch may defer (see ``bind_deferred_figure_media``). No provider
-    diagnostic text is ever persisted, only the fixed ``reason_code``.
+    Returns ``None`` when the uncommitted claim could not be re-claimed; the
+    caller then re-raises and lease expiry reconciles the item.
     """
-    deferred = bind_deferred_figure_media(job.work, reason_code=reason_code)
-    output = deferred.model_dump(mode="json")
-    completed_item = await complete_work_item(
+    failure_lease_token = await rollback_for_failure_record(
         job.session,
-        work_item_id=item.id,
+        lease_token=lease_token,
+        lease_committed=lease_committed,
+        reclaim=lambda: claim_work_item(
+            job.session,
+            work_item_id=job.work_item_id,
+            worker_id=job.worker_id,
+            source=identity,
+            lease_seconds=job.lease_seconds,
+            now=now,
+        ),
+    )
+    if failure_lease_token is None:
+        return None
+    return await fail_work_item(
+        job.session,
+        work_item_id=job.work_item_id,
         worker_id=job.worker_id,
-        lease_token=item.lease_token or 0,
-        output_json=output,
-        output_hash=content_hash(output),
+        lease_token=failure_lease_token,
+        failure=failure,
         now=now,
     )
-    await append_event(
-        job.session,
-        run_id=completed_item.run_id,
-        work_item_id=completed_item.id,
-        event_type="media_deferred",
-        error_code=reason_code,
-        safe_payload={"media_status": "deferred", "reason_code": reason_code},
-    )
-    return MediaRuntimeOutcome(work_item_id=item.id, media=deferred)
 
 
 async def execute_figure_media_work_item(
     job: MediaWorkItemJob,
     *,
     now: Any = None,
-    media_optional: bool | None = None,
 ) -> MediaRuntimeOutcome:
-    """Claim, execute, and fenced-commit one figure work item.
-
-    ``media_optional`` defaults to the local-only ``shared_document_media_
-    optional`` setting when not given explicitly. When enabled, a media
-    provider failure or shared-media-contract violation completes the work
-    item READY with a deferred output instead of persisting a failure; the
-    lease-lost and checkpoint-integrity paths, and any other unexpected
-    executor error, are never affected by this switch.
-    """
-    optional_media = settings.shared_document_media_optional if media_optional is None else media_optional
+    """Claim, execute, and fenced-commit one figure work item."""
     identity = _identity(job.source)
     _verify_work_source(job.work, identity)
-    _verify_accepted_section(job.work, job.accepted_section)
+    _verify_accepted_section(job.work, job.accepted_section, job.source)
     item = await claim_work_item(
         job.session,
         work_item_id=job.work_item_id,
@@ -593,6 +598,10 @@ async def execute_figure_media_work_item(
         lease_seconds=job.lease_seconds,
         now=now,
     )
+    # Capture ORM attributes now: rollback expires ``item`` and a lazy reload
+    # outside the greenlet raises MissingGreenlet.
+    item_id = item.id
+    lease_token = item.lease_token or 0
     compatibility = _checkpoint_compatibility(source=identity, item=item)
     try:
         _validate_item_binding(item, job.work)
@@ -625,38 +634,50 @@ async def execute_figure_media_work_item(
             safe_summary="Figure media checkpoint failed compatibility or integrity validation.",
             recovery_action=RecoveryAction.NONE,
         )
-        await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
-            now=now,
-        )
+        if (
+            await _fail_after_rollback(
+                job,
+                identity=identity,
+                lease_token=lease_token,
+                lease_committed=False,
+                failure=failure,
+                now=now,
+            )
+            is None
+        ):
+            raise
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
-    except Exception:  # noqa: BLE001 - persist unknown checkpoint failures as terminal.
+    except Exception as exc:  # noqa: BLE001 - persist unknown checkpoint failures as terminal.
         # Checkpoint integrity/source mismatches are terminal contract errors;
-        # they must not enter semantic provider retry.
-        failure = WorkItemFailure(
-            error_code="media_checkpoint_integrity",
-            error_class=ErrorClass.UNSUPPORTED_CONTRACT,
-            safe_summary="Figure media checkpoint failed compatibility or integrity validation.",
-            recovery_action=RecoveryAction.NONE,
-        )
-        await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
-            now=now,
-        )
+        # they must not enter semantic provider retry. A raw database fault is
+        # transient and stays retryable.
+        if isinstance(exc, DBAPIError):
+            failure = _failure_for_exception(exc)
+        else:
+            failure = WorkItemFailure(
+                error_code="media_checkpoint_integrity",
+                error_class=ErrorClass.UNSUPPORTED_CONTRACT,
+                safe_summary="Figure media checkpoint failed compatibility or integrity validation.",
+                recovery_action=RecoveryAction.NONE,
+            )
+        if (
+            await _fail_after_rollback(
+                job,
+                identity=identity,
+                lease_token=lease_token,
+                lease_committed=False,
+                failure=failure,
+                now=now,
+            )
+            is None
+        ):
+            raise
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
@@ -671,30 +692,28 @@ async def execute_figure_media_work_item(
         media = bind_generated_figure(job.work, blocks)
     except LeaseLostError:
         raise
-    except SharedFigureMediaProviderFailed:
-        if optional_media:
-            return await _complete_as_deferred(
-                job, item=item, reason_code="media_provider_failed", now=now
-            )
+    except SharedFigureMediaProviderFailed as provider_exc:
         # The executor itself reported a failed provider/transport call (for
         # example an unreachable image API). This is not a violation of the
         # shared media contract, so it must not be classified as invalid
         # hosted output. Only a safe, structured diagnostic is recorded -
         # never the provider's error_message, prompts, URLs, or keys.
+        provider_code = provider_exc.error_code
         failure = WorkItemFailure(
-            error_code="media_provider_failed",
+            error_code=provider_code,
             error_class=ErrorClass.PROVIDER_TRANSPORT,
-            safe_summary="Figure media provider call failed.",
+            safe_summary=safe_summary_for_code(provider_code),
             recovery_action=RecoveryAction.RETRY,
         )
-        failed_item = await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
+        failed_item = await _fail_after_rollback(
+            job,
+            identity=identity,
+            lease_token=lease_token,
+            lease_committed=True,
             failure=failure,
             now=now,
         )
+        assert failed_item is not None  # lease_committed=True never skips the record
         await append_event(
             job.session,
             run_id=failed_item.run_id,
@@ -704,46 +723,50 @@ async def execute_figure_media_work_item(
             safe_payload={"media_block_status": "failed"},
         )
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
     except SharedFigureMediaError:
-        if optional_media:
-            return await _complete_as_deferred(
-                job, item=item, reason_code="media_invalid_output", now=now
-            )
         failure = WorkItemFailure(
             error_code="media_invalid_output",
             error_class=ErrorClass.PROVIDER_OUTPUT,
             safe_summary="Figure media output failed the shared semantic contract.",
             recovery_action=RecoveryAction.RETRY,
         )
-        await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
-            now=now,
-        )
+        if (
+            await _fail_after_rollback(
+                job,
+                identity=identity,
+                lease_token=lease_token,
+                lease_committed=True,
+                failure=failure,
+                now=now,
+            )
+            is None
+        ):
+            raise
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
     except Exception as exc:  # noqa: BLE001 - fail closed for unknown provider errors.
         failure = _failure_for_exception(exc)
-        await fail_work_item(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            failure=failure,
-            now=now,
-        )
+        if (
+            await _fail_after_rollback(
+                job,
+                identity=identity,
+                lease_token=lease_token,
+                lease_committed=True,
+                failure=failure,
+                now=now,
+            )
+            is None
+        ):
+            raise
         return MediaRuntimeOutcome(
-            work_item_id=item.id,
+            work_item_id=item_id,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
@@ -753,7 +776,7 @@ async def execute_figure_media_work_item(
         job.session,
         work_item_id=item.id,
         worker_id=job.worker_id,
-        lease_token=item.lease_token or 0,
+        lease_token=lease_token,
         output_json=output,
         output_hash=content_hash(output),
         now=now,
@@ -765,7 +788,6 @@ async def execute_figure_media_work_items(
     jobs: Sequence[MediaWorkItemJob],
     *,
     concurrency: int = MAX_CONCURRENT_MEDIA,
-    media_optional: bool | None = None,
 ) -> tuple[MediaRuntimeOutcome, ...]:
     """Execute independent figures concurrently while preserving siblings."""
     if not jobs:
@@ -788,7 +810,7 @@ async def execute_figure_media_work_items(
             )
         async with semaphore:
             try:
-                outcome = await execute_figure_media_work_item(job, media_optional=media_optional)
+                outcome = await execute_figure_media_work_item(job)
             except LeaseLostError:
                 await job.session.rollback()
                 return MediaRuntimeOutcome(

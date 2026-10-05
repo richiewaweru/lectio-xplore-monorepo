@@ -6,7 +6,7 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.projections import (
@@ -55,8 +55,10 @@ from curriculum.agents import (
     run_path_planner,
     run_plan_chat_edit,
 )
+from curriculum.figure_progress import active_leaves, plan_visual_figures
 from curriculum.lesson_progress import ProgressItem, project_artifact_progress
 from curriculum.lesson_review import collect_lesson_issues
+from document.shared_lesson.run_failure import summarize_failed_leaves
 from curriculum.models import (
     ConstructorReadbackRequest,
     GuardedMergePathLessonsRequest,
@@ -360,15 +362,71 @@ async def _attach_progress(
             GenerationWorkItemModel.item_key,
             GenerationWorkItemModel.stage,
             GenerationWorkItemModel.status,
+            GenerationWorkItemModel.id,
+            GenerationWorkItemModel.replaces_work_item_id,
+            GenerationWorkItemModel.attempt,
+            GenerationWorkItemModel.max_attempts,
+            GenerationWorkItemModel.error_code,
+            GenerationWorkItemModel.error_class,
+            GenerationWorkItemModel.error_summary,
+            GenerationWorkItemModel.recovery_action,
+            # Only media items need the frozen work order (figure identity).
+            case(
+                (
+                    GenerationWorkItemModel.stage == "media_generation",
+                    GenerationWorkItemModel.composition_identity,
+                ),
+                else_=None,
+            ),
         )
         .where(GenerationWorkItemModel.run_id.in_(run_ids))
         .order_by(GenerationWorkItemModel.created_at)
     )
     by_run: dict[str, list[ProgressItem]] = {}
-    for run_id, item_key, stage, item_status in items:
-        by_run.setdefault(run_id, []).append(ProgressItem(item_key, stage, item_status))
+    for (
+        run_id,
+        item_key,
+        stage,
+        item_status,
+        item_id,
+        replaces_id,
+        attempt,
+        max_attempts,
+        error_code,
+        error_class,
+        error_summary,
+        recovery_action,
+        composition_identity,
+    ) in items:
+        by_run.setdefault(run_id, []).append(
+            ProgressItem(
+                item_key,
+                stage,
+                item_status,
+                id=item_id,
+                replaces_work_item_id=replaces_id,
+                attempt=attempt,
+                max_attempts=max_attempts,
+                error_code=error_code,
+                error_class=error_class,
+                error_summary=error_summary,
+                recovery_action=recovery_action,
+                composition_identity=composition_identity,
+            )
+        )
     shared = runs.get(shared_run_id) if shared_run_id else None
     realize = runs.get(realize_run_id) if realize_run_id else None
+    planned_figures = []
+    if shared is not None and getattr(row, "preparation_generation_id", None):
+        try:
+            preparation = await session.get(GenerationModel, row.preparation_generation_id)
+            state = getattr(preparation, "chunked_state_json", None)
+            page_state = state.get("page_document_v2") if isinstance(state, dict) else None
+            planned_figures = plan_visual_figures(
+                page_state, revision=int(getattr(row, "teaching_plan_revision", 0) or 0)
+            )
+        except Exception:  # noqa: BLE001 - progress is advisory; never break status reads
+            planned_figures = []
     progress = project_artifact_progress(
         path=path,
         shared_run_status=shared.status if shared else None,
@@ -377,11 +435,37 @@ async def _attach_progress(
         realize_run_status=realize.status if realize else None,
         realize_items=by_run.get(realize_run_id, []) if realize else [],
         realize_started_at=(realize.started_at or realize.created_at) if realize else None,
+        planned_figures=planned_figures,
     )
     if progress is None:
         return identity
     merged = dict(identity or {})
     merged["progress"] = progress.model_dump(mode="json")
+    if (
+        shared is not None
+        and realize is None
+        and shared.status in {"failed_recoverable", "failed_terminal"}
+        and not isinstance(merged.get("error_detail"), dict)
+    ):
+        failure = summarize_failed_leaves(
+            active_leaves([i for i in by_run.get(shared_run_id, [])])
+        )
+        if failure is not None:
+            merged["error_detail"] = {
+                "code": failure.error_code,
+                "message": failure.safe_summary,
+                "failure_class": failure.error_class,
+                "retryable": failure.retryable and shared.status == "failed_recoverable",
+                "stage": failure.stage,
+                "work_item_id": failure.work_item_id,
+                "attempt": failure.attempt,
+                "max_attempts": failure.max_attempts,
+                "recovery_action": failure.recovery_action
+                if shared.status == "failed_recoverable"
+                else "regenerate",
+                "auto_retrying": failure.auto_retrying
+                and shared.status == "failed_recoverable",
+            }
     return merged
 
 

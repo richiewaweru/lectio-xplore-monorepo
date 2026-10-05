@@ -26,6 +26,7 @@ from curriculum.teaching_plan.compatibility import (
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import TeachingPlanDraftV2
 from curriculum.teaching_plan.semantic_review import (
+    ADVISORY_ONLY_SEMANTIC_CODES,
     TeachingPlanSemanticReviewError,
     TeachingPlanSemanticReviewResult,
     review_teaching_plan_draft,
@@ -891,7 +892,15 @@ async def run_lesson_approach_planner(
                             "source IDs or turn a valid formative task into an assessment. "
                             "Keep optional guided or independent practice passive when no "
                             "structurally planned approved source belongs there. Remove "
-                            "forbidden terminology and use only allowed_evidence_refs."
+                            "forbidden terminology and use only allowed_evidence_refs. "
+                            "When a validation error is VISUAL_SPEC_INVALID, fix that "
+                            "block's `visual` object: purpose must say what the learner "
+                            "must notice, must_show must list at least one exact stage, "
+                            "part or relationship taken from the objective or "
+                            "must_establish, and every labels_required entry must appear "
+                            "verbatim inside a must_show entry, the lesson objective or a "
+                            "must_establish statement. If the block does not truly need a "
+                            "figure, omit `visual` instead."
                         ),
                         "previous_output": previous_output,
                         "validation_errors": repair_errors,
@@ -998,27 +1007,32 @@ async def run_lesson_approach_planner(
                         "TEACHING_SEMANTIC_REVIEW_INVALID",
                         "Teaching Plan semantic review is not bound to this candidate",
                     )
-                if advisory_gate:
-                    flags.extend(
-                        plan_quality_flag(
-                            code=finding.code,
-                            source="reviewer",
-                            message=finding.message,
-                            section_ids=finding.section_ids,
-                            block_ids=finding.block_ids,
-                            repair_instruction=finding.repair_instruction,
-                        )
-                        for finding in semantic_review.findings
+                # Advisory-only reviewer codes never block, even in the strict gate.
+                flagged_findings = [
+                    finding
+                    for finding in semantic_review.findings
+                    if advisory_gate or finding.code in ADVISORY_ONLY_SEMANTIC_CODES
+                ]
+                flags.extend(
+                    plan_quality_flag(
+                        code=finding.code,
+                        source="reviewer",
+                        message=finding.message,
+                        section_ids=finding.section_ids,
+                        block_ids=finding.block_ids,
+                        repair_instruction=finding.repair_instruction,
                     )
-                else:
-                    ownership_errors.extend(
-                        (
-                            f"SEMANTIC_{finding.code.upper()} "
-                            f"sections={finding.section_ids} blocks={finding.block_ids}: "
-                            f"{finding.repair_instruction}"
-                        )
-                        for finding in semantic_review.findings
+                    for finding in flagged_findings
+                )
+                ownership_errors.extend(
+                    (
+                        f"SEMANTIC_{finding.code.upper()} "
+                        f"sections={finding.section_ids} blocks={finding.block_ids}: "
+                        f"{finding.repair_instruction}"
                     )
+                    for finding in semantic_review.findings
+                    if finding not in flagged_findings
+                )
             qc = [finding.to_dict() for finding in qc_findings]
             attempts.append(
                 TeachingPlanAttempt(

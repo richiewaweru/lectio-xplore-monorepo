@@ -76,10 +76,17 @@ LOGGER = logging.getLogger(__name__)
 
 
 _TRANSIENT_DISPATCH_ERRORS: tuple[type[BaseException], ...] = (
-    sqlalchemy_exc.OperationalError,
-    sqlalchemy_exc.InterfaceError,
+    # DBAPIError covers OperationalError/InterfaceError and the
+    # ProgrammingError (InFailedSQLTransactionError) that follows an aborted
+    # transaction; none of these is a poisoned-Run programming fault.
+    sqlalchemy_exc.DBAPIError,
     TimeoutError,
     ConnectionError,
+)
+# Constraint/data errors repeat on every attempt; backing off would loop forever.
+_DETERMINISTIC_DB_ERRORS: tuple[type[BaseException], ...] = (
+    sqlalchemy_exc.IntegrityError,
+    sqlalchemy_exc.DataError,
 )
 
 class SharedDocumentWorkerError(RuntimeError):
@@ -247,6 +254,12 @@ class SharedDocumentWorker:
             )
             return retried > 0
 
+        # Capture identity while the freshly loaded instance is not expired:
+        # a mid-dispatch rollback expires it, and a lazy reload outside the
+        # greenlet raises MissingGreenlet in the failure handler.
+        dispatch_run_id = candidate.run.id
+        dispatch_owner_user_id = candidate.run.owner_user_id
+
         try:
             source, verifier, snapshot_loader = await self._source_context(session, candidate)
         except (ApprovedSourceVerificationError, SharedDocumentWorkerError) as exc:
@@ -295,10 +308,10 @@ class SharedDocumentWorker:
                         outcome.stage,
                         outcome.error,
                     )
-                    # A blocked Run that still has active leaves cannot be
-                    # terminalized yet; back it off so it cannot monopolise
-                    # the worker loop and starve other queued Runs.
-                    self._mark_dispatch_failure(pipeline_run_id, current)
+                    # ``_terminalize_blocked_post_section`` decides the backoff:
+                    # a Run waiting only on retryable failed_recoverable leaves
+                    # must stay visible to auto-retry (which applies its own
+                    # short delay), not sit out the poison backoff.
                     await self._terminalize_blocked_post_section(
                         session,
                         run_id=pipeline_run_id,
@@ -416,7 +429,13 @@ class SharedDocumentWorker:
         except (asyncio.CancelledError, LeaseLostError):
             raise
         except Exception as exc:  # noqa: BLE001 - isolate an unexpected per-Run failure
-            await self._handle_unexpected_dispatch_failure(session, candidate, exc, current)
+            await self._handle_unexpected_dispatch_failure(
+                session,
+                exc,
+                current,
+                run_id=dispatch_run_id,
+                owner_user_id=dispatch_owner_user_id,
+            )
             return True
 
     def _mark_dispatch_failure(
@@ -461,25 +480,28 @@ class SharedDocumentWorker:
     async def _handle_unexpected_dispatch_failure(
         self,
         session: Any,
-        candidate: _Candidate,
         exc: Exception,
         now: datetime,
+        *,
+        run_id: str,
+        owner_user_id: str,
     ) -> None:
         """Isolate a poisoned Run: terminalize it and never fall through to a
 
         semantic fallback. Programming errors must stay programming errors.
         """
-        # Capture identity before rolling back: the ORM instance's attributes
-        # are expired by rollback, and re-loading them lazily here would
-        # attempt synchronous IO outside the async greenlet context.
-        run_id = candidate.run.id
-        owner_user_id = candidate.run.owner_user_id
+        # ``run_id``/``owner_user_id`` are captured by the caller before
+        # dispatch: rollback (or an earlier failed flush) expires the ORM
+        # instance, and lazily reloading it here would attempt synchronous IO
+        # outside the async greenlet context (MissingGreenlet).
         LOGGER.exception(
             "SharedDocument Run %s dispatch raised an unexpected exception; terminalizing",
             run_id,
         )
         await session.rollback()
-        if isinstance(exc, _TRANSIENT_DISPATCH_ERRORS):
+        if isinstance(exc, _TRANSIENT_DISPATCH_ERRORS) and not isinstance(
+            exc, _DETERMINISTIC_DB_ERRORS
+        ):
             self._mark_dispatch_failure(
                 run_id, now, seconds=self._TRANSIENT_DISPATCH_BACKOFF_SECONDS
             )
@@ -714,8 +736,19 @@ class SharedDocumentWorker:
             ).all()
         )
         active = active_work_items(items)
-        if any(item.status in {"queued", "running", "failed_recoverable"} for item in active):
+        statuses = {item.status for item in active}
+        if statuses & {"queued", "running"}:
+            # Still has live leaves: it cannot be terminalized yet; back it
+            # off so it cannot monopolise the worker loop and starve others.
+            self._mark_dispatch_failure(run_id, now)
             return
+        if "failed_recoverable" in statuses:
+            # Blocked on a retryable leaf: auto-retry (or the operator) owns the
+            # next step. Do not apply the poison backoff, which would hold the
+            # auto-retry scan off for minutes beyond its own delay.
+            self._dispatch_failure_skip_until.pop(run_id, None)
+            return
+        self._mark_dispatch_failure(run_id, now)
         try:
             await fail_run_terminal(
                 session,

@@ -28,9 +28,6 @@
 						<p class="font-semibold">{index + 1}. {section.title}</p>
 						<span class="rounded-full bg-muted px-2 py-0.5 text-xs uppercase">{section.role}</span>
 					</div>
-					<p class="mt-1 text-xs text-muted-foreground">
-						{section.visual_required ? 'Visual required' : 'No visual required'}
-					</p>
 					{#if section.transition_note}
 						<p class="mt-2 text-xs text-muted-foreground">{section.transition_note}</p>
 					{/if}

@@ -31,7 +31,7 @@ from document.shared_lesson.runtime import (
 )
 from document.shared_lesson.writer import (
     SectionSource,
-    SectionWriterDraft,
+    ordinary_nodes_as_draft,
     SectionWriteResult,
     SectionWriteValidationError,
     validate_and_build_section,
@@ -229,16 +229,13 @@ def _parse_writer(
             tasks=_section_tasks(section, tasks),
             sources=sources,
         )
-        ordinary_nodes = tuple(
-            node.model_dump(mode="json") for node in result.nodes if node.kind != "task_anchor"
-        )
         # ``accept_soft_issues=True`` reproduces an already-accepted section
         # deterministically: a HARD issue still fails this reload, but a SOFT
         # issue the writer's final attempt already accepted (and recorded as
         # a warning) must not fail durable reloads of that exact content.
         verified = validate_and_build_section(
             request=request,
-            draft=SectionWriterDraft.model_validate({"nodes": ordinary_nodes}),
+            draft=ordinary_nodes_as_draft(result.nodes),
             accept_soft_issues=True,
         )
     except (TypeError, ValueError, SectionRuntimeError, SectionWriteValidationError) as exc:

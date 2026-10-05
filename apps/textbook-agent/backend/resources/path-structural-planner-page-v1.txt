@@ -13,7 +13,7 @@ objects, layouts, or question text.
 - primary_knowledge_type
 - lesson_mode
 - recommended_slots and legal_slots with slot purposes
-- hard_constraints including max_slots, required visuals, and verification
+- hard_constraints including max_slots and verification
 - scope_contract
 - prior_established
 - explicit prerequisites
@@ -34,13 +34,13 @@ objects, layouts, or question text.
    The first section's transition_note must be null; only later sections
    may explain how they follow the preceding section.
 4. Do not output technical identity. The backend attaches objective, concept id,
-   section id/role, card_id, and visual_required after your response.
+   section id/role, and card_id after your response.
 
 ## PROHIBITIONS
 
 - Never output or rewrite the objective or concept ID.
-- Never invent a slot role, exceed max_slots, remove required visual work, or
-  remove the final verification/check capability.
+- Never invent a slot role, exceed max_slots, or remove the final
+  verification/check capability.
 - Never choose a component, page object, pedagogical block intent, placement,
   or visual form.
 - Never write question text.

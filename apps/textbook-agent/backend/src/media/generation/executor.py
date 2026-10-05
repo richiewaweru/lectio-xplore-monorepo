@@ -18,6 +18,12 @@ from media.diagram_compositor import (
     compose_diagram_precision,
     preflight_diagram_labels,
 )
+from media.generation.provider_errors import (
+    NON_RETRYABLE_HTTP_STATUSES,
+    PROVIDER_ERROR,
+    classify_provider_exception,
+    http_status_from_code,
+)
 from media.providers.registry import get_image_client, load_image_provider_spec
 from media.qc.visual_qc import evaluate_visual_quality, visual_qc_enabled
 from infra.execution.retries import V3_MAX_RETRIES
@@ -70,6 +76,9 @@ def _cache_key_for_visual(
         "font_version": FONT_VERSION,
         "layout_version": LAYOUT_VERSION,
         "visual_qc_contract_version": VISUAL_QC_CONTRACT_VERSION,
+        # A cached raster may only claim a QC review if QC was on when it was
+        # produced, so QC on/off must not share cache entries.
+        "visual_qc_enabled": visual_qc_enabled(),
     }
     encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()[:32]
@@ -158,7 +167,12 @@ async def _render_frame(
     cache_object_key = f"images/cache/{cache_key}.png"
     destination_key = f"{generation_id}/{order.visual.attaches_to or 'visuals'}/{visual_id}.png"
 
-    is_diagram_precision = getattr(order.visual, "visual_style", None) == "diagram_precision"
+    # Gemini renders its own labels; the deterministic compositor (and its
+    # preflight) only applies to the other providers.
+    is_diagram_precision = (
+        getattr(order.visual, "visual_style", None) == "diagram_precision"
+        and provider_name != "gemini"
+    )
     # Fail before touching the provider (and before accepting a cache entry) if
     # the deterministic label band cannot fit at print-safe font size.
     if is_diagram_precision:
@@ -232,6 +246,13 @@ async def _render_frame(
                         component_id=component_id,
                         parent_visual_id=parent_visual_id,
                         status="ready",
+                        # Only accepted (reviewed) output is cached when QC is
+                        # on; the cache key separates QC on/off.
+                        qc_state=(
+                            "passed"
+                            if visual_qc_enabled() and order.visual.mode != "simulation"
+                            else "unreviewed"
+                        ),
                     )
                     errs = validate_visual_block(block, order)
                     if errs:
@@ -401,6 +422,7 @@ async def _render_frame(
         )
 
     qc_status: Literal["ready", "ready_with_quality_warning"] = "ready"
+    qc_state: Literal["passed", "flagged", "unavailable", "unreviewed"] = "unreviewed"
     qc_reasons: list[str] = []
     qc_correction_hint: str | None = None
     if visual_qc_enabled() and order.visual.mode != "simulation":
@@ -430,10 +452,13 @@ async def _render_frame(
             # deliverable and record the unavailable review as a warning; only
             # delivery/attachment failures remain retryable hard failures.
             qc_status = "ready_with_quality_warning"
+            qc_state = "unavailable"
             qc_reasons = [f"visual QC unavailable: {type(exc).__name__}: {exc}"]
             qc_correction_hint = "rerun visual quality review"
         else:
+            qc_state = "passed"
             if verdict.verdict in {"flag", "reject"}:
+                qc_state = "flagged"
                 # A reject is still a QC opinion, not proof that delivery
                 # failed. Preserve the rendered bytes and review metadata so
                 # a future replacement workflow can act on the asset.
@@ -505,9 +530,11 @@ async def _render_frame(
         component_id=component_id,
         parent_visual_id=parent_visual_id,
         status=qc_status,
+        qc_state=qc_state,
         qc_reasons=qc_reasons,
         qc_correction_hint=qc_correction_hint,
         qc_trace_id=trace_id,
+        provider_text=getattr(image, "text", None),
     )
     errs = validate_visual_block(block, order)
     if errs:
@@ -576,7 +603,11 @@ async def execute_visual(
                     frame_order = order.model_copy(deep=True)
                     frame_order.visual.must_show = frame.must_show or frame_order.visual.must_show
                     frame_order.visual.purpose = frame.description or frame_order.visual.purpose
-                    prompt = build_visual_prompt(frame_order, previous_frame_description=previous)
+                    prompt = build_visual_prompt(
+                        frame_order,
+                        previous_frame_description=previous,
+                        provider_renders_labels=spec.provider == "gemini",
+                    )
                     block = await _render_frame(
                         order=frame_order,
                         generation_id=gid,
@@ -595,7 +626,9 @@ async def execute_visual(
                     blocks.append(block)
                     previous = frame.description
             else:
-                prompt = build_visual_prompt(order)
+                prompt = build_visual_prompt(
+                    order, provider_renders_labels=spec.provider == "gemini"
+                )
                 block = await _render_frame(
                     order=order,
                     generation_id=gid,
@@ -638,12 +671,10 @@ async def execute_visual(
                 exc=exc,
             )
             original = last_failure.original_exception
-            response = getattr(original, "response", None)
-            status_code = getattr(response, "status_code", None)
-            if status_code is None:
-                status_code = getattr(original, "status_code", None)
-            non_retryable = int(status_code or 0) == 400 or last_failure.stage.startswith(
-                "diagram_compositor"
+            status_code = http_status_from_code(classify_provider_exception(original))
+            non_retryable = (
+                status_code in NON_RETRYABLE_HTTP_STATUSES
+                or last_failure.stage.startswith("diagram_compositor")
             )
             logger.error(
                 "v3 visual execution failed",
@@ -717,6 +748,12 @@ async def execute_visual(
                 parent_visual_id=None,
                 status="failed",
                 error_message="; ".join(outcome.errors),
+                error_code=(
+                    classify_provider_exception(last_failure.original_exception)
+                    if last_failure is not None
+                    and last_failure.stage == "image_generation_api_call"
+                    else PROVIDER_ERROR
+                ),
             )
         ]
     return [

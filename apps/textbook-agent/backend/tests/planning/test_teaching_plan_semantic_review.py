@@ -574,3 +574,32 @@ async def test_reviewer_reasks_once_after_unbound_finding(monkeypatch) -> None:
     assert len(payloads) == 2
     assert "previous_attempt_binding_error" not in payloads[0]
     assert "previous_attempt_binding_error" in payloads[1]
+
+
+@pytest.mark.asyncio
+async def test_visual_missing_finding_is_lesson_level_and_rejects_block_binding(
+    monkeypatch,
+) -> None:
+    draft = _draft()
+    plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
+    findings_by_call = [
+        [_finding("visual_missing_for_figure_objective", ["explain"], [])],
+        [_finding("visual_missing_for_figure_objective", ["explain"], ["explain-b1"])],
+    ]
+
+    async def _fake_structured(**_kwargs):
+        return TeachingPlanSemanticReviewDraft(reviewed=True, findings=findings_by_call.pop(0))
+
+    monkeypatch.setattr(semantic_review, "_run_structured", _fake_structured)
+    result = await semantic_review.review_teaching_plan_draft(
+        draft=draft, plan=plan, lesson_context={}
+    )
+    assert [finding.code for finding in result.findings] == [
+        "visual_missing_for_figure_objective"
+    ]
+    assert "visual_missing_for_figure_objective" in semantic_review.ADVISORY_ONLY_SEMANTIC_CODES
+
+    with pytest.raises(TeachingPlanSemanticReviewError):
+        await semantic_review.review_teaching_plan_draft(
+            draft=draft, plan=plan, lesson_context={}
+        )

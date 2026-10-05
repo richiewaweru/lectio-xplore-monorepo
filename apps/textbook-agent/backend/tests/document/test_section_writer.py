@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from curriculum.shared_tasks.models import SharedTaskSpec
-from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
+from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection, VisualSpec
 from document.shared_lesson.composer import (
     CompositionChoice,
     validate_and_build_composition,
@@ -25,7 +25,11 @@ from infra.authoring.model_policy import SHARED_SECTION_WRITER, get_v3_slot
 
 
 def _block(
-    block_id: str, position: int, intent: str, brief: str | None = None
+    block_id: str,
+    position: int,
+    intent: str,
+    brief: str | None = None,
+    visual: VisualSpec | None = None,
 ) -> TeachingPlanBlock:
     return TeachingPlanBlock(
         id=block_id,
@@ -33,6 +37,7 @@ def _block(
         intent=intent,
         brief=brief or intent,
         evidence=f"Learners can demonstrate {intent}.",
+        visual=visual,
     )
 
 
@@ -62,7 +67,16 @@ def _request() -> SectionWriterRequest:
         exit_state=["Learner predicts particle motion after heating"],
         specific_purpose="Explain and compare particle models",
         blocks=[
-            _block("block-intro", 0, "introduce the water model with a diagram"),
+            _block(
+                "block-intro",
+                0,
+                "introduce the water model with a diagram",
+                visual=VisualSpec(
+                    purpose="Show particle motion in water",
+                    must_show=["Water particles"],
+                    labels_required=["Particle"],
+                ),
+            ),
             _block("block-compare", 1, "compare experimental evidence from two models"),
         ],
     )
@@ -72,9 +86,6 @@ def _request() -> SectionWriterRequest:
         choices=[
             CompositionChoice(
                 teaching_block_id="block-intro", kind="paragraph", semantic_role="explanation"
-            ),
-            CompositionChoice(
-                teaching_block_id="block-intro", kind="figure", semantic_role="visual_model"
             ),
             CompositionChoice(
                 teaching_block_id="block-compare", kind="table", semantic_role="comparison"
@@ -180,7 +191,7 @@ def _payload_for_item(item) -> dict[str, Any]:
         payload["display"] = {"text": "Heating gives water particles more motion."}
     elif item.kind == "figure":
         payload["display"] = {"caption": "Particle motion after heating"}
-        payload["accessibility"] = {"alt_text": "Particles move faster after heating."}
+        del payload["accessibility"]  # the writer never authors alt text
     elif item.kind == "table":
         payload["display"] = {
             "headers": ["Model", "Particle motion"],
@@ -322,12 +333,47 @@ def test_rejects_unknown_fields_planning_leaks_placeholders_and_unapproved_numbe
             validate_and_build_section(request=request, draft=invalid)
 
 
-def test_rejects_missing_figure_alt_text_and_malformed_table_content() -> None:
+def test_figure_node_is_code_placed_with_pending_alt_and_writer_cannot_author_alt() -> None:
     request = _request()
-    invalid_figure = _draft(request)
-    del invalid_figure["nodes"][1]["accessibility"]["alt_text"]
+    figure_items = [item for item in request.composition_plan.items if item.kind == "figure"]
+    assert [(item.teaching_block_id, item.semantic_role) for item in figure_items] == [
+        ("block-intro", "visual_model")
+    ]
+    result = validate_and_build_section(request=request, draft=_draft(request))
+    figure = next(node for node in result.nodes if node.kind == "figure")
+    assert figure.display.caption == "Particle motion after heating"
+    assert figure.accessibility.alt_text == ""  # pending until media binds
+
+    with_alt = _draft(request)
+    with_alt["nodes"][1]["accessibility"] = {"alt_text": "Writer-authored alt"}
     with pytest.raises(SectionWriteValidationError):
-        validate_and_build_section(request=request, draft=invalid_figure)
+        validate_and_build_section(request=request, draft=with_alt)
+
+    blank_caption = _draft(request)
+    blank_caption["nodes"][1]["display"]["caption"] = "  "
+    with pytest.raises(SectionWriteValidationError, match="blank"):
+        validate_and_build_section(request=request, draft=blank_caption)
+
+
+def test_writer_payload_carries_each_blocks_visual_spec() -> None:
+    from document.shared_lesson.writer import _request_payload
+
+    request = _request()
+    payload = _request_payload(request, repair_scope="", errors=())
+    blocks = {block["id"]: block for block in payload["section_contract"]["blocks"]}
+    assert blocks["block-intro"]["visual"] == {
+        "mode": "diagram",
+        "purpose": "Show particle motion in water",
+        "must_show": ["Water particles"],
+        "labels_required": ["Particle"],
+        "must_not_show": [],
+        "required": True,
+    }
+    assert blocks["block-compare"]["visual"] is None
+
+
+def test_rejects_malformed_table_content() -> None:
+    request = _request()
 
     invalid_table = _draft(request)
     invalid_table["nodes"][2]["display"]["rows"] = [["Only one cell"]]

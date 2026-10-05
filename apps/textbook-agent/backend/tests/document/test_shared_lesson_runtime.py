@@ -614,7 +614,7 @@ async def test_writer_total_timeout_is_recorded_as_retryable_transport_failure(m
     recorded = []
 
     async def fake_claim(*_args, **_kwargs):
-        return SimpleNamespace(lease_token=1)
+        return SimpleNamespace(lease_token=1, run_id="run-1")
 
     async def fake_no_checkpoint(*_args, **_kwargs):
         return None
@@ -671,7 +671,7 @@ async def test_writer_timeout_records_failure_without_awaiting_cancel_resistant_
     recorded = []
 
     async def fake_claim(*_args, **_kwargs):
-        return SimpleNamespace(lease_token=1)
+        return SimpleNamespace(lease_token=1, run_id="run-1")
 
     async def fake_no_checkpoint(*_args, **_kwargs):
         return None
@@ -877,7 +877,7 @@ async def test_pending_source_is_rejected_before_work_item_claim(monkeypatch) ->
 
     async def fake_claim(*args, **kwargs):
         claim_calls.append((args, kwargs))
-        return SimpleNamespace(lease_token=1)
+        return SimpleNamespace(lease_token=1, run_id="run-1")
 
     monkeypatch.setattr("document.shared_lesson.runtime.claim_work_item", fake_claim)
     with pytest.raises(SectionRuntimeError, match="approved"):
@@ -1231,7 +1231,7 @@ async def test_late_provider_result_cannot_complete_after_lease_is_lost(monkeypa
             boundaries.append("commit")
 
     async def fake_claim(*_args, **_kwargs):
-        return SimpleNamespace(lease_token=9)
+        return SimpleNamespace(lease_token=9, run_id="run-1")
 
     async def fake_load(*_args, **_kwargs):
         return None

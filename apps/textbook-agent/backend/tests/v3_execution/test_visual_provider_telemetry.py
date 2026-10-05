@@ -183,3 +183,72 @@ async def test_visual_ledger_event_uses_generation_lookup_for_user_attribution()
     assert repo.saved[0]["user_id"] == "visual-owner"
     assert repo.saved[0]["generation_id"] == "gen-1"
     assert repo.saved[0]["node"] == "visual_executor"
+
+
+class _GenaiLikeForbidden(Exception):
+    code = 403
+
+
+def _patch_failing_provider(monkeypatch, exc: Exception, calls: list[int]) -> None:
+    class Client:
+        async def generate_image(self, *, prompt: str):
+            _ = prompt
+            calls.append(1)
+            raise exc
+
+    monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "false")
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: Client())
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: _Store())
+    monkeypatch.setattr(
+        "media.generation.executor.load_image_provider_spec",
+        lambda: SimpleNamespace(provider="gemini", model_name="gemini-image"),
+    )
+
+
+@pytest.mark.asyncio
+async def test_forbidden_provider_failure_is_specific_code_and_not_retried(monkeypatch) -> None:
+    calls: list[int] = []
+    _patch_failing_provider(monkeypatch, _GenaiLikeForbidden("PERMISSION_DENIED key=abc"), calls)
+
+    blocks = await execute_visual(
+        _order(), _emit, trace_id="t-403", generation_id="generation-403"
+    )
+
+    assert blocks[0].status == "failed"
+    assert blocks[0].error_code == "provider_http_403"
+    assert len(calls) == 1  # 403 is not hammered by the inner retry loop
+
+
+@pytest.mark.asyncio
+async def test_unknown_provider_failure_is_provider_error_and_retried(monkeypatch) -> None:
+    calls: list[int] = []
+    _patch_failing_provider(monkeypatch, RuntimeError("boom"), calls)
+
+    blocks = await execute_visual(
+        _order(), _emit, trace_id="t-err", generation_id="generation-err"
+    )
+
+    assert blocks[0].error_code == "provider_error"
+    assert len(calls) > 1
+
+
+@pytest.mark.asyncio
+async def test_qc_disabled_marks_block_unreviewed(monkeypatch) -> None:
+    class Client:
+        async def generate_image(self, *, prompt: str):
+            _ = prompt
+            return SimpleNamespace(bytes=b"image", format="png", mime_type="image/png")
+
+    monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "false")
+    monkeypatch.setenv("V3_VISUAL_QC_ENABLED", "false")
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: Client())
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: _Store())
+    monkeypatch.setattr(
+        "media.generation.executor.load_image_provider_spec",
+        lambda: SimpleNamespace(provider="xai", model_name="grok"),
+    )
+
+    blocks = await execute_visual(_order(), _emit, trace_id="t-qc", generation_id="g-qc")
+
+    assert blocks[0].status == "ready"
+    assert blocks[0].qc_state == "unreviewed"

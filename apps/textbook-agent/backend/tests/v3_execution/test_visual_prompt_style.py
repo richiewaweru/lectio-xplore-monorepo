@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
-from media.generation.prompt import build_visual_prompt
+from media.generation.prompt import NO_CAPTION_TEXT_CONSTRAINT, build_visual_prompt
 
 
 def test_visual_prompt_includes_diagram_precision_style_requirements() -> None:
@@ -68,3 +68,52 @@ def test_diagram_precision_provider_prompt_has_no_label_or_qc_text_permission() 
     assert "Short labels" not in prompt
     assert "LABELS REQUIRED" not in prompt
     assert "Fix label spelling" not in prompt
+
+
+def _order(mode: str, labels: list[str]) -> VisualGeneratorWorkOrder:
+    return VisualGeneratorWorkOrder(
+        work_order_id="vis-gem",
+        visual=VisualPlanItem(
+            id="vis-gem",
+            attaches_to="model",
+            mode=mode,
+            purpose="show the water cycle",
+            must_show=["a sea", "a cloud"],
+            labels_required=labels,
+        ),
+    )
+
+
+def test_gemini_prompt_with_labels_has_closed_text_set() -> None:
+    prompt = build_visual_prompt(
+        _order("diagram", ["evaporation", "condensation"]),
+        provider_renders_labels=True,
+    )
+
+    assert '"evaporation"' in prompt
+    assert '"condensation"' in prompt
+    assert "closed set" in prompt
+    assert "no paraphrases" in prompt
+    assert "educational diagram" in prompt
+    assert "LABELS REQUIRED" not in prompt
+
+
+def test_gemini_prompt_without_labels_renders_no_words() -> None:
+    prompt = build_visual_prompt(_order("diagram", []), provider_renders_labels=True)
+
+    assert "Render no words" in prompt
+    assert "LABELS REQUIRED" not in prompt
+
+
+def test_gemini_image_mode_is_illustration() -> None:
+    prompt = build_visual_prompt(_order("image", []), provider_renders_labels=True)
+
+    assert "educational illustration" in prompt
+    assert "educational diagram" not in prompt
+
+
+def test_non_gemini_prompt_keeps_labels_required_and_caption_constraint() -> None:
+    prompt = build_visual_prompt(_order("image", ["sea", "cloud"]))
+
+    assert "LABELS REQUIRED" in prompt
+    assert NO_CAPTION_TEXT_CONSTRAINT in prompt

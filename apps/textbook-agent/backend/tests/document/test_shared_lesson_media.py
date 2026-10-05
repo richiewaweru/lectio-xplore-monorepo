@@ -12,19 +12,18 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
     TeachingRevisionRecord,
+    VisualSpec,
 )
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.media import (
     SharedFigureMediaError,
     SharedFigureMediaProviderFailed,
-    bind_deferred_figure_media,
-    bind_deferred_figure_media_to_document,
     bind_figure_media_to_document,
     bind_generated_figure,
     build_figure_work_order,
     execute_figure_work_orders,
+    fallback_alt_text,
     validate_reusable_figure_asset,
-    verify_bound_deferred_figure_media,
     verify_bound_figure_media,
 )
 from document.shared_lesson.models import (
@@ -41,11 +40,6 @@ def _section(section_id: str, position: int, *, caption: str | None = None) -> S
     caption = caption or (
         "A leaf in sunlight" if section_id == "section-a" else "Energy moves from the source"
     )
-    alt_text = (
-        "A leaf receiving sunlight"
-        if section_id == "section-a"
-        else "Energy moving through a leaf from the source"
-    )
     node_id = "figure-a" if section_id == "section-a" else "figure-b"
     block_id = "block-a" if section_id == "section-a" else "block-b"
     return SharedSection(
@@ -58,7 +52,7 @@ def _section(section_id: str, position: int, *, caption: str | None = None) -> S
                 "kind": "figure",
                 "teaching_block_id": block_id,
                 "display": {"caption": caption},
-                "accessibility": {"alt_text": alt_text},
+                "accessibility": {"alt_text": ""},
             },
         ),
     )
@@ -82,6 +76,12 @@ def _source() -> TeachingPlanSource:
                     intent="Show the leaf",
                     brief="Show a leaf",
                     evidence="The learner identifies the leaf",
+                    visual=VisualSpec(
+                        purpose="Show how sunlight reaches a leaf",
+                        must_show=["Sun", "Leaf"],
+                        labels_required=["Sunlight", "Leaf"],
+                        must_not_show=["A person"],
+                    ),
                 )
             ],
         ),
@@ -101,6 +101,11 @@ def _source() -> TeachingPlanSource:
                     intent="Show energy movement",
                     brief="Show energy movement",
                     evidence="The learner follows energy",
+                    visual=VisualSpec(
+                        purpose="Show energy moving through a leaf",
+                        must_show=["Source", "Leaf"],
+                        labels_required=["Energy"],
+                    ),
                 )
             ],
         ),
@@ -162,7 +167,7 @@ def _shape(section_id: str) -> tuple[ExpectedNodeShape, ...]:
     )
 
 
-def _work(section_id: str = "section-a", *, facts=None, required: bool = True):
+def _work(section_id: str = "section-a", *, facts=None):
     section = _section(section_id, 0 if section_id == "section-a" else 1)
     return build_figure_work_order(
         _source(),
@@ -170,7 +175,6 @@ def _work(section_id: str = "section-a", *, facts=None, required: bool = True):
         figure_node_id="figure-a" if section_id == "section-a" else "figure-b",
         expected_shape=_shape(section_id),
         approved_source_facts=facts or {"fact-leaf": "The leaf receives sunlight."},
-        required=required,
     )
 
 
@@ -197,7 +201,7 @@ def _document(
 def _block(work, *, url: str | None = "https://cdn.example.test/image.png", status: str = "ready"):
     # Mirror the real executor's own output shape (media/generation/executor.py):
     # both caption and alt_text are set to the work order's purpose, which
-    # legitimately differs from the FigureNode's alt text (``must_show[0]``).
+    # legitimately differs from the spec-built fallback alt text.
     return GeneratedVisualBlock(
         visual_id=work.work_order.visual.id,
         attaches_to=work.figure_node_id,
@@ -217,9 +221,20 @@ def test_section_early_work_order_freezes_plan_section_and_figure_identity() -> 
     assert work.source_plan_id == "plan-1"
     assert work.source_plan_revision == 3
     assert work.section_output_hash
-    assert work.work_order.visual.purpose == "A leaf in sunlight"
-    assert work.work_order.visual.must_show == ["A leaf receiving sunlight"]
-    assert work.work_order.source_of_truth[0].text == "The leaf receives sunlight."
+    # The plan block's visual spec is authoritative -- not the caption/alt.
+    visual = work.work_order.visual
+    assert visual.purpose == "Show how sunlight reaches a leaf"
+    assert visual.must_show == ["Sun", "Leaf"]
+    assert visual.labels_required == ["Sunlight", "Leaf"]
+    assert visual.must_not_show == ["A person"]
+    assert visual.mode == "diagram"
+    assert visual.attaches_to == "figure-a"
+    assert work.required
+    entries = {entry.key: entry.text for entry in work.work_order.source_of_truth}
+    assert entries["fact-leaf"] == "The leaf receives sunlight."
+    assert entries["context:caption"] == "A leaf in sunlight"
+    # Only facts and writer context reach source_of_truth, never alt text.
+    assert set(entries) == {"fact-leaf", "context:caption"}
     assert work.work_order.work_order_id.startswith("shared-media-")
 
 
@@ -292,73 +307,6 @@ def test_changed_section_and_stale_document_are_rejected() -> None:
         bind_figure_media_to_document(ready, stale)
 
 
-def test_deferred_media_binds_only_after_document_hash_and_semantics_are_verified() -> None:
-    source = _source()
-    work = _work()
-    deferred = bind_deferred_figure_media(work, reason_code="media_provider_failed")
-
-    assert deferred.status == "deferred"
-    assert deferred.reason_code == "media_provider_failed"
-    assert not hasattr(deferred, "asset_id")
-    assert not hasattr(deferred, "asset_url")
-
-    bound = bind_deferred_figure_media_to_document(deferred, _document(source))
-    assert bound.source_document_id == "shared-media-lesson"
-    assert bound.source_document_hash == _document(source).content_hash
-    assert bound.reason_code == "media_provider_failed"
-    assert bound.status == "deferred"
-
-
-def test_deferred_media_rejects_unsupported_reason_code() -> None:
-    work = _work()
-    with pytest.raises(SharedFigureMediaError, match="reason_code"):
-        bind_deferred_figure_media(work, reason_code="media_executor_configuration")
-
-
-@pytest.mark.parametrize(
-    "mutate",
-    [
-        lambda value: value.model_copy(update={"source_document_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"section_output_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"figure_semantic_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"work_order_id": "shared-media-" + "c" * 64}),
-    ],
-)
-def test_deferred_media_verifier_rejects_stale_identity(mutate) -> None:
-    work = _work()
-    document = _document()
-    bound = bind_deferred_figure_media_to_document(
-        bind_deferred_figure_media(work, reason_code="media_invalid_output"), document
-    )
-    with pytest.raises(SharedFigureMediaError):
-        verify_bound_deferred_figure_media(mutate(bound), document)
-
-
-def test_deferred_media_verifier_recomputes_an_unchanged_result() -> None:
-    work = _work()
-    document = _document()
-    bound = bind_deferred_figure_media_to_document(
-        bind_deferred_figure_media(work, reason_code="media_provider_failed"), document
-    )
-
-    assert verify_bound_deferred_figure_media(bound, document) == bound
-
-
-@pytest.mark.parametrize(
-    "mutate",
-    [
-        lambda value: value.model_copy(update={"source_plan_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"section_output_hash": "b" * 64}),
-        lambda value: value.model_copy(update={"figure_node_id": "other-figure"}),
-    ],
-)
-def test_deferred_media_changed_identity_is_rejected_at_document_binding(mutate) -> None:
-    work = _work()
-    deferred = mutate(bind_deferred_figure_media(work, reason_code="media_invalid_output"))
-    with pytest.raises(SharedFigureMediaError):
-        bind_deferred_figure_media_to_document(deferred, _document())
-
-
 def test_pending_source_and_invalid_shape_or_facts_fail_before_media_order() -> None:
     source = _source()
     pending = source.model_copy(
@@ -408,7 +356,6 @@ def test_media_admission_keeps_hard_contract_but_leaves_bridge_to_boundary_qa() 
         figure_node_id="figure-b",
         expected_shape=_shape("section-b"),
         approved_source_facts={"fact-energy": "Energy moves through the leaf."},
-        required=True,
     )
     assert work.section_id == "section-b"
     assert work.required
@@ -477,7 +424,6 @@ def test_real_executor_shape_binds_even_when_caption_and_alt_text_differ() -> No
     # the FigureNode's own alt text (``must_show[0]``). Binding must accept
     # this real shape rather than rejecting a valid result.
     work = _work()
-    assert work.work_order.visual.purpose != work.work_order.visual.must_show[0]
     block = _block(work)
     assert block.caption == work.work_order.visual.purpose
     assert block.alt_text == work.work_order.visual.purpose
@@ -486,7 +432,8 @@ def test_real_executor_shape_binds_even_when_caption_and_alt_text_differ() -> No
 
     assert ready.asset_url == block.image_url
     assert not hasattr(ready, "caption")
-    assert not hasattr(ready, "alt_text")
+    # Alt is built in code from the spec, never taken from provider diagnostics.
+    assert ready.alt_text == fallback_alt_text(work.work_order.visual)
 
 
 def test_provider_diagnostics_never_replace_learner_figure_fields() -> None:
@@ -503,11 +450,12 @@ def test_provider_diagnostics_never_replace_learner_figure_fields() -> None:
     bound = bind_figure_media_to_document(ready, _document(source))
 
     assert not hasattr(bound, "caption")
-    assert not hasattr(bound, "alt_text")
+    assert bound.alt_text != "provider diagnostic"
+    assert bound.alt_text == fallback_alt_text(work.work_order.visual)
     section = next(item for item in _document(source).sections if item.id == work.section_id)
     node = next(item for item in section.nodes if item.id == work.figure_node_id)
     assert node.display.caption != "provider diagnostic"
-    assert node.accessibility.alt_text != "provider diagnostic"
+    assert node.accessibility.alt_text == ""  # pending until media binds
 
 
 def test_failed_provider_block_raises_provider_failed_not_invalid_output() -> None:
@@ -524,9 +472,7 @@ def test_failed_provider_block_raises_provider_failed_not_invalid_output() -> No
 
 def test_independent_figures_run_concurrently_and_required_failure_preserves_sibling() -> None:
     work_a = _work("section-a")
-    work_b = _work(
-        "section-b", facts={"fact-energy": "Energy moves through the leaf."}, required=False
-    )
+    work_b = _work("section-b", facts={"fact-energy": "Energy moves through the leaf."})
     works = (work_a, work_b)
 
     class Executor:
@@ -555,9 +501,7 @@ def test_independent_figures_run_concurrently_and_required_failure_preserves_sib
 
 def test_targeted_retry_preserves_healthy_sibling_output() -> None:
     work_a = _work("section-a")
-    work_b = _work(
-        "section-b", facts={"fact-energy": "Energy moves through the leaf."}, required=False
-    )
+    work_b = _work("section-b", facts={"fact-energy": "Energy moves through the leaf."})
     healthy = bind_generated_figure(work_b, [_block(work_b)])
     attempts = {"figure-a": 0}
 
@@ -599,6 +543,7 @@ def test_existing_asset_cannot_be_reused_for_new_work_order() -> None:
     section = _section("section-a", 0)
     payload = section.model_dump(mode="json")
     payload["nodes"][0]["display"]["asset_id"] = "asset-existing"
+    payload["nodes"][0]["accessibility"]["alt_text"] = "Existing alt"
     with pytest.raises(SharedFigureMediaError, match="already has a bound asset"):
         build_figure_work_order(
             _source(),
@@ -606,3 +551,246 @@ def test_existing_asset_cannot_be_reused_for_new_work_order() -> None:
             figure_node_id="figure-a",
             expected_shape=_shape("section-a"),
         )
+
+
+def _section_with_prose(caption: str, paragraph: str) -> SharedSection:
+    return SharedSection(
+        id="section-a",
+        title="The energy source",
+        position=0,
+        nodes=(
+            {
+                "id": "para-a",
+                "kind": "paragraph",
+                "teaching_block_id": "block-a",
+                "display": {"text": paragraph},
+                "accessibility": {},
+            },
+            {
+                "id": "figure-a",
+                "kind": "figure",
+                "teaching_block_id": "block-a",
+                "display": {"caption": caption},
+                "accessibility": {"alt_text": ""},
+            },
+        ),
+    )
+
+
+def _prose_shape() -> tuple[ExpectedNodeShape, ...]:
+    return (
+        ExpectedNodeShape(
+            id="para-a",
+            kind="paragraph",
+            teaching_block_id="block-a",
+            semantic_role="explanation",
+        ),
+        ExpectedNodeShape(
+            id="figure-a",
+            kind="figure",
+            teaching_block_id="block-a",
+            semantic_role="visual_model",
+        ),
+    )
+
+
+def test_work_order_carries_spec_caption_and_referring_sentences_not_caption_or_alt_only() -> None:
+    section = _section_with_prose(
+        "Sunlight reaches a leaf",
+        "Plants grow slowly. The diagram shows Sunlight hitting a Leaf. "
+        "Roots take in water. Each Leaf is flat.",
+    )
+    work = build_figure_work_order(
+        _source(),
+        section,
+        figure_node_id="figure-a",
+        expected_shape=_prose_shape(),
+        approved_source_facts={"fact-leaf": "The leaf receives sunlight."},
+    )
+
+    visual = work.work_order.visual
+    assert visual.purpose == "Show how sunlight reaches a leaf"
+    assert visual.purpose != section.nodes[1].display.caption
+    assert visual.must_show == ["Sun", "Leaf"]
+    assert visual.labels_required == ["Sunlight", "Leaf"]
+    assert visual.must_not_show == ["A person"]
+    entries = {entry.key: entry.text for entry in work.work_order.source_of_truth}
+    assert entries["context:caption"] == "Sunlight reaches a leaf"
+    # Exactly two referring sentences (figure word or a required label), in order.
+    assert entries["context:section-text-1"] == "The diagram shows Sunlight hitting a Leaf."
+    assert entries["context:section-text-2"] == "Each Leaf is flat."
+    assert "context:section-text-3" not in entries
+    assert "Plants grow slowly." not in entries.values()
+    assert entries["fact-leaf"] == "The leaf receives sunlight."
+
+
+def test_work_order_falls_back_to_first_sentence_when_nothing_refers_to_the_figure() -> None:
+    section = _section_with_prose("Sunlight reaches a leaf", "Plants grow slowly. Roots drink.")
+    work = build_figure_work_order(
+        _source(),
+        section,
+        figure_node_id="figure-a",
+        expected_shape=_prose_shape(),
+    )
+    entries = {entry.key: entry.text for entry in work.work_order.source_of_truth}
+    assert entries["context:section-text-1"] == "Plants grow slowly."
+    assert "context:section-text-2" not in entries
+
+
+def test_label_check_records_non_blocking_warnings_on_the_work_order() -> None:
+    section = _section_with_prose("A picture", "Plants grow slowly.")
+    work = build_figure_work_order(
+        _source(),
+        section,
+        figure_node_id="figure-a",
+        expected_shape=_prose_shape(),
+    )
+    assert work.warnings == ["label_missing:Sunlight", "label_missing:Leaf"]
+
+    covered = _section_with_prose("Sunlight and the leaf", "Plants grow slowly.")
+    work = build_figure_work_order(
+        _source(),
+        covered,
+        figure_node_id="figure-a",
+        expected_shape=_prose_shape(),
+    )
+    assert work.warnings == []
+
+
+def test_figure_whose_plan_block_has_no_visual_is_rejected() -> None:
+    source = _source()
+    plan = source.plan.model_copy(deep=True)
+    plan.sections[0].blocks[0].visual = None
+    digest = teaching_plan_content_hash(plan)
+    record = source.revision_record.model_copy(
+        update={"content_hash": digest, "plan": plan.model_dump(mode="json")}
+    )
+    no_visual = source.model_copy(
+        update={"plan": plan, "revision_record": record, "content_hash": digest}
+    )
+    with pytest.raises(SharedFigureMediaError, match="no visual spec"):
+        build_figure_work_order(
+            no_visual,
+            _section("section-a", 0),
+            figure_node_id="figure-a",
+            expected_shape=_shape("section-a"),
+        )
+
+
+def test_fallback_alt_text_is_built_from_the_spec_and_binds_with_the_ready_result() -> None:
+    spec = VisualSpec(
+        purpose="Show the water cycle",
+        must_show=["Evaporation", "Rain"],
+        labels_required=["Water vapour"],
+    )
+    assert fallback_alt_text(spec) == (
+        "Show the water cycle. Shows: Evaporation, Rain. Labels: Water vapour."
+    )
+    assert fallback_alt_text(VisualSpec(purpose="P", must_show=["A"])) == "P. Shows: A."
+    assert fallback_alt_text(VisualSpec(purpose="P.", must_show=["A"])) == "P. Shows: A."
+
+    work = _work()
+    ready = bind_generated_figure(work, [_block(work)])
+    assert ready.alt_text == fallback_alt_text(work.work_order.visual)
+    bound = bind_figure_media_to_document(ready, _document())
+    assert bound.alt_text == ready.alt_text
+    with pytest.raises(SharedFigureMediaError, match="alt text"):
+        bind_figure_media_to_document(ready.model_copy(update={"alt_text": " "}), _document())
+
+
+def test_runtime_verifier_rederives_with_the_shared_builder_against_the_plan_spec() -> None:
+    from document.shared_lesson.media_runtime import MediaSourceConflict, _verify_accepted_section
+
+    source = _source()
+    work = _work()
+    section = _section("section-a", 0)
+    _verify_accepted_section(work, section, source)  # honest order passes
+
+    forged = work.model_copy(
+        update={
+            "work_order": work.work_order.model_copy(
+                update={
+                    "visual": work.work_order.visual.model_copy(
+                        update={"purpose": "Forged", "labels_required": []}
+                    )
+                }
+            )
+        }
+    )
+    with pytest.raises(MediaSourceConflict, match="differs"):
+        _verify_accepted_section(forged, section, source)
+
+
+def test_image_prompt_renders_spec_labels_and_writer_context_for_the_non_precision_path() -> None:
+    from media.generation.prompt import build_visual_prompt
+
+    work = _work()
+    assert work.work_order.visual.visual_style is None  # not diagram_precision
+    prompt = build_visual_prompt(work.work_order)
+
+    assert "PURPOSE: Show how sunlight reaches a leaf" in prompt
+    assert "- Sun" in prompt and "- Leaf" in prompt  # MUST SHOW
+    assert "- A person" in prompt  # MUST NOT SHOW
+    assert "LABELS REQUIRED" in prompt and "Sunlight, Leaf" in prompt
+    assert "[context:caption] A leaf in sunlight" in prompt
+
+
+def test_bound_alt_text_uses_the_alt_line() -> None:
+    work = _work()
+    block = _block(work).model_copy(
+        update={"provider_text": "Here you go.\nALT:  A leaf under the sun with arrows.  \n"}
+    )
+
+    ready = bind_generated_figure(work, [block])
+
+    assert ready.alt_text == "A leaf under the sun with arrows."
+
+
+@pytest.mark.parametrize(
+    "provider_text",
+    [
+        (
+            "The generated diagram successfully meets all the pedagogical and visual "
+            "requirements. It is excellent for print."
+        ),
+        "ALT: The generated diagram successfully meets all the pedagogical requirements.",
+        "A leaf under the sun.",
+        "ALT: " + "word " * 100,
+    ],
+)
+def test_bound_alt_text_rejects_commentary_and_free_text(provider_text) -> None:
+    work = _work()
+    block = _block(work).model_copy(update={"provider_text": provider_text})
+
+    ready = bind_generated_figure(work, [block])
+
+    assert ready.alt_text == fallback_alt_text(work.work_order.visual)
+
+
+def test_gemini_prompt_asks_for_alt_line_only_when_provider_returns_text() -> None:
+    from media.generation.prompt import build_visual_prompt
+
+    work = _work()
+    assert "ALT: " in build_visual_prompt(work.work_order, provider_renders_labels=True)
+    assert "ALT: " not in build_visual_prompt(work.work_order)
+
+
+@pytest.mark.parametrize("provider_text", [None, "", "   \n "])
+def test_bound_alt_text_falls_back_to_spec_without_provider_text(provider_text) -> None:
+    work = _work()
+    block = _block(work).model_copy(update={"provider_text": provider_text})
+
+    ready = bind_generated_figure(work, [block])
+
+    assert ready.alt_text == fallback_alt_text(work.work_order.visual)
+
+
+def test_bound_media_carries_qc_state_through_document_binding() -> None:
+    work = _work()
+    block = _block(work).model_copy(update={"qc_state": "flagged"})
+
+    ready = bind_generated_figure(work, [block])
+
+    assert ready.qc_state == "flagged"
+    assert _block(work).qc_state == "unreviewed"
+    assert bind_generated_figure(work, [_block(work)]).qc_state == "unreviewed"

@@ -31,7 +31,6 @@ def _section(**overrides: object) -> dict:
         "role": "orient",
         "title": "Opening",
         "card_id": None,
-        "visual_required": False,
         "transition_note": None,
     }
     payload.update(overrides)
@@ -180,7 +179,6 @@ def test_schema_exposes_typed_definitions_not_free_form_objects() -> None:
         "role",
         "title",
         "card_id",
-        "visual_required",
         "transition_note",
         "components",
     }
@@ -238,3 +236,10 @@ def test_page_plan_rejects_upstream_identity_fields() -> None:
                 ],
             }
         )
+
+
+def test_path_structural_section_loads_stored_payload_with_retired_visual_required() -> None:
+    section = PathStructuralSection.model_validate(_section(visual_required=True))
+    assert not hasattr(section, "visual_required")
+    assert "visual_required" not in section.model_dump()
+    assert "visual_required" not in PathStructuralSection.model_json_schema()["properties"]

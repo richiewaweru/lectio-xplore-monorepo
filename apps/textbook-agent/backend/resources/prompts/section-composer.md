@@ -6,11 +6,13 @@ preserving the supplied block order. Choose form and role only; do not write
 learner-facing prose, task wording, IDs, TaskAnchors, Learn widgets, Print
 layout, or path-specific content.
 
-Use only these ordinary kinds: `paragraph`, `heading`, `list`, `figure`,
-`table`, and `callout`. Use only these semantic roles: `bridge`, `explanation`,
+Use only these ordinary kinds: `paragraph`, `heading`, `list`, `table`, and
+`callout`. Use only these semantic roles: `bridge`, `explanation`,
 `worked_example`, `interpretation`, `summary`, `sequence`, `comparison`,
-`evidence`, `visual_model`, `visual_interpretation`, `misconception`,
-`safety_guidance`, and `subsection`.
+`evidence`, `misconception`, `safety_guidance`, and `subsection`.
+Figures are placed by code from the teaching plan and must not be emitted. A
+block's `visual` field is context only; still give that block its ordinary
+node(s) as usual.
 
 The deterministic validator decides eligibility from only the current block's
 `intent`, `brief`, and `evidence`, using case-insensitive substring matches.
@@ -20,9 +22,6 @@ always eligible. Specialized form eligibility is exact:
 
 - `heading` / `subsection`: the block text contains `subsection`, `subtopic`,
   `case study`, `phase`, `stage`, or `category`.
-- `figure` / `visual_model` or `visual_interpretation`: it contains `visual`,
-  `diagram`, `figure`, `show`, `model`, `structure`, `part`, `flow`, `map`, or
-  `image`.
 - `table` / `comparison` or `evidence`: it contains `compare`, `contrast`,
   `relationship`, `data`, or `evidence`.
 - `list` / `sequence` or `evidence`: it contains `sequence`, `step`, `stage`,
@@ -39,8 +38,7 @@ the `misconception` role.
 Match roles to kinds exactly: paragraphs allow `bridge`, `explanation`,
 `worked_example`, `interpretation`, `summary`, `evidence`, `misconception`, and
 `safety_guidance`; headings allow only `subsection`; lists allow only `sequence`
-and `evidence`; figures allow only `visual_model` and `visual_interpretation`;
-tables allow only `comparison` and `evidence`; callouts allow only `misconception`
+and `evidence`; tables allow only `comparison` and `evidence`; callouts allow only `misconception`
 and `safety_guidance`. Keep paragraph runs to at most two, each block to at most
 two ordinary nodes, and the section to ten ordinary nodes.
 
@@ -54,8 +52,8 @@ count of zero. A block with no task does not break a run.
 Before choosing kinds, pre-plan: scan the blocks in order and find every run of
 three or more consecutive blocks that would otherwise all need a paragraph (no
 TaskAnchor breaks them). For each such run, check every block in it against the
-cue lists above and pick an eligible non-paragraph kind (list, table, figure,
-heading, or callout) for at least one block in the run, using the exact cue
+cue lists above and pick an eligible non-paragraph kind (list, table, heading,
+or callout) for at least one block in the run, using the exact cue
 word that block's `intent`, `brief`, or `evidence` contains. If, and only if,
 none of the blocks in that run contain any cue for any non-paragraph kind, the
 run may stay all paragraphs.

@@ -146,7 +146,7 @@ def _node_text(node: SharedLessonNode) -> str:
     if isinstance(node, ListNode):
         return " ".join(node.display.items)
     if isinstance(node, FigureNode):
-        return f"{node.display.caption} {node.accessibility.alt_text}"
+        return " ".join(part for part in (node.display.caption, node.accessibility.alt_text) if part)
     if isinstance(node, TableNode):
         return " ".join(
             (
@@ -158,6 +158,11 @@ def _node_text(node: SharedLessonNode) -> str:
     if isinstance(node, CalloutNode):
         return f"{node.display.title} {node.display.body}"
     return ""
+
+
+def node_text(node: SharedLessonNode) -> str:
+    """Flatten one node's learner-visible text (public alias for media/consistency checks)."""
+    return _node_text(node)
 
 
 def _node_parts(section: SharedSection) -> tuple[_TextPart, ...]:
@@ -353,7 +358,13 @@ def _primitive_issues(section: SharedSection) -> list[ContinuityIssue]:
                     [node.id],
                 )
             )
-        if isinstance(node, FigureNode) and not _meaningful(node.accessibility.alt_text):
+        # A pending figure (no bound asset yet) legitimately has empty alt; media
+        # binding fills it, so only a bound figure must carry alt text.
+        if (
+            isinstance(node, FigureNode)
+            and node.display.asset_id is not None
+            and not _meaningful(node.accessibility.alt_text)
+        ):
             issues.append(
                 _issue(
                     "figure_alt_text_missing",
@@ -647,6 +658,7 @@ __all__ = [
     "SectionRepairEngine",
     "SectionRepairRequest",
     "coerce_expected_node_shape",
+    "node_text",
     "repair_affected_section_once",
     "validate_section_boundary",
     "validate_section_continuity",

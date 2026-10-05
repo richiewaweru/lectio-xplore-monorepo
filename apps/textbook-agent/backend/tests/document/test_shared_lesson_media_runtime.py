@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.dialects import postgresql
 
-from document.shared_lesson.media import SharedFigureWorkOrder
+from document.shared_lesson.media import SharedFigureWorkOrder, rebuild_figure_work_order
 from document.shared_lesson.media_runtime import (
     MediaRuntimeError,
     MediaRuntimeOutcome,
@@ -22,7 +22,6 @@ from document.shared_lesson.media_runtime import (
     execute_figure_media_work_item,
     execute_figure_media_work_items,
     find_active_figure_media_work_item,
-    frozen_figure_semantic_hash,
     project_media_readiness,
     work_order_from_composition_identity,
 )
@@ -55,6 +54,7 @@ from infra.generation_runtime import (
     WorkItemUnavailable,
 )
 from media.generation.contracts import (
+    SourceOfTruthEntry,
     GeneratedVisualBlock,
     VisualGeneratorWorkOrder,
     VisualPlanItem,
@@ -123,45 +123,47 @@ async def _seed_run(session, *, suffix: str = "a"):
     return owner, admitted.record.id
 
 
-def _work(*, suffix: str = "a", required: bool = True) -> SharedFigureWorkOrder:
+def _work_for(
+    accepted: SharedSection,
+    *,
+    purpose: str,
+    must_show: list[str],
+    required: bool = True,
+) -> SharedFigureWorkOrder:
+    """Build a frozen work order with the one shared builder (identity-only path)."""
+    suffix = accepted.id.removeprefix("section-")
     figure_id = f"figure-{suffix}"
-    accepted = _accepted_section(suffix)
-    order = VisualGeneratorWorkOrder(
-        work_order_id="placeholder",
-        resource_type="shared_lesson_figure",
-        dependency="section_text",
-        visual=VisualPlanItem(
-            id="placeholder",
-            attaches_to=figure_id,
-            mode="diagram",
-            purpose=f"A diagram for {suffix}",
-            must_show=[f"The {suffix} relationship"],
-        ),
-    )
     draft = SharedFigureWorkOrder(
         source_plan_id=SOURCE.source_artifact_id,
         source_plan_revision=SOURCE.source_revision,
         source_plan_hash=SOURCE.source_hash,
-        section_id=f"section-{suffix}",
+        section_id=accepted.id,
         section_output_hash=accepted_section_output_hash(accepted),
         figure_node_id=figure_id,
         figure_semantic_hash="0" * 64,
         required=required,
-        work_order=order,
-    )
-    semantic_hash = frozen_figure_semantic_hash(draft, accepted)
-    return draft.model_copy(
-        update={
-            "figure_semantic_hash": semantic_hash,
-            "work_order": order.model_copy(
-                update={
-                    "work_order_id": f"shared-media-{semantic_hash}",
-                    "visual": order.visual.model_copy(
-                        update={"id": f"shared-figure-{semantic_hash[:24]}"}
-                    ),
-                }
+        work_order=VisualGeneratorWorkOrder(
+            work_order_id="placeholder",
+            resource_type="shared_lesson_figure",
+            dependency="section_text",
+            visual=VisualPlanItem(
+                id="placeholder",
+                attaches_to=figure_id,
+                mode="diagram",
+                purpose=purpose,
+                must_show=must_show,
             ),
-        }
+        ),
+    )
+    return rebuild_figure_work_order(draft, accepted)
+
+
+def _work(*, suffix: str = "a", required: bool = True) -> SharedFigureWorkOrder:
+    return _work_for(
+        _accepted_section(suffix),
+        purpose=f"A diagram for {suffix}",
+        must_show=[f"The {suffix} relationship"],
+        required=required,
     )
 
 
@@ -169,10 +171,9 @@ def _accepted_section(
     suffix: str,
     *,
     caption: str | None = None,
-    alt_text: str | None = None,
+    alt_text: str = "",
 ) -> SharedSection:
     caption = caption or f"A diagram for {suffix}"
-    alt_text = alt_text or f"The {suffix} relationship"
     return SharedSection(
         id=f"section-{suffix}",
         title=f"Section {suffix}",
@@ -392,16 +393,23 @@ async def test_changed_active_figure_requires_linked_replacement_and_preserves_s
 async def test_forged_work_order_is_rejected_against_accepted_section(db_session) -> None:
     owner, run_id = await _seed_run(db_session)
     accepted = _accepted_section("a")
-    forged = _work().model_copy(
+    # Identity-only source: the spec is read back from the work order, so the
+    # shared builder still catches forged writer context. (A forged spec is
+    # caught against the approved plan; see test_shared_lesson_media.py.)
+    work = _work()
+    forged = work.model_copy(
         update={
-            "work_order": _work().work_order.model_copy(
+            "work_order": work.work_order.model_copy(
                 update={
-                    "visual": _work().work_order.visual.model_copy(update={"purpose": "Forged"})
+                    "source_of_truth": [
+                        *work.work_order.source_of_truth,
+                        SourceOfTruthEntry(key="context:caption", text="Forged caption"),
+                    ]
                 }
             )
         }
     )
-    with pytest.raises(MediaSourceConflict, match="purpose"):
+    with pytest.raises(MediaSourceConflict, match="differs"):
         await admit_figure_media_work_item(
             db_session,
             run_id=run_id,
@@ -441,39 +449,12 @@ async def test_non_ascii_section_hash_and_semantics_match_media_canonicalization
 ) -> None:
     owner, run_id = await _seed_run(db_session, suffix="unicode")
     accepted = _accepted_section(
-        "é", caption="Énergie solaire", alt_text="Relation énergie lumière"
+        "é", caption="Énergie solaire"
     )
-    draft = _work(suffix="é").model_copy(
-        update={
-            "section_output_hash": accepted_section_output_hash(accepted),
-            "figure_semantic_hash": "0" * 64,
-            "work_order": _work(suffix="é").work_order.model_copy(
-                update={
-                    "work_order_id": "placeholder",
-                    "visual": _work(suffix="é").work_order.visual.model_copy(
-                        update={
-                            "id": "placeholder",
-                            "purpose": "Énergie solaire",
-                            "must_show": ["Relation énergie lumière"],
-                        }
-                    ),
-                }
-            ),
-        }
-    )
-    semantic_hash = frozen_figure_semantic_hash(draft, accepted)
-    work = draft.model_copy(
-        update={
-            "figure_semantic_hash": semantic_hash,
-            "work_order": draft.work_order.model_copy(
-                update={
-                    "work_order_id": f"shared-media-{semantic_hash}",
-                    "visual": draft.work_order.visual.model_copy(
-                        update={"id": f"shared-figure-{semantic_hash[:24]}"}
-                    ),
-                }
-            ),
-        }
+    work = _work_for(
+        accepted,
+        purpose="Énergie solaire",
+        must_show=["Relation énergie lumière"],
     )
     admitted = await admit_figure_media_work_item(
         db_session,
@@ -671,39 +652,12 @@ async def test_repaired_figure_uses_linked_replacement_and_active_readiness(db_s
         )
     )
     repaired_section = _accepted_section(
-        "a", caption="A repaired diagram", alt_text="The repaired relationship"
+        "a", caption="A repaired diagram"
     )
-    repaired_draft = original.model_copy(
-        update={
-            "section_output_hash": accepted_section_output_hash(repaired_section),
-            "figure_semantic_hash": "0" * 64,
-            "work_order": original.work_order.model_copy(
-                update={
-                    "work_order_id": "placeholder",
-                    "visual": original.work_order.visual.model_copy(
-                        update={
-                            "id": "placeholder",
-                            "purpose": "A repaired diagram",
-                            "must_show": ["The repaired relationship"],
-                        }
-                    ),
-                }
-            ),
-        }
-    )
-    repaired_hash = frozen_figure_semantic_hash(repaired_draft, repaired_section)
-    repaired = repaired_draft.model_copy(
-        update={
-            "figure_semantic_hash": repaired_hash,
-            "work_order": repaired_draft.work_order.model_copy(
-                update={
-                    "work_order_id": f"shared-media-{repaired_hash}",
-                    "visual": repaired_draft.work_order.visual.model_copy(
-                        update={"id": f"shared-figure-{repaired_hash[:24]}"}
-                    ),
-                }
-            ),
-        }
+    repaired = _work_for(
+        repaired_section,
+        purpose="A repaired diagram",
+        must_show=["The repaired relationship"],
     )
     replacement = await admit_repaired_figure_media_work_item(
         db_session,
@@ -1103,11 +1057,13 @@ async def test_failed_status_block_is_provider_failed_not_invalid_output(db_sess
     )
 
     assert outcome.media is None
-    assert outcome.error_code == "media_provider_failed"
+    assert outcome.error_code == "provider_error"
     row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
     assert row is not None
     assert row.status == "failed_recoverable"
-    assert row.error_code == "media_provider_failed"
+    assert row.error_code == "provider_error"
+    assert row.recovery_action == "retry"
+    assert "dead image API" not in (row.error_summary or "")
     assert row.error_class == "provider_transport"
 
     events = list(
@@ -1169,212 +1125,6 @@ async def test_empty_block_list_still_classifies_as_invalid_output(db_session) -
 
 
 @pytest.mark.asyncio
-async def test_media_optional_on_defers_provider_failure_to_ready_work_item(db_session) -> None:
-    # The local-only, default-OFF switch: a provider failure that would
-    # otherwise leave the work item failed_recoverable instead completes it
-    # READY with a closed, asset-free deferred output.
-    owner, run_id = await _seed_run(db_session, suffix="media-optional-provider")
-    work = _work(suffix="media-optional-provider")
-    admitted = await admit_figure_media_work_item(
-        db_session,
-        run_id=run_id,
-        owner_user_id=owner,
-        source=SOURCE,
-        work=work,
-        accepted_section=_accepted_for(work),
-    )
-
-    outcome = await execute_figure_media_work_item(
-        MediaWorkItemJob(
-            session=db_session,
-            work_item_id=admitted.record.id,
-            worker_id="media-optional-provider-worker",
-            source=SOURCE,
-            work=work,
-            accepted_section=_accepted_for(work),
-            executor=_ProviderFailedExecutor(work),
-        ),
-        media_optional=True,
-    )
-
-    assert outcome.error_code is None
-    assert outcome.media is not None
-    assert outcome.media.status == "deferred"
-    assert outcome.media.reason_code == "media_provider_failed"
-
-    row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
-    assert row is not None
-    assert row.status == "ready"
-    assert row.output_json["status"] == "deferred"
-    assert row.output_json["reason_code"] == "media_provider_failed"
-    assert "asset_id" not in row.output_json
-    assert "asset_url" not in row.output_json
-
-    events = list(
-        (
-            await db_session.scalars(
-                select(GenerationEventModel).where(
-                    GenerationEventModel.work_item_id == admitted.record.id
-                )
-            )
-        ).all()
-    )
-    diagnostic = next(event for event in events if event.event_type == "media_deferred")
-    assert diagnostic.error_code == "media_provider_failed"
-    assert diagnostic.safe_payload_json == {
-        "media_status": "deferred",
-        "reason_code": "media_provider_failed",
-    }
-
-
-@pytest.mark.asyncio
-async def test_media_optional_on_defers_invalid_output_to_ready_work_item(db_session) -> None:
-    owner, run_id = await _seed_run(db_session, suffix="media-optional-invalid")
-    work = _work(suffix="media-optional-invalid")
-    admitted = await admit_figure_media_work_item(
-        db_session,
-        run_id=run_id,
-        owner_user_id=owner,
-        source=SOURCE,
-        work=work,
-        accepted_section=_accepted_for(work),
-    )
-
-    outcome = await execute_figure_media_work_item(
-        MediaWorkItemJob(
-            session=db_session,
-            work_item_id=admitted.record.id,
-            worker_id="media-optional-invalid-worker",
-            source=SOURCE,
-            work=work,
-            accepted_section=_accepted_for(work),
-            executor=_Executor(work, fail=True),
-        ),
-        media_optional=True,
-    )
-
-    assert outcome.media is not None
-    assert outcome.media.status == "deferred"
-    assert outcome.media.reason_code == "media_invalid_output"
-    row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
-    assert row is not None
-    assert row.status == "ready"
-    assert row.output_json["reason_code"] == "media_invalid_output"
-
-
-@pytest.mark.asyncio
-async def test_media_optional_on_leaves_successful_execution_unchanged(db_session) -> None:
-    owner, run_id = await _seed_run(db_session, suffix="media-optional-success")
-    work = _work(suffix="media-optional-success")
-    admitted = await admit_figure_media_work_item(
-        db_session,
-        run_id=run_id,
-        owner_user_id=owner,
-        source=SOURCE,
-        work=work,
-        accepted_section=_accepted_for(work),
-    )
-
-    outcome = await execute_figure_media_work_item(
-        MediaWorkItemJob(
-            session=db_session,
-            work_item_id=admitted.record.id,
-            worker_id="media-optional-success-worker",
-            source=SOURCE,
-            work=work,
-            accepted_section=_accepted_for(work),
-            executor=_Executor(work),
-        ),
-        media_optional=True,
-    )
-
-    assert outcome.media is not None
-    assert outcome.media.status == "ready"
-    assert outcome.media.asset_url == "https://cdn.example.test/figure.png"
-    row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
-    assert row is not None
-    assert row.status == "ready"
-    assert row.output_json["status"] == "ready"
-
-
-@pytest.mark.asyncio
-async def test_media_optional_explicitly_off_keeps_provider_failure_recoverable(
-    db_session,
-) -> None:
-    # The switch must be explicitly opted into; passing media_optional=False
-    # keeps today's failed_recoverable behaviour even though the same
-    # provider failure would be deferred when the switch is on.
-    owner, run_id = await _seed_run(db_session, suffix="media-optional-explicit-off")
-    work = _work(suffix="media-optional-explicit-off")
-    admitted = await admit_figure_media_work_item(
-        db_session,
-        run_id=run_id,
-        owner_user_id=owner,
-        source=SOURCE,
-        work=work,
-        accepted_section=_accepted_for(work),
-    )
-
-    outcome = await execute_figure_media_work_item(
-        MediaWorkItemJob(
-            session=db_session,
-            work_item_id=admitted.record.id,
-            worker_id="media-optional-explicit-off-worker",
-            source=SOURCE,
-            work=work,
-            accepted_section=_accepted_for(work),
-            executor=_ProviderFailedExecutor(work),
-        ),
-        media_optional=False,
-    )
-
-    assert outcome.media is None
-    assert outcome.error_code == "media_provider_failed"
-    row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
-    assert row is not None
-    assert row.status == "failed_recoverable"
-
-
-@pytest.mark.asyncio
-async def test_media_optional_on_never_defers_programming_or_config_failures(db_session) -> None:
-    # Luna rule: programming/auth/config errors never become a semantic
-    # fallback. The media-optional switch must not defer them even when on.
-    owner, run_id = await _seed_run(db_session, suffix="media-optional-config")
-    work = _work(suffix="media-optional-config")
-    admitted = await admit_figure_media_work_item(
-        db_session,
-        run_id=run_id,
-        owner_user_id=owner,
-        source=SOURCE,
-        work=work,
-        accepted_section=_accepted_for(work),
-    )
-
-    class MisconfiguredExecutor:
-        async def execute_figure(self, _order):
-            raise PermissionError("provider credentials rejected")
-
-    outcome = await execute_figure_media_work_item(
-        MediaWorkItemJob(
-            session=db_session,
-            work_item_id=admitted.record.id,
-            worker_id="media-optional-config-worker",
-            source=SOURCE,
-            work=work,
-            accepted_section=_accepted_for(work),
-            executor=MisconfiguredExecutor(),
-        ),
-        media_optional=True,
-    )
-
-    assert outcome.media is None
-    assert outcome.error_code == "media_executor_configuration"
-    row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
-    assert row is not None
-    assert row.status == "failed_terminal"
-
-
-@pytest.mark.asyncio
 async def test_find_active_figure_media_work_item_locates_current_leaf(db_session) -> None:
     owner, run_id = await _seed_run(db_session, suffix="find-active")
     work = _work(suffix="find-active")
@@ -1429,39 +1179,12 @@ async def test_find_active_figure_media_work_item_follows_replacement(db_session
         )
     )
     repaired_section = _accepted_section(
-        "find-active-repair", caption="A repaired diagram", alt_text="The repaired relationship"
+        "find-active-repair", caption="A repaired diagram"
     )
-    repaired_draft = original.model_copy(
-        update={
-            "section_output_hash": accepted_section_output_hash(repaired_section),
-            "figure_semantic_hash": "0" * 64,
-            "work_order": original.work_order.model_copy(
-                update={
-                    "work_order_id": "placeholder",
-                    "visual": original.work_order.visual.model_copy(
-                        update={
-                            "id": "placeholder",
-                            "purpose": "A repaired diagram",
-                            "must_show": ["The repaired relationship"],
-                        }
-                    ),
-                }
-            ),
-        }
-    )
-    repaired_hash = frozen_figure_semantic_hash(repaired_draft, repaired_section)
-    repaired = repaired_draft.model_copy(
-        update={
-            "figure_semantic_hash": repaired_hash,
-            "work_order": repaired_draft.work_order.model_copy(
-                update={
-                    "work_order_id": f"shared-media-{repaired_hash}",
-                    "visual": repaired_draft.work_order.visual.model_copy(
-                        update={"id": f"shared-figure-{repaired_hash[:24]}"}
-                    ),
-                }
-            ),
-        }
+    repaired = _work_for(
+        repaired_section,
+        purpose="A repaired diagram",
+        must_show=["The repaired relationship"],
     )
     replacement = await admit_repaired_figure_media_work_item(
         db_session,

@@ -13,7 +13,6 @@ from curriculum.teaching_plan.models import LearnerActionId, TeachingPlanSection
 from document.shared_lesson.composer import CompositionItem, SectionCompositionPlan
 from document.shared_lesson.models import (
     CalloutDisplay,
-    FigureAccessibility,
     FigureDisplay,
     HeadingDisplay,
     ListDisplay,
@@ -189,8 +188,9 @@ class WrittenList(_WrittenNodeBase):
 
 class WrittenFigure(_WrittenNodeBase):
     kind: Literal["figure"]
+    #: Caption only. Alt text is never writer-authored; the persisted figure
+    #: node carries an empty (pending) alt until media binds the ready result.
     display: FigureDisplay
-    accessibility: FigureAccessibility
 
 
 class WrittenTable(_WrittenNodeBase):
@@ -362,7 +362,9 @@ def _composition_error(
 
 def _node_text_values(node: WrittenNode) -> list[str]:
     display = node.display.model_dump(mode="json")
-    accessibility = node.accessibility.model_dump(mode="json")
+    accessibility = (
+        node.accessibility.model_dump(mode="json") if hasattr(node, "accessibility") else {}
+    )
     values: list[str] = []
     for mapping in (display, accessibility):
         for key, value in mapping.items():
@@ -500,7 +502,7 @@ def _check_learner_text(
     elif isinstance(node, WrittenList):
         required.extend(node.display.items)
     elif isinstance(node, WrittenFigure):
-        required.append(node.accessibility.alt_text)
+        required.append(node.display.caption)
     elif isinstance(node, WrittenTable):
         if not node.display.headers or not node.display.rows:
             raise _composition_error(
@@ -653,6 +655,9 @@ def validate_and_build_section(
             warnings=warnings,
         )
         payload = written.model_dump(mode="json")
+        if isinstance(written, WrittenFigure):
+            # Alt text is pending until media binds the ready result.
+            payload["accessibility"] = {"alt_text": ""}
         try:
             node_by_id[written.id] = shared_lesson_node_adapter.validate_python(payload)
         except ValidationError as exc:
@@ -697,6 +702,23 @@ def validate_and_build_section(
     )
 
 
+def ordinary_nodes_as_draft(nodes: Sequence[SharedLessonNode]) -> SectionWriterDraft:
+    """Re-express persisted ordinary nodes as a writer draft.
+
+    Figures keep no writer-authored accessibility (alt is pending until media
+    binds), so it is dropped here instead of failing the closed writer schema.
+    """
+    payloads: list[dict[str, Any]] = []
+    for node in nodes:
+        if node.kind == "task_anchor":
+            continue
+        payload = node.model_dump(mode="json")
+        if node.kind == "figure":
+            payload.pop("accessibility", None)
+        payloads.append(payload)
+    return SectionWriterDraft.model_validate({"nodes": payloads})
+
+
 def _request_payload(
     request: SectionWriterRequest,
     *,
@@ -719,6 +741,11 @@ def _request_payload(
                     "intent": block.intent,
                     "brief": block.brief,
                     "evidence": block.evidence,
+                    "visual": (
+                        block.visual.model_dump(mode="json")
+                        if block.visual is not None
+                        else None
+                    ),
                 }
                 for block in request.section.blocks
             ],
@@ -840,6 +867,7 @@ __all__ = [
     "WrittenNode",
     "WrittenParagraph",
     "WrittenTable",
+    "ordinary_nodes_as_draft",
     "validate_and_build_section",
     "write_section",
 ]

@@ -362,6 +362,11 @@ async def claim_work_item(
             if result.rowcount != 1:
                 raise WorkItemUnavailable("generation work item was claimed concurrently")
 
+            # Lock order is item -> Run, and the Run lock is taken exclusively
+            # (never FOR SHARE).  Every later step of the same transaction
+            # (checkpoint load, completion, failure) re-locks the Run FOR
+            # UPDATE; two concurrent claims each holding a shared Run lock
+            # would deadlock on that upgrade.
             if run.status == "queued":
                 run_started = await session.execute(
                     update(GenerationRunModel)
@@ -379,7 +384,7 @@ async def claim_work_item(
                     current_run_status = await session.scalar(
                         select(GenerationRunModel.status)
                         .where(GenerationRunModel.id == run.id)
-                        .with_for_update(read=True)
+                        .with_for_update()
                     )
                     if current_run_status != "running":
                         raise WorkItemUnavailable("generation run changed before item claim")
@@ -387,7 +392,7 @@ async def claim_work_item(
                 current_run_status = await session.scalar(
                     select(GenerationRunModel.status)
                     .where(GenerationRunModel.id == run.id)
-                    .with_for_update(read=True)
+                    .with_for_update()
                 )
                 if current_run_status != "running":
                     raise WorkItemUnavailable("generation run changed before item claim")

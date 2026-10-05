@@ -21,6 +21,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError
 
 from curriculum.teaching_plan.models import TeachingPlanSection
 from document.shared_lesson.boundary import (
@@ -32,7 +33,11 @@ from document.shared_lesson.boundary import (
     validate_and_repair_boundary,
 )
 from document.shared_lesson.models import SharedSection
-from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
+from document.shared_lesson.runtime import (
+    TeachingPlanSource,
+    rollback_for_failure_record,
+    verify_teaching_plan_source,
+)
 from document.shared_lesson.writer import SectionWriteResult, SectionWriterRequest
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
@@ -672,6 +677,14 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
             safe_summary="Boundary semantic provider transport failed.",
             recovery_action=RecoveryAction.RETRY,
         )
+    if isinstance(exc, DBAPIError):
+        # Raw database faults are transient infrastructure errors; retryable.
+        return WorkItemFailure(
+            error_code="database_transient",
+            error_class=ErrorClass.PROVIDER_TRANSPORT,
+            safe_summary="A transient database error interrupted boundary validation.",
+            recovery_action=RecoveryAction.RETRY,
+        )
     if isinstance(exc, (BoundaryCheckpointError, BoundarySourceConflict)):
         return WorkItemFailure(
             error_code="boundary_checkpoint_integrity",
@@ -779,6 +792,7 @@ async def execute_boundary_work_item(
         lease_seconds=job.lease_seconds,
         now=now,
     )
+    claimed_lease_token = item.lease_token or 0
     # Keep a reserve inside the item lease for the final fenced recheck and
     # failure/completion persistence.  All semantic review and targeted
     # repair calls share this one aggregate deadline.
@@ -813,23 +827,26 @@ async def execute_boundary_work_item(
         raise
     except Exception as exc:  # noqa: BLE001 - persist unknown checkpoint failures as typed failures.
         # A checkpoint read/write failure may leave the session's transaction
-        # aborted (e.g. a SQL error). The claim above is not yet committed, so
-        # rollback clears the failed transaction and the item must be
-        # reclaimed under a fresh fence before the typed failure can persist.
-        rollback = getattr(job.session, "rollback", None)
-        failure_lease_token = item.lease_token or 0
-        transaction_failed = getattr(job.session, "is_active", True) is False
-        if callable(rollback) and transaction_failed:
-            await rollback()
-            item = await claim_work_item(
+        # aborted (e.g. a SQL error) even while ``is_active`` is True, so
+        # always roll back first. The claim above is not yet committed, so the
+        # item is reclaimed under a fresh fence before the typed failure can
+        # persist. ORM attributes were captured before this rollback expired
+        # them (a lazy reload outside the greenlet raises MissingGreenlet).
+        failure_lease_token = await rollback_for_failure_record(
+            job.session,
+            lease_token=claimed_lease_token,
+            lease_committed=False,
+            reclaim=lambda: claim_work_item(
                 job.session,
                 work_item_id=job.work_item_id,
                 worker_id=job.worker_id,
                 source=identity,
                 lease_seconds=job.lease_seconds,
                 now=now,
-            )
-            failure_lease_token = item.lease_token or 0
+            ),
+        )
+        if failure_lease_token is None:
+            raise
         failure = await _record_boundary_execution_failure(
             job.session,
             work_item_id=job.work_item_id,
@@ -885,7 +902,7 @@ async def execute_boundary_work_item(
         # before the typed failure persists so the fenced write is never
         # attempted against a poisoned session.
         rollback = getattr(job.session, "rollback", None)
-        failure_lease_token = item.lease_token or 0
+        failure_lease_token = claimed_lease_token
         if callable(rollback):
             await rollback()
         failure = await _record_boundary_execution_failure(

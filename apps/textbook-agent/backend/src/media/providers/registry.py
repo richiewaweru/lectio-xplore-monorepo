@@ -3,7 +3,13 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from media.providers.gemini_image_client import GeminiImageClient, get_gemini_image_client
+from media.providers.gemini_image_client import (
+    API_KEY_ENV as GEMINI_API_KEY_ENV,
+)
+from media.providers.gemini_image_client import (
+    get_gemini_image_client,
+    resolve_gemini_image_model,
+)
 from media.providers.openai_image_client import OpenAIImageClient
 from media.providers.xai_image_client import XAIImageClient
 
@@ -39,11 +45,14 @@ def load_image_provider_spec() -> ImageProviderSpec:
         api_key_env = _first_env("PIPELINE_IMAGE_API_KEY_ENV")
 
     if provider == "gemini":
+        # Gemini has its own variables (GEMINI_IMAGE_*). The generic IMAGE_MODEL_NAME,
+        # IMAGE_BASE_URL and IMAGE_API_KEY_ENV are deliberately ignored here: they
+        # may still hold another provider's values, and the client never read them.
         return ImageProviderSpec(
             provider="gemini",
-            model_name=model_name or GeminiImageClient.MODEL,
-            base_url=base_url,
-            api_key_env=api_key_env,
+            model_name=resolve_gemini_image_model(),
+            base_url=None,
+            api_key_env=GEMINI_API_KEY_ENV,
         )
     if provider == "openai":
         return ImageProviderSpec(

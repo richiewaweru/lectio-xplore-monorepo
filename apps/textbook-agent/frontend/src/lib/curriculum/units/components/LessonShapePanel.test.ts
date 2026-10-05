@@ -12,7 +12,7 @@ vi.mock('$lib/api/units', () => mocks);
 import LessonShapePanel from './LessonShapePanel.svelte';
 
 const slot = (slot_id: string, locked = false) => ({
-	slot_id, role: slot_id, purpose: slot_id, allowed_components: ['text'], locked, visual_required: false
+	slot_id, role: slot_id, purpose: slot_id, allowed_components: ['text'], locked
 });
 
 const canonical = {

@@ -135,11 +135,6 @@ async def build_packet_for_generation(
 
     scope = context.get("scope_contract") or {}
     slot_ids = slot_ids_from_structural_plan(plan_raw if isinstance(plan_raw, dict) else {})
-    visual_required_by_slot = {
-        str(section.get("role") or section.get("id")): bool(section.get("visual_required"))
-        for section in (plan_raw.get("sections") or [])
-        if isinstance(section, dict) and (section.get("role") or section.get("id"))
-    }
     required_assessment_slots = assessment_slots_from_structural_plan(
         plan_raw if isinstance(plan_raw, dict) else {}
     )
@@ -175,7 +170,6 @@ async def build_packet_for_generation(
         prior_established=list(context.get("prior_established") or plan_raw.get("prior_knowledge") or []),
         approved_items=items,
         slot_ids=slot_ids or CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
-        visual_required_by_slot=visual_required_by_slot,
         required_assessment_slots=required_assessment_slots,
     )
 

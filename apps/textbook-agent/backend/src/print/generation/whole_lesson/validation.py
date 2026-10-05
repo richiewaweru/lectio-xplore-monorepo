@@ -8,6 +8,7 @@ from typing import Any
 
 from curriculum.approved_items import approved_item_kind
 from curriculum.teaching_plan.compatibility import response_bearing_action
+from curriculum.teaching_plan.models import VisualSpec
 from print.contracts.lectio_page import PAGE_OBJECT_IDS
 from print.generation.page_blocks import validate_intent_departure
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
@@ -23,9 +24,6 @@ BANNED_BRIEF_PHRASES = (
 )
 
 REQUIRED_SLOTS = ("orient", "explain", "confront", "check")
-SPATIAL_PROCESS_REPRESENTATION_INTENTS = frozenset(
-    {"show-structure", "trace-flow", "sequence", "name-parts"}
-)
 
 
 @dataclass
@@ -86,6 +84,27 @@ def anchor_terms(description: str) -> set[str]:
     """
     words = re.findall(r"[A-Za-z][A-Za-z'-]{2,}", description.lower())
     return {w for w in words if w not in _ANCHOR_STOPWORDS}
+
+
+def _normalize_label_text(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+
+def _visual_spec_problems(visual: VisualSpec, grounding: list[str]) -> list[str]:
+    """Shape-only checks on a block's ``visual`` spec (never a figure-or-not call)."""
+    problems: list[str] = []
+    if not visual.purpose.strip():
+        problems.append("purpose must say what the learner must notice")
+    if not visual.must_show:
+        problems.append("must_show must list at least one exact stage, part or relationship")
+    for label in visual.labels_required:
+        needle = _normalize_label_text(label)
+        if needle and not any(needle in haystack for haystack in grounding):
+            problems.append(
+                f"labels_required entry {label!r} is not drawn from must_show, "
+                "the lesson objective or must_establish"
+            )
+    return problems
 
 
 def _contains_object_id(text: str) -> str | None:
@@ -242,6 +261,24 @@ def validate_teaching_plan(
                         path=path,
                     )
                 )
+
+            if block.visual is not None:
+                visual_grounding = [
+                    _normalize_label_text(text)
+                    for text in (
+                        *block.visual.must_show,
+                        packet.lesson.objective,
+                        *(entry.statement for entry in packet.scope.must_establish),
+                    )
+                ]
+                for problem in _visual_spec_problems(block.visual, visual_grounding):
+                    issues.append(
+                        ValidationIssue(
+                            code="VISUAL_SPEC_INVALID",
+                            message=problem,
+                            path=f"{path}.visual",
+                        )
+                    )
 
             if _word_count(block.brief) < 15:
                 issues.append(
@@ -495,28 +532,6 @@ def validate_teaching_plan(
             )
         )
 
-    for slot in packet.slots:
-        if not slot.visual_required:
-            continue
-        section = next(
-            (candidate for candidate in plan.sections if candidate.slot_id == slot.slot_id),
-            None,
-        )
-        if section is None or not any(
-            block.intent in SPATIAL_PROCESS_REPRESENTATION_INTENTS
-            for block in section.blocks
-        ):
-            issues.append(
-                ValidationIssue(
-                    code="REQUIRED_VISUAL_INTENT",
-                    message=(
-                        f"required visual slot {slot.slot_id!r} must contain at least "
-                        "one spatial/process representation intent"
-                    ),
-                    path=f"sections.{slot.slot_id}",
-                )
-            )
-
     for focus_id in plan.misconception_focus_ids:
         if focus_id not in misconception_ids:
             issues.append(
@@ -548,7 +563,13 @@ def validate_teaching_plan(
                 )
             )
 
-    leaked_plan = _contains_object_id(plan.model_dump_json())
+    # The structured ``visual`` spec legitimately uses figure vocabulary
+    # ("figure", "table", "list"), so it is excluded from the catalogue-leak scan.
+    leaked_plan = _contains_object_id(
+        plan.model_dump_json(
+            exclude={"sections": {"__all__": {"blocks": {"__all__": {"visual"}}}}}
+        )
+    )
     if leaked_plan:
         issues.append(
             ValidationIssue(
@@ -631,6 +652,7 @@ HARD_PLAN_ISSUE_CODES: frozenset[str] = frozenset(
         "OPEN_RESPONSE_SOURCE_LIMIT",
         "UNKNOWN_MISCONCEPTION",
         "ACTION_SOURCE_INCOMPATIBLE",
+        "VISUAL_SPEC_INVALID",
     }
 )
 ADVISORY_PLAN_ISSUE_CODES: frozenset[str] = frozenset(
@@ -645,7 +667,6 @@ ADVISORY_PLAN_ISSUE_CODES: frozenset[str] = frozenset(
         "BRIEF_GENERIC",
         "EXCLUDED_TERM",
         "QUESTION_CONTENT",
-        "REQUIRED_VISUAL_INTENT",
         "MUST_ESTABLISH_UNCOVERED",
         "LATE_BRIEF_THINNING",
         "REPEATED_TEACHING_JOB",

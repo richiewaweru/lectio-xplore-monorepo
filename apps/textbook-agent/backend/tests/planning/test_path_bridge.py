@@ -178,7 +178,7 @@ def test_normalize_page_concept_card_payload_drops_empty_misconceptions():
     ConceptCard.model_validate(out)
 
 
-def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> None:
+def test_bridge_stamps_no_visual_flag_on_shared_sections() -> None:
     from types import SimpleNamespace
 
     from application.unit_lesson.prepare import _build_structural_plan
@@ -212,10 +212,9 @@ def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> 
         slot_instance_ids=slots,
         selected_components={},
         shared_preparation=True,
-        visual_required_by_instance={"orient": False, "model": True, "check": False},
     )
 
-    assert [section.visual_required for section in plan.sections] == [False, True, False]
+    assert all("visual_required" not in section.model_dump() for section in plan.sections)
 
 
 def test_bridge_preserves_complete_unicode_source_anchor() -> None:
@@ -252,7 +251,6 @@ def test_bridge_preserves_complete_unicode_source_anchor() -> None:
         slot_instance_ids=["orient", "model", "check"],
         selected_components={},
         shared_preparation=True,
-        visual_required_by_instance={},
     )
 
     assert len(anchor) > 100
@@ -293,7 +291,6 @@ def test_bridge_rejects_corrupted_source_anchor() -> None:
             slot_instance_ids=["orient", "model", "check"],
             selected_components={},
             shared_preparation=True,
-            visual_required_by_instance={},
         )
 
 
@@ -331,7 +328,6 @@ def test_native_page_plan_bridge_stamps_fixed_identities() -> None:
         slot_instance_ids=slots,
         selected_components={},
         shared_preparation=True,
-        visual_required_by_instance={"orient": False, "explain": True, "check": False},
     )
 
     assert [section.id for section in plan.sections] == slots

@@ -10,6 +10,13 @@ log = logging.getLogger(__name__)
 
 # ── Stage 1 output models ─────────────────────────────────────────────────
 
+def _drop_retired_visual_required(data: Any) -> Any:
+    """Stored plans written before the flag was retired still carry it; ignore it."""
+    if isinstance(data, dict) and "visual_required" in data:
+        return {key: value for key, value in data.items() if key != "visual_required"}
+    return data
+
+
 VisualStyle = Literal["diagram_precision", "illustration"]
 _VISUAL_STYLES = {"diagram_precision", "illustration"}
 
@@ -149,7 +156,6 @@ class SectionPlan(BaseModel):
         default=None,
         description="Stable concept-card id for teaching sections; null for plain sections.",
     )
-    visual_required: bool
     transition_note: str | None = Field(
         default=None,
         description="Why this section follows the previous one. "
@@ -167,6 +173,11 @@ class SectionPlan(BaseModel):
         default_factory=list,
         description="Native ordered page-object blocks for document_contract_version=2.",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _ignore_retired_visual_required(cls, data: Any) -> Any:
+        return _drop_retired_visual_required(data)
 
     @field_validator("components")
     @classmethod
@@ -533,8 +544,12 @@ class IntentSectionPlan(BaseModel):
     must_establish: list[str] = Field(default_factory=list)
     misconception_focus: list[str] = Field(default_factory=list)
     card_id: str | None = Field(default=None)
-    visual_required: bool
     transition_note: str | None = Field(default=None, max_length=120)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _ignore_retired_visual_required(cls, data: Any) -> Any:
+        return _drop_retired_visual_required(data)
 
 
 class IntentPlan(BaseModel):
@@ -589,7 +604,6 @@ def intent_plan_to_structural_plan(intent: IntentPlan) -> StructuralPlan:
             must_establish=list(section.must_establish),
             misconception_focus=list(section.misconception_focus),
             card_id=section.card_id,
-            visual_required=section.visual_required,
             transition_note=section.transition_note,
             components=[],
         )

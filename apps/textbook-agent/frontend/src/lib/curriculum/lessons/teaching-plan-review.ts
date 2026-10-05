@@ -10,6 +10,14 @@ export type TeachingPlanBlockView = {
 	sourcebook_needs?: string[];
 	sourcebook_refs?: string[];
 	stimulus_dependencies?: string[];
+	visual?: {
+		mode?: string;
+		purpose: string;
+		must_show?: string[];
+		labels_required?: string[];
+		must_not_show?: string[];
+		required?: boolean;
+	} | null;
 	learner_action?: {
 		action: string;
 		target: string;
