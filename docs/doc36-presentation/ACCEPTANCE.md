@@ -19,10 +19,10 @@ Status: pending track gates and Phase 5. An empty checkbox has no acceptance evi
 | Gate | Status | Evidence |
 | --- | --- | --- |
 | G0 | Accepted | RUNBOOK.md; committed regression logs and legacy PDF |
-| G1 | Pending | Track A |
-| G2 | Pending | Track B |
-| G3 | Pending | Track C |
-| G4 | Queued | Track D |
+| G1 | Visual review passed; final full keyboard traversal pending | A: `4525b64d`, `879b3cff`; six fixture screenshots and DOM checks |
+| G2 | Corrections required | B: `eed18c86`; initial golden/stress PDFs reviewed; missing list markers, question numbering and prediction lines |
+| G3 | Evidence incomplete; quality misses retained | C: `087e3daf`; 122 focused tests, three live generations, accepted exports and Learn captures |
+| G4 | In progress | Track D |
 
 ## Visual differences to review
 
@@ -33,6 +33,12 @@ Status: pending track gates and Phase 5. An empty checkbox has no acceptance evi
 | Golden fixture adds the superscript note "Leaf area can be measured in m^2^." | Acceptable | Mandatory grammar coverage absent from reference; fixture only. |
 
 Append actual screenshot/PDF findings after visual review; do not infer acceptance from these intended exceptions.
+
+## Current review findings
+
+- A's final golden desktop/mobile captures preserve block order, quote misconception beliefs, put the aside below its box, and show no horizontal page overflow. Full keyboard evidence is being extended to both tasks.
+- B's initial PDFs need visible list markers, question numbers, tick circles, prediction answer lines, the prescribed key-idea typography and table grid. The figure must reuse the supplied fixture asset; figure redesign is outside this work order. Legacy and frozen overlong PDF evidence is still required.
+- C's three accepted outputs are one-section composer/writer runs, not Phase 5's complete end-to-end lesson. The formula section lacks a key idea. None of the three contains a subscript/superscript or a misconception. Golden coverage cannot satisfy those fresh-generation items. These misses must remain visible; accepted content is not repaired or regenerated for shape.
 
 ## Execution branches
 
