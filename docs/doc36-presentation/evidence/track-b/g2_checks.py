@@ -131,7 +131,7 @@ qn = {}
 for k, (fx, s, t) in CASES.items():
     if not t:
         continue
-    st = sorted(set(re.findall(r'\bQ(\d+)\.', text(PDF / s))), key=int)
+    st = sorted(set(re.findall(r'QUESTION (\d+)', text(PDF / s))), key=int)  # task header strips
     tc = text(PDF / t)
     tq = sorted(set(re.findall(r'\bQ(\d+)\b', tc.split('Teacher copy', 1)[-1])), key=int)
     qn[k] = {'learner_pages': st, 'teacher_answer_page': tq, 'match': st == tq}
@@ -141,7 +141,7 @@ res['q_numbers'] = qn
 lay = text(PDF / 'shared-lesson-legacy-student.pdf', '-layout')
 p1 = lay.split('\f')[0]
 paras = [x for x in re.split(r'\n\s*\n', p1) if len(x.split()) > 12]
-nums = re.findall(r'^\s*(\d)\.\s+\S', lay, re.M)
+nums = re.findall(r'^\s*(\d)\s{2,}\S', lay, re.M)  # outlined numeral circle, then the item text
 res['legacy'] = {
     'page1_paragraph_blocks_over_12_words': len(paras),
     'source_paragraph_count_block0': len(load('shared-lesson-legacy')['sections'][0]['blocks'][0]['content']['paragraphs']),
@@ -149,6 +149,25 @@ res['legacy'] = {
     'numbered_1_to_5': all(str(i) in nums for i in range(1, 6)),
 }
 
+
+# 4b. no hyphenation at line ends (a line ending letter+hyphen in layout text)
+res['line_end_hyphenation'] = {
+    name: [l.strip()[-40:] for l in text(PDF / name, '-layout').splitlines() if re.search(r'[A-Za-z]-\s*$', l)]
+    for name in sorted({s for _, s, _ in CASES.values()} | {t for _, _, t in CASES.values() if t})
+}
+
+
+# 4c. task header strips and section badges present in learner PDFs
+def _tasks(name):
+    low = text(PDF / name)
+    found = re.findall(r'QUESTION \d+(?:[^\w\n]+[A-Z]+)?', low)
+    return [re.sub(r'[^\x20-\x7e]+', '.', m) for m in found]  # middle dot shown as "."
+
+
+res['task_header_text'] = {
+    'shared-lesson-golden-student.pdf': _tasks('shared-lesson-golden-student.pdf'),
+    'shared-lesson-legacy-student.pdf': _tasks('shared-lesson-legacy-student.pdf'),
+}
 
 # 5. geometry
 def bbox_report(pdf):

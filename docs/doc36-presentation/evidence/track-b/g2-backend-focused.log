@@ -5,4 +5,4 @@ src\contracts\generation_manifest.py:6
     class GenerationFieldContract(BaseModel):
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-39 passed, 1 warning in 55.55s
+39 passed, 1 warning in 47.39s

@@ -13,8 +13,8 @@
    "teacher": null
   },
   "stress": {
-   "student": 25,
-   "teacher": 26
+   "student": 24,
+   "teacher": 25
   }
  },
  "overlong_more_pages_than_golden": true,
@@ -128,69 +128,92 @@
   "ordered_list_numbers_seen": [
    "1",
    "2",
+   "1",
+   "2",
    "3",
    "4",
-   "5"
+   "5",
+   "3",
+   "4"
   ],
   "numbered_1_to_5": true
  },
+ "line_end_hyphenation": {
+  "oversized-stress-bg-on.pdf": [],
+  "oversized-stress-student.pdf": [],
+  "shared-lesson-golden-bg-on.pdf": [],
+  "shared-lesson-golden-student.pdf": [],
+  "shared-lesson-legacy-student.pdf": [],
+  "shared-lesson-overlong-bg-on.pdf": [],
+  "shared-lesson-overlong-student.pdf": []
+ },
+ "task_header_text": {
+  "shared-lesson-golden-student.pdf": [
+   "QUESTION 1 . PREDICT",
+   "QUESTION 2 . CHECK"
+  ],
+  "shared-lesson-legacy-student.pdf": [
+   "QUESTION 1",
+   "QUESTION 2"
+  ]
+ },
  "geometry_16mm_margins_and_overlap": {
   "oversized-stress-bg-on.pdf": {
-   "words": 10896,
+   "words": 10774,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
   },
   "oversized-stress-student.pdf": {
-   "words": 10778,
+   "words": 10643,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
   },
   "shared-lesson-golden-bg-on.pdf": {
-   "words": 1095,
+   "words": 1107,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
   },
   "shared-lesson-golden-student.pdf": {
-   "words": 977,
+   "words": 976,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
   },
   "shared-lesson-legacy-student.pdf": {
-   "words": 1320,
+   "words": 1319,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
   },
   "shared-lesson-overlong-bg-on.pdf": {
-   "words": 2142,
+   "words": 2154,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
   },
   "shared-lesson-overlong-student.pdf": {
-   "words": 1937,
+   "words": 1924,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
   },
   "track-c-comparison-print-student.pdf": {
-   "words": 123,
+   "words": 122,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
   },
   "track-c-formula-print-student.pdf": {
-   "words": 57,
+   "words": 58,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
   },
   "track-c-photosynthesis-print-student.pdf": {
-   "words": 107,
+   "words": 108,
    "outside_count": 0,
    "outside_sample": [],
    "overlapping_word_pairs": 0
