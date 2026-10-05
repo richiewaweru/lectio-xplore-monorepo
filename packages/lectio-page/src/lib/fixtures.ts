@@ -2,6 +2,7 @@ import type { LectioDocument } from '$lib/contract/document';
 import photosynthesis from '../../fixtures/photosynthesis-ref.json';
 import empty from '../../fixtures/empty-document.json';
 import marginStress from '../../fixtures/margin-stress.json';
+import sharedLessonLegacy from '../../fixtures/shared-lesson-legacy.json';
 
 export const fixtureIndex = [
 	{
@@ -18,6 +19,11 @@ export const fixtureIndex = [
 		id: 'margin-stress',
 		title: 'Margin placement stress cases',
 		description: 'Adjacent asides and an aside positioned near a page break.'
+	},
+	{
+		id: 'shared-lesson-legacy',
+		title: 'Legacy shared lesson',
+		description: 'Production shared lesson export used for the doc36 compatibility PDF proof.'
 	}
 ] as const;
 
@@ -27,5 +33,6 @@ export function loadFixture(id: string): LectioDocument | null {
 	if (id === 'photosynthesis-ref') return photosynthesis as LectioDocument;
 	if (id === 'empty-document') return empty as LectioDocument;
 	if (id === 'margin-stress') return marginStress as LectioDocument;
+	if (id === 'shared-lesson-legacy') return sharedLessonLegacy as LectioDocument;
 	return null;
 }

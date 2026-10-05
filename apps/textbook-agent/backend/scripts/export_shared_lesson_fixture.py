@@ -10,16 +10,17 @@ the new presentation blocks.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
 from typing import Any
 
 from document.shared_lesson.fixtures import load_shared_lesson_fixture
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.repository import StoredSharedLessonDocument
 from infra.execution.checkpoints import content_hash
-from infra.config import settings
 from learn.generation.shared_document_adapter import (
     SharedDocumentIdentity as LearnIdentity,
     realize_shared_document_for_learn,
@@ -28,8 +29,6 @@ from print.generation.shared_document_adapter import (
     SharedDocumentIdentity as PrintIdentity,
     realize_shared_document_for_print,
 )
-from print.rendering.pdf.config import PDFExportConfig
-from print.rendering.pdf.rendering.playwright import render_generation_pdf
 
 
 def export_fixture(name: str) -> dict[str, Any]:
@@ -73,6 +72,34 @@ def export_fixture(name: str) -> dict[str, Any]:
     return result
 
 
+def render_legacy_pdf(output_path: Path) -> dict[str, Any]:
+    """Render the raw legacy fixture through the existing Lectio page route.
+
+    This deliberately uses the package's own Vite preview and Playwright helper,
+    so the proof exercises the same Svelte ``LectioDocumentView`` path as the
+    Print worker without requiring a persisted generation or an auth token.
+    """
+
+    repository_root = Path(__file__).resolve().parents[4]
+    page_root = repository_root / "packages" / "lectio-page"
+    source_name = "shared-lesson-legacy-student.pdf"
+    output_path = output_path.resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    helper_output = output_path.parent / source_name
+    if helper_output.exists():
+        helper_output.unlink()
+
+    env = os.environ.copy()
+    env["PDF_FIXTURES"] = "shared-lesson-legacy"
+    env["PDF_OUT_DIR"] = str(output_path.parent)
+    pnpm = "pnpm.cmd" if os.name == "nt" else "pnpm"
+    subprocess.run([pnpm, "pdf:fixture"], cwd=page_root, env=env, check=True)
+    if not helper_output.exists() or helper_output.stat().st_size == 0:
+        raise RuntimeError(f"PDF helper did not write {helper_output}")
+    shutil.copy2(helper_output, output_path)
+    return {"path": str(output_path), "bytes": output_path.stat().st_size}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("fixture", choices=("golden", "legacy", "overlong"))
@@ -80,35 +107,19 @@ def main() -> None:
     parser.add_argument(
         "--pdf",
         type=Path,
-        help="run the existing Print PDF runtime for --generation-id and write its PDF here",
-    )
-    parser.add_argument(
-        "--generation-id",
-        help="persisted Print generation to hand to the existing PDF runtime",
-    )
-    parser.add_argument(
-        "--auth-token",
-        help="short-lived token accepted by the existing Print route (never included in output)",
+        help="for the legacy fixture, render the existing Lectio page route and write its PDF here",
     )
     args = parser.parse_args()
     result = export_fixture(args.fixture)
     if args.pdf:
         if "print" not in result:
             raise SystemExit(f"Cannot export {args.fixture} as PDF: {result['print_error']}")
-        if not args.generation_id or not args.auth_token:
+        if args.fixture != "legacy":
             raise SystemExit(
-                "--pdf requires --generation-id and --auth-token so the existing Print PDF runtime "
-                "can render the persisted print route"
+                "--pdf is available for legacy only until Track B adds Print lowering for "
+                "equation, quote and compare blocks"
             )
-        output_path, snapshot = asyncio.run(
-            render_generation_pdf(
-                output_path=args.pdf,
-                generation_id=args.generation_id,
-                auth_token=args.auth_token,
-                config=PDFExportConfig(settings),
-            )
-        )
-        result["pdf"] = {"path": str(output_path), "snapshot": snapshot}
+        result["pdf"] = render_legacy_pdf(args.pdf)
     output = json.dumps(result, indent=2, ensure_ascii=False)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

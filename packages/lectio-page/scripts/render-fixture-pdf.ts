@@ -13,7 +13,11 @@ import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type Page } from 'playwright';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const outDir = join(root, 'out');
+const outDir = process.env.PDF_OUT_DIR
+	? process.env.PDF_OUT_DIR.startsWith('/') || /^[A-Za-z]:[\\/]/.test(process.env.PDF_OUT_DIR)
+		? process.env.PDF_OUT_DIR
+		: join(root, process.env.PDF_OUT_DIR)
+	: join(root, 'out');
 mkdirSync(outDir, { recursive: true });
 
 const PREVIEW_PORT = Number(process.env.PDF_PREVIEW_PORT ?? 4173);
@@ -224,8 +228,14 @@ async function writeEditionPdfs(
 // answer_key or every object type, so it skips that coverage assertion.
 const FIXTURES: Array<{ id: string; requireFullCoverage: boolean; editions: Array<'teacher' | 'student'> }> = [
 	{ id: 'photosynthesis-ref', requireFullCoverage: true, editions: ['teacher', 'student'] },
-	{ id: 'margin-stress', requireFullCoverage: false, editions: ['teacher'] }
+	{ id: 'margin-stress', requireFullCoverage: false, editions: ['teacher'] },
+	{ id: 'shared-lesson-legacy', requireFullCoverage: false, editions: ['student'] }
 ];
+
+const selectedFixtureIds = process.env.PDF_FIXTURES
+	?.split(',')
+	.map((id) => id.trim())
+	.filter(Boolean);
 
 async function main(): Promise<void> {
 	// Fail fast before the expensive build if Chromium is missing.
@@ -243,7 +253,14 @@ async function main(): Promise<void> {
 		const page = await browser.newPage();
 		const report: Record<string, unknown> = {};
 
-		for (const fixture of FIXTURES) {
+		const fixtures = selectedFixtureIds
+			? FIXTURES.filter((fixture) => selectedFixtureIds.includes(fixture.id))
+			: FIXTURES;
+		if (fixtures.length === 0) {
+			fail(`No configured fixtures match PDF_FIXTURES=${process.env.PDF_FIXTURES}`);
+		}
+
+		for (const fixture of fixtures) {
 			for (const edition of fixture.editions) {
 				const result = await writeEditionPdfs(page, fixture.id, edition, fixture.requireFullCoverage);
 				report[`${fixture.id}_${edition}_pages`] = result.pages;
