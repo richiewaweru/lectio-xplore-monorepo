@@ -28,7 +28,6 @@
 	class="interaction-node"
 	data-testid="interaction-node-renderer"
 	data-interaction-type={node.interaction_type}
-	data-node-id={node.id}
 	data-question-number={questionNumber}
 >
 	<InteractionShell {node} {disabled} {onSubmit} {initialEvaluation} {questionNumber} />
