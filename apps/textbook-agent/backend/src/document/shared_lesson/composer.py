@@ -225,6 +225,47 @@ _KIND_CUES: dict[str, tuple[str, ...]] = {
 }
 
 
+#: Block intents (the closed Teaching Plan ``IntentId`` vocabulary) that make a
+#: section an *explaining* section. No new plan field: the section's existing
+#: block intents are the signal.
+EXPLAINING_INTENTS = frozenset(
+    {
+        "explain",
+        "explain-cause",
+        "trace-flow",
+        "show-structure",
+        "demonstrate",
+        "derive",
+        "define",
+        "name-parts",
+        "model-thinking",
+    }
+)
+#: Id prefix of the code-owned key-idea slot.
+KEY_IDEA_SLOT_PREFIX = "shared-key-idea-"
+
+
+def is_explaining_section(section: TeachingPlanSection) -> bool:
+    """True when any block of the section carries an explaining intent."""
+    return any(block.intent in EXPLAINING_INTENTS for block in section.blocks)
+
+
+def key_idea_slot_for_section(section: TeachingPlanSection) -> CompositionItem:
+    """The code-owned key-idea callout slot: first item, owned by the first block.
+
+    Owning it by the first block keeps the composition in Teaching Plan block
+    order, which the writer request validates.
+    """
+    return CompositionItem(
+        id=_stable_id(
+            KEY_IDEA_SLOT_PREFIX.rstrip("-"), f"{section.slot_id}\0{section.blocks[0].id}"
+        ),
+        kind="callout",
+        teaching_block_id=section.blocks[0].id,
+        semantic_role="explanation",
+    )
+
+
 def _stable_id(prefix: str, value: str) -> str:
     digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:20]
     return f"{prefix}-{digest}"
@@ -435,6 +476,7 @@ def validate_and_build_composition(
     tasks: Sequence[SharedTaskSpec],
     policy: CompositionPolicy | None = None,
     accept_soft_issues: bool = False,
+    reserve_key_idea: bool = True,
 ) -> SectionCompositionPlan:
     """Validate model-selected form and build stable IDs plus fixed task anchors.
 
@@ -442,6 +484,14 @@ def validate_and_build_composition(
     accepted for durable callers that already pass it, but it no longer
     changes provider choices or readiness. Identity, schema, and contract
     violations still fail closed.
+
+    ``reserve_key_idea`` makes an explaining section (see
+    ``is_explaining_section``) start with one code-owned ``key_idea`` callout
+    slot that the writer fills. Any provider callout with the ``explanation``
+    role is folded into that slot (a block it would leave empty gets a plain
+    explanation paragraph). The slot is added after shape evaluation, so it
+    never triggers a callout-count advisory. Verification of stored plans
+    passes ``False`` unless the plan already contains a slot.
     """
     policy = policy or CompositionPolicy()
     draft_items = choices.items if isinstance(choices, SectionCompositionDraft) else tuple(choices)
@@ -502,6 +552,21 @@ def validate_and_build_composition(
 
     section_key = section.slot_id
     items: list[CompositionItem] = []
+    if reserve_key_idea and blocks and is_explaining_section(section):
+        for block in blocks:
+            kept = [
+                choice
+                for choice in choices_by_block[block.id]
+                if not (choice.kind == "callout" and choice.semantic_role == "explanation")
+            ]
+            if not kept:
+                kept = [
+                    CompositionChoice(
+                        teaching_block_id=block.id, kind="paragraph", semantic_role="explanation"
+                    )
+                ]
+            choices_by_block[block.id] = kept
+        items.append(key_idea_slot_for_section(section))
     for block in blocks:
         for offset, choice in enumerate(choices_by_block[block.id]):
             identity = f"{section_key}\0{block.id}\0{offset}\0{choice.kind}\0{choice.semantic_role}"
@@ -537,9 +602,15 @@ def validate_composition_plan(
 ) -> None:
     """Reject mutated plans, including moved, duplicated, or invented anchors."""
     choices: list[CompositionChoice] = []
+    has_slot = False
     for item in plan.items:
         if item.kind in ("task_anchor", "figure"):
             # Anchors and figures are code-owned and re-derived below.
+            continue
+        if item.kind == "callout" and item.id.startswith(KEY_IDEA_SLOT_PREFIX):
+            # The code-owned key-idea slot is re-derived below. Plans stored
+            # before the slot existed have none and verify unchanged.
+            has_slot = True
             continue
         choices.append(
             CompositionChoice(
@@ -551,7 +622,12 @@ def validate_composition_plan(
     # Warnings are excluded from the equality check below because they describe
     # the provider's accepted shape rather than code-owned identity.
     expected = validate_and_build_composition(
-        section=section, choices=choices, tasks=tasks, policy=policy, accept_soft_issues=True
+        section=section,
+        choices=choices,
+        tasks=tasks,
+        policy=policy,
+        accept_soft_issues=True,
+        reserve_key_idea=has_slot,
     )
     if plan.section_slot_id != expected.section_slot_id or plan.items != expected.items:
         expected_anchors = [item for item in expected.items if item.kind == "task_anchor"]
@@ -693,7 +769,11 @@ __all__ = [
     "CompositionValidationError",
     "SectionCompositionDraft",
     "SectionCompositionPlan",
+    "EXPLAINING_INTENTS",
+    "KEY_IDEA_SLOT_PREFIX",
     "compose_section",
+    "is_explaining_section",
+    "key_idea_slot_for_section",
     "figure_item_for_block",
     "validate_and_build_composition",
     "validate_composition_plan",

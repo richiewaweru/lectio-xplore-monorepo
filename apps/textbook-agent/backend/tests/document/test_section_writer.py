@@ -878,3 +878,47 @@ def test_diagnostic_issue_codes_are_closed_vocabulary() -> None:
 def test_unknown_issue_code_is_rejected() -> None:
     with pytest.raises(ValueError, match="unknown section write issue code"):
         SectionWriteValidationError(["boom"], issues=(("not_a_real_code", ""),))
+
+
+def test_payload_names_the_key_idea_slot_only_for_reserved_sections() -> None:
+    from document.shared_lesson.writer import _request_payload
+
+    request = _request()
+    payload = _request_payload(request, repair_scope="initial", errors=())
+    assert payload["key_idea_slot_node_id"] is None
+
+    section = request.section.model_copy(
+        update={
+            "blocks": [
+                request.section.blocks[0].model_copy(update={"intent": "explain"}),
+                request.section.blocks[1],
+            ]
+        }
+    )
+    choices = [
+        CompositionChoice(
+            teaching_block_id="block-intro", kind="paragraph", semantic_role="explanation"
+        ),
+        CompositionChoice(
+            teaching_block_id="block-compare", kind="table", semantic_role="comparison"
+        ),
+        CompositionChoice(
+            teaching_block_id="block-compare", kind="list", semantic_role="evidence"
+        ),
+    ]
+    composition = validate_and_build_composition(
+        section=section, choices=choices, tasks=[_task()]
+    )
+    reserved = request.model_copy(update={"section": section, "composition_plan": composition})
+    payload = _request_payload(reserved, repair_scope="initial", errors=())
+
+    assert payload["key_idea_slot_node_id"] == composition.items[0].id
+    assert payload["shaping_targets"]["key_idea_words_max"] == 25
+
+
+def test_writer_prompt_tells_it_to_fill_the_key_idea_slot() -> None:
+    from core.prompts import effective_prompt_text
+
+    prompt = " ".join(effective_prompt_text("shared-section-writer").split())
+    assert "key_idea_slot_node_id" in prompt
+    assert "25 words or fewer" in prompt

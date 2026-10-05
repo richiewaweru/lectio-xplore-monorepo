@@ -29,8 +29,8 @@ always eligible. Specialized form eligibility is exact:
 - `callout` with role `explanation`, `summary`, `misconception`, or
   `safety_guidance`: an explaining block may carry a `key idea`; the same block
   text contains `key idea`, `explain`, `misconception`, `mistake`, `warning`,
-  `safety`, or `caution`. Prefer one callout per section; a section's key idea
-  and a named misconception may each earn one (advisory, never repaired).
+  `safety`, or `caution`. Prefer one callout per section; the code-owned key-idea
+  slot of an explaining section does not count (advisory, never repaired).
 - `equation` with role `worked_example`, `explanation`, or `sequence`: the
   block text contains `equation`, `formula`, `input`, `output`, `process`, or
   `calculate`.
@@ -59,8 +59,8 @@ Shape the eventual writing deliberately: a paragraph is one idea in three or
 four sentences and up to 60 words; a section changes job with a subsection
 heading (especially beyond 120 prose words); an explaining section opens with
 exactly one key idea, ordered before any equation, compare, table or figure
-(when a block's text carries a `key idea` or `explain` cue, give the
-section's first ordinary block the callout rather than a later one); and a
+(code reserves and places that key-idea callout slot for explaining sections, so
+do not spend a callout on it; use callouts for misconceptions and cautions); and a
 specialized form must earn its place from the block cue.
 Use `**term**` once for key terms, `*emphasis*` for emphasis, `~subscript~`,
 `^superscript^`, and blank lines for paragraph breaks. Chemical formulas, units

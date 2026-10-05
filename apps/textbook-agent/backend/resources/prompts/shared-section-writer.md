@@ -30,8 +30,11 @@ comparison nodes keep every card, even when there are more than three.
 Shape prose rather than compressing it into one block: each paragraph holds
 one idea in three or four sentences and is normally at most 60 words; add a
 subheading when a section changes job or exceeds about 120 prose words; an
-explaining section opens with exactly one key idea. If the composition has a
-callout node, write the key idea there as variant `key_idea`; the key idea always
+explaining section opens with exactly one key idea. Code reserves the slot: when the
+packet's `key_idea_slot_node_id` names a callout node, write exactly one `key_idea`
+callout there, one bold sentence of 25 words or fewer stating the section's main
+point; it is first in the section. If the composition has another
+callout node, it is a different callout; the key idea always
 comes before any equation, compare, table or figure, so when no callout opens the
 section, state it as one bold sentence in the first paragraph. Use lists only for steps
 in order or parallel items of the same kind, and keep each list item near 30

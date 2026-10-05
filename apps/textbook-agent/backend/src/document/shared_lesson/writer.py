@@ -10,7 +10,11 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from curriculum.teaching_plan.models import LearnerActionId, TeachingPlanSection
-from document.shared_lesson.composer import CompositionItem, SectionCompositionPlan
+from document.shared_lesson.composer import (
+    KEY_IDEA_SLOT_PREFIX,
+    CompositionItem,
+    SectionCompositionPlan,
+)
 from document.shared_lesson.inline import parse_inline_markup
 from document.shared_lesson.models import (
     CalloutDisplay,
@@ -938,6 +942,16 @@ def _request_payload(
         "composition_plan": [
             item.model_dump(mode="json") for item in request.composition_plan.items
         ],
+        # Code-reserved key-idea slot: one `key_idea` callout of at most 25
+        # words, first in the section. Advisory; never repaired.
+        "key_idea_slot_node_id": next(
+            (
+                item.id
+                for item in request.composition_plan.items
+                if item.kind == "callout" and item.id.startswith(KEY_IDEA_SLOT_PREFIX)
+            ),
+            None,
+        ),
         "shaping_targets": {
             "paragraph_words_max": 60,
             "key_idea_words_max": 25,

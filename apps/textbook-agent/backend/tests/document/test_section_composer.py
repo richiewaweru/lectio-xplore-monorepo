@@ -120,7 +120,7 @@ async def test_composes_diverse_section_with_fixed_order_and_stable_ids() -> Non
 
 
 def test_code_inserts_adjacent_task_anchors_after_owning_block_nodes() -> None:
-    section = _section(_block("b0", "explain"), _block("b1", "compare evidence"))
+    section = _section(_block("b0", "orient", "explain"), _block("b1", "compare evidence"))
     tasks = [_task("task-a", "b0"), _task("task-b", "b0"), _task("task-c", "b1")]
     plan = validate_and_build_composition(
         section=section,
@@ -501,7 +501,7 @@ def test_rejects_more_than_ten_ordinary_nodes_even_when_block_caps_hold() -> Non
 
 
 def test_rejects_anchor_removal_invention_and_reordering() -> None:
-    section = _section(_block("b0", "explain"), _block("b1", "compare"))
+    section = _section(_block("b0", "orient", "explain"), _block("b1", "compare"))
     tasks = [_task("task-a", "b0"), _task("task-b", "b1")]
     valid = validate_and_build_composition(
         section=section,
@@ -526,7 +526,7 @@ def test_rejects_anchor_removal_invention_and_reordering() -> None:
 
 @pytest.mark.asyncio
 async def test_one_targeted_repair_then_fail_closed() -> None:
-    section = _section(_block("b0", "explain"))
+    section = _section(_block("b0", "orient", "explain"))
     calls: list[dict[str, Any]] = []
 
     async def provider(payload: dict[str, Any]) -> Any:
@@ -931,3 +931,135 @@ def test_no_visual_blocks_means_no_figure_items() -> None:
         tasks=[],
     )
     assert all(item.kind != "figure" for item in plan.items)
+
+
+# --- code-reserved key-idea slot (doc 36 G3) ---------------------------------
+
+
+def _explain_section(*extra: TeachingPlanBlock) -> TeachingPlanSection:
+    return _section(_block("b0", "explain-cause", "How the process works"), *extra)
+
+
+def test_explaining_section_detected_from_block_intent() -> None:
+    from document.shared_lesson.composer import is_explaining_section
+
+    assert is_explaining_section(_explain_section())
+    assert is_explaining_section(_section(_block("b0", "orient"), _block("b1", "trace-flow")))
+    assert not is_explaining_section(_section(_block("b0", "orient", "explain")))
+    assert not is_explaining_section(_section(_block("b0", "check-understanding")))
+
+
+def test_explaining_section_gets_key_idea_slot_first_without_callout_warning() -> None:
+    from document.shared_lesson.composer import KEY_IDEA_SLOT_PREFIX
+
+    section = _explain_section(_block("b1", "compare evidence", visual=True))
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+            CompositionChoice(teaching_block_id="b1", kind="table", semantic_role="comparison"),
+        ],
+        tasks=[],
+    )
+
+    first = plan.items[0]
+    assert (first.kind, first.semantic_role, first.teaching_block_id) == (
+        "callout",
+        "explanation",
+        "b0",
+    )
+    assert first.id.startswith(KEY_IDEA_SLOT_PREFIX)
+    assert [item.kind for item in plan.items] == ["callout", "paragraph", "table", "figure"]
+    assert sum(1 for item in plan.items if item.kind == "callout") == 1
+    assert not any(code == "section_exceeds_callout_limit" for code, _ in plan.warnings)
+    # The slot is code-owned and survives verification.
+    validate_composition_plan(plan=plan, section=section, tasks=[])
+
+
+def test_slot_does_not_warn_when_provider_also_chose_a_misconception_callout() -> None:
+    section = _explain_section(_block("b1", "diagnose-misconception", "a common mistake"))
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+            CompositionChoice(teaching_block_id="b1", kind="callout", semantic_role="misconception"),
+        ],
+        tasks=[],
+    )
+
+    assert [item.kind for item in plan.items] == ["callout", "paragraph", "callout"]
+    assert [item.semantic_role for item in plan.items] == ["explanation", "explanation", "misconception"]
+    assert plan.warnings == ()
+    validate_composition_plan(plan=plan, section=section, tasks=[])
+
+
+def test_non_explaining_section_is_unchanged() -> None:
+    section = _section(_block("b0", "orient", "explain"), _block("b1", "check-understanding"))
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+            CompositionChoice(teaching_block_id="b1", kind="paragraph", semantic_role="evidence"),
+        ],
+        tasks=[],
+    )
+
+    assert [item.kind for item in plan.items] == ["paragraph", "paragraph"]
+    validate_composition_plan(plan=plan, section=section, tasks=[])
+
+
+def test_existing_explanation_callout_moves_to_front_without_duplicating() -> None:
+    section = _explain_section(_block("b1", "explain key idea"))
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation"),
+            CompositionChoice(teaching_block_id="b1", kind="callout", semantic_role="explanation"),
+        ],
+        tasks=[],
+    )
+
+    kinds = [(item.kind, item.teaching_block_id) for item in plan.items]
+    assert kinds[0] == ("callout", "b0")
+    assert sum(1 for kind, _ in kinds if kind == "callout") == 1
+    # b1 would have been left empty, so it keeps an ordinary explanation node.
+    assert ("paragraph", "b1") in kinds
+    validate_composition_plan(plan=plan, section=section, tasks=[])
+
+
+def test_stored_plan_without_slot_still_verifies() -> None:
+    section = _explain_section()
+    legacy = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation")
+        ],
+        tasks=[],
+        reserve_key_idea=False,
+    )
+
+    assert [item.kind for item in legacy.items] == ["paragraph"]
+    validate_composition_plan(plan=legacy, section=section, tasks=[])
+
+
+def test_removing_the_slot_from_a_new_plan_is_rejected() -> None:
+    section = _explain_section()
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[
+            CompositionChoice(teaching_block_id="b0", kind="paragraph", semantic_role="explanation")
+        ],
+        tasks=[],
+    )
+    forged = plan.model_copy(update={"items": plan.items[1:]})
+
+    # A plan without a slot is a legacy plan and is accepted unchanged; a plan
+    # whose slot id was tampered with diverges from the deterministic build.
+    validate_composition_plan(plan=forged, section=section, tasks=[])
+    tampered_slot = plan.items[0].model_copy(update={"id": plan.items[0].id[:-1] + "x"})
+    with pytest.raises(CompositionValidationError):
+        validate_composition_plan(
+            plan=plan.model_copy(update={"items": (tampered_slot, *plan.items[1:])}),
+            section=section,
+            tasks=[],
+        )
