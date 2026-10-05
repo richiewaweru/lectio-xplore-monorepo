@@ -4,11 +4,23 @@ Worktree: `codex/doc36-tasks` (Phase 0 base `92973aa0`).
 
 ## G4 checklist
 
-- [x] Fresh task authoring retains a short `display_prompt` and does not repeat more than one sentence from the paragraph above. The topical photosynthesis run below contains distinct prompts for prediction, practice, and checking.
-- [x] Prediction submissions are saved with the existing ungraded `pending-review` representation and never expose correct/incorrect state in focused runtime/component tests.
-- [x] Fresh practice/check feedback is explanatory; no accepted fresh record uses the legacy generic `Correct.` or `Not yet â€” try again.`.
-- [x] Previously stored role-absent tasks still render and answer with legacy behavior. Browser proof in [`browser-proof.txt`](browser-proof.txt) shows the legacy `Check` path and `Correct.` feedback.
-- [ ] Running Q numbers agree across Learn, learner Print, and the teacher answer page.
+Closed 2026-10-05 by the Track D implementer; the lead decides acceptance.
+
+- [x] Fresh task authoring keeps a short `display_prompt` and does not repeat more than one sentence from the context above it. Evidence: [`g4-prompt-overlap.log`](g4-prompt-overlap.log) / [`g4-prompt-overlap-report.json`](g4-prompt-overlap-report.json) — every task has 0 repeated sentences, except live `task-predict-light` which has 1 (the allowed maximum) against its sourcebook/plan text. Limit: the live run authors tasks only, so no authored paragraph exists in the live JSON; the live prompts are checked against the writer's inputs (bound sourcebook entries plus plan block brief/evidence) and against the paragraph above each anchor in the composed documents (golden skeleton). Legacy prompts, which fold the setup into the prompt, are legacy data and are not the authoring target.
+- [x] A predict task never shows `Correct` or `Not yet`. Evidence: real Chromium run [`g4-browser-proof.log`](g4-browser-proof.log) with screenshots [`images/golden-predict-1-before.png`](images/golden-predict-1-before.png), [`-2-selected`](images/golden-predict-2-selected.png), [`-3-saved`](images/golden-predict-3-saved.png) (shows `Prediction saved. Keep it in mind — Part 2 will test it.`) and [`-4-other-option-saved`](images/golden-predict-4-other-option-saved.png) (the other option is saved with no grading either). Both options PASS.
+- [x] Old stored (role-absent) tasks still render and can be answered. Evidence: same log; [`images/legacy-1-before.png`](images/legacy-1-before.png), [`legacy-2-correct-answer`](images/legacy-2-correct-answer.png) (`Correct.`), [`legacy-3-wrong-answer`](images/legacy-3-wrong-answer.png) (`Not yet`). Both legacy tasks render as Q1/Q2.
+- [x] No fresh feedback string equals `Correct.` or `Not yet — try again.`. Evidence: [`g4-feedback-strings.log`](g4-feedback-strings.log) — five feedback strings in the topical live JSON, all explanatory; zero exact legacy strings and zero occurrences of `Not yet`.
+- [x] Running Q numbers agree across Learn, learner Print and the teacher answer page. Evidence: [`g4-numbering-run.log`](g4-numbering-run.log) / [`g4-numbering-report.json`](g4-numbering-report.json), produced by [`g4_numbering_harness.py`](g4_numbering_harness.py): golden `Q1,Q2`, legacy `Q1,Q2`, live topical `Q1,Q2,Q3` are identical across Learn, Print learner blocks, Print answer-key entries and Print task metadata, with the same anchor/task behind each number. No mismatch was found. Cross-checks: the browser log shows Learn's rendered `data-question-number` sequence `Q1,Q2` for golden and legacy, and Track B's committed teacher/learner PDF text for golden shows `Q1.`/`Q2.` (`codex/doc36-print:docs/doc36-presentation/evidence/track-b/shared-lesson-golden-*.txt`).
+
+### Numbering harness (how it works, and its limits)
+
+The tracks are not merged, so the harness runs the two real adapters in separate processes over the same stored shared-lesson documents:
+
+- Learn side: this branch's `realize_shared_document_for_learn`, then the `DocumentCanvas.svelte` rule (one running counter over every `interaction` node in document order).
+- Print side: `realize_shared_document_for_print` from `codex/doc36-print` (353d1747), extracted read-only with `git archive` into a scratch directory; no Track B file is modified. Learner numbers are the `Q<n>` block ids, teacher numbers the `answer_key` `question_id`s.
+- Inputs ([`g4-numbering-inputs/`](g4-numbering-inputs/)): golden and legacy fixtures, plus a composed document that anchors the three live DeepSeek tasks (`predict`, `practice`, `check`, in live order) into the golden skeleton.
+- Limits: figure nodes are removed from the harness copies because Print admission needs produced figure media (figures carry no numbering); the live document reuses golden paragraphs because the live run authored tasks only; the check compares emitted numbering from the adapters, not rendered Print PDFs of the live document. It is not a Phase 5 merged-output proof.
+- Re-run: `JWT_SECRET_KEY=<any 32+ chars> python g4_numbering_harness.py run --print-tree <dir containing the archived apps/textbook-agent/backend/{src,contracts,resources}>` (about one minute).
 
 ## Focused implementation evidence
 
@@ -30,5 +42,6 @@ Worktree: `codex/doc36-tasks` (Phase 0 base `92973aa0`).
 ## Browser/rendered evidence
 
 - [`browser-proof.txt`](browser-proof.txt) records the local Learn golden prediction save and role-absent legacy answer proof from the real browser. The Learn AX tree showed the authored question, paragraph context, saved prediction feedback, and no correctness feedback for prediction.
-- Print and teacher Q-number agreement remains unticked until B's projection and answer-key changes are integrated.
+- [`g4-browser-proof.log`](g4-browser-proof.log) plus [`images/`](images/) hold the screenshot-backed version of the same proof (script [`g4_browser_proof.cjs`](g4_browser_proof.cjs), real Chromium via the repo's existing Playwright install, dev fixture routes on a local Vite server that was stopped afterwards).
+- Print and teacher Q-number agreement is evidenced by the isolated harness above, not by merged output; merged-output confirmation stays with Phase 5.
 
