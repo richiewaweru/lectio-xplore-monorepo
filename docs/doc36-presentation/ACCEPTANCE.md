@@ -24,6 +24,8 @@ Status: pending track gates and Phase 5. An empty checkbox has no acceptance evi
 | G3 | Evidence incomplete; quality misses retained | C: `087e3daf`; 122 focused tests, three live generations, accepted exports and Learn captures |
 | G4 | In progress | Track D |
 
+Track draft PRs: [A — Learn #6](https://github.com/richiewaweru/lectio-xplore-monorepo/pull/6), [B — Print #7](https://github.com/richiewaweru/lectio-xplore-monorepo/pull/7), [D — Tasks #8](https://github.com/richiewaweru/lectio-xplore-monorepo/pull/8), [C — Writer #5](https://github.com/richiewaweru/lectio-xplore-monorepo/pull/5). Each targets the Phase 0 branch. No track has been integrated or merged into main.
+
 ## Visual differences to review
 
 | Difference | Decision | Evidence / rationale |
