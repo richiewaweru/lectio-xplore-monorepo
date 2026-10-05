@@ -7,7 +7,7 @@ Worktree: `codex/doc36-tasks` (Phase 0 base `92973aa0`).
 - [x] Fresh task authoring retains a short `display_prompt` and does not repeat more than one sentence from the paragraph above. The topical photosynthesis run below contains distinct prompts for prediction, practice, and checking.
 - [x] Prediction submissions are saved with the existing ungraded `pending-review` representation and never expose correct/incorrect state in focused runtime/component tests.
 - [x] Fresh practice/check feedback is explanatory; no accepted fresh record uses the legacy generic `Correct.` or `Not yet — try again.`.
-- [ ] Previously stored role-absent tasks still render and answer with legacy behavior.
+- [x] Previously stored role-absent tasks still render and answer with legacy behavior. Browser proof in [`browser-proof.txt`](browser-proof.txt) shows the legacy `Check` path and `Correct.` feedback.
 - [ ] Running Q numbers agree across Learn, learner Print, and the teacher answer page.
 
 ## Focused implementation evidence
@@ -29,3 +29,4 @@ Worktree: `codex/doc36-tasks` (Phase 0 base `92973aa0`).
 ## Browser/rendered evidence
 
 Pending. Attach Learn prediction/check screenshots and Print/teacher projection output after the app check and fresh-task run.
+
