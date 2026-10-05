@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "id": "learn-doc36-track-c-formula-6908e512395d",
+  "title": "Area of a rectangle",
+  "subject": "mathematics",
+  "source": "shared_document",
+  "source_generation_id": "doc36-track-c-formula-6908e512395d",
+  "nodes": [
+    {
+      "id": "shared-node-240485b6ce392347255e",
+      "teaching_block_id": "b0",
+      "kind": "equation",
+      "label": "Area of a rectangle",
+      "inputs": [
+        "length",
+        "width"
+      ],
+      "condition": null,
+      "outputs": [
+        "area"
+      ]
+    },
+    {
+      "id": "shared-node-3147ef18c10edb684e89",
+      "teaching_block_id": "b1",
+      "kind": "paragraph",
+      "text": "An 8 m by 3 m rectangle has an **area** of 8 × 3 = 24 square metres. Multiplying the length by the width gives the result in square metres."
+    }
+  ],
+  "sections": [
+    {
+      "id": "formula-section",
+      "title": "Area of a rectangle",
+      "position": 0,
+      "transition": null,
+      "node_ids": [
+        "shared-node-240485b6ce392347255e",
+        "shared-node-3147ef18c10edb684e89"
+      ]
+    }
+  ],
+  "created_at": "2026-10-05T00:00:00+00:00",
+  "updated_at": "2026-10-05T00:00:00+00:00",
+  "teaching_plan_id": "doc36-plan-formula",
+  "teaching_plan_revision": 1
+}
