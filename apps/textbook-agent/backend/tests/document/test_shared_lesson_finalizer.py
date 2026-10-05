@@ -206,6 +206,7 @@ def _boundary_fixture():
                 ).model_dump(mode="json")
             ),
         },
+        section_warnings={},
     )
     previous_identity = _stable_hash(previous_composition.model_dump(mode="json"))
     next_identity = _stable_hash(next_composition.model_dump(mode="json"))
@@ -660,6 +661,29 @@ def test_boundary_gate_rejects_stale_current_section_hash() -> None:
             verified_inputs=verified_inputs,
             active_items=(item,),
         )
+
+
+def test_boundary_gate_accepts_section_whose_writer_output_carries_soft_warnings() -> None:
+    """A final-attempt SOFT writer issue is stored in the durable output (and hash)."""
+    source, document, verified_inputs, item = _boundary_fixture()
+    previous = verified_inputs.sections[0]
+    warnings = (("unsupported_number", "nodes[0].text"),)
+    verified_inputs.section_warnings["s1"] = warnings
+    verified_inputs.section_hashes["s1"] = content_hash(
+        SectionWriteResult(
+            section_slot_id="s1",
+            title=previous.title,
+            nodes=previous.nodes,
+            warnings=warnings,
+        ).model_dump(mode="json")
+    )
+
+    _verify_boundary_coverage(
+        source=source,
+        document=document,
+        verified_inputs=verified_inputs,
+        active_items=(item,),
+    )
 
 
 def test_boundary_gate_follows_replacement_chain_to_current_leaf() -> None:

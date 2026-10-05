@@ -579,6 +579,9 @@ def _verify_boundary_coverage(
                 section_slot_id=previous_plan.slot_id,
                 title=previous.title,
                 nodes=previous.nodes,
+                # The durable writer output carries its accepted SOFT-issue
+                # warnings; omitting them here makes the hashes diverge.
+                warnings=verified_inputs.section_warnings.get(previous_plan.slot_id, ()),
             ).model_dump(mode="json")
         )
         if (
@@ -596,6 +599,9 @@ def _verify_boundary_coverage(
                 section_slot_id=next_plan.slot_id,
                 title=next_.title,
                 nodes=next_.nodes,
+                # The durable writer output carries its accepted SOFT-issue
+                # warnings; omitting them here makes the hashes diverge.
+                warnings=verified_inputs.section_warnings.get(next_plan.slot_id, ()),
             ).model_dump(mode="json")
         )
         if (

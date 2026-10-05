@@ -308,10 +308,10 @@ class SharedDocumentWorker:
                         outcome.stage,
                         outcome.error,
                     )
-                    # A blocked Run that still has active leaves cannot be
-                    # terminalized yet; back it off so it cannot monopolise
-                    # the worker loop and starve other queued Runs.
-                    self._mark_dispatch_failure(pipeline_run_id, current)
+                    # ``_terminalize_blocked_post_section`` decides the backoff:
+                    # a Run waiting only on retryable failed_recoverable leaves
+                    # must stay visible to auto-retry (which applies its own
+                    # short delay), not sit out the poison backoff.
                     await self._terminalize_blocked_post_section(
                         session,
                         run_id=pipeline_run_id,
@@ -736,8 +736,19 @@ class SharedDocumentWorker:
             ).all()
         )
         active = active_work_items(items)
-        if any(item.status in {"queued", "running", "failed_recoverable"} for item in active):
+        statuses = {item.status for item in active}
+        if statuses & {"queued", "running"}:
+            # Still has live leaves: it cannot be terminalized yet; back it
+            # off so it cannot monopolise the worker loop and starve others.
+            self._mark_dispatch_failure(run_id, now)
             return
+        if "failed_recoverable" in statuses:
+            # Blocked on a retryable leaf: auto-retry (or the operator) owns the
+            # next step. Do not apply the poison backoff, which would hold the
+            # auto-retry scan off for minutes beyond its own delay.
+            self._dispatch_failure_skip_until.pop(run_id, None)
+            return
+        self._mark_dispatch_failure(run_id, now)
         try:
             await fail_run_terminal(
                 session,

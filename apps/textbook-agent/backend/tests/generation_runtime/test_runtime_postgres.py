@@ -50,13 +50,14 @@ from infra.generation_runtime import (
     claim_work_item,
     complete_work_item,
     create_build,
+    heartbeat_work_item,
     load_compatible_checkpoint,
     persist_checkpoint,
     replace_work_item,
 )
 
 POSTGRES_URL = "postgresql+asyncpg://textbook:textbook@127.0.0.1:5432/textbook_agent"
-APPLIED_RUNTIME_HEAD = "20260925_0046"
+APPLIED_RUNTIME_HEAD = "20260929_0049"
 
 
 @pytest.fixture
@@ -579,3 +580,52 @@ async def test_postgres_cancellation_fences_late_worker_and_preserves_ready_sibl
         assert persisted_ready is not None and persisted_ready.status == "ready"
         assert persisted_running is not None and persisted_running.status == "cancelled"
         assert persisted_running.output_json is None
+
+
+@pytest.mark.postgres
+@pytest.mark.asyncio
+async def test_postgres_concurrent_claims_then_run_lock_do_not_deadlock(
+    pg_runtime, pg_fixture
+) -> None:
+    """Parallel leaves claim and then re-lock the Run in one transaction.
+
+    Claim used to take the Run FOR SHARE; each leaf's next step (checkpoint
+    load/heartbeat) locks the Run FOR UPDATE, so two overlapping leaves
+    deadlocked on the share-to-exclusive upgrade.
+    """
+    _engine, factory = pg_runtime
+    fixture = pg_fixture
+    source = _source(fixture)
+    async with factory() as session:
+        _build, admitted = await _admit(session, fixture, request_key="pg-claim-deadlock")
+        first = await _add_item(session, admitted.record.id, "section:first")
+        left = await _add_item(session, admitted.record.id, "section:left")
+        right = await _add_item(session, admitted.record.id, "section:right")
+        await session.commit()
+    # Move the Run to running so later claims take the "already running" branch.
+    async with factory() as session:
+        await claim_work_item(
+            session, work_item_id=first.record.id, worker_id="pg-first", source=source
+        )
+        await session.commit()
+
+    async def leaf(item_id: str, worker: str) -> int:
+        async with factory() as session:
+            claimed = await claim_work_item(
+                session, work_item_id=item_id, worker_id=worker, source=source
+            )
+            await asyncio.sleep(0.3)  # let the sibling leaf finish its claim
+            await heartbeat_work_item(
+                session,
+                work_item_id=item_id,
+                worker_id=worker,
+                lease_token=claimed.lease_token,
+            )
+            await session.commit()
+            return int(claimed.lease_token)
+
+    tokens = await asyncio.wait_for(
+        asyncio.gather(leaf(left.record.id, "pg-left"), leaf(right.record.id, "pg-right")),
+        timeout=30,
+    )
+    assert len(tokens) == 2

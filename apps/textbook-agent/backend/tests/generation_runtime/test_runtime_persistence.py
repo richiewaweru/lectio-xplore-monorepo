@@ -2816,3 +2816,58 @@ async def test_work_item_cannot_use_run_only_awaiting_review_status(db_session) 
     with pytest.raises(IntegrityError):
         await db_session.flush()
     await db_session.rollback()
+
+
+@pytest.mark.asyncio
+async def test_claim_locks_run_exclusively_and_after_the_item(db_session) -> None:
+    """Claim must never FOR SHARE the Run: later steps re-lock it FOR UPDATE, and two
+    concurrent leaves holding shared Run locks deadlock on that upgrade (PostgreSQL).
+    """
+    from sqlalchemy import event
+
+    owner_id, lesson_id = await _seed_lesson(db_session)
+    _build, admitted = await _admit(db_session, owner_id=owner_id, lesson_id=lesson_id)
+    items = []
+    for key in ("section:one", "section:two"):
+        items.append(
+            await add_work_item(
+                db_session,
+                WorkItemAdmission(
+                    run_id=admitted.record.id,
+                    item_key=key,
+                    stage="section_writing",
+                    input_hash=f"input-{key}",
+                    definition_hash=f"definition-{key}",
+                ),
+            )
+        )
+    source = _source_identity()
+    locks: list[tuple[str, bool]] = []
+
+    def record(orm_execute_state) -> None:
+        arg = getattr(orm_execute_state.statement, "_for_update_arg", None)
+        if arg is None:
+            return
+        locked = arg.of or orm_execute_state.statement.get_final_froms()
+        names = {str(getattr(t, "name", t)) for t in locked}
+        locks.append((",".join(sorted(names)), bool(arg.read)))
+
+    event.listen(db_session.sync_session, "do_orm_execute", record)
+    try:
+        for index, added in enumerate(items):
+            await claim_work_item(
+                db_session,
+                work_item_id=added.record.id,
+                worker_id=f"worker-{index}",
+                source=source,
+            )
+    finally:
+        event.remove(db_session.sync_session, "do_orm_execute", record)
+
+    assert locks, "claim should take row locks"
+    assert not any(read for _name, read in locks), locks
+    run_lock_positions = [i for i, (name, _r) in enumerate(locks) if "generation_runs" in name]
+    item_lock_positions = [i for i, (name, _r) in enumerate(locks) if "generation_work_items" in name]
+    # Within each claim the item lock precedes the Run lock (item -> Run order).
+    assert run_lock_positions and item_lock_positions
+    assert item_lock_positions[0] < run_lock_positions[0]
