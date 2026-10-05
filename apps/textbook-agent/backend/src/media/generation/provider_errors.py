@@ -18,8 +18,9 @@ PROVIDER_ERROR = "provider_error"
 # Retrying these inside the executor only hammers the provider; the work item
 # stays retryable so a key fix followed by Retry works.
 NON_RETRYABLE_HTTP_STATUSES = frozenset({400, 401, 403, 404})
-# Auto-retry never helps without an operator/key change.
-AUTH_HTTP_STATUSES = frozenset({401, 403, 404})
+# Auto-retry never helps without an operator/key change. A 400 is a request or
+# key problem (Gemini reports an invalid API key as 400); resending cannot help.
+AUTH_HTTP_STATUSES = frozenset({400, 401, 403, 404})
 
 _HTTP_CODE_RE = re.compile(r"^provider_http_(\d{3})$")
 

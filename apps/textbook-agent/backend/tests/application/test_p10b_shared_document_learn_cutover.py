@@ -183,6 +183,54 @@ async def test_failed_media_leaf_projects_failed_recoverable_then_auto_retry_req
     assert row.error_summary is None
 
 
+@pytest.mark.asyncio
+async def test_failed_media_leaf_is_not_queued_while_sibling_leaves_still_run(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    lesson, _plan, _source, _document = await _approved_native_preparation(
+        db_session, user_id="p10b-media-failed-running"
+    )
+    admitted = await realize_learn_from_preparation(
+        db_session,
+        preparation_generation_id=str(lesson.pack_id),
+        user_id="p10b-media-failed-running",
+        path_lesson_id=lesson.id,
+    )
+    await db_session.commit()
+    row = await db_session.get(NativeRealizationModel, admitted["realization_id"])
+    assert row is not None and row.shared_document_run_id
+    run_id = row.shared_document_run_id
+
+    run = await db_session.get(GenerationRunModel, run_id)
+    db_session.add(
+        GenerationWorkItemModel(
+            run_id=run_id,
+            item_key="media:fig-1",
+            stage="media_generation",
+            status="failed_recoverable",
+            attempt=1,
+            max_attempts=3,
+            input_hash="d" * 64,
+            definition_hash="e" * 64,
+            error_code="database_transient",
+            error_class="database_transient",
+            error_summary="A temporary database problem interrupted figure generation.",
+            recovery_action="retry",
+        )
+    )
+    # Sibling leaves are still running, so the Run aggregate says running.
+    run.status = "running"
+    await db_session.commit()
+
+    worker = RealizationWorker(db_session_factory, worker_id="p10b-media-failed-running-worker")
+    async with db_session_factory() as tick:
+        await worker.run_one(tick)
+    await db_session.refresh(row)
+    assert row.status == "failed_recoverable"
+    assert row.shared_document_state == "recoverable"
+    assert row.error_summary.startswith("database_transient:")
+
+
 @pytest.mark.usefixtures("blocking_quality_gate")
 @pytest.mark.asyncio
 async def test_worker_reports_needs_shared_review_without_authoring(

@@ -1263,6 +1263,26 @@ def _document_revision(chunked: dict[str, Any]) -> int | None:
         return None
 
 
+async def _visual_quality_for_generation(model: Any, chunked: dict[str, Any]) -> dict[str, Any]:
+    """Visual quality, from the shared-document run's figures when one backs this generation."""
+    from print.generation.whole_lesson.visual_quality import (
+        visual_quality_from_figure_qc,
+        visual_quality_summary,
+    )
+
+    run_id = getattr(model, "shared_document_run_id", None)
+    if run_id:
+        from document.shared_lesson.realization_source import load_run_figure_qc
+
+        async with async_session_factory() as session:
+            records = await load_run_figure_qc(
+                session, run_id=str(run_id), owner_user_id=str(model.user_id)
+            )
+        if records:
+            return visual_quality_from_figure_qc(records)
+    return visual_quality_summary(chunked)
+
+
 @v3_studio_router.get("/generations/{generation_id}", response_model=V3GenerationDetailDTO)
 async def get_v3_generation_detail(
     generation_id: str,
@@ -1277,7 +1297,6 @@ async def get_v3_generation_detail(
         current_user.id,
     )
     from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from print.generation.whole_lesson.visual_quality import visual_quality_summary
 
     chunked = dict(model.chunked_state_json or {})
     contract_version = _contract_version_for_generation(model, chunked)
@@ -1298,7 +1317,7 @@ async def get_v3_generation_detail(
         completed_at=_iso(model.completed_at),
         native_whole_lesson=native_whole_lesson,
         document_contract_version=contract_version,
-        visual_quality=visual_quality_summary(chunked),
+        visual_quality=await _visual_quality_for_generation(model, chunked),
         document_revision=_document_revision(chunked),
     )
 
@@ -1434,12 +1453,11 @@ async def get_v3_generation_document(
         }
     document_json = await _with_shared_pack_assessment(model, document_json)
     from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from print.generation.whole_lesson.visual_quality import visual_quality_summary
     chunked_state = dict(model.chunked_state_json or {})
     if generation_is_native_whole_lesson(chunked_state, model):
         document_json = {
             **document_json,
-            "visual_quality": visual_quality_summary(chunked_state),
+            "visual_quality": await _visual_quality_for_generation(model, chunked_state),
         }
     sections = document_json.get("sections")
     if not isinstance(sections, list) or not sections:

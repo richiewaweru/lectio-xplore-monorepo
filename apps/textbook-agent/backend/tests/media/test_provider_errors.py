@@ -56,6 +56,7 @@ def test_server_errors_stay_retryable_and_auth_is_not_auto_retried() -> None:
     assert not is_non_retryable_provider_code("provider_http_503")
     assert not is_non_retryable_provider_code("provider_timeout")
     assert is_auth_provider_code("provider_http_403")
+    assert is_auth_provider_code("provider_http_400")  # Gemini invalid API key
     assert not is_auth_provider_code("provider_http_429")
 
 

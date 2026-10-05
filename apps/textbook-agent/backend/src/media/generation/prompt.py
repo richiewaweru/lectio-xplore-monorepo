@@ -19,6 +19,14 @@ NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT = (
     "arrows, geometry, and color only; all labels are added by the deterministic compositor."
 )
 
+# Only used when the provider returns text next to the image (Gemini). The
+# reply is parsed for exactly one ``ALT:`` line; any other text is discarded.
+ALT_TEXT_INSTRUCTION = (
+    "\nAFTER THE IMAGE: reply with exactly one line starting 'ALT: ' giving a "
+    "one-sentence factual description of what the figure shows for a learner who "
+    "cannot see it. Do not evaluate or comment on the image.\n"
+)
+
 
 def format_anchor_for_visual(order: VisualGeneratorWorkOrder) -> str:
     if order.visual.uses_anchor_id:
@@ -114,6 +122,8 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
             "- no decorative clutter or irrelevant background detail"
         )
 
+    alt_instruction = ALT_TEXT_INSTRUCTION if provider_renders_labels else ""
+
     return f"""Generate a clear educational illustration for print.
 
 MODE: {order.visual.mode}
@@ -143,10 +153,11 @@ PRINT REQUIREMENTS:
 {prints}
 
 RESOURCE TYPE: {order.resource_type}
-"""
+{alt_instruction}"""
 
 
 __all__ = [
+    "ALT_TEXT_INSTRUCTION",
     "CLOSED_LABEL_TEXT_CONSTRAINT",
     "NO_CAPTION_TEXT_CONSTRAINT",
     "NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT",

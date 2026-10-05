@@ -734,24 +734,42 @@ def test_image_prompt_renders_spec_labels_and_writer_context_for_the_non_precisi
     assert "[context:caption] A leaf in sunlight" in prompt
 
 
-def test_bound_alt_text_prefers_cleaned_provider_text() -> None:
+def test_bound_alt_text_uses_the_alt_line() -> None:
     work = _work()
     block = _block(work).model_copy(
-        update={"provider_text": "  A leaf under the sun.\n\nArrows show light.  "}
+        update={"provider_text": "Here you go.\nALT:  A leaf under the sun with arrows.  \n"}
     )
 
     ready = bind_generated_figure(work, [block])
 
-    assert ready.alt_text == "A leaf under the sun. Arrows show light."
+    assert ready.alt_text == "A leaf under the sun with arrows."
 
 
-def test_bound_alt_text_caps_long_provider_text() -> None:
+@pytest.mark.parametrize(
+    "provider_text",
+    [
+        "The generated diagram successfully meets all the pedagogical and visual "
+        "requirements. It is excellent for print.",
+        "ALT: The generated diagram successfully meets all the pedagogical requirements.",
+        "A leaf under the sun.",
+        "ALT: " + "word " * 100,
+    ],
+)
+def test_bound_alt_text_rejects_commentary_and_free_text(provider_text) -> None:
     work = _work()
-    block = _block(work).model_copy(update={"provider_text": "word " * 300})
+    block = _block(work).model_copy(update={"provider_text": provider_text})
 
     ready = bind_generated_figure(work, [block])
 
-    assert 0 < len(ready.alt_text) <= 400
+    assert ready.alt_text == fallback_alt_text(work.work_order.visual)
+
+
+def test_gemini_prompt_asks_for_alt_line_only_when_provider_returns_text() -> None:
+    from media.generation.prompt import build_visual_prompt
+
+    work = _work()
+    assert "ALT: " in build_visual_prompt(work.work_order, provider_renders_labels=True)
+    assert "ALT: " not in build_visual_prompt(work.work_order)
 
 
 @pytest.mark.parametrize("provider_text", [None, "", "   \n "])
@@ -762,3 +780,14 @@ def test_bound_alt_text_falls_back_to_spec_without_provider_text(provider_text) 
     ready = bind_generated_figure(work, [block])
 
     assert ready.alt_text == fallback_alt_text(work.work_order.visual)
+
+
+def test_bound_media_carries_qc_state_through_document_binding() -> None:
+    work = _work()
+    block = _block(work).model_copy(update={"qc_state": "flagged"})
+
+    ready = bind_generated_figure(work, [block])
+
+    assert ready.qc_state == "flagged"
+    assert _block(work).qc_state == "unreviewed"
+    assert bind_generated_figure(work, [_block(work)]).qc_state == "unreviewed"

@@ -7,7 +7,7 @@ import hashlib
 import json
 import re
 from collections.abc import Mapping, Sequence
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -94,6 +94,9 @@ class SharedFigureWorkOrder(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+QcState = Literal["passed", "flagged", "unavailable", "unreviewed"]
+
+
 class ReadyFigureMediaResult(BaseModel):
     """A ready provider result still bound only to the accepted section."""
 
@@ -117,6 +120,8 @@ class ReadyFigureMediaResult(BaseModel):
     required: bool = True
     source_facts: tuple[SourceOfTruthEntry, ...] = ()
     status: str = "ready"
+    #: Visual QC verdict carried from the executor block (never inferred).
+    qc_state: QcState = "unreviewed"
 
 
 class FigureMediaResult(BaseModel):
@@ -143,6 +148,7 @@ class FigureMediaResult(BaseModel):
     source_facts: tuple[SourceOfTruthEntry, ...] = ()
     required: bool = True
     status: str = "ready"
+    qc_state: QcState = "unreviewed"
 
 
 class FigureMediaFailure(BaseModel):
@@ -279,18 +285,32 @@ def fallback_alt_text(spec: Any) -> str:
     return alt
 
 
-_MAX_PROVIDER_ALT_CHARS = 400
+_MAX_PROVIDER_ALT_CHARS = 300
+_ALT_LINE = re.compile(r"^\s*ALT:\s*(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
+# Self-review / meta commentary is never alt text.
+_ALT_META_PHRASES = re.compile(
+    r"requirement|pedagogical|generated|successfully|\bmeets?\b|\bprint\b|"
+    r"image quality|visual quality|excellent|as requested|as specified|"
+    r"this (?:image|diagram|illustration|figure) (?:is|has|does)",
+    re.IGNORECASE,
+)
 
 
 def _clean_provider_alt_text(text: str | None) -> str | None:
-    """Single-paragraph, length-capped provider text, or None if unusable."""
+    """Alt text from the provider's single ``ALT:`` line, or None if unusable.
+
+    Free-form provider text (often a self-review) is never used.
+    """
     if not text:
         return None
-    cleaned = " ".join(text.split())
-    if not cleaned:
+    match = _ALT_LINE.search(text)
+    if match is None:
         return None
-    if len(cleaned) > _MAX_PROVIDER_ALT_CHARS:
-        cleaned = cleaned[: _MAX_PROVIDER_ALT_CHARS - 1].rstrip() + "…"
+    cleaned = " ".join(match.group(1).split())
+    if not cleaned or len(cleaned) > _MAX_PROVIDER_ALT_CHARS:
+        return None
+    if _ALT_META_PHRASES.search(cleaned):
+        return None
     return cleaned
 
 
@@ -591,6 +611,7 @@ def bind_generated_figure(
         required=work.required,
         source_facts=tuple(work.work_order.source_of_truth),
         status=block.status,
+        qc_state=block.qc_state,
     )
 
 
@@ -663,6 +684,7 @@ def bind_figure_media_to_document(
         source_facts=tuple(media.source_facts),
         required=media.required,
         status=media.status,
+        qc_state=media.qc_state,
     )
 
 
@@ -702,6 +724,7 @@ def verify_bound_figure_media(
         source_facts=tuple(media.source_facts),
         required=media.required,
         status=media.status,
+        qc_state=media.qc_state,
     )
     rebound = bind_figure_media_to_document(candidate, document)
     if rebound != media:

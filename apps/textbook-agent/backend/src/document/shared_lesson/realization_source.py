@@ -310,6 +310,49 @@ def _document_media_results(
     return tuple(results)
 
 
+@dataclass(frozen=True)
+class FigureQcRecord:
+    """Visual QC outcome of one shared-document figure media leaf."""
+
+    figure_node_id: str
+    qc_state: str  # passed | flagged | unavailable | unreviewed
+    failed: bool = False
+
+
+_MEDIA_FAILED_STATUSES = frozenset({"failed", "failed_recoverable", "failed_terminal"})
+
+
+async def load_run_figure_qc(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    owner_user_id: str,
+) -> tuple[FigureQcRecord, ...]:
+    """Read-only QC state of every active media leaf of a SharedDocument Run.
+
+    Print visual-quality reporting for shared-document-backed generations reads
+    this instead of the legacy chunked page-document state, which such
+    generations never populate.
+    """
+    run = await get_run_status(session, run_id=run_id, owner_user_id=owner_user_id)
+    if run is None:
+        return ()
+    records: list[FigureQcRecord] = []
+    for item in active_work_items(tuple(run.work_items)):
+        if item.stage != MEDIA_STAGE and not item.item_key.startswith("media:"):
+            continue
+        figure_id = str(item.item_key.removeprefix("media:"))
+        if item.status in _MEDIA_FAILED_STATUSES:
+            records.append(FigureQcRecord(figure_id, "unreviewed", failed=True))
+            continue
+        output = item.output_json if isinstance(item.output_json, dict) else {}
+        state = str(output.get("qc_state") or "unreviewed")
+        if state not in {"passed", "flagged", "unavailable", "unreviewed"}:
+            state = "unreviewed"
+        records.append(FigureQcRecord(str(output.get("figure_node_id") or figure_id), state))
+    return tuple(records)
+
+
 async def _latest_shared_document_run(
     session: AsyncSession,
     *,
@@ -383,12 +426,17 @@ async def load_realization_source(
             ),
         )
 
-    if run.status == "failed_recoverable":
+    if run.status in {"failed_recoverable", "queued", "running", "awaiting_review"}:
+        # A failed leaf is reported as a failure even while sibling leaves are
+        # still running: the Run aggregate prefers running/queued over
+        # failed_recoverable, but nothing may read queued/running as healthy
+        # while a step has failed.
         leaves = active_work_items(tuple(run.work_items))
         review_leaves = tuple(
             item
             for item in leaves
-            if item.stage == DOCUMENT_QA_STAGE
+            if run.status == "failed_recoverable"
+            and item.stage == DOCUMENT_QA_STAGE
             and item.status == "failed_recoverable"
             and item.recovery_action == "review"
         )
@@ -546,6 +594,8 @@ async def load_realization_source(
 
 
 __all__ = [
+    "FigureQcRecord",
+    "load_run_figure_qc",
     "FailedRealizationSource",
     "NeedsReviewRealizationSource",
     "PendingRealizationSource",

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from media.qc.visual_qc import visual_qc_enabled
@@ -81,5 +81,49 @@ def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
         "retryable": bool(flagged or failed),
     }
 
+def visual_quality_from_figure_qc(records: Sequence[Any]) -> dict[str, Any]:
+    """Visual quality of a shared-document-backed generation's figures.
 
-__all__ = ["visual_quality_summary"]
+    ``records`` carry ``figure_node_id``, ``qc_state`` (passed, flagged,
+    unavailable, unreviewed) and ``failed``. "ready" is only reported when QC
+    passed for every figure.
+    """
+    flagged: list[dict[str, Any]] = []
+    failed: list[str] = []
+    unreviewed = 0
+    for record in records:
+        figure_id = str(record.figure_node_id)
+        if record.failed:
+            failed.append(figure_id)
+        elif record.qc_state == "flagged":
+            flagged.append(
+                {
+                    "request_id": figure_id,
+                    "block_id": figure_id,
+                    "status": "flagged_quality",
+                    "asset_status": "ready",
+                    "reasons": [],
+                    "correction_hint": None,
+                }
+            )
+        elif record.qc_state != "passed":
+            unreviewed += 1
+    if flagged:
+        status = "ready_with_quality_warning"
+    elif failed:
+        status = "failed"
+    elif unreviewed:
+        status = "unreviewed"
+    else:
+        status = "ready"
+    return {
+        "status": status,
+        "unreviewed_count": unreviewed,
+        "flagged": flagged,
+        "flagged_count": len(flagged),
+        "failed_request_ids": sorted(set(failed)),
+        "retryable": bool(flagged or failed),
+    }
+
+
+__all__ = ["visual_quality_from_figure_qc", "visual_quality_summary"]
