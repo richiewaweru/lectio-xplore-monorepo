@@ -1,0 +1,12 @@
+
+ RUN  v3.2.7 C:/Users/richi/.codex/worktrees/e983/lectio/apps/textbook-agent/frontend
+
+ ✓ src/lib/learn/document/inline.test.ts (8 tests) 13ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  13:44:55
+   Duration  7.72s (transform 390ms, setup 0ms, collect 297ms, tests 13ms, environment 6.18s, prepare 464ms)
+
+
+EXIT_CODE=0
