@@ -14,16 +14,28 @@
 
 	const src = $derived(resolveFigureAsset(node.asset_id, assets));
 	const alt = $derived(node.alt || node.caption || 'Figure');
+	let failedSrc = $state<string | null>(null);
+	let lastSrc = $state<string | null>(null);
+	$effect(() => {
+		if (lastSrc !== src) {
+			lastSrc = src;
+			failedSrc = null;
+		}
+	});
 
 	function resolveFigureAsset(assetId: string | null | undefined, assetMap: Record<string, AssetRef> | null): string | null {
 		if (assetMap && assetId && !assetMap[assetId] && !/^(https?:\/\/|data:|blob:|\/)/i.test(assetId)) return null;
 		return resolveAssetUrl(assetId, assetMap);
 	}
+
+	function handleImageError() {
+		failedSrc = src;
+	}
 </script>
 
-{#if src}
+{#if src && failedSrc !== src}
 	<figure class="learn-figure" data-testid="figure-node">
-		<img class="figure-img" src={src} alt={alt} data-testid="figure-img" />
+		<img class="figure-img" src={src} alt={alt} data-testid="figure-img" onerror={handleImageError} />
 		{#if node.caption}
 			<figcaption>
 				{#if figureNumber && !/^Figure\s+\d+\./i.test(node.caption)}Figure {figureNumber}. {/if}<InlineMarkup value={node.caption} />

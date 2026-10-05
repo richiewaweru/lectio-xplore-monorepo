@@ -1,11 +1,13 @@
 import { cleanup, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { tick } from 'svelte';
 import ParagraphNode from './ParagraphNode.svelte';
 import EquationNode from './EquationNode.svelte';
 import CalloutNode from './CalloutNode.svelte';
 import FigureNode from './FigureNode.svelte';
 import DocumentNodeRenderer from './DocumentNodeRenderer.svelte';
 import type { DocumentNode } from '../types';
+import InteractionShell from '../../interactions/InteractionShell.svelte';
 
 afterEach(() => cleanup());
 
@@ -55,5 +57,38 @@ describe('Learn document renderers', () => {
 		first.unmount();
 		second.unmount();
 		warn.mockRestore();
+	});
+
+	it('hides a broken figure frame and caption, then recovers for a changed asset', async () => {
+		const view = render(FigureNode, {
+			node: { id: 'f', kind: 'figure', asset_id: 'one', caption: 'Figure caption' },
+			assets: { one: { url: '/one.svg' }, two: { url: '/two.svg' } }
+		});
+		const image = view.container.querySelector<HTMLImageElement>('[data-testid="figure-img"]');
+		expect(image).not.toBeNull();
+		image?.dispatchEvent(new Event('error'));
+		await tick();
+		expect(view.container.querySelector('[data-testid="figure-node"]')).toBeNull();
+		await view.rerender({
+			node: { id: 'f', kind: 'figure', asset_id: 'two', caption: 'Figure caption' },
+			assets: { one: { url: '/one.svg' }, two: { url: '/two.svg' } }
+		});
+		expect(view.container.querySelector<HTMLImageElement>('[data-testid="figure-img"]')?.getAttribute('src')).toBe('/two.svg');
+	});
+
+	it('uses native exclusive buttons with pressed state for choice tasks', async () => {
+		const { container } = render(InteractionShell, {
+			node: {
+				id: 'task', kind: 'interaction', interaction_type: 'choice',
+				prompt: 'Choose one', config: { options: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }] }
+			}
+		});
+		const options = [...container.querySelectorAll<HTMLButtonElement>('.option')];
+		expect(options).toHaveLength(2);
+		expect(options.every((button) => button.getAttribute('role') === null)).toBe(true);
+		expect(options.map((button) => button.getAttribute('aria-pressed'))).toEqual(['false', 'false']);
+		options[1]?.click();
+		await tick();
+		expect(options.map((button) => button.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
 	});
 });

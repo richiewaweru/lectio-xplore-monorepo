@@ -1,9 +1,14 @@
-Browser QA — golden fixture
+Browser QA — golden fixture (final G1 correction)
 
 Route: http://127.0.0.1:5181/dev/shared-lesson/golden
-Viewport: default desktop browser; keyboard action performed with the first prediction radio's Space key.
+Viewport: default desktop browser; final renderer uses native `<button>` options with `aria-pressed`.
 
-Before: first prediction radio had Value: 0 and “Lock in my prediction” was disabled.
-After: first prediction radio had Value: 1 and “Lock in my prediction” was enabled.
+Tab traversal from the first choice option produced this verified sequence:
 
-The browser accessibility tree exposed the option as a radio button and the action as a button. The screenshot `golden-desktop.png` shows the selected option and dark task header.
+1. Option A received focus and exposed `aria-pressed="true"` after selection.
+2. Tab moved to option B, which exposed `aria-pressed="false"`.
+3. Tab moved to the enabled “Lock in my prediction” button.
+
+The DOM contained six native choice buttons across the two choice tasks; no choice button had a `role` attribute. The browser accessibility tree exposed the controls as checkbox-like pressed buttons inside a labelled “Choose one” group.
+
+The screenshot `golden-desktop.png` shows the final task card and dark task header.

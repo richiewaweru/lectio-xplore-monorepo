@@ -314,15 +314,14 @@
 		<p class="prompt"><InlineMarkup value={prompt} /></p>
 
 	{#if type === 'choice'}
-		<ul class="options" role="radiogroup" aria-label={prompt}>
+		<ul class="options" role="group" aria-label="Choose one">
 			{#each choiceOptions as option (option.id)}
 				<li>
 					<button
 						type="button"
 						class="option"
 						class:selected={selectedOne === option.id}
-						role="radio"
-						aria-checked={selectedOne === option.id}
+						aria-pressed={selectedOne === option.id}
 						disabled={submitted || disabled}
 						onclick={() => (selectedOne = option.id)}
 					>
