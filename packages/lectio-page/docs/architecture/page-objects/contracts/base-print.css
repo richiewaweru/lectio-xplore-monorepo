@@ -2,7 +2,7 @@
    Positive page rules only. No !important. No override rules. No print-mode branches.
    Requires: <html lang="..."> on the render root, or hyphens:auto silently does nothing. */
 
-@page { size: A4; margin: var(--page-margin, 18mm); }
+@page { size: A4; margin: 16mm; }
 
 /* ── Page geometry ───────────────────────────────────────────
    One measure for the whole document. Margin objects float inside it and
@@ -12,30 +12,46 @@
    on these. */
 .lectio-document {
   --page-width: 210mm;
-  --page-margin: 26mm;
+  --page-margin: 16mm;
   --measure: calc(var(--page-width) - (2 * var(--page-margin)));  /* 158mm */
   --aside-width: 46mm;
   --aside-gap: 6mm;
-  --line: 16pt;
+  --line: 17pt;
 }
 
-html { font-family: var(--lectio-body, sans-serif); }
+html { font-family: var(--lectio-body, "Atkinson Hyperlegible", sans-serif); }
 body {
   margin: 0; color: #111;
-  font-size: 12pt; line-height: var(--line, 16pt);
+  font-size: 12pt; line-height: var(--line, 17pt);
   orphans: 3; widows: 3; hyphens: auto;
 }
 
 /* flow-root so a trailing margin float cannot escape the document body. */
 .lectio-main { max-width: var(--measure); display: flow-root; }
 
+.lectio-running-head,
+.lectio-page-footer {
+  position: fixed;
+  left: var(--page-margin);
+  right: var(--page-margin);
+  color: #767676;
+  font-size: 9pt;
+  line-height: 11pt;
+}
+.lectio-running-head { top: -5mm; border-bottom: 1px solid #767676; padding-bottom: 2pt; }
+.lectio-page-footer { bottom: 2mm; border-top: 1px solid #767676; padding-top: 2pt; text-align: right; }
+.lectio-page-footer::after { content: "Page " counter(page) " of " counter(pages); }
+
 /* ── Front matter (FIX 1) ────────────────────────────────────
    Cover, contents and running head are renderer furniture, not authored
    page objects. They are derived from document metadata + section titles. */
 .lectio-cover { break-after: page; }
+.lectio-inline-frontmatter { margin-bottom: calc(var(--line) * 1.5); padding-top: 7mm; }
+.lectio-cover { padding-top: 7mm; }
+.lectio-inline-frontmatter .lectio-cover-title { font-size: 24pt; line-height: 29pt; margin: 0 0 var(--line); }
 .lectio-cover-title { font-size: 32pt; line-height: 40pt; margin: 0 0 var(--line); }
 .lectio-section-title {
-  font-size: 17pt;
+  font-size: 16pt;
   line-height: 24pt;
   margin-top: calc(var(--line) * 2);
   margin-bottom: 8pt;
@@ -44,7 +60,7 @@ body {
 }
 .lectio-cover-subtitle { font-size: 14pt; line-height: 20pt; margin: 0 0 calc(var(--line) * 2); }
 .lectio-cover-fields { max-width: var(--measure); }
-.lectio-cover-field { border-bottom: .5pt solid #777; height: 22pt; margin-bottom: var(--line); }
+.lectio-cover-field { border-bottom: 1px solid #767676; height: 22pt; margin-bottom: var(--line); }
 
 .lectio-contents { break-after: page; max-width: var(--measure); }
 .lectio-contents-entry { display: flex; justify-content: space-between; margin-bottom: 8pt; }
@@ -54,6 +70,7 @@ body {
    immediately next element. .lectio-heading-binding is the real mechanism:
    wrap heading + first following block in it. */
 h1, h2, h3 { break-after: avoid; margin: 0; color: inherit; clear: right; }
+h1, h2, h3, .lectio-cover-title { font-family: var(--lectio-display, "Fraunces", serif); }
 h1 { font-size: 26pt; line-height: 32pt; margin-bottom: var(--line); }
 h2 { font-size: 17pt; line-height: 24pt; margin-top: calc(var(--line) * 2); margin-bottom: 8pt; }
 h3 { font-size: 13pt; line-height: var(--line); margin-top: calc(var(--line) * 1.5); margin-bottom: 8pt; }
@@ -77,9 +94,14 @@ p { margin: 0 0 var(--line); }
    Aside carries its rule and type size at either placement. */
 .lectio-aside {
   padding-left: 3mm;
-  border-left: .75pt solid currentColor;
+  border-left: 1px solid #767676;
   font-size: 10pt; line-height: 14pt;
 }
+.lectio-aside--spanning { width: 100%; box-sizing: border-box; clear: both; }
+.lectio-aside--spanning.lectio-aside { border: 1pt solid #767676; padding: 7pt 9pt; }
+.lectio-aside--spanning .lectio-misconception-row { display: grid; grid-template-columns: 30mm 1fr; gap: 5pt; padding: 4pt 0; border-top: 1px solid #767676; break-inside: avoid; }
+.lectio-aside--spanning .lectio-misconception-row:first-of-type { border-top: 0; }
+.lectio-aside-followup { margin-top: 8pt; }
 
 /* ── List ────────────────────────────────────────────────────*/
 .lectio-list { margin: 0 0 var(--line); padding-left: 9mm; }
@@ -94,7 +116,7 @@ p { margin: 0 0 var(--line); }
    ("wider than body text") no longer has a referent. Resemanticising it as
    "clears all floats" waits on the Placement reconciliation — see commit 5. */
 .lectio-table thead { display: table-header-group; }
-.lectio-table th, .lectio-table td { text-align: left; padding: 3pt 4pt; border-bottom: .5pt solid #777; }
+.lectio-table th, .lectio-table td { text-align: left; padding: 3pt 4pt; border-bottom: 1px solid #767676; }
 .lectio-table th { font-size: 9pt; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1pt solid #111; }
 .lectio-table tr { break-inside: avoid; }
 
@@ -120,12 +142,36 @@ p { margin: 0 0 var(--line); }
 .lectio-question-marks { float: right; font-size: 10pt; }
 /* flow-root: without a BFC the full-width rules draw under a margin float. */
 .lectio-answer-lines { margin-top: 8pt; display: flow-root; }
-.lectio-answer-line { height: 18pt; border-bottom: .5pt solid #999; }
+.lectio-answer-line { height: 18pt; border-bottom: 1px solid #767676; }
 
 /* ── Choices ─────────────────────────────────────────────────*/
+.lectio-choices { break-inside: avoid; }
 .lectio-choice { position: relative; padding-left: 9mm; margin-bottom: 8pt; break-inside: avoid; }
 .lectio-choice-letter { position: absolute; left: 0; font-weight: 700; }
+
+/* Doc 36 ordinary blocks. Each remains identifiable when printed without colour. */
+.lectio-equation,
+.lectio-quote { clear: both; break-inside: avoid; margin: 0 0 var(--line); }
+.lectio-compare { clear: both; margin: 0 0 var(--line); }
+.lectio-equation { border: 1pt solid #767676; padding: 8pt; }
+.lectio-equation-label { display: block; margin-bottom: 5pt; }
+.lectio-equation-row { display: flex; align-items: center; justify-content: center; gap: 9pt; }
+.lectio-equation-terms { display: flex; flex-wrap: wrap; align-items: center; gap: 5pt; justify-content: center; }
+.lectio-equation-terms > span:not(:empty) { border: 1px solid #767676; padding: 3pt 5pt; }
+.lectio-equation-arrow { display: grid; justify-items: center; gap: 1pt; font-size: 16pt; }
+.lectio-equation-arrow small { font-size: 9pt; line-height: 11pt; }
+.lectio-quote { border-left: 2pt solid #767676; padding: 4pt 0 4pt 10pt; font-family: var(--lectio-display, "Fraunces", serif); font-size: 15pt; }
+.lectio-quote p { margin-bottom: 4pt; }
+.lectio-quote cite { font-family: var(--lectio-body, "Atkinson Hyperlegible", sans-serif); font-size: 10pt; }
+.lectio-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8pt; }
+.lectio-compare-item { border: 1pt solid #767676; padding: 7pt; break-inside: avoid; }
+.lectio-compare-item h3 { font-size: 12pt; margin: 0 0 5pt; }
+.lectio-compare-item p { margin-bottom: 5pt; }
+.lectio-compare-label { font-weight: 700; font-size: 9pt; text-transform: uppercase; }
 
 /* ── Answer key ──────────────────────────────────────────────*/
 .lectio-answer-key { break-before: page; clear: both; max-width: var(--measure); font-size: 10.5pt; line-height: 15pt; }
 .lectio-answer-key-entry { margin-bottom: var(--line); break-inside: avoid; }
+.lectio-option-notes { border-collapse: collapse; width: 100%; margin: 4pt 0 var(--line); }
+.lectio-option-notes th, .lectio-option-notes td { text-align: left; padding: 3pt 4pt; border-bottom: 1px solid #767676; }
+.lectio-option-notes th { font-size: 9pt; }

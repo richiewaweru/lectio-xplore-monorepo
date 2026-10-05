@@ -55,7 +55,7 @@
 				asset: {
 					kind: 'svg',
 					status: 'ready',
-					svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 80'><rect width='240' height='80' fill='#eee' stroke='#777'/></svg>"
+					svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 80'><rect width='240' height='80' fill='#EDEDED' stroke='#767676'/></svg>"
 				}
 			}
 		},

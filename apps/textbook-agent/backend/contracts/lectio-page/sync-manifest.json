@@ -6,28 +6,28 @@
   "files": {
     "lectio-document-v2.schema.json": {
       "path": "lectio-document-v2.schema.json",
-      "sha256": "6b63a908811485b71443fe178cde55f2aff9ee7a576d73db110dfeeaafde0e61",
-      "bytes": 17373
+      "sha256": "d01dc0d731b2299423aa4aa953f33fc4555d82639f9c8889fad949d806ebc949",
+      "bytes": 21133
     },
     "intent-catalogue.v1.json": {
       "path": "intent-catalogue.v1.json",
-      "sha256": "f32ddc947a5b70d4f2cb926d3eeacf1d83a0f7331edfa28846d53593df00855c",
-      "bytes": 17311
+      "sha256": "eb6812ac7680bebb1f7ee772e9d362da92e038a725ccd46f78da835fcdf6e23a",
+      "bytes": 17406
     },
     "object-catalogue.v1.json": {
       "path": "object-catalogue.v1.json",
-      "sha256": "2e57f9bc8369f089886349527fe54fdece2d2e586e208ef096a92f8a60ca4c73",
-      "bytes": 17970
+      "sha256": "d92b1e0424869760feb93c97a6c7295404b23bcf36a205a81d10763d95348e48",
+      "bytes": 22044
     },
     "base-print.css": {
       "path": "base-print.css",
-      "sha256": "b62e788d5186ff654f7c60d3aa24928f354d4f89e6df2b90845b4b5b43f8b060",
-      "bytes": 7482
+      "sha256": "16fbda7b9cceeebc4d8bff7161ceb7f6a3c0d1906e3b6ccb75bab361bfeb6524",
+      "bytes": 10547
     },
     "manifest.json": {
       "path": "manifest.json",
-      "sha256": "2620f9c7e22721803e247db41a533357536e5f512e261c7de1ee22b3d7bd3d36",
-      "bytes": 3177
+      "sha256": "f9d070087e3f45ef0d3bdfb3cc5674e3ad192f822c015a6f5b59a281df876946",
+      "bytes": 3710
     }
   }
 }

@@ -7,13 +7,9 @@
 
 	const printMode = $derived($page.url.searchParams.get('print') === '1');
 	const editionParam = $derived($page.url.searchParams.get('edition'));
-	let edition = $state<'student' | 'teacher'>('teacher');
-
-	$effect(() => {
-		if (editionParam === 'student' || editionParam === 'teacher') {
-			edition = editionParam;
-		}
-	});
+	let edition = $derived<'student' | 'teacher'>(
+		editionParam === 'student' || editionParam === 'teacher' ? editionParam : 'teacher'
+	);
 </script>
 
 {#if printMode}

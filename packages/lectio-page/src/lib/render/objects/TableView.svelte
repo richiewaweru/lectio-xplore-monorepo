@@ -14,12 +14,12 @@
 
 <table class={['lectio-table', spanning && 'lectio-table--span']}>
 	{#if content.caption}
-		<caption class="lectio-caption">{content.caption}</caption>
+		<caption class="lectio-caption"><InlineView nodes={asRichText(content.caption)} /></caption>
 	{/if}
 	<thead>
 		<tr>
 			{#each content.columns as col}
-				<th>{col.label}</th>
+				<th><InlineView nodes={asRichText(col.label)} /></th>
 			{/each}
 		</tr>
 	</thead>

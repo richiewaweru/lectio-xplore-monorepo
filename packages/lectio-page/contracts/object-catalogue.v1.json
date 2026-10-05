@@ -20,6 +20,7 @@
       "emphasis": "Type size, weight, rule, and spacing only. No box.",
       "screen_layer": "Review wrapper may show selection and hierarchy controls outside the print subtree.",
       "writer_guidance": {
+        "label": "Name the relation when a short label helps the learner.",
         "level": "1 for the lesson title, 2 for a section, 3 for a subsection. Never skip a level.",
         "text": "Name the content, not the pedagogy. No trailing punctuation.",
         "number": "Only when the document numbers sections. Null otherwise — never invent numbering."
@@ -195,7 +196,7 @@
     "aside": {
       "holds": "Short set-apart note with optional student-facing label.",
       "content_schema": {
-        "label": "string|null",
+        "label": "RichText|null",
         "body": "RichText"
       },
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/aside-content",
@@ -205,13 +206,14 @@
       "form_selectable": true,
       "placement": [
         "margin",
-        "main"
+        "main",
+        "spanning"
       ],
-      "fragmentation": "Atomic. Margin placement uses float, clear:right, and negative margin. Move cleanly if it does not fit.",
+      "fragmentation": "Keep a normal callout together when it fits; a spanning misconception continues at its row boundaries when intrinsically taller than the page. Margin placement uses float and clear:right.",
       "emphasis": "The only object allowed a border or background. Default is a single vertical rule with restrained label.",
       "screen_layer": "Can receive intent badge in teacher review only; badge excluded from print.",
       "earns_its_place_when": "One short point that must sit outside the reading line without breaking it.",
-      "reject_when": "Longer than the margin column holds, or the point belongs in the flow. If it will not fit in 40 words it is prose.",
+      "reject_when": "The point belongs in the flow as ordinary explanation. Use spanning placement for a full-width callout or misconception.",
       "capacity": {
         "bodyMaxWords": 40,
         "labelMaxWords": 4,
@@ -227,6 +229,64 @@
         "content the reader must read in order to follow the main flow",
         "label longer than labelMaxWords"
       ]
+    },
+    "equation": {
+      "holds": "Inputs, an optional condition, and outputs for a process or relationship.",
+      "content_schema": {
+        "label": "RichText|null",
+        "inputs": "RichText[]",
+        "condition": "RichText|null",
+        "outputs": "RichText[]"
+      },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/equation-content",
+      "supported_actions": ["read-explanation"],
+      "form_selectable": true,
+      "placement": ["main", "spanning"],
+      "fragmentation": "Atomic when it fits; move to the next page when it does not.",
+      "emphasis": "Outlined equation row with readable labels; no colour dependency.",
+      "screen_layer": "Equation editing controls remain outside the print subtree.",
+      "earns_its_place_when": "A process has named inputs and outputs that are easier to scan as one relation.",
+      "reject_when": "The relationship needs a full explanation rather than a compact form.",
+      "capacity": {"inputsMax": 4, "outputsMax": 3},
+      "writer_guidance": {
+        "label": "Name the relation when a short label helps the learner.",
+        "inputs": "List each input term in process order. The capacity is advisory; preserve every authored term when more are needed.",
+        "condition": "State the condition above the arrow when one matters.",
+        "outputs": "List each resulting term in process order. The capacity is advisory; preserve every authored term when more are needed."
+      },
+      "negative_cases": ["missing inputs", "missing outputs"]
+    },
+    "quote": {
+      "holds": "A claim or learner voice with optional attribution.",
+      "content_schema": {"text": "RichText", "attribution": "RichText|null"},
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/quote-content",
+      "supported_actions": ["read-explanation"],
+      "form_selectable": true,
+      "placement": ["main", "spanning"],
+      "fragmentation": "Atomic when it fits; move to the next page when it does not.",
+      "emphasis": "Indented grey block with serif quote text.",
+      "screen_layer": "Quote editing controls remain outside the print subtree.",
+      "earns_its_place_when": "A person's claim or a learner voice is itself part of the teaching move.",
+      "reject_when": "The wording is ordinary explanation that reads better as prose.",
+      "capacity": {},
+      "writer_guidance": {"text": "Preserve the speaker's exact claim.", "attribution": "Name the speaker when supplied."},
+      "negative_cases": ["quote without text"]
+    },
+    "compare": {
+      "holds": "Two or three labelled alternatives presented side by side.",
+      "content_schema": {"items": "CompareItem[]", "label": "RichText|null", "title": "RichText", "body": "RichText"},
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/compare-content",
+      "supported_actions": ["compare-without-response", "read-explanation"],
+      "form_selectable": true,
+      "placement": ["main", "spanning"],
+      "fragmentation": "Items stay together when they fit; an oversized item continues at paragraph boundaries.",
+      "emphasis": "Bordered comparison boxes that remain distinct in greyscale.",
+      "screen_layer": "Comparison editing controls remain outside the print subtree.",
+      "earns_its_place_when": "Two or three alternatives need parallel titles and bodies.",
+      "reject_when": "The items cannot be compared on a shared reading frame.",
+      "capacity": {"itemsMin": 2, "itemsMax": 3},
+      "writer_guidance": {"items": "Use two or three alternatives with a title and body for each. The item capacity is advisory; preserve every authored card when more are needed.", "label": "Use a short label when it clarifies the alternative.", "title": "Name each alternative.", "body": "Explain each alternative in parallel wording."},
+      "negative_cases": ["fewer than two items"]
     },
     "worked-example": {
       "holds": "Problem/setup, ordered reasoning steps, final answer, optional checks.",

@@ -164,7 +164,7 @@
         "read-explanation"
       ],
       "choose_when": "One short point that must sit outside the reading line without breaking it.",
-      "reject_when": "Longer than the margin column holds, or the point belongs in the flow. If it will not fit in 40 words it is prose.",
+      "reject_when": "The point belongs in the flow as ordinary explanation. Use spanning placement for a full-width callout or misconception.",
       "capacity": {
         "bodyMaxWords": 40,
         "labelMaxWords": 4,
@@ -172,7 +172,74 @@
       },
       "placement": [
         "margin",
-        "main"
+        "main",
+        "spanning"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": false
+    },
+    {
+      "id": "equation",
+      "purpose": "Inputs, an optional condition, and outputs for a process or relationship.",
+      "supported_intents": [
+        "explain",
+        "explain-cause"
+      ],
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "choose_when": "A process has named inputs and outputs that are easier to scan as one relation.",
+      "reject_when": "The relationship needs a full explanation rather than a compact form.",
+      "capacity": {
+        "inputsMax": 4,
+        "outputsMax": 3
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": false
+    },
+    {
+      "id": "quote",
+      "purpose": "A claim or learner voice with optional attribution.",
+      "supported_intents": [
+        "explain"
+      ],
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "choose_when": "A person's claim or a learner voice is itself part of the teaching move.",
+      "reject_when": "The wording is ordinary explanation that reads better as prose.",
+      "capacity": {},
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": false
+    },
+    {
+      "id": "compare",
+      "purpose": "Two or three labelled alternatives presented side by side.",
+      "supported_intents": [
+        "compare",
+        "explain"
+      ],
+      "supported_actions": [
+        "compare-without-response",
+        "read-explanation"
+      ],
+      "choose_when": "Two or three alternatives need parallel titles and bodies.",
+      "reject_when": "The items cannot be compared on a shared reading frame.",
+      "capacity": {
+        "itemsMin": 2,
+        "itemsMax": 3
+      },
+      "placement": [
+        "main",
+        "spanning"
       ],
       "requires_asset": false,
       "produces_answer_key": false

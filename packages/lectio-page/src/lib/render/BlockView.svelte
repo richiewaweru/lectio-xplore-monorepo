@@ -6,6 +6,9 @@
 	import TableView from './objects/TableView.svelte';
 	import FigureView from './objects/FigureView.svelte';
 	import AsideView from './objects/AsideView.svelte';
+	import EquationView from './objects/EquationView.svelte';
+	import QuoteView from './objects/QuoteView.svelte';
+	import CompareView from './objects/CompareView.svelte';
 	import WorkedExampleView from './objects/WorkedExampleView.svelte';
 	import QuestionsView from './objects/QuestionsView.svelte';
 	import ChoicesView from './objects/ChoicesView.svelte';
@@ -37,7 +40,13 @@
 {:else if block.object === 'figure'}
 	<FigureView content={block.content} {spanning} />
 {:else if block.object === 'aside'}
-	<AsideView content={block.content} {inMargin} />
+	<AsideView content={block.content} inMargin={inMargin && !spanning} spanning={spanning} />
+{:else if block.object === 'equation'}
+	<EquationView content={block.content} />
+{:else if block.object === 'quote'}
+	<QuoteView content={block.content} />
+{:else if block.object === 'compare'}
+	<CompareView content={block.content} />
 {:else if block.object === 'worked-example'}
 	<WorkedExampleView content={block.content} />
 {:else if block.object === 'questions'}

@@ -30,6 +30,9 @@ const OBJECT_SELECTORS: Record<string, string> = {
 	table: '.lectio-table',
 	figure: '.lectio-figure',
 	aside: '.lectio-aside',
+	equation: '.lectio-equation',
+	quote: '.lectio-quote',
+	compare: '.lectio-compare',
 	'worked-example': '.lectio-worked-example',
 	questions: '.lectio-question',
 	choices: '.lectio-choices',
@@ -179,6 +182,12 @@ async function writeEditionPdfs(
 	if (reviewChrome > 0) {
 		fail('Print route must not include review chrome');
 	}
+	// Chromium's PDF engine supplies reliable pageNumber/totalPages tokens;
+	// remove the screen-only fixed footer before emitting the PDF.
+	await page.locator('.lectio-page-footer').evaluateAll((nodes) => nodes.forEach((node) => node.remove()));
+	const runningHeadText = await page.locator('.lectio-running-head').innerText();
+	await page.locator('.lectio-running-head').evaluateAll((nodes) => nodes.forEach((node) => node.remove()));
+	const safeRunningHead = runningHeadText.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 	const targets =
 		edition === 'teacher'
@@ -197,7 +206,12 @@ async function writeEditionPdfs(
 			path: outPath,
 			format: 'A4',
 			printBackground: target.background,
-			preferCSSPageSize: true
+			preferCSSPageSize: true,
+			displayHeaderFooter: true,
+			headerTemplate:
+				`<div style="width:100%;border-bottom:1px solid #767676;padding-bottom:2pt;color:#767676;font:9pt Atkinson Hyperlegible,sans-serif;">${safeRunningHead}</div>`,
+			footerTemplate:
+				'<div style="width:100%;border-top:1px solid #767676;padding-top:2pt;text-align:right;color:#767676;font:9pt Atkinson Hyperlegible,sans-serif;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>'
 		});
 
 		if (!existsSync(outPath) || statSync(outPath).size === 0) {
@@ -229,7 +243,9 @@ async function writeEditionPdfs(
 const FIXTURES: Array<{ id: string; requireFullCoverage: boolean; editions: Array<'teacher' | 'student'> }> = [
 	{ id: 'photosynthesis-ref', requireFullCoverage: true, editions: ['teacher', 'student'] },
 	{ id: 'margin-stress', requireFullCoverage: false, editions: ['teacher'] },
-	{ id: 'shared-lesson-legacy', requireFullCoverage: false, editions: ['student'] }
+	{ id: 'shared-lesson-legacy', requireFullCoverage: false, editions: ['student'] },
+	{ id: 'shared-lesson-golden', requireFullCoverage: false, editions: ['student', 'teacher'] },
+	{ id: 'oversized-stress', requireFullCoverage: true, editions: ['student', 'teacher'] }
 ];
 
 const selectedFixtureIds = process.env.PDF_FIXTURES

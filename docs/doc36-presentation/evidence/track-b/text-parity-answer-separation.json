@@ -1,0 +1,14 @@
+{
+  "golden_student": {
+    "source_words": 729,
+    "missing_unique_tokens": [],
+    "missing_count": 0
+  },
+  "stress_student": {
+    "source_words": 9225,
+    "missing_unique_tokens": [],
+    "missing_count": 0
+  },
+  "golden_answer_leak_tokens": [],
+  "teacher_answer_key_present": true
+}

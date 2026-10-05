@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="240" viewBox="0 0 640 240" role="img" aria-label="Two seedlings in different light conditions">
+  <rect width="640" height="240" fill="#EDEDED"/>
+  <path d="M80 210h190M370 210h190" stroke="#111111" stroke-width="8"/>
+  <path d="M175 210c0-62 4-105 30-145M465 210c0-54-9-88-34-118" stroke="#111111" stroke-width="8" fill="none"/>
+  <ellipse cx="197" cy="63" rx="43" ry="22" fill="#767676" transform="rotate(-25 197 63)"/>
+  <ellipse cx="142" cy="94" rx="43" ry="22" fill="#767676" transform="rotate(22 142 94)"/>
+  <ellipse cx="425" cy="82" rx="43" ry="22" fill="#767676" transform="rotate(-22 425 82)"/>
+  <ellipse cx="497" cy="107" rx="43" ry="22" fill="#767676" transform="rotate(22 497 107)"/>
+  <text x="128" y="232" font-family="sans-serif" font-size="18" fill="#111111">window</text>
+  <text x="430" y="232" font-family="sans-serif" font-size="18" fill="#111111">dark cupboard</text>
+</svg>

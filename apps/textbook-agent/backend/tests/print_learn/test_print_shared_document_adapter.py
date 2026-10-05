@@ -9,6 +9,11 @@ from document.shared_lesson.models import (
     FigureAccessibility,
     FigureDisplay,
     FigureNode,
+    CompareDisplay,
+    CompareItem,
+    CompareNode,
+    EquationDisplay,
+    EquationNode,
     HeadingDisplay,
     HeadingNode,
     ParagraphDisplay,
@@ -17,6 +22,7 @@ from document.shared_lesson.models import (
     TaskAnchor,
     build_shared_lesson_document,
 )
+from document.shared_lesson.fixtures import load_shared_lesson_fixture
 from document.shared_lesson.repository import StoredSharedLessonDocument
 from infra.execution.checkpoints import content_hash
 from print.generation.shared_document_adapter import (
@@ -107,14 +113,17 @@ def test_print_adapter_verifies_source_and_maps_heading_hierarchy_and_task_label
     section = result.document["sections"][0]
     assert section["title"] == "First section"
     assert [block["object"] for block in section["blocks"]] == ["prose", "heading", "choices"]
-    assert section["blocks"][1]["content"] == {"text": "Shared subsection", "level": 3}
+    assert section["blocks"][1]["content"] == {
+        "text": [{"type": "text", "value": "Shared subsection"}],
+        "level": 3,
+    }
     choice = section["blocks"][2]
     assert choice["content"]["options"] == [
-        {"letter": "A", "text": "First"},
-        {"letter": "B", "text": "Second"},
+        {"letter": "A", "text": [{"type": "text", "value": "First"}]},
+        {"letter": "B", "text": [{"type": "text", "value": "Second"}]},
     ]
     assert result.document["answer_key"]["content"]["groups"][0]["entries"] == [
-        {"question_id": "Choice-1", "answer": "B"}
+        {"question_id": "Q1", "answer": "B"}
     ]
     metadata = result.document["metadata"]["shared_tasks"][0]
     assert metadata == {
@@ -144,6 +153,100 @@ def test_print_adapter_fails_when_required_figure_media_is_missing() -> None:
 
     with pytest.raises(SharedDocumentPrintMappingError, match="no document-bound Print media"):
         realize_shared_document_for_print(stored, expected_identity=_identity(stored))
+
+
+def test_print_adapter_projects_doc36_blocks_and_shared_inline_markup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    import print.generation.shared_document_adapter as adapter
+
+    document = load_shared_lesson_fixture("golden")
+    stored = StoredSharedLessonDocument(
+        document=document,
+        path_lesson_id="path-lesson-golden",
+        status="ready",
+        storage_hash=content_hash(document.model_dump(mode="json")),
+    )
+    media = SimpleNamespace(
+        figure_node_id="observe-figure",
+        status="ready",
+        asset_url="https://cdn.example.test/seedlings.svg",
+        alt_text="Two seedlings",
+    )
+    monkeypatch.setattr(adapter, "verify_bound_figure_media", lambda m, _doc: m)
+
+    result = realize_shared_document_for_print(
+        stored,
+        expected_identity=_identity(stored),
+        figure_media=[media],
+    ).document
+    blocks = [block for section in result["sections"] for block in section["blocks"]]
+    assert {block["object"] for block in blocks} >= {
+        "prose",
+        "list",
+        "aside",
+        "equation",
+        "quote",
+        "compare",
+        "table",
+        "choices",
+    }
+    prose = next(block for block in blocks if block["id"] == "observe-question")
+    assert len(prose["content"]["paragraphs"]) == 2
+    assert prose["content"]["paragraphs"][1]["children"][0]["type"] == "strong"
+    equation = next(block for block in blocks if block["object"] == "equation")
+    assert equation["content"]["inputs"][1][0]["type"] == "text"
+    assert equation["layout"] == {"placement": "spanning"}
+    misconception = next(block for block in blocks if block["id"] == "contrast-belief")
+    assert misconception["content"]["variant"] == "misconception"
+    assert misconception["content"]["belief"]
+    assert result["front_matter"]["contents"] is False
+    assert "task-predict" not in str(result["answer_key"])
+
+
+def test_print_adapter_lowers_markup_in_new_block_labels() -> None:
+    nodes = (
+        EquationNode(
+            id="equation-label",
+            teaching_block_id="block-1",
+            display=EquationDisplay(label="*Energy* input", inputs=("light",), outputs=("growth",)),
+        ),
+        CompareNode(
+            id="compare-label",
+            teaching_block_id="block-1",
+            display=CompareDisplay(
+                items=(
+                    CompareItem(label="*A*", title="First", body="One"),
+                    CompareItem(label="B", title="Second", body="Two"),
+                )
+            ),
+        ),
+    )
+    document = build_shared_lesson_document(
+        {
+            "id": "shared-labels",
+            "revision": 1,
+            "teaching_plan_id": "plan-1",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "c" * 64,
+            "title": "Labels",
+            "sections": [SharedSection(id="section-1", title="Labels", position=0, nodes=nodes)],
+            "created_at": datetime(2026, 9, 20, 9, 0, tzinfo=UTC),
+        }
+    )
+    stored = StoredSharedLessonDocument(
+        document=document,
+        path_lesson_id="path-labels",
+        status="ready",
+        storage_hash=content_hash(document.model_dump(mode="json")),
+    )
+    blocks = realize_shared_document_for_print(
+        stored, expected_identity=_identity(stored)
+    ).document["sections"][0]["blocks"]
+    assert blocks[0]["content"]["label"][0]["type"] == "emphasis"
+    assert blocks[1]["content"]["items"][0]["label"][0]["type"] == "emphasis"
 
 @pytest.mark.parametrize(
     ("media_status", "accepted"),

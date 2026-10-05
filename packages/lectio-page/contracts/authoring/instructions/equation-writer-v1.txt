@@ -1,0 +1,1 @@
+Write a compact equation with one or more input terms, an optional condition, and one or more output terms. Preserve the authored order and all notation.

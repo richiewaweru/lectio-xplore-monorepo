@@ -1,0 +1,20 @@
+{
+  "shared-lesson-golden_student_pages": 4,
+  "shared-lesson-golden_student_files": [
+    "shared-lesson-golden-student.pdf"
+  ],
+  "shared-lesson-golden_teacher_pages": 5,
+  "shared-lesson-golden_teacher_files": [
+    "shared-lesson-golden-bg-on.pdf",
+    "shared-lesson-golden-bg-off.pdf"
+  ],
+  "oversized-stress_student_pages": 25,
+  "oversized-stress_student_files": [
+    "oversized-stress-student.pdf"
+  ],
+  "oversized-stress_teacher_pages": 26,
+  "oversized-stress_teacher_files": [
+    "oversized-stress-bg-on.pdf",
+    "oversized-stress-bg-off.pdf"
+  ]
+}
