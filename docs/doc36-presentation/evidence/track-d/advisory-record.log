@@ -1,0 +1,25 @@
+shared task presentation advisory
+{
+  "provider_calls": 1,
+  "advisories": [
+    {
+      "task_id": "task-block-a",
+      "path": "display_prompt",
+      "actual_words": 30,
+      "target_words": 25,
+      "severity": "advisory"
+    },
+    {
+      "task_id": "task-block-a",
+      "path": "feedback.correct",
+      "actual_words": 41,
+      "target_words": 40,
+      "severity": "advisory"
+    }
+  ],
+  "display_prompt": "This is a deliberately long display prompt with more than twenty five words so the advisory records the exact authored path without changing any learner-facing text in the accepted task.",
+  "feedback": {
+    "correct": "This deliberately long explanatory feedback remains intact and is only reported as a presentation advisory for the teacher to review later while preserving the provider wording exactly for learner and teacher views across every rendered output and future teacher review record."
+  }
+}
+shared task presentation advisory

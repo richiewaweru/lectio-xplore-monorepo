@@ -15,6 +15,7 @@ Worktree: `codex/doc36-tasks` (Phase 0 base `92973aa0`).
 - Backend: [`focused-backend.log`](focused-backend.log) — 55 focused tests passed; one existing Pydantic warning.
 - Frontend unit tests: [`focused-frontend-tests.log`](focused-frontend-tests.log) — 4 tests passed.
 - Frontend static check: [`frontend-check.log`](frontend-check.log) — 0 errors, 5 pre-existing warnings.
+- Advisory audit: [`advisory-record.log`](advisory-record.log) records one provider call, preserved overlong strings, and exact non-blocking paths/counts (`display_prompt` 30/25 and `feedback.correct` 41/40); [`advisory-log.log`](advisory-log.log) captures the warning channel.
 - Runtime prediction uses the existing `pending-review` outcome with `0/0` scores, neutral details, and authored `saved` feedback after validating the response.
 - Legacy role-absent Learn adapter behavior remains covered by the existing adapter assertions (`Correct.` / `Not yet — try again.`).
 - Default DeepSeek structured mode is now `prompted_json`; strict tool support remains explicit and tested.
