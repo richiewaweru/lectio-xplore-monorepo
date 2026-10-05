@@ -98,7 +98,7 @@ p { margin: 0 0 var(--line); }
   border-left: 1px solid #767676;
   font-size: 10pt; line-height: 14pt;
 }
-.lectio-aside--spanning { width: 100%; box-sizing: border-box; clear: both; }
+.lectio-aside--spanning { width: 100%; box-sizing: border-box; clear: both; margin-bottom: var(--line); }
 .lectio-aside--spanning.lectio-aside { border: 1pt solid #767676; padding: 7pt 9pt; }
 .lectio-aside--spanning:has(.lectio-misconception-grid).lectio-aside { border: 0; padding: 0; }
 .lectio-misconception-grid { border: 1pt solid #767676; padding: 7pt 9pt; break-inside: avoid; }
@@ -160,7 +160,7 @@ p { margin: 0 0 var(--line); }
 /* ── Choices ─────────────────────────────────────────────────*/
 .lectio-choices { break-inside: avoid; }
 .lectio-choice-question-number { margin: 0 0 6pt; }
-.lectio-choice { position: relative; padding-left: 9mm; margin-bottom: 8pt; break-inside: avoid; }
+.lectio-choice { position: relative; padding-left: 12mm; margin-bottom: 8pt; break-inside: avoid; }
 .lectio-choice-mark { position: absolute; left: 0; font-size: 14pt; line-height: 12pt; }
 .lectio-choice-letter { position: absolute; left: 5mm; font-weight: 700; }
 .lectio-prediction-reason { margin-top: 8pt; }

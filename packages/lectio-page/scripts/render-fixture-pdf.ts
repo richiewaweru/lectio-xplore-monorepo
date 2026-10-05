@@ -209,9 +209,9 @@ async function writeEditionPdfs(
 			preferCSSPageSize: true,
 			displayHeaderFooter: true,
 			headerTemplate:
-				`<div style="width:100%;border-bottom:1px solid #767676;padding-bottom:2pt;color:#767676;font:9pt Atkinson Hyperlegible,sans-serif;">${safeRunningHead}</div>`,
+				`<div style="width:100%;padding:0 16mm;box-sizing:border-box;"><div style="border-bottom:1px solid #767676;padding-bottom:2pt;color:#767676;font:9pt Atkinson Hyperlegible,sans-serif;">${safeRunningHead}</div></div>`,
 			footerTemplate:
-				'<div style="width:100%;border-top:1px solid #767676;padding-top:2pt;text-align:right;color:#767676;font:9pt Atkinson Hyperlegible,sans-serif;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>'
+				'<div style="width:100%;padding:0 16mm;box-sizing:border-box;"><div style="border-top:1px solid #767676;padding-top:2pt;text-align:right;color:#767676;font:9pt Atkinson Hyperlegible,sans-serif;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div></div>'
 		});
 
 		if (!existsSync(outPath) || statSync(outPath).size === 0) {
