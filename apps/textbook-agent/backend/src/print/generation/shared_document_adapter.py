@@ -143,7 +143,8 @@ def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, Figu
         display = node.display
         content: dict[str, Any] = {
             "body": _inline(display.body or ""),
-            "label": _inline(display.title or display.tone),
+            # Learn labels every key idea "Key idea"; Print must say the same words.
+            "label": _inline("Key idea" if display.variant == "key_idea" else (display.title or display.tone)),
         }
         if display.variant:
             content["variant"] = display.variant

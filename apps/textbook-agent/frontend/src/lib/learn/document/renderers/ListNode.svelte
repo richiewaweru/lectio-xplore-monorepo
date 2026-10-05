@@ -33,6 +33,7 @@
 		font-size: 18px;
 		line-height: 1.6;
 	}
+	.learn-list[data-ordered='false'] { list-style: disc; }
 	.learn-list li + li {
 		margin-top: 14px;
 	}

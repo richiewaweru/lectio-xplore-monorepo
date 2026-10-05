@@ -112,7 +112,7 @@ p { margin: 0 0 var(--line); }
   border-left: 1px solid #767676;
   font-size: 10pt; line-height: 14pt;
 }
-.lectio-aside--spanning { width: 100%; box-sizing: border-box; clear: both; margin-bottom: var(--line); }
+.lectio-aside--spanning { width: 100%; box-sizing: border-box; clear: both; margin-bottom: var(--line); break-inside: avoid; }
 .lectio-aside--spanning.lectio-aside { border: 1pt solid #767676; padding: 7pt 9pt; }
 .lectio-aside--spanning:has(.lectio-misconception-grid).lectio-aside { border: 0; padding: 0; }
 .lectio-misconception-grid { border: 1pt solid #767676; padding: 7pt 9pt; break-inside: avoid; }
