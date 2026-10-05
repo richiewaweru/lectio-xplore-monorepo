@@ -1,6 +1,6 @@
 """Neutral ordinary document vocabulary shared by Print and Learn.
 
-Six primitives only. No pagination, CSS, component IDs, interaction scoring,
+Ordinary document primitives only. No pagination, CSS, component IDs, interaction scoring,
 video, simulation, or generic Media.
 """
 
@@ -8,12 +8,15 @@ from document.composition import CompositionDecision, CompositionPlan
 from document.models import (
     DOCUMENT_PRIMITIVE_KINDS,
     CalloutNode,
+    CompareNode,
     DocumentNode,
+    EquationNode,
     FigureNode,
     HeadingNode,
     ListNode,
     ParagraphNode,
     TableNode,
+    QuoteNode,
 )
 from document.shared_lesson import (
     AssemblyIssue,
@@ -33,10 +36,12 @@ from document.validation import DocumentValidationError, validate_document_nodes
 __all__ = [
     "DOCUMENT_PRIMITIVE_KINDS",
     "CalloutNode",
+    "CompareNode",
     "AssemblyIssue",
     "CompositionDecision",
     "CompositionPlan",
     "DocumentNode",
+    "EquationNode",
     "DocumentValidationError",
     "FigureNode",
     "HeadingNode",
@@ -48,6 +53,7 @@ __all__ = [
     "SharedProvenance",
     "SharedSection",
     "TableNode",
+    "QuoteNode",
     "TaskAnchor",
     "build_shared_lesson_document",
     "assemble_shared_lesson_document",

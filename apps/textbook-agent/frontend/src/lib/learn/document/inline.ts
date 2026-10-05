@@ -21,6 +21,23 @@ function append(nodes: InlineNode[], node: InlineNode): void {
 	}
 }
 
+function markerRunIsExact(value: string, index: number, marker: string): boolean {
+	const character = marker[0]
+	const left = index > 0 && value[index - 1] === character
+	const rightIndex = index + marker.length
+	const right = rightIndex < value.length && value[rightIndex] === character
+	return !left && !right
+}
+
+function findClose(value: string, marker: string, start: number): number {
+	let candidate = value.indexOf(marker, start)
+	while (candidate >= 0) {
+		if (markerRunIsExact(value, candidate, marker)) return candidate
+		candidate = value.indexOf(marker, candidate + 1)
+	}
+	return -1
+}
+
 function parseSegment(value: string, allowEmphasis: boolean, allowSubSup: boolean): InlineNode[] {
 	const nodes: InlineNode[] = []
 	let textStart = 0
@@ -50,9 +67,17 @@ function parseSegment(value: string, allowEmphasis: boolean, allowSubSup: boolea
 			index += 1
 			continue
 		}
+		if (!markerRunIsExact(value, index, marker)) {
+			index += marker.length
+			continue
+		}
 
-		const close = value.indexOf(marker, index + marker.length)
+		const close = findClose(value, marker, index + marker.length)
 		if (close < 0) {
+			index += marker.length
+			continue
+		}
+		if (close === index + marker.length) {
 			index += marker.length
 			continue
 		}

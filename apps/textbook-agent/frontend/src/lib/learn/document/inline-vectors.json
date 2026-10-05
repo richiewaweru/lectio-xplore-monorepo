@@ -54,11 +54,8 @@
     "expected": [{"type":"text","value":"<script>alert(1)</script>"}]
   },
   {
-    "name": "empty spans are valid",
-    "input": "**** **",
-    "expected": [
-      {"type":"strong","children":[]},
-      {"type":"text","value":" **"}
-    ]
+    "name": "empty and malformed spans stay literal",
+    "input": "**** ** ~~ ^^ ***",
+    "expected": [{"type":"text","value":"**** ** ~~ ^^ ***"}]
   }
 ]

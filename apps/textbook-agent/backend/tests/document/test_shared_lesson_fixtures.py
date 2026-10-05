@@ -1,4 +1,5 @@
 from document.shared_lesson.fixtures import load_shared_lesson_fixture
+from document.shared_lesson.inline import parse_inline_markup
 from document.shared_lesson.models import CompareDisplay, CompareItem, EquationDisplay
 
 
@@ -27,14 +28,18 @@ def test_golden_fixture_covers_every_phase_zero_node_and_task_shape() -> None:
 
 def test_overlong_fixture_is_loaded_without_truncation() -> None:
     document = load_shared_lesson_fixture("overlong")
-    paragraph = next(
-        node for node in document.sections[0].nodes if node.kind == "paragraph"
-    )
-    text = paragraph.display.text  # type: ignore[union-attr]
+    paragraphs = [
+        node.display.text
+        for section in document.sections
+        for node in section.nodes
+        if node.kind == "paragraph"
+    ]
+    text = max(paragraphs, key=len)
 
-    assert len(text.split()) > 100
-    assert text.count("This controlled comparison makes it possible") == 2
-    assert text.count("Two pots are set up to be compared.") == 2
+    # The authentic longest paragraph is 46 words; doubling it is the
+    # intentional overlong fixture without inventing learner-facing prose.
+    assert len(text.split()) > 80
+    assert text.count("Soil does a real job") == 2
     assert {node.kind for section in document.sections for node in section.nodes} == {
         node.kind for section in load_shared_lesson_fixture("golden").sections for node in section.nodes
     }
@@ -74,3 +79,27 @@ def test_shape_targets_are_advisory_and_preserve_oversized_content() -> None:
     assert len(equation.inputs) == 5
     assert len(equation.outputs) == 4
     assert len(comparison.items) == 4
+
+
+def test_golden_fixture_exercises_every_inline_markup_kind() -> None:
+    document = load_shared_lesson_fixture("golden")
+    text_parts: list[str] = []
+    for section in document.sections:
+        for node in section.nodes:
+            display = getattr(node, "display", None)
+            for value in (
+                getattr(display, "text", None),
+                getattr(display, "body", None),
+                getattr(display, "condition", None),
+                getattr(display, "belief", None),
+                getattr(display, "evidence", None),
+                getattr(display, "conclusion", None),
+                getattr(display, "aside", None),
+                *(getattr(display, "inputs", ()) or ()),
+                *(getattr(display, "outputs", ()) or ()),
+            ):
+                if isinstance(value, str):
+                    text_parts.append(value)
+    ast = parse_inline_markup("\n".join(text_parts))
+    kinds = {node["type"] for node in ast}
+    assert {"strong", "emphasis", "subscript", "superscript"} <= kinds

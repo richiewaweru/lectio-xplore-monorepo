@@ -48,8 +48,22 @@ def _plain(value: str) -> list[InlineNode]:
     return [_text(value)] if value else []
 
 
+def _marker_run_is_exact(value: str, index: int, marker: str) -> bool:
+    """Only an isolated delimiter run can open or close a span."""
+    char = marker[0]
+    left = index > 0 and value[index - 1] == char
+    right_index = index + len(marker)
+    right = right_index < len(value) and value[right_index] == char
+    return not left and not right
+
+
 def _find_close(value: str, marker: str, start: int) -> int:
-    return value.find(marker, start)
+    candidate = value.find(marker, start)
+    while candidate >= 0:
+        if _marker_run_is_exact(value, candidate, marker):
+            return candidate
+        candidate = value.find(marker, candidate + 1)
+    return -1
 
 
 def _parse_segment(
@@ -80,8 +94,15 @@ def _parse_segment(
             index += 1
             continue
 
+        if not _marker_run_is_exact(value, index, marker):
+            index += len(marker)
+            continue
+
         close = _find_close(value, marker, index + len(marker))
         if close < 0:
+            index += len(marker)
+            continue
+        if close == index + len(marker):
             index += len(marker)
             continue
 
