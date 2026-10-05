@@ -49,7 +49,14 @@ class SharedFigureMediaProviderFailed(SharedFigureMediaError):
     executor already tried and reported ``status="failed"`` (a provider or
     transport failure), so it must never be mistaken for invalid hosted
     output the provider actually returned.
+
+    ``error_code`` is the executor's safe, specific code (for example
+    ``provider_http_403``); it never carries a raw provider message.
     """
+
+    def __init__(self, message: str, *, error_code: str | None = None) -> None:
+        super().__init__(message)
+        self.error_code = error_code or "provider_error"
 
 
 _MEDIA_NARRATIVE_SECTION_ISSUES = frozenset(
@@ -545,7 +552,8 @@ def bind_generated_figure(
         # the shared media contract, and must be classified separately so it
         # is never mistaken for invalid hosted output.
         raise SharedFigureMediaProviderFailed(
-            f"figure {work.figure_node_id!r} media provider call failed"
+            f"figure {work.figure_node_id!r} media provider call failed",
+            error_code=block.error_code,
         )
     if block.status not in {"ready", "ready_with_quality_warning"}:
         raise SharedFigureMediaError(

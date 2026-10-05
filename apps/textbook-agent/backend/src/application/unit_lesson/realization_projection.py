@@ -11,6 +11,8 @@ retry/regenerate revision bump remain product decisions and are not job state.
 | queued / running      | none               | queued                |
 | failed_recoverable +  | none               | needs_shared_review   |
 |   document review     |                    |                       |
+| failed_recoverable on | none               | failed_recoverable    |
+|   retryable leaves    |                    | (specific error code) |
 | failed_* / cancelled  | none               | failed_recoverable    |
 | ready                 | queued / running   | queued / running      |
 | ready                 | ready              | ready                 |
@@ -37,7 +39,7 @@ _NO_RUN_STATUSES = frozenset(
 )
 _NON_PROJECTED_STATUSES = frozenset({"stale", "read_only"})
 # A no-Run failure written by the projection itself (document failed/stale).
-_DOC_PROJECTED_FAILURE_STATES = frozenset({"failed", "stale"})
+_DOC_PROJECTED_FAILURE_STATES = frozenset({"failed", "stale", "recoverable"})
 _FAILED_STATUSES = frozenset({"failed_recoverable", "failed_terminal", "failed"})
 
 
@@ -162,6 +164,17 @@ def project_realization_status(
             status="needs_shared_review",
             error_summary=None,
             shared_document_state="needs_review",
+        )
+    elif state == "recoverable":
+        recoverable = doc_source.recoverable
+        assert recoverable is not None
+        row.shared_document_run_id = recoverable.run_id
+        failure = recoverable.failure
+        _apply(
+            row,
+            status="failed_recoverable",
+            error_summary=f"{failure.error_code}: {failure.safe_summary}"[:500],
+            shared_document_state="recoverable",
         )
     elif state == "stale":
         stale = doc_source.stale

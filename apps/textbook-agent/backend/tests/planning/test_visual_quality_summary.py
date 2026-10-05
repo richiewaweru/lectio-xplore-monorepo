@@ -62,6 +62,33 @@ def test_archived_flagged_qc_surfaces_until_accepted_replacement() -> None:
     assert summary["flagged_count"] == 1
 
 
+def _figure(qc: dict | None) -> dict:
+    outcome: dict = {
+        "object": "figure",
+        "status": "ready",
+        "request_id": "req-figure-1",
+        "content": {"asset": {"status": "ready", "src": "/images/a.png"}},
+    }
+    if qc is not None:
+        outcome["visual_qc"] = qc
+    return {execution_key("section-1", "figure-1"): outcome}
+
+
+def test_figure_without_qc_verdict_is_unreviewed_not_ready() -> None:
+    summary = visual_quality_summary(_state(_figure(None)))
+    assert summary["status"] == "unreviewed"
+    assert summary["unreviewed_count"] == 1
+    assert summary["retryable"] is False
+
+
+def test_figure_with_qc_verdict_is_ready_only_when_qc_enabled(monkeypatch) -> None:
+    state = _state(_figure({"status": "ready"}))
+    monkeypatch.setenv("V3_VISUAL_QC_ENABLED", "true")
+    assert visual_quality_summary(state)["status"] == "ready"
+    monkeypatch.setenv("V3_VISUAL_QC_ENABLED", "false")
+    assert visual_quality_summary(state)["status"] == "unreviewed"
+
+
 def test_document_revision_reads_page_document_revision() -> None:
     assert _document_revision({"page_document_v2": {"document_revision": 3}}) == 3
     assert _document_revision({"page_document_v2": {}}) == 0

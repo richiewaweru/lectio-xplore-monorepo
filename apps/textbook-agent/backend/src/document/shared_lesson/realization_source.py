@@ -49,6 +49,7 @@ from document.shared_lesson.repository import (
     load_shared_lesson_document,
 )
 from document.shared_lesson.run_admission import admit_shared_document_run
+from document.shared_lesson.run_failure import RunFailureSummary, summarize_failed_leaves
 from document.shared_lesson.runtime import verify_teaching_plan_source
 from infra.database.models import (
     GenerationBuildModel,
@@ -65,7 +66,9 @@ from infra.generation_runtime import (
     get_run_status,
 )
 
-RealizationState = Literal["ready", "pending", "needs_review", "stale", "failed"]
+RealizationState = Literal[
+    "ready", "pending", "needs_review", "recoverable", "stale", "failed"
+]
 
 _TERMINAL_RUN_STATUSES = frozenset({"failed_terminal", "cancelled"})
 _MAX_TERMINAL_ATTEMPTS = 3
@@ -120,6 +123,18 @@ class PendingRealizationSource:
 
 
 @dataclass(frozen=True)
+class RecoverableRealizationSource:
+    """The Run is ``failed_recoverable`` on retryable leaves (not a QA review).
+
+    Reported honestly as a failure, with the safe error code of the failed leaf
+    and whether the worker's bounded auto-retry will requeue it on its own.
+    """
+
+    run_id: str
+    failure: RunFailureSummary
+
+
+@dataclass(frozen=True)
 class NeedsReviewRealizationSource:
     """A document-QA leaf is blocked on a human reviewer decision."""
 
@@ -158,6 +173,7 @@ class RealizationSourceResult:
     ready: ReadyRealizationSource | None = None
     pending: PendingRealizationSource | None = None
     needs_review: NeedsReviewRealizationSource | None = None
+    recoverable: RecoverableRealizationSource | None = None
     stale: StaleRealizationSource | None = None
     failed: FailedRealizationSource | None = None
 
@@ -334,8 +350,10 @@ async def load_realization_source(
     do that.  It finds the most recently admitted SharedDocument Run for this
     path lesson and classifies it: ``ready`` with a hash-recomputed,
     lineage-verified document and bound media; ``pending`` while the Run is
-    still queued, running, awaiting review, bounded-retryable, or has never
-    been admitted at all; ``needs_review`` when an active document-QA leaf is
+    still queued, running, awaiting review, or has never
+    been admitted at all; ``recoverable`` when the Run is ``failed_recoverable``
+    on retryable leaves (reported as a failure with its safe error code and
+    whether auto-retry will requeue it); ``needs_review`` when an active document-QA leaf is
     blocked on a human reviewer decision; ``stale`` when a ready Run's output
     no longer matches the *current* approved Teaching Plan; and ``failed`` for
     a terminal Run. Owner/path-lesson scoping failures raise directly rather
@@ -381,6 +399,12 @@ async def load_realization_source(
                 needs_review=NeedsReviewRealizationSource(
                     run_id=run.id, work_item_id=leaf.id, stage=leaf.stage
                 ),
+            )
+        failure = summarize_failed_leaves(leaves)
+        if failure is not None:
+            return RealizationSourceResult(
+                state="recoverable",
+                recoverable=RecoverableRealizationSource(run_id=run.id, failure=failure),
             )
         return RealizationSourceResult(
             state="pending",
@@ -532,6 +556,7 @@ __all__ = [
     "RealizationSourceNotFound",
     "RealizationSourceResult",
     "RealizationState",
+    "RecoverableRealizationSource",
     "StaleRealizationSource",
     "ensure_shared_document_run",
     "load_realization_source",

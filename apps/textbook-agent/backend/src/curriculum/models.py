@@ -365,7 +365,10 @@ class WorkspaceErrorDTO(StrictModel):
     stage: str | None = None
     work_item_id: str | None = None
     attempt: int | None = None
+    max_attempts: int | None = None
     recovery_action: str | None = None
+    # True when the worker will requeue the failed step on its own.
+    auto_retrying: bool | None = None
 
 
 class PreparationProgressDTO(StrictModel):
@@ -413,12 +416,39 @@ class ArtifactProgressStepDTO(StrictModel):
     total: int | None = None
 
 
+class FigureProgressDTO(StrictModel):
+    """One planned figure joined to its media work item (if any)."""
+
+    figure_id: str
+    section_id: str | None = None
+    section_title: str | None = None
+    block_id: str | None = None
+    # planned: no work item yet; pending: queued/running; ready; failed.
+    status: Literal["planned", "pending", "ready", "failed"]
+    required: bool = True
+    # Safe code such as provider_http_403 / provider_timeout; never raw text.
+    error_code: str | None = None
+    error_summary: str | None = None
+    retryable: bool = False
+    recovery_action: str | None = None
+    attempt: int | None = None
+    max_attempts: int | None = None
+    # True when the worker will requeue this failed figure on its own.
+    auto_retrying: bool = False
+    warnings: list[str] = Field(default_factory=list)
+
+
 class ArtifactProgressDTO(StrictModel):
     """Ordered stage progress of the Runs that build a Learn/Print artifact."""
 
     steps: list[ArtifactProgressStepDTO] = Field(default_factory=list)
     current_label: str | None = None
+    # Timezone-aware UTC ISO-8601 (``+00:00``); never an offsetless string.
     started_at: str | None = None
+    figures: list[FigureProgressDTO] = Field(default_factory=list)
+    figures_planned: int = 0
+    figures_ready: int = 0
+    figures_failed: int = 0
 
 
 class ArtifactWorkspaceDTO(StrictModel):

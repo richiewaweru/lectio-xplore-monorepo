@@ -39,6 +39,12 @@ class GeneratedVisualBlock(BaseModel):
         "flagged_quality",
     ] = "ready"
     error_message: str | None = None
+    # Safe, specific failure code (e.g. provider_http_403); never a raw message.
+    error_code: str | None = None
+    # ``status`` "ready" only means an image exists. ``qc_state`` says whether a
+    # quality review actually ran: "passed" | "flagged" | "unavailable" (QC
+    # errored) | "unreviewed" (QC disabled, skipped, or not run for this block).
+    qc_state: Literal["passed", "flagged", "unavailable", "unreviewed"] = "unreviewed"
     qc_reasons: list[str] = Field(default_factory=list)
     qc_correction_hint: str | None = None
     qc_trace_id: str | None = None

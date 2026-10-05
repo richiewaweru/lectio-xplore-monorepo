@@ -1057,11 +1057,13 @@ async def test_failed_status_block_is_provider_failed_not_invalid_output(db_sess
     )
 
     assert outcome.media is None
-    assert outcome.error_code == "media_provider_failed"
+    assert outcome.error_code == "provider_error"
     row = await db_session.get(GenerationWorkItemModel, admitted.record.id)
     assert row is not None
     assert row.status == "failed_recoverable"
-    assert row.error_code == "media_provider_failed"
+    assert row.error_code == "provider_error"
+    assert row.recovery_action == "retry"
+    assert "dead image API" not in (row.error_summary or "")
     assert row.error_class == "provider_transport"
 
     events = list(

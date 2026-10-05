@@ -37,6 +37,7 @@ from document.shared_lesson.media import (
     rebuild_figure_work_order,
 )
 from curriculum.teaching_plan.models import VisualSpec
+from media.generation.provider_errors import safe_summary_for_code
 from document.shared_lesson.models import FigureNode, SharedSection
 from document.shared_lesson.runtime import (
     TeachingPlanSource,
@@ -172,18 +173,25 @@ def _composition_identity(work: SharedFigureWorkOrder) -> str:
     # digest in ``input_hash`` remains the compact equality check; this
     # canonical JSON lets a restarted worker reconstruct and verify the exact
     # accepted media input without consulting an in-memory section writer.
+    payload: dict[str, Any] = {
+        "source_plan_id": work.source_plan_id,
+        "source_plan_revision": work.source_plan_revision,
+        "source_plan_hash": work.source_plan_hash,
+        "section_id": work.section_id,
+        "section_output_hash": work.section_output_hash,
+        "figure_node_id": work.figure_node_id,
+        "figure_semantic_hash": work.figure_semantic_hash,
+        "required": work.required,
+        "work_order": work.work_order.model_dump(mode="json"),
+    }
+    if work.warnings:
+        # Warnings are part of ``input_hash``; persisting them (only when
+        # present, so existing identities stay byte-identical) lets a
+        # reconstructed work order reproduce that hash and lets progress
+        # surface them.
+        payload["warnings"] = list(work.warnings)
     return json.dumps(
-        {
-            "source_plan_id": work.source_plan_id,
-            "source_plan_revision": work.source_plan_revision,
-            "source_plan_hash": work.source_plan_hash,
-            "section_id": work.section_id,
-            "section_output_hash": work.section_output_hash,
-            "figure_node_id": work.figure_node_id,
-            "figure_semantic_hash": work.figure_semantic_hash,
-            "required": work.required,
-            "work_order": work.work_order.model_dump(mode="json"),
-        },
+        payload,
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
@@ -684,16 +692,17 @@ async def execute_figure_media_work_item(
         media = bind_generated_figure(job.work, blocks)
     except LeaseLostError:
         raise
-    except SharedFigureMediaProviderFailed:
+    except SharedFigureMediaProviderFailed as provider_exc:
         # The executor itself reported a failed provider/transport call (for
         # example an unreachable image API). This is not a violation of the
         # shared media contract, so it must not be classified as invalid
         # hosted output. Only a safe, structured diagnostic is recorded -
         # never the provider's error_message, prompts, URLs, or keys.
+        provider_code = provider_exc.error_code
         failure = WorkItemFailure(
-            error_code="media_provider_failed",
+            error_code=provider_code,
             error_class=ErrorClass.PROVIDER_TRANSPORT,
-            safe_summary="Figure media provider call failed.",
+            safe_summary=safe_summary_for_code(provider_code),
             recovery_action=RecoveryAction.RETRY,
         )
         failed_item = await _fail_after_rollback(

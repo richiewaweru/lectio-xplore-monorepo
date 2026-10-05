@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from media.qc.visual_qc import visual_qc_enabled
+
 
 def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
     """Expose the persisted visual QC markers needed by native viewers/retry UI."""
@@ -13,10 +15,13 @@ def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
     block_execution = page.get("block_execution")
     flagged: list[dict[str, Any]] = []
     failed: list[str] = []
+    figure_count = 0
+    reviewed_count = 0
     if isinstance(block_execution, Mapping):
         for outcome in block_execution.values():
             if not isinstance(outcome, Mapping) or str(outcome.get("object") or "") != "figure":
                 continue
+            figure_count += 1
             request_id = str(outcome.get("request_id") or "")
             content = outcome.get("content") if isinstance(outcome.get("content"), Mapping) else {}
             asset = content.get("asset") if isinstance(content, Mapping) and isinstance(content.get("asset"), Mapping) else {}
@@ -43,6 +48,8 @@ def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
                         if isinstance(candidate, Mapping):
                             qc = candidate
                             break
+            if isinstance(qc, Mapping) and str(qc.get("status") or "").strip():
+                reviewed_count += 1
             if isinstance(qc, Mapping) and str(qc.get("status") or "") == "flagged_quality":
                 flagged.append(
                     {
@@ -54,8 +61,20 @@ def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
                         "correction_hint": str(qc.get("correction_hint") or "") or None,
                     }
                 )
+    # "ready" is a claim that quality review ran and passed. With figures
+    # present but QC disabled or no verdict persisted, say so honestly.
+    reviewed = visual_qc_enabled() and reviewed_count > 0
+    if flagged:
+        status = "ready_with_quality_warning"
+    elif failed:
+        status = "failed"
+    elif figure_count and not reviewed:
+        status = "unreviewed"
+    else:
+        status = "ready"
     return {
-        "status": "ready_with_quality_warning" if flagged else ("failed" if failed else "ready"),
+        "status": status,
+        "unreviewed_count": max(figure_count - reviewed_count, 0) if figure_count else 0,
         "flagged": flagged,
         "flagged_count": len(flagged),
         "failed_request_ids": sorted(set(failed)),

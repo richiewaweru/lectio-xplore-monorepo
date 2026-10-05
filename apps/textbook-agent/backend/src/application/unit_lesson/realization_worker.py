@@ -29,7 +29,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import exc as sqlalchemy_exc
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import selectinload
 
 from application.unit_lesson.realization_projection import project_realization_status
@@ -264,7 +264,16 @@ class RealizationWorker:
                     .where(
                         NativeRealizationModel.generation_run_id.is_(None),
                         NativeRealizationModel.path.in_(_PATHS),
-                        NativeRealizationModel.status.in_(("queued", "needs_shared_review")),
+                        or_(
+                            NativeRealizationModel.status.in_(("queued", "needs_shared_review")),
+                            # Failed on retryable shared-document leaves: keep
+                            # following the Run so an auto/manual retry flips
+                            # the realization back to queued.
+                            and_(
+                                NativeRealizationModel.status == "failed_recoverable",
+                                NativeRealizationModel.shared_document_state == "recoverable",
+                            ),
+                        ),
                         NativeRealizationModel.output_id.is_not(None),
                     )
                     .order_by(NativeRealizationModel.created_at.asc())
@@ -297,7 +306,13 @@ class RealizationWorker:
         if (
             row is None
             or row.generation_run_id
-            or row.status not in {"queued", "needs_shared_review"}
+            or not (
+                row.status in {"queued", "needs_shared_review"}
+                or (
+                    row.status == "failed_recoverable"
+                    and row.shared_document_state == "recoverable"
+                )
+            )
         ):
             return False
         owner_id = await self._owner_id(session, str(row.path_lesson_id))

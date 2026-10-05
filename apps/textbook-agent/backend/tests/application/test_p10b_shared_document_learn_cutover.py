@@ -31,7 +31,12 @@ from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.revisions import TeachingRevisionStore
 from document.shared_lesson.continuity import ContinuityIssue
 from document.shared_lesson.document_semantic import DocumentSemanticVerdict
-from infra.database.models import SharedLessonDocumentModel
+from document.shared_lesson.auto_retry import scan_and_auto_retry
+from infra.database.models import (
+    GenerationRunModel,
+    GenerationWorkItemModel,
+    SharedLessonDocumentModel,
+)
 from document.shared_lesson.post_section_pipeline import run_post_section_pipeline
 from learn.authoring.builder.service import (
     SharedDocumentLineageMismatchError,
@@ -108,6 +113,74 @@ async def test_worker_reports_pending_without_consuming_an_attempt(
     assert row.generation_run_id is None
     assert row.shared_document_state == "pending"
     assert row.realization_revision == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_media_leaf_projects_failed_recoverable_then_auto_retry_requeues(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    lesson, _plan, _source, _document = await _approved_native_preparation(
+        db_session, user_id="p10b-media-failed"
+    )
+    admitted = await realize_learn_from_preparation(
+        db_session,
+        preparation_generation_id=str(lesson.pack_id),
+        user_id="p10b-media-failed",
+        path_lesson_id=lesson.id,
+    )
+    await db_session.commit()
+    row = await db_session.get(NativeRealizationModel, admitted["realization_id"])
+    assert row is not None and row.shared_document_run_id
+    run_id = row.shared_document_run_id
+
+    run = await db_session.get(GenerationRunModel, run_id)
+    for item in (
+        await db_session.scalars(
+            select(GenerationWorkItemModel).where(GenerationWorkItemModel.run_id == run_id)
+        )
+    ).all():
+        item.status = "ready"
+        item.output_json = {"ok": True}
+        item.output_hash = "f" * 64
+    db_session.add(
+        GenerationWorkItemModel(
+            run_id=run_id,
+            item_key="media:fig-1",
+            stage="media_generation",
+            status="failed_recoverable",
+            attempt=1,
+            max_attempts=3,
+            input_hash="d" * 64,
+            definition_hash="e" * 64,
+            error_code="provider_http_503",
+            error_class="provider_transport",
+            error_summary="Figure generation failed: the image provider had a temporary problem (HTTP 503).",
+            recovery_action="retry",
+        )
+    )
+    run.status = "failed_recoverable"
+    await db_session.commit()
+
+    worker = RealizationWorker(db_session_factory, worker_id="p10b-media-failed-worker")
+    async with db_session_factory() as tick:
+        await worker.run_one(tick)
+    await db_session.refresh(row)
+    assert row.status == "failed_recoverable"  # truthful: not "queued"
+    assert row.shared_document_state == "recoverable"
+    assert row.error_summary.startswith("provider_http_503: Figure generation failed")
+    assert row.generation_run_id is None
+
+    # The bounded auto-retry (scans Runs, not realizations) requeues the leaf...
+    async with db_session_factory() as retry_session:
+        retried = await scan_and_auto_retry(retry_session, delay_seconds=0)
+    assert retried == 1
+    # ...and the realization follows the Run back to queued on the next tick.
+    async with db_session_factory() as tick:
+        await worker.run_one(tick)
+    await db_session.refresh(row)
+    assert row.status == "queued"
+    assert row.shared_document_state == "pending"
+    assert row.error_summary is None
 
 
 @pytest.mark.usefixtures("blocking_quality_gate")

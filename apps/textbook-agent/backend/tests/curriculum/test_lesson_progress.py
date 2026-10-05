@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+import json
+from datetime import UTC, datetime, timedelta
 
+from curriculum.figure_progress import PlannedFigure
 from curriculum.lesson_progress import ProgressItem, project_artifact_progress
 
 START = datetime(2026, 10, 1, 12, 0, 0)
@@ -41,7 +43,7 @@ def test_early_first_step_active():
     assert steps["sourcebook"].status == "active"
     assert steps["shared_tasks"].status == "pending"
     assert progress.current_label == "Gathering source notes"
-    assert progress.started_at == START.isoformat()
+    assert progress.started_at == START.replace(tzinfo=UTC).isoformat()
     assert "media" not in steps
 
 
@@ -118,3 +120,189 @@ def test_everything_done():
     progress = _project([], run="ready", realize="ready")
     assert all(s.status == "done" for s in progress.steps)
     assert progress.current_label is None
+
+
+def test_started_at_is_tz_aware_utc_and_elapsed_is_small():
+    # DB datetimes are naive UTC; a run started "now" must not look hours old.
+    started = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=5)
+    progress = project_artifact_progress(
+        path="learn",
+        shared_run_status="running",
+        shared_items=[_i("sourcebook", "running")],
+        shared_started_at=started,
+    )
+    assert progress.started_at is not None
+    assert progress.started_at.endswith("+00:00")
+    elapsed = datetime.now(UTC) - datetime.fromisoformat(progress.started_at)
+    assert timedelta(0) <= elapsed < timedelta(seconds=60)
+
+
+def _media(
+    key: str,
+    status: str,
+    figure_id: str,
+    *,
+    error_code: str | None = None,
+    attempt: int = 1,
+    recovery_action: str | None = None,
+    warnings: list[str] | None = None,
+) -> ProgressItem:
+    identity = {"figure_node_id": figure_id, "section_id": "s1", "required": True}
+    if warnings:
+        identity["warnings"] = warnings
+    return ProgressItem(
+        key,
+        "media_generation",
+        status,
+        id=f"id-{key}",
+        attempt=attempt,
+        error_code=error_code,
+        error_class="provider_transport" if error_code else None,
+        error_summary="Figure generation failed: the image provider rejected the request (HTTP 403)."
+        if error_code
+        else None,
+        recovery_action=recovery_action,
+        composition_identity=json.dumps(identity),
+    )
+
+
+PLANNED = tuple(
+    PlannedFigure(f"fig-{n}", "s1", "Section one", f"b{n}", True) for n in range(1, 6)
+)
+
+
+def test_figure_records_cover_planned_ready_failed_and_pending():
+    items = [
+        _media("media:1", "ready", "fig-1"),
+        _media("media:2", "ready", "fig-2", warnings=["label_missing:Root"]),
+        _media(
+            "media:3",
+            "failed_recoverable",
+            "fig-3",
+            error_code="provider_http_403",
+            recovery_action="retry",
+        ),
+        _media("media:4", "running", "fig-4"),
+    ]
+    progress = project_artifact_progress(
+        path="learn",
+        shared_run_status="running",
+        shared_items=items,
+        shared_started_at=START,
+        planned_figures=PLANNED,
+    )
+    by_id = {f.figure_id: f for f in progress.figures}
+    assert [f.status for f in progress.figures] == ["ready", "ready", "failed", "pending", "planned"]
+    assert by_id["fig-2"].warnings == ["label_missing:Root"]
+    failed = by_id["fig-3"]
+    assert failed.error_code == "provider_http_403"
+    assert failed.retryable is True
+    assert failed.recovery_action == "retry"
+    # 403 is never auto-retried: say so honestly.
+    assert failed.auto_retrying is False
+    assert by_id["fig-5"].section_title == "Section one"
+    assert (progress.figures_planned, progress.figures_ready, progress.figures_failed) == (5, 2, 1)
+    media_step = _by_key(progress)["media"]
+    assert media_step.label == "Figures: 2 ready / 1 failed / 5 planned"
+    assert media_step.status == "failed"
+    assert progress.current_label == "Figures: 2 ready / 1 failed / 5 planned"
+
+
+def test_transient_failure_is_marked_auto_retrying():
+    items = [
+        _media(
+            "media:1",
+            "failed_recoverable",
+            "fig-1",
+            error_code="provider_http_503",
+            recovery_action="retry",
+        )
+    ]
+    progress = project_artifact_progress(
+        path="learn",
+        shared_run_status="failed_recoverable",
+        shared_items=items,
+        shared_started_at=START,
+        planned_figures=PLANNED[:1],
+    )
+    figure = progress.figures[0]
+    assert figure.status == "failed"
+    assert figure.retryable is True
+    assert figure.auto_retrying is True
+
+
+def test_planned_figures_show_before_any_media_item_exists():
+    progress = project_artifact_progress(
+        path="learn",
+        shared_run_status="running",
+        shared_items=[_i("sourcebook", "ready")],
+        shared_started_at=START,
+        planned_figures=PLANNED,
+    )
+    step = _by_key(progress)["media"]
+    assert step.label == "Figures: 0 ready / 5 planned"
+    assert step.status == "pending"
+    assert {f.status for f in progress.figures} == {"planned"}
+
+
+def test_all_figures_ready_is_done():
+    items = [_media(f"media:{n}", "ready", f"fig-{n}") for n in range(1, 6)]
+    progress = project_artifact_progress(
+        path="learn",
+        shared_run_status="running",
+        shared_items=items,
+        shared_started_at=START,
+        planned_figures=PLANNED,
+    )
+    step = _by_key(progress)["media"]
+    assert step.label == "Figures: 5 ready"
+    assert step.status == "done"
+
+
+def test_plan_visual_figures_lists_one_per_visual_block_with_composer_ids():
+    from curriculum.figure_progress import plan_visual_figures
+    from curriculum.teaching_plan.models import TeachingPlanBlock
+    from document.shared_lesson.composer import figure_item_for_block
+
+    def block(block_id: str, visual: dict | None) -> dict:
+        data = {
+            "id": block_id,
+            "position": 0,
+            "intent": "explain",
+            "brief": "brief",
+            "evidence": "evidence",
+        }
+        if visual is not None:
+            data["visual"] = visual
+        return data
+
+    visual = {"mode": "diagram", "purpose": "show flow", "must_show": ["a", "b"], "required": False}
+    page_state = {
+        "teaching_revisions": [
+            {
+                "revision": 2,
+                "plan": {
+                    "sections": [
+                        {
+                            "slot_id": "s1",
+                            "display_title": "Intro",
+                            "blocks": [block("b1", visual), block("b2", None)],
+                        }
+                    ]
+                },
+            }
+        ]
+    }
+
+    planned = plan_visual_figures(page_state, revision=2)
+
+    assert len(planned) == 1
+    figure = planned[0]
+    assert figure.section_id == "s1"
+    assert figure.section_title == "Intro"
+    assert figure.block_id == "b1"
+    assert figure.required is False
+    expected = figure_item_for_block("s1", TeachingPlanBlock.model_validate(block("b1", visual)))
+    assert figure.figure_id == expected.id
+    assert plan_visual_figures(page_state, revision=9) == []
+    assert plan_visual_figures(None, revision=2) == []
