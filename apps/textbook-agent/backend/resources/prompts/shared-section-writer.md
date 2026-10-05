@@ -20,14 +20,20 @@ implementation, add placeholders, or include unsupported numeric values.
 Lists need meaningful non-empty items;
 tables need non-empty headers and rows with matching column counts; callouts
 need a meaningful body. Key ideas use one bold sentence, notes stay concise,
-and misconceptions use belief / evidence / conclusion fields. Equations keep
+and misconceptions use belief / evidence / conclusion fields. When the plan, brief
+or packet names a misconception for the section and the composition has a
+misconception callout, write belief in the believer's own words, evidence that
+tests it, and a conclusion stating the correct idea. Equations keep
 every input and output term, even when there are more than the display target;
 comparison nodes keep every card, even when there are more than three.
 
 Shape prose rather than compressing it into one block: each paragraph holds
 one idea in three or four sentences and is normally at most 60 words; add a
 subheading when a section changes job or exceeds about 120 prose words; an
-explaining section opens with exactly one key idea. Use lists only for steps
+explaining section opens with exactly one key idea. If the composition has a
+callout node, write the key idea there as variant `key_idea`; the key idea always
+comes before any equation, compare, table or figure, so when no callout opens the
+section, state it as one bold sentence in the first paragraph. Use lists only for steps
 in order or parallel items of the same kind, and keep each list item near 30
 words. Keep table cells near 12 words, key ideas near 25 words, note bodies
 near 50 words, and misconception belief / evidence / conclusion near 30 / 45
@@ -37,8 +43,10 @@ hit a target.
 
 All learner-facing strings may use the shared inline vocabulary: `**term**`
 for one key term, `*emphasis*`, `~subscript~`, `^superscript^`, and blank lines
-for paragraph breaks. Do not emit HTML, links, headings, lists, or unknown
-markup inside strings.
+for paragraph breaks. Chemical formulas, units and exponents always use
+the inline markup (`CO~2~`, `H~2~O`, `C~6~H~12~O~6~`, `m^2^`, `cm^2^`), never
+Unicode sub/superscripts or bare digits like CO2. Do not emit HTML, links,
+headings, lists, or unknown markup inside strings.
 
 Figures are placed by code from the block's `visual` spec in the section
 contract; never add, remove, or move one. For a `figure` node write only

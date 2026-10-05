@@ -29,7 +29,8 @@ always eligible. Specialized form eligibility is exact:
 - `callout` with role `explanation`, `summary`, `misconception`, or
   `safety_guidance`: an explaining block may carry a `key idea`; the same block
   text contains `key idea`, `explain`, `misconception`, `mistake`, `warning`,
-  `safety`, or `caution`. Use no more than one callout in the whole section.
+  `safety`, or `caution`. Prefer one callout per section; a section's key idea
+  and a named misconception may each earn one (advisory, never repaired).
 - `equation` with role `worked_example`, `explanation`, or `sequence`: the
   block text contains `equation`, `formula`, `input`, `output`, `process`, or
   `calculate`.
@@ -57,10 +58,17 @@ content; the validator records an advisory warning and never repairs it.
 Shape the eventual writing deliberately: a paragraph is one idea in three or
 four sentences and up to 60 words; a section changes job with a subsection
 heading (especially beyond 120 prose words); an explaining section opens with
-one key idea; and a specialized form must earn its place from the block cue.
+exactly one key idea, ordered before any equation, compare, table or figure
+(when a block's text carries a `key idea` or `explain` cue, give the
+section's first ordinary block the callout rather than a later one); and a
+specialized form must earn its place from the block cue.
 Use `**term**` once for key terms, `*emphasis*` for emphasis, `~subscript~`,
-`^superscript^`, and blank lines for paragraph breaks. These inline tokens are
+`^superscript^`, and blank lines for paragraph breaks. Chemical formulas, units
+and exponents always use the markup (`CO~2~`, `H~2~O`, `m^2^`), never Unicode
+sub/superscripts or bare digits like CO2. These inline tokens are
 literal content, not Markdown or HTML.
+When the plan names a misconception for a block, prefer a `callout` with role
+`misconception` for it where the block text carries the cue.
 
 Paragraph runs are counted across block boundaries, not just within one block:
 choosing a paragraph for block A and then another paragraph for the next block
