@@ -20,6 +20,7 @@ Classification: major. Lead owns orchestration and gate review; Luna executors o
 - Doc 36 wins over the artboards. Print must not abbreviate shared ordinary content. Use existing app display serif and prescribed Atkinson/palette.
 - Figure decisions remain doc 35-owned; no renderer/writer invents a figure.
 - Length and shape targets are advisory only: never fail, repair, regenerate, pad, truncate, or change READY because of them.
+- Owner confirmed equation input/output and comparison-card upper bounds are advisory too; preserve every term/card. Meaningful structural minimums remain schema requirements.
 - Preserve stored lessons and hashes; omit only newly introduced absent defaults from canonical serialization, retaining previous null fields.
 - The supplied payload is LearnDocument v2, not SharedLessonDocument. Preserve the raw input and obtain the matching stored shared snapshot independently.
 - Normal Print blocks stay together. Owner selected safe continuation for blocks taller than an A4 content area, preserving every word.
@@ -37,3 +38,6 @@ Gate evidence will be recorded under `evidence/` and linked from each PR. An unc
 - Page suite: 64 passed (`evidence/g0-page-tests-recheck.log`); shared vocabulary suite: 20 passed (`evidence/g0-contracts-tests.log`). Initial package tests lacked built `@lectio/contracts` output and hit CPU-contention timeouts; building the existing package and limiting workers resolved them without source changes.
 - Frontend type check: 0 errors, 5 existing warnings (`evidence/g0-frontend-check.log`). Initial full frontend suite passed 279 tests and exposed two new inline-parser regressions, which were sent back for correction; the final run is still required.
 - Golden and overlong fixture review initially rejected abbreviated/generic content. Correcting to the reference's four sections and block sequence is required before G0 acceptance.
+- Phase 0 contract commit: `ab4452df`. Review follow-up is completing backend Learn primitive twins, adapter propagation and development fixture preview/export entrypoints. Empty markup delimiters must render literally; the first follow-up frontend run passed all 65 existing files (280 tests total passed) and failed one new malformed-span vector. G0 remains unticked pending correction and final backend results.
+- Backend unit shard completed with 1,335 passed, 5 skipped and 6 deselected (`evidence/g0-backend-unit-tests.log`, exit 0). The full application/document/backend run is still in progress; its result is not assumed.
+- Fixture artwork provenance reviewed: the four path values in `fixtures/shared_lesson/seedlings.svg` match the two seedling SVGs embedded in Learn artboard `6ceffc7b-cc2a-4c73-ab53-fdb57cf6b72c` in the supplied HTML bundle. This reuses the target illustration; it does not change doc 35 figure decisions.

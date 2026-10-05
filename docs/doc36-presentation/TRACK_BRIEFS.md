@@ -2,6 +2,8 @@
 
 All workers read doc 36 in full, doc 35, applicable AGENTS.md and standards. Source design: `C:/Users/richi/Downloads/Lesson presentation revamp.html`. Source work order: `C:/Users/richi/Downloads/36_LESSON_PRESENTATION_REVAMP.md`. Workers are not alone: preserve other edits, change only owned files, and report unexpected dependencies to the lead. Use small commits, no pushes to main. A gate checkbox requires a named artifact/test/log; report partial items honestly. Do not change shared declarations after G0 without lead review.
 
+Owner confirmed that equation input/output and comparison-card upper bounds are advisory. All terms/cards must survive validation and rendering; record advisory warnings without repair, regeneration or truncation.
+
 ## A — Learn renderer, G1
 
 Own `apps/textbook-agent/frontend/src/lib/learn/document/` renderer components/canvas/styles (exclude Phase 0 types and parsers), `learn/student/OrderedDocumentList.svelte`, learner shell metadata/title presentation, and task component markup/styles only. Own fixture-page screen preview wiring needed for screenshot tests. D owns interaction logic/feedback evaluation. Read new fields with legacy fallback. Coordinate shared task component changes with D; D branches from Phase 0 and receives your styled component before integrating logic.
