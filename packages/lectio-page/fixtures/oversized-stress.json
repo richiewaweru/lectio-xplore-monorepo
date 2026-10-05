@@ -3148,7 +3148,7 @@
               "question_id": "Q1",
               "answer": "Prediction (not marked)",
               "option_notes": {
-                "soil": [
+                "A": [
                   {
                     "type": "text",
                     "value": "The evidence will test this idea."
@@ -3167,19 +3167,19 @@
                 }
               ],
               "option_notes": {
-                "b": [
+                "B": [
                   {
                     "type": "text",
                     "value": "A plant growing taller in the dark would fit the soil idea, not challenge it."
                   }
                 ],
-                "c": [
+                "C": [
                   {
                     "type": "text",
                     "value": "Temperature is not the issue. In the two-pot comparison both plants were equally warm."
                   }
                 ],
-                "d": [
+                "D": [
                   {
                     "type": "text",
                     "value": "Growing well on plant food in the dark would support the soil idea, not challenge it."
