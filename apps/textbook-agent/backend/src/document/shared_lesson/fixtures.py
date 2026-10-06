@@ -9,8 +9,27 @@ from typing import Any
 from document.shared_lesson.models import SharedLessonDocument, build_shared_lesson_document
 
 
-_FIXTURE_ROOT = Path(__file__).parents[4] / "fixtures" / "shared_lesson"
-_LEGACY_SOURCE = Path(__file__).parents[6] / "docs/doc36-presentation/evidence/legacy-shared-source.json"
+_FIXTURE_DIR = Path("fixtures/shared_lesson")
+_LEGACY_SOURCE = Path("docs/doc36-presentation/evidence/legacy-shared-source.json")
+
+
+def _find_upwards(relative: Path) -> Path:
+    """Resolve a development fixture path lazily, at any checkout depth.
+
+    Fixtures are not packaged into deployed images, so this must never run at
+    import time: a missing fixture only fails the call that asked for it.
+    """
+
+    for ancestor in Path(__file__).resolve().parents:
+        candidate = ancestor / relative
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(
+        f"{relative.as_posix()} not found: shared lesson fixtures are "
+        "development-only and not packaged in this build"
+    )
+
+
 _STRUCTURAL_KEYS = {
     "schema_version",
     "content_hash",
@@ -59,14 +78,14 @@ def load_shared_lesson_fixture(name: str = "golden") -> SharedLessonDocument:
         # The legacy artifact is loaded with its stored hash intact. It is
         # deliberately never rebuilt through build_shared_lesson_document.
         return SharedLessonDocument.model_validate(
-            json.loads(_LEGACY_SOURCE.read_text(encoding="utf-8"))
+            json.loads(_find_upwards(_LEGACY_SOURCE).read_text(encoding="utf-8"))
         )
     if name == "overlong":
         payload = _double_learner_text(
-            json.loads((_FIXTURE_ROOT / "golden.json").read_text(encoding="utf-8"))
+            json.loads(_find_upwards(_FIXTURE_DIR / "golden.json").read_text(encoding="utf-8"))
         )
     else:
-        path = _FIXTURE_ROOT / f"{name}.json"
+        path = _find_upwards(_FIXTURE_DIR / f"{name}.json")
         payload = json.loads(path.read_text(encoding="utf-8"))
     return build_shared_lesson_document(payload)
 
