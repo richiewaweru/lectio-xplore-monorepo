@@ -25,6 +25,7 @@ from print.rendering.pdf.components.answers import (
     extract_answer_entries,
     generate_answer_key_pdf,
 )
+from print.rendering.pdf.components.assembly import add_page_numbers
 from print.rendering.pdf.components.cover import (
     clean_cover_title,
     format_cover_date,
@@ -195,3 +196,82 @@ def test_cleanup_files_removes_export_artifacts(tmp_path: Path) -> None:
     assert not first.exists()
     assert not second.exists()
 
+
+
+LESSON_TITLE = "Splitting an L-shaped floor into rectangles and right triangles"
+
+
+def test_clean_cover_title_keeps_full_lesson_title_when_not_trimming() -> None:
+    assert clean_cover_title(LESSON_TITLE, trim_words=False) == LESSON_TITLE
+    # Legacy prompt-style trimming stays the default.
+    assert clean_cover_title(LESSON_TITLE) != LESSON_TITLE
+
+
+def test_generate_cover_pdf_shows_full_lesson_title(tmp_path: Path) -> None:
+    output = generate_cover_pdf(
+        output_path=tmp_path / "cover.pdf",
+        title=LESSON_TITLE,
+        school_name="Springfield High",
+        teacher_name="Ms. Johnson",
+        date_label="2026-04-07",
+        trim_title=False,
+    )
+
+    reader = PdfReader(str(output))
+    page_text = " ".join((reader.pages[0].extract_text() or "").split())
+    assert reader.metadata.title == LESSON_TITLE
+    assert "right triangles" in page_text
+    assert "Prepared" not in page_text
+
+
+def test_generation_title_ignores_prepared_from_path_lesson_context() -> None:
+    from core.database.models import GenerationModel
+    from print.http.v3_studio.router import _export_title, _generation_title
+
+    model = GenerationModel(
+        id="g1",
+        user_id="u1",
+        subject="Mathematics",
+        context="Prepared from path lesson abc-123",
+        mode="v3",
+        status="completed",
+    )
+    assert _generation_title(model) == "Mathematics"
+    assert (
+        _export_title(model, {"lectio_document": {"title": LESSON_TITLE}}) == LESSON_TITLE
+    )
+    assert _export_title(model, {"title": LESSON_TITLE}) == LESSON_TITLE
+    assert _export_title(model, {}) == "Mathematics"
+
+
+def test_add_page_numbers_stamps_page_n_of_m_after_front_matter(tmp_path: Path) -> None:
+    from pypdf import PdfWriter
+
+    source = tmp_path / "doc.pdf"
+    writer = PdfWriter()
+    for _ in range(4):
+        writer.add_blank_page(width=595, height=842)
+    with source.open("wb") as handle:
+        writer.write(handle)
+
+    add_page_numbers(pdf_path=source, skip_pages=1, label_format="Page {page} of {total}")
+
+    texts = [(page.extract_text() or "").strip() for page in PdfReader(str(source)).pages]
+    assert texts[0] == ""
+    assert texts[1:] == ["Page 1 of 3", "Page 2 of 3", "Page 3 of 3"]
+    assert not any("Page 0 of 0" in text for text in texts)
+
+
+def test_full_cover_title_keeps_subtitle_after_colon(tmp_path: Path) -> None:
+    full = "Labelling the Water Cycle: Naming and Explaining Its Four Stages"
+    assert clean_cover_title(full, trim_words=False) == full
+    output = generate_cover_pdf(
+        output_path=tmp_path / "cover.pdf",
+        title=full,
+        school_name="S",
+        teacher_name="T",
+        date_label="2026-04-07",
+        trim_title=False,
+    )
+    text = " ".join((PdfReader(str(output)).pages[0].extract_text() or "").split())
+    assert "Four Stages" in text

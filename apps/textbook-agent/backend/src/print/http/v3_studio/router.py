@@ -203,6 +203,24 @@ def _booklet_status(model: GenerationModel) -> str:
     return "streaming_preview"
 
 
+# `GenerationModel.context` for path-prepared lessons is a provenance marker
+# ("Prepared from path lesson <id>"), not a learner-facing title.
+_PREPARED_CONTEXT_PREFIX = "prepared from path lesson"
+
+
+def _export_title(model: GenerationModel, document_json: dict[str, Any]) -> str:
+    """Title for the PDF cover/filename: the document's own lesson title first."""
+    candidates: list[Any] = []
+    lectio_doc = document_json.get("lectio_document")
+    if isinstance(lectio_doc, dict):
+        candidates.append(lectio_doc.get("title"))
+    candidates.append(document_json.get("title"))
+    for candidate in candidates:
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return _generation_title(model)
+
+
 def _generation_title(model: GenerationModel) -> str:
     if isinstance(model.report_json, dict):
         planning = model.report_json.get("planning")
@@ -210,7 +228,11 @@ def _generation_title(model: GenerationModel) -> str:
             display_title = planning.get("display_title")
             if isinstance(display_title, str) and display_title.strip():
                 return display_title.strip()
-    if isinstance(model.context, str) and model.context.strip():
+    if (
+        isinstance(model.context, str)
+        and model.context.strip()
+        and not model.context.strip().lower().startswith(_PREPARED_CONTEXT_PREFIX)
+    ):
         return model.context.strip()
     if isinstance(model.report_json, dict):
         candidate = model.report_json.get("title")
@@ -1705,7 +1727,7 @@ async def post_v3_export_pdf(
         result = await export_v3_studio_pdf(
             generation_id=generation_id,
             user_id=current_user.id,
-            title=_generation_title(model),
+            title=_export_title(model, document_json),
             subject=model.subject or "",
             template_id=template_id,
             document_json=document_json,
