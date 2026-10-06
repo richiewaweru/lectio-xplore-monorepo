@@ -152,15 +152,23 @@ def _validate_finding_bindings(
         seen.add(signature)
 
 
-async def review_teaching_plan_draft(
+async def _review_candidate(
     *,
     draft: TeachingPlanDraftV2,
     plan: TeachingPlan,
     lesson_context: dict[str, Any],
-    trace_id: str | None = None,
-    generation_id: str | None = None,
-) -> TeachingPlanSemanticReviewResult:
-    """Review one structurally valid V2 candidate once and bind to its content hash."""
+    trace_id: str | None,
+    generation_id: str | None,
+    system_prompt: str,
+    extra_payload: dict[str, Any] | None = None,
+    allowed_codes: frozenset[str] | None = None,
+    caller: str = "teaching_plan_semantic_reviewer",
+) -> list[TeachingPlanSemanticFinding]:
+    """Shared reviewer loop: payload, bounded binding re-ask, error mapping.
+
+    Findings whose code is outside ``allowed_codes`` are dropped before binding
+    validation (out of scope is not a reviewer defect).
+    """
     section_to_blocks = {
         section.slot_id: {block.id for block in section.blocks}
         for section in plan.sections
@@ -179,6 +187,7 @@ async def review_teaching_plan_draft(
             {"section_id": section_id, "block_ids": sorted(block_ids)}
             for section_id, block_ids in section_to_blocks.items()
         ],
+        **(extra_payload or {}),
     }
     binding_error: str | None = None
     # One bounded re-ask: a finding bound to a non-existent section/block is a
@@ -195,9 +204,9 @@ async def review_teaching_plan_draft(
         try:
             raw_review = await _run_structured(
                 node=TEACHING_PLAN_SEMANTIC_REVIEWER,
-                caller="teaching_plan_semantic_reviewer",
+                caller=caller,
                 output_type=TeachingPlanSemanticReviewDraft,
-                system_prompt=teaching_plan_semantic_reviewer_prompt(),
+                system_prompt=system_prompt,
                 user_payload=payload,
                 trace_id=trace_id,
                 generation_id=generation_id,
@@ -218,6 +227,11 @@ async def review_teaching_plan_draft(
                 "Teaching Plan semantic reviewer failed; candidate is not approval-ready",
             ) from exc
 
+        if allowed_codes is not None:
+            review = TeachingPlanSemanticReviewDraft(
+                reviewed=True,
+                findings=[f for f in review.findings if f.code in allowed_codes],
+            )
         try:
             _validate_finding_bindings(review, section_to_blocks=section_to_blocks)
         except (TypeError, ValueError) as exc:
@@ -230,9 +244,29 @@ async def review_teaching_plan_draft(
             ) from exc
         break
 
+    return review.findings
+
+
+async def review_teaching_plan_draft(
+    *,
+    draft: TeachingPlanDraftV2,
+    plan: TeachingPlan,
+    lesson_context: dict[str, Any],
+    trace_id: str | None = None,
+    generation_id: str | None = None,
+) -> TeachingPlanSemanticReviewResult:
+    """Review one structurally valid V2 candidate once and bind to its content hash."""
+    findings = await _review_candidate(
+        draft=draft,
+        plan=plan,
+        lesson_context=lesson_context,
+        trace_id=trace_id,
+        generation_id=generation_id,
+        system_prompt=teaching_plan_semantic_reviewer_prompt(),
+    )
     return TeachingPlanSemanticReviewResult(
         content_hash=teaching_plan_content_hash(plan),
-        findings=review.findings,
+        findings=findings,
     )
 
 
