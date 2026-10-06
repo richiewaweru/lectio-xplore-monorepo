@@ -103,3 +103,20 @@ def test_golden_fixture_exercises_every_inline_markup_kind() -> None:
     ast = parse_inline_markup("\n".join(text_parts))
     kinds = {node["type"] for node in ast}
     assert {"strong", "emphasis", "subscript", "superscript"} <= kinds
+
+
+def test_fixture_module_imports_and_fails_lazily_when_fixtures_are_not_packaged(
+    monkeypatch,
+) -> None:
+    # Deployed images hold only backend/src, so a fixed parents[N] lookup
+    # crashed app import (IndexError) on Railway. Paths now resolve per call.
+    import pytest
+
+    from document.shared_lesson import fixtures
+
+    container_path = "/app/backend/src/document/shared_lesson/fixtures.py"
+    monkeypatch.setattr(fixtures, "__file__", container_path)
+    with pytest.raises(FileNotFoundError, match="development-only"):
+        fixtures.load_shared_lesson_fixture("golden")
+    with pytest.raises(FileNotFoundError, match="development-only"):
+        fixtures.load_shared_lesson_fixture("legacy")
