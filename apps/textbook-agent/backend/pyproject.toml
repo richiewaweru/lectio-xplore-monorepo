@@ -28,6 +28,7 @@ dependencies = [
     "httpx>=0.27.0",
     "aiosqlite>=0.22.1",
     "pillow>=12.3.0",
+    "matplotlib>=3.11.2",
     "aiohttp>=3.14.1",
     "authlib>=1.6.12",
     "cryptography>=48.0.1",
