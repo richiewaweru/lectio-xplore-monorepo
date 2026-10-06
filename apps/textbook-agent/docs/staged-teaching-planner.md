@@ -9,7 +9,28 @@ The teaching planner (`run_lesson_approach_planner`,
 whole `TeachingPlanDraftV2`: title, arc, start and target states, anchor usage, misconception
 focus, every section's continuity fields, and every block's brief, learner action, task mode,
 sources and figure spec. A second LLM call (`review_teaching_plan_draft`) then reviews the
-whole plan. It takes about 8 minutes, the longest wait in preparation.
+whole plan.
+
+### Baseline (local DB, last ~3 weeks, DeepSeek `deepseek-flash`, 2026-10-06)
+
+- **Planner LLM call** (`llm_calls.caller = v2_lesson_approach_planner`): median ~100 s, range
+  81-308 s. On average ~16.5k tokens in, ~19.5k out, ~21.8k thinking.
+- **Preparation runs that actually plan:** 210-564 s end to end. The planner call accounts for
+  only 90-180 s of that. The rest is **not visible**: the semantic reviewer
+  (`_run_structured`, caller `teaching_plan_semantic_reviewer`) and the backbone writer don't
+  write `llm_calls` rows, so their time can't be measured today.
+- **Retries:** most lessons succeed on the first attempt. The failure cascade is real, though:
+  one run hit `TeachingPlanOutputInvalidError` twice, so the work item retried 3 times x 2
+  internal attempts = 6 planner calls, about 1,074 s of planner time and 1,179 s for the run.
+- **For context, the writing stage (`shared_document` runs) is the bigger wait:** typically
+  2-10 min, outliers over 20 min. Sections are already written in parallel there. The slow
+  pieces are a single slow section writer (up to ~500 s), media (up to ~1,170 s) and document QA.
+  4 of the last 12 runs ended `failed_terminal`. That's out of scope here, but worth its own
+  look.
+
+What to expect: the staged planner should cut a normal planning stage by a minute or more and
+show progress. Its main win is removing the 6-call failure cascade. It won't fix the
+writing-stage wait.
 
 Problems:
 
@@ -187,16 +208,21 @@ semantic reviewer prompt about reusing the anchor versus approved items.
 
 | # | What | Touches existing code |
 |---|---|---|
-| 0 | Baseline: timings and attempt counts from recent preparation runs (planner vs reviewer vs retry). Pick 5-8 fixture lessons across subjects and lesson shapes. | No |
+| 0 | Observability: make the semantic reviewer and backbone writer calls write `llm_calls` rows (caller, node, attempt, latency, tokens, `generation_id`) like `run_llm` does, so both planners can be timed. Pass `generation_id` into `review_teaching_plan_draft`. Baseline numbers are above. | Yes, logging only |
 | 1 | Finalize this spec: `TeachingSpineDraft` schema, section-call I/O, prompt outlines. | No |
 | 2 | Split the validators by scope: section-local vs lesson-wide, with no behaviour change. The single planner keeps calling the same combined function. | Yes, refactor only, existing tests must pass |
 | 3 | Spine: schema, prompt (`resources/prompts/teaching-spine.md` + manifest), code checks, variant derivation, retry. | No |
 | 4 | Section calls: prompt (`teaching-section.md`), run in parallel, per-section validation + deterministic repairs + retry + flag fallback. | No |
 | 5 | Assembly + final gate via `materialize_teaching_plan` + `validate_teaching_plan`. | No |
 | 6 | Review split: per-section review + whole-lesson check + routing fixes to a section. | No |
-| 7 | Compare `single` vs `staged` on the fixtures: wall-clock, attempts, flags, plan quality side by side, and that figure specs reach media with matching ids. | No |
+| 7 | **Build** a local comparison script, `backend/scripts/compare_teaching_planners.py`: given generation ids, it builds each packet with `build_packet_for_generation` from the local DB, runs both modes, and writes both plans plus a report (wall-clock per call, attempts, flags, validation issues, block ids with `visual`, a section-by-section diff) to `outputs/planner-compare/`. It writes nothing to the DB. **Running it happens locally**; the cloud session only builds it and tests it against a fake model. No real lesson data is committed (the repo is public). | No |
 | 8 | Streaming: `teaching_spine` and `teaching_section:{slot}` work items with progress; plan page shows the spine first, then sections as they land, marked "draft" until the whole-lesson check passes. | Runtime + frontend |
 | 9 | Flip default; delete the single path after the agreed period. | Yes, deletion |
+
+**Cloud scope:** the cloud session builds phases 0-8 end to end, with the flag defaulting to
+`single`, so nothing changes until someone switches it. Unit tests use fake models only; no API
+keys or database are needed. Phase 9 (switching the default, deleting the old path) waits for the
+local comparison.
 
 Phases 3-6 run inside the existing `teaching_plan` work item (parallelism via
 `asyncio.gather`), so the runtime and UI don't change until phase 8.
