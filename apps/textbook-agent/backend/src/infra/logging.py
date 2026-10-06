@@ -41,6 +41,14 @@ _OPTIONAL_LOG_FIELDS = (
     # provider responses, prompts, or raw exception messages.
     "failure_stage",
     "original_exception_type",
+    # Code-rendered figures (media.render): outcome and fallback telemetry
+    # that decides which render families to build next.
+    "event",
+    "work_order_id",
+    "reason",
+    "purpose",
+    "attempts",
+    "warnings",
 )
 
 

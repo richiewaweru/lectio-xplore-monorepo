@@ -29,6 +29,16 @@ POLYGON_GALLERY: dict[str, dict[str, Any]] = {
             {"points": [[6, 0], [9, 0], [9, 5], [6, 5]], "label": "B"},
         ],
     },
+    "polygon_l_room_grid": {
+        "family": "polygon_area",
+        "points": L_ROOM_POINTS,
+        "segments": [{"start": [6, 0], "end": [6, 5], "style": "solid", "label": "cut"}],
+        "regions": [
+            {"points": [[0, 0], [6, 0], [6, 7], [0, 7]], "label": "A"},
+            {"points": [[6, 0], [9, 0], [9, 5], [6, 5]], "label": "B"},
+        ],
+        "grid": True,
+    },
     "polygon_triangle_height": {
         "family": "polygon_area",
         "points": [[0, 0], [8, 0], [3, 5]],

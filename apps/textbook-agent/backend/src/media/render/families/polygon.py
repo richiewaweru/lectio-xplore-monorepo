@@ -19,6 +19,8 @@ from media.render.layout import fit_labels
 from media.render.style import FILL, INK, LABEL_FONT_SIZE, LINE, SHADES, THIN
 
 _MAX_FIGURE_IN = 5.5
+# Darker than the house GRID so squares stay countable on shaded regions.
+_GRID_LINE = "#9aa5b1"
 
 
 @dataclass(frozen=True)
@@ -154,9 +156,17 @@ def draw(spec: PolygonAreaSpec) -> Figure:
         ax.set_ylim(y0 - pad, y1 + pad)
         ax.set_aspect("equal")
         ax.axis("off")
+        if spec.grid:
+            gx0, gx1 = int(round(x0)) - 1, int(round(x1)) + 1
+            gy0, gy1 = int(round(y0)) - 1, int(round(y1)) + 1
+            for gx in range(gx0, gx1 + 1):
+                ax.plot([gx, gx], [gy0, gy1], color=_GRID_LINE, linewidth=0.8, zorder=1.5)
+            for gy in range(gy0, gy1 + 1):
+                ax.plot([gx0, gx1], [gy, gy], color=_GRID_LINE, linewidth=0.8, zorder=1.5)
         shaded = [r for r in spec.regions if r.shade]
+        base_fill = "none" if spec.grid else ("white" if shaded else FILL)
         ax.add_patch(
-            PolygonPatch(spec.points, closed=True, facecolor="white" if shaded else FILL, edgecolor="none")
+            PolygonPatch(spec.points, closed=True, facecolor=base_fill, edgecolor="none")
         )
         for index, region in enumerate(shaded):
             ax.add_patch(
@@ -185,7 +195,13 @@ def draw(spec: PolygonAreaSpec) -> Figure:
                 linewidth=THIN,
             )
         outline = PolygonPatch(
-            spec.points, closed=True, facecolor="none", edgecolor=INK, linewidth=LINE, joinstyle="miter"
+            spec.points,
+            closed=True,
+            facecolor="none",
+            edgecolor=INK,
+            linewidth=LINE,
+            joinstyle="miter",
+            zorder=3,
         )
         ax.add_patch(outline)
         obstacles.append(outline)
@@ -200,6 +216,12 @@ def draw(spec: PolygonAreaSpec) -> Figure:
                 fontweight="bold" if label.kind == "region" else "normal",
                 fontstyle="italic" if label.italic else "normal",
                 color=INK,
+                zorder=4,
+                bbox=(
+                    {"facecolor": "white", "edgecolor": "none", "pad": 1.5}
+                    if spec.grid and label.kind != "region"
+                    else None
+                ),
             )
             for label in labels
         ]
@@ -269,6 +291,18 @@ def validate(spec: PolygonAreaSpec) -> list[RenderSpecError]:
                 errors.append(
                     RenderSpecError("right_angle_off_boundary", path, "right_angle_at must be an endpoint on the shape's edge")
                 )
+    if spec.grid:
+        coords = [c for p in pts for c in p] + [
+            c for r in spec.regions for p in r.points for c in p
+        ]
+        if any(abs(c - round(c)) > 1e-9 for c in coords):
+            errors.append(
+                RenderSpecError("grid_needs_whole_points", "points", "grid figures need whole-number coordinates so corners sit on grid lines")
+            )
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        if max(max(xs) - min(xs), max(ys) - min(ys)) > 30:
+            errors.append(RenderSpecError("grid_too_large", "points", "grid figures may span at most 30 squares"))
     total = 0.0
     for index, region in enumerate(spec.regions):
         path = f"regions[{index}]"

@@ -24,7 +24,7 @@ trapezium, composite room). Use for area, perimeter and length problems.
 unit (e.g. "m"); edge_labels [{edge: i, kind: "computed"|"symbol"|"hidden", text}] \
 (edge i runs from point i to point i+1, wrapping); segments [{start, end, \
 style: "solid"|"dashed", label, right_angle_at: "start"|"end"}] (split or height lines); \
-regions [{points, label, shade}]; mark_right_angles (bool).
+regions [{points, label, shade}]; mark_right_angles (bool); grid (bool: draw on square \ngrid paper, one square per unit, whole-number points only, at most 30 squares across).
 - number_line: a line with ticks, points, jumps or shaded intervals (integers, decimals, \
 fractions, inequalities, addition/subtraction jumps).
   fields: start, end, step (>0); tick_format "integer"|"decimal"|"fraction"; denominator \
@@ -64,7 +64,7 @@ with named parts (cells, organs, apparatus, maps), or anything no family fits.
 - polygon_area: list points in order around the shape, in the problem's units. The \
 renderer measures each edge, so the points must match the stated lengths exactly. \
 edge_labels choose which edges show their measured length (kind "computed"); an unknown \
-is kind "symbol" with text like "x".
+is kind "symbol" with text like "x". If the text mentions grid paper or counting squares, \nset grid true and use whole-number points (1 unit = 1 square). If the text states no \nmeasurements, draw a plausible shape but label no edges with computed lengths.
 - flow and cycle: at most 8 nodes, with short node text.
 - function_graph: only linear, quadratic or polyline curves.
 - Never output SVG, HTML or code. Output only the structured result.

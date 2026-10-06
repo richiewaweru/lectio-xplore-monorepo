@@ -91,3 +91,9 @@ def test_spec_result_family_must_match() -> None:
         RenderSpecResult.model_validate({"family": "flow", "spec": {"family": "polygon_area", "points": L_ROOM}})
     with pytest.raises(ValidationError):
         RenderSpecResult(family="polygon_area")
+
+
+def test_grid_needs_whole_points_and_a_small_span() -> None:
+    assert _codes(points=L_ROOM, grid=True) == []
+    assert _codes(points=[[0, 0], [2.5, 0], [2.5, 2], [0, 2]], grid=True) == ["grid_needs_whole_points"]
+    assert _codes(points=[[0, 0], [40, 0], [40, 2], [0, 2]], grid=True) == ["grid_too_large"]

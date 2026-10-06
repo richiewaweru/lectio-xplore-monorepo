@@ -98,6 +98,9 @@ class PolygonAreaSpec(_Spec):
     segments: list[Segment] = Field(default_factory=list, max_length=8)
     regions: list[Region] = Field(default_factory=list, max_length=6)
     mark_right_angles: bool = False
+    # Draw the shape on square grid paper: one square per unit, aligned to whole
+    # coordinates (for "count the squares" lessons).
+    grid: bool = False
 
 
 # --- number_line --------------------------------------------------------------
