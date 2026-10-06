@@ -10,7 +10,7 @@ from typing import Any
 
 L_ROOM_POINTS = [[0, 0], [9, 0], [9, 5], [6, 5], [6, 7], [0, 7]]
 
-GALLERY: dict[str, dict[str, Any]] = {
+POLYGON_GALLERY: dict[str, dict[str, Any]] = {
     "polygon_l_room": {
         "family": "polygon_area",
         "points": L_ROOM_POINTS,
@@ -50,4 +50,16 @@ GALLERY: dict[str, dict[str, Any]] = {
 }
 
 
-__all__ = ["GALLERY", "L_ROOM_POINTS"]
+def _all_families() -> dict[str, dict[str, Any]]:
+    from media.render.families import bar_chart, cycle, flow, function_graph, number_line
+
+    merged = dict(POLYGON_GALLERY)
+    for module in (number_line, bar_chart, function_graph, flow, cycle):
+        merged.update(module.GALLERY)
+    return merged
+
+
+GALLERY: dict[str, dict[str, Any]] = _all_families()
+
+
+__all__ = ["GALLERY", "L_ROOM_POINTS", "POLYGON_GALLERY"]
