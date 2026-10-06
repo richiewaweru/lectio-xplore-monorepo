@@ -399,6 +399,13 @@ async def realize_learn_from_preparation(
                     "recovery_action": "reprepare",
                 },
             )
+        from learn.generation.shared_document_execution import backfill_figure_media
+
+        await backfill_figure_media(
+            session,
+            editable=await session.get(EditableLessonModel, editable_id),
+            generation=output,
+        )
         return _result_for(
             realization,
             replayed=True,

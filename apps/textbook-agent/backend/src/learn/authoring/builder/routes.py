@@ -34,6 +34,7 @@ from infra.storage.gcs_image_store import GCSImageStore
 from learn.authoring.builder.service import (
     ACTIVE_BUILDER_SOURCE_TYPES,
     ComponentLectioBuilderError,
+    backfill_learn_figure_media,
     get_or_create_native_learn_builder_lesson,
     guard_shared_document_builder_edit,
     validate_builder_document,
@@ -524,6 +525,8 @@ async def get_builder_lesson(
     session: AsyncSession = Depends(get_async_session),
 ) -> BuilderLessonDetailResponse:
     model = await _owned_lesson_or_404(session, lesson_id=lesson_id, user_id=current_user.id)
+    if await backfill_learn_figure_media(session, lesson=model):
+        await session.commit()
     _log_builder_event(
         "lesson_loaded",
         user_id=current_user.id,

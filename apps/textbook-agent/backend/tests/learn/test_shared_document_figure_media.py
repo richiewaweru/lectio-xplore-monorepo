@@ -115,3 +115,73 @@ def test_existing_lesson_figure_patch_adds_media_only_to_imageless_figures() -> 
     assert patched["nodes"][0]["alt"] == "Media alt"
     assert patched["nodes"][1]["asset_id"] == "keep"
     assert document["nodes"][0]["asset_id"] is None
+
+
+class _FakeSession:
+    def __init__(self, run) -> None:
+        self.run = run
+        self.queries = 0
+        self.flushes = 0
+
+    async def scalar(self, _stmt):
+        self.queries += 1
+        return self.run
+
+    async def flush(self) -> None:
+        self.flushes += 1
+
+
+async def test_backfill_fills_imageless_figures_once_then_no_further_work(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import document.shared_lesson.media as media_mod
+    import document.shared_lesson.repository as repo_mod
+    from learn.generation.shared_document_execution import backfill_figure_media
+
+    stored = SimpleNamespace(status="ready", document=object())
+
+    async def _load(_session, **_kw):
+        return stored
+
+    monkeypatch.setattr(repo_mod, "load_shared_lesson_document", _load)
+    monkeypatch.setattr(media_mod, "bind_durable_media_output", lambda _out, _d: _media())
+    monkeypatch.setattr(media_mod, "verify_bound_figure_media", lambda m, _d: m)
+    item = SimpleNamespace(
+        id="w1",
+        replaces_work_item_id=None,
+        stage="media_generation",
+        item_key="media:figure-1",
+        status="ready",
+        output_json={"kind": "figure"},
+    )
+    session = _FakeSession(SimpleNamespace(work_items=[item]))
+    nodes = [
+        {"id": "figure-1", "kind": "figure", "asset_id": None, "caption": "Cap", "alt": "Cap"},
+        {"id": "figure-2", "kind": "figure", "asset_id": None, "caption": "Edited", "alt": "Mine"},
+    ]
+    editable = SimpleNamespace(
+        document_json={"nodes": nodes},
+        shared_document_run_id="run-1",
+        shared_document_id="doc-1",
+        shared_document_revision=1,
+    )
+    assert await backfill_figure_media(session, editable=editable) is True
+    first = editable.document_json["nodes"]
+    assert first[0]["asset_id"] == "https://storage.example.test/figure.png"
+    assert first[0]["alt"] == "Media alt"
+    assert first[1]["asset_id"] is None  # no media for it; edits untouched
+    assert first[1]["alt"] == "Mine"
+    assert session.flushes == 1
+
+    # Second load: figure-2 still lacks an image so one cheap query may run,
+    # but nothing is written.
+    before = editable.document_json
+    assert await backfill_figure_media(session, editable=editable) is False
+    assert editable.document_json is before
+    assert session.flushes == 1
+
+    # Fully imaged lesson: no query at all.
+    editable.document_json = {"nodes": [{**first[0]}]}
+    queries = session.queries
+    assert await backfill_figure_media(session, editable=editable) is False
+    assert session.queries == queries

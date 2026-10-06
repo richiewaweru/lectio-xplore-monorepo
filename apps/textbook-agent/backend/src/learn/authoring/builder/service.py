@@ -228,6 +228,20 @@ async def _verify_shared_document_lineage(
         )
 
 
+async def backfill_learn_figure_media(
+    session: AsyncSession,
+    *,
+    lesson: EditableLessonModel,
+    generation: GenerationModel | None = None,
+) -> bool:
+    """Fill image-less figures of a shared-document Learn lesson (idempotent)."""
+    if not getattr(lesson, "shared_document_id", None):
+        return False
+    from learn.generation.shared_document_execution import backfill_figure_media
+
+    return await backfill_figure_media(session, editable=lesson, generation=generation)
+
+
 def ordinary_nodes_by_id(nodes: list[Any]) -> dict[Any, Any]:
     """Map LearnDocument v2 node id -> node for every non-interaction node.
 
@@ -285,6 +299,7 @@ async def get_or_create_native_learn_builder_lesson(
         source_types=frozenset({"learn_document", "native_learn", "document"}),
     )
     if existing is not None:
+        await backfill_learn_figure_media(session, lesson=existing, generation=generation)
         return existing
 
     lesson_id = str(uuid.uuid4())

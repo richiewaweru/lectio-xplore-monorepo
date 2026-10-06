@@ -77,6 +77,102 @@ def _with_figure_media(
     return {**document, "nodes": patched} if changed else document
 
 
+def _has_imageless_figure(document: Any) -> bool:
+    nodes = document.get("nodes") if isinstance(document, dict) else None
+    return isinstance(nodes, list) and any(
+        isinstance(n, dict) and n.get("kind") == "figure" and not n.get("asset_id")
+        for n in nodes
+    )
+
+
+async def backfill_figure_media(
+    session: AsyncSession,
+    *,
+    editable: EditableLessonModel | None = None,
+    generation: GenerationModel | None = None,
+) -> bool:
+    """Idempotently fill image-less figures of a stored Learn lesson.
+
+    Uses only the shared-document Run's ready, verified media (same rule as the
+    adapter).  Touches only figures without an image, so teacher edits and
+    existing images are never overwritten.  Issues no query unless a figure
+    lacks an image.  Persists to whichever of the two stored rows needs it and
+    returns whether anything changed; the caller owns the commit.
+    """
+    from sqlalchemy.orm import selectinload
+
+    from document.shared_lesson.media import (
+        SharedFigureMediaError,
+        bind_durable_media_output,
+        verify_bound_figure_media,
+    )
+    from document.shared_lesson.media_runtime import MEDIA_STAGE
+    from document.shared_lesson.repository import (
+        SharedLessonDocumentRepositoryError,
+        load_shared_lesson_document,
+    )
+    from infra.database.models import GenerationRunModel
+    from infra.generation_runtime import active_work_items
+
+    rows = [
+        r
+        for r in (editable, generation)
+        if r is not None and _has_imageless_figure(r.document_json)
+    ]
+    if not rows:
+        return False
+    source = editable or generation
+    run_id = getattr(source, "shared_document_run_id", None) or getattr(
+        generation, "shared_document_run_id", None
+    )
+    document_id = getattr(source, "shared_document_id", None)
+    revision = getattr(source, "shared_document_revision", None)
+    if not (run_id and document_id and revision is not None):
+        return False
+    try:
+        stored = await load_shared_lesson_document(
+            session, document_id=document_id, revision=int(revision)
+        )
+    except SharedLessonDocumentRepositoryError:
+        return False
+    if stored.status != "ready":
+        return False
+    run = await session.scalar(
+        select(GenerationRunModel)
+        .options(selectinload(GenerationRunModel.work_items))
+        .where(GenerationRunModel.id == run_id)
+    )
+    if run is None:
+        return False
+    media: list[FigureMediaResult] = []
+    for item in active_work_items(tuple(run.work_items)):
+        if not (item.stage == MEDIA_STAGE or item.item_key.startswith("media:")):
+            continue
+        if item.status != "ready" or not isinstance(item.output_json, dict):
+            continue
+        try:
+            media.append(
+                verify_bound_figure_media(
+                    bind_durable_media_output(item.output_json, stored.document),
+                    stored.document,
+                )
+            )
+        except (SharedFigureMediaError, ValueError):
+            continue
+    fields = _figure_fields_from_media(media)
+    if not fields:
+        return False
+    changed = False
+    for row in rows:
+        patched = _with_figure_media(row.document_json, fields)
+        if patched is not row.document_json:
+            row.document_json = patched
+            changed = True
+    if changed:
+        await session.flush()
+    return changed
+
+
 async def materialize_learn_output_from_shared_document(
     session: AsyncSession,
     *,
@@ -124,9 +220,8 @@ async def materialize_learn_output_from_shared_document(
         and existing_editable_id
         and output.shared_document_hash == ready.content_hash
     ):
-        # Lessons realized before figure media was threaded into Learn have
-        # figure nodes with no image.  Re-project only the figure fields from
-        # the Run's verified media (no regeneration, no other edits).
+        # Lessons realized before figure media reached Learn: fill image-less
+        # figures from the Run's verified media (no regeneration).
         if figure_media:
             media_node_fields = _figure_fields_from_media(figure_media)
             output.document_json = _with_figure_media(output.document_json, media_node_fields)
@@ -237,4 +332,4 @@ async def materialize_learn_output_from_shared_document(
     }
 
 
-__all__ = ["materialize_learn_output_from_shared_document"]
+__all__ = ["backfill_figure_media", "materialize_learn_output_from_shared_document"]
