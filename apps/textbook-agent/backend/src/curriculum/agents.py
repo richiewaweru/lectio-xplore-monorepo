@@ -462,6 +462,9 @@ async def run_path_structural_planner(
             expected_slots=expected_slots,
             legal_slots=legal_slots or None,
             max_slots=int(fixed_context.get("max_slots") or len(expected_slots)),
+            recommended_slots_by_high_risk_count=(
+                fixed_context.get("recommended_slots_by_high_risk_count") or None
+            ),
         )
         if not errors:
             return plan

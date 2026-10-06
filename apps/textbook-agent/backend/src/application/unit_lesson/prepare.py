@@ -33,12 +33,17 @@ from core.database.models import (
 )
 from curriculum.agents import run_component_selector, run_path_structural_planner
 from curriculum.flow_validation import validate_flow_choice
+from curriculum.structural_validation import (
+    high_risk_misconception_count,
+    recommended_slots_for_high_risk_count,
+)
 from curriculum.models import (
     FlowChoice,
     PathStructuralPagePlan,
     PathStructuralPlan,
     PreparedLessonResponse,
     PrepareLessonRequest,
+    normalize_misconception_risk,
 )
 from curriculum.outcomes import actual_context_for_lessons
 from curriculum.schedule import selected_unit_groups
@@ -165,7 +170,7 @@ async def _preparation_context(
 # The page structural planner occasionally emits richer shapes (e.g. a per-card
 # ``concept_id`` or a per-misconception ``rationale``); those must be dropped
 # rather than forwarded, or ConceptCard.model_validate raises extra_forbidden.
-_ALLOWED_MISCONCEPTION_KEYS = {"id", "description", "source"}
+_ALLOWED_MISCONCEPTION_KEYS = {"id", "description", "source", "risk"}
 _ALLOWED_MISCONCEPTION_SOURCES = {"drafted", "teacher"}
 _ALLOWED_CONCEPT_CARD_KEYS = {
     "id",
@@ -206,12 +211,16 @@ def _normalize_page_concept_card_payload(
                 row.setdefault("id", f"M{index}")
                 if row.get("source") not in _ALLOWED_MISCONCEPTION_SOURCES:
                     row.pop("source", None)
+                # Missing or unrecognised risk is treated as high (earns a confront).
+                row["risk"] = normalize_misconception_risk(row.get("risk"))
                 row = {k: v for k, v in row.items() if k in _ALLOWED_MISCONCEPTION_KEYS}
                 normalized.append(row)
             elif isinstance(item, str):
                 if not item.strip():
                     continue
-                normalized.append({"id": f"M{index}", "description": item})
+                normalized.append(
+                    {"id": f"M{index}", "description": item, "risk": "high"}
+                )
         payload["misconceptions"] = normalized
         if not normalized:
             payload["no_known_misconceptions"] = True
@@ -528,6 +537,33 @@ async def prepare_path_lesson(
         for count in (0, 1, 2)
     ]
     preparation_group_preview = possible_previews[0]
+    # Recommended flow per number of high-risk misconceptions (0, 1, 2+). The
+    # planner rates misconception risk itself, so the code-owned recommendation
+    # it must follow depends on its own rating; confront slots earned by
+    # high-risk misconceptions are therefore part of the recommendation, not a
+    # departure from it.
+    recommended_slots_by_high_risk_count: dict[str, list[str]] = {
+        "0": list(recommended_slots)
+    }
+    for count in (1, 2):
+        count_preview = catalog.preview(
+            SkeletonPreviewRequest(
+                objective=lesson.objective,
+                lesson_mode=request.lesson_mode,
+                misconception_count=count,
+                group_profiles=["core"],
+                approved_deviations=approved_deviations,
+            ),
+            knowledge_type=lesson.primary_knowledge_type,
+        )
+        if _blocking_shape_message(count_preview.variants) or not count_preview.variants:
+            recommended_slots_by_high_risk_count[str(count)] = list(
+                recommended_slots_by_high_risk_count[str(count - 1)]
+            )
+        else:
+            recommended_slots_by_high_risk_count[str(count)] = [
+                slot.slot_id for slot in count_preview.variants[0].slots
+            ]
     # Fresh Unit preparation is shared instructional meaning only. Native
     # forms/components and print document contracts are selected later by path
     # consumers after teaching approval (P03+).
@@ -570,6 +606,7 @@ async def prepare_path_lesson(
         "native_whole_lesson": True,
         "slots": projected_slots,
         "recommended_slots": recommended_slots,
+        "recommended_slots_by_high_risk_count": recommended_slots_by_high_risk_count,
         "legal_slots": legal_slots,
         "max_slots": catalog.max_slots,
         "hard_constraints": {
@@ -608,15 +645,23 @@ async def prepare_path_lesson(
         )
     else:
         generated = await structural_planner({**fixed_context, **provider_packet})
+    planned_high_risk_count = high_risk_misconception_count(
+        generated.cards[0].misconceptions if generated.cards else []
+    )
+    flow_recommended_slots = recommended_slots_for_high_risk_count(
+        recommended_slots_by_high_risk_count,
+        planned_high_risk_count,
+        default=recommended_slots,
+    )
     flow = FlowChoice(
-        recommended_slots=recommended_slots,
-        selected_slots=list(generated.selected_slots or recommended_slots),
+        recommended_slots=flow_recommended_slots,
+        selected_slots=list(generated.selected_slots or flow_recommended_slots),
         rationale=str(generated.flow_rationale or ""),
         departures=list(generated.flow_departures or []),
     )
     flow_errors = validate_flow_choice(
         flow,
-        recommended_slots=recommended_slots,
+        recommended_slots=flow_recommended_slots,
         legal_slots={item["slot_id"]: item for item in legal_slots},
         max_slots=catalog.max_slots,
     )
@@ -634,7 +679,12 @@ async def prepare_path_lesson(
         selected_components={},
         shared_preparation=shared_preparation,
     )
-    misconception_count = min(len(plan.cards[0].misconceptions), 3)
+    # Only high-risk misconceptions earn confront slots; low-risk ones stay on
+    # the card for item diagnoses and teacher notes.
+    misconception_count = min(
+        sum(1 for item in plan.cards[0].misconceptions if item.risk == "high"),
+        3,
+    )
     group_preview = catalog.preview(
         SkeletonPreviewRequest(
             objective=lesson.objective,

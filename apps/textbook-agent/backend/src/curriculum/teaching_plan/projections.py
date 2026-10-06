@@ -42,6 +42,7 @@ _SHARED_PREP_ALLOWLIST = frozenset(
         "secondary_demand",
         "slots",
         "recommended_slots",
+        "recommended_slots_by_high_risk_count",
         "legal_slots",
         "max_slots",
         "hard_constraints",
