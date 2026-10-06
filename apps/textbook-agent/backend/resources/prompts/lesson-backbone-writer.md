@@ -27,8 +27,15 @@ Return JSON matching the supplied schema. Do not write any question text.
    actually look at. Do not invent decorative figures. For each:
    - `id`: a short unique slug such as `fig-1`.
    - `purpose`: what the learner uses the figure for.
+   - `mode`: the kind of figure. `"diagram"` for anything measured or
+     structured: shapes with lengths, graphs, number lines, charts, tables,
+     flows, cycles; give exact `data`. `"image"` for a realistic picture:
+     scenes, organisms, apparatus, places, objects whose look matters;
+     describe it fully in `must_show` (and `labels_required` for any labels);
+     `data` is optional. Choose `"diagram"` whenever the learner must read
+     exact values from the figure.
    - `must_show`: the exact things that must be visible (shapes, values,
-     relationships, positions).
+     relationships, positions). Required for `"image"` figures.
    - `labels_required`: every label, axis name, unit and value that must
      appear, written exactly as it should appear.
    - `data`: the exact values the figure plots or tabulates (same numbers as
@@ -55,7 +62,8 @@ Return JSON matching the supplied schema. Do not write any question text.
 - Realistic and age-appropriate: ordinary names, plausible quantities.
 - Do not write questions, prompts, answer options or feedback. Questions are
   written later against this backbone.
-- Do not name renderers, widgets, page objects or layout.
+- Do not name renderers, widgets, page objects or layout. `mode` is only the
+  kind of figure (diagram or image), never a tool.
 - Do not output ids for the anchor or the variants; they are assigned for you.
   Figure ids must be unique, and every id in `figure_ids` must exist in
   `figures`.

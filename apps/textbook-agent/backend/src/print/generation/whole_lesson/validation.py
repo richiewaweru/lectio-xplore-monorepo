@@ -107,6 +107,46 @@ def _visual_spec_problems(visual: VisualSpec, grounding: list[str]) -> list[str]
     return problems
 
 
+def _backbone_figure_map(packet: ImmutableLessonPacket) -> dict[str, dict[str, Any]]:
+    figures = (packet.backbone or {}).get("figures") or []
+    return {
+        str(f["id"]): f for f in figures if isinstance(f, dict) and f.get("id")
+    }
+
+
+def _flatten_scalars(value: Any, out: list[str], depth: int = 0) -> None:
+    if isinstance(value, dict):
+        for item in value.values():
+            _flatten_scalars(item, out, depth)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            _flatten_scalars(item, out, depth)
+    elif value is not None and not isinstance(value, bool):
+        out.append(str(value))
+
+
+def _figure_grounding_texts(figure: dict[str, Any]) -> list[str]:
+    out: list[str] = [
+        *(str(t) for t in figure.get("must_show") or []),
+        *(str(t) for t in figure.get("labels_required") or []),
+    ]
+    _flatten_scalars(figure.get("data") or {}, out)
+    return out
+
+
+def _required_figures_for_block(
+    block: Any, packet: ImmutableLessonPacket
+) -> dict[str, str]:
+    """Map owned approved question id -> backbone figure id it relies on."""
+    out: dict[str, str] = {}
+    for question_id in block.source_question_ids:
+        ref = packet.item_backbone_refs.get(question_id) or {}
+        figure_id = ref.get("figure_id")
+        if figure_id:
+            out[question_id] = str(figure_id)
+    return out
+
+
 def _contains_object_id(text: str) -> str | None:
     """Detect page-object catalogue leaks without flagging ordinary English.
 
@@ -201,6 +241,8 @@ def validate_teaching_plan(
         entry.statement.lower() for entry in packet.scope.must_not_introduce
     }
 
+    backbone_figures = _backbone_figure_map(packet)
+
     for section in plan.sections:
         if not section.blocks:
             issues.append(
@@ -263,19 +305,54 @@ def validate_teaching_plan(
                 )
 
             if block.visual is not None:
+                figure = backbone_figures.get(block.visual.figure_ref or "")
                 visual_grounding = [
                     _normalize_label_text(text)
                     for text in (
                         *block.visual.must_show,
                         packet.lesson.objective,
                         *(entry.statement for entry in packet.scope.must_establish),
+                        *(_figure_grounding_texts(figure) if figure else ()),
                     )
                 ]
+                if block.visual.figure_ref and figure is None:
+                    issues.append(
+                        ValidationIssue(
+                            code="FIGURE_REF_UNKNOWN",
+                            message=(
+                                f"visual.figure_ref {block.visual.figure_ref!r} is not a "
+                                "backbone figure id"
+                            ),
+                            path=f"{path}.visual",
+                        )
+                    )
                 for problem in _visual_spec_problems(block.visual, visual_grounding):
                     issues.append(
                         ValidationIssue(
                             code="VISUAL_SPEC_INVALID",
                             message=problem,
+                            path=f"{path}.visual",
+                        )
+                    )
+
+            needed = _required_figures_for_block(block, packet)
+            if needed:
+                have = block.visual.figure_ref if block.visual is not None else None
+                missing = {
+                    qid: fid for qid, fid in needed.items() if fid != have
+                }
+                if missing or len(set(needed.values())) > 1:
+                    issues.append(
+                        ValidationIssue(
+                            code="FIGURE_REF_MISSING",
+                            message=(
+                                "block owns approved questions that rely on backbone "
+                                f"figures {sorted(set(needed.values()))} (questions "
+                                f"{sorted(needed)}) but its visual.figure_ref is "
+                                f"{have!r}; one block cannot draw more than one figure, "
+                                "so each such question needs a block whose visual "
+                                "figure_ref is its figure id"
+                            ),
                             path=f"{path}.visual",
                         )
                     )
@@ -653,6 +730,8 @@ HARD_PLAN_ISSUE_CODES: frozenset[str] = frozenset(
         "UNKNOWN_MISCONCEPTION",
         "ACTION_SOURCE_INCOMPATIBLE",
         "VISUAL_SPEC_INVALID",
+        "FIGURE_REF_UNKNOWN",
+        "FIGURE_REF_MISSING",
     }
 )
 ADVISORY_PLAN_ISSUE_CODES: frozenset[str] = frozenset(

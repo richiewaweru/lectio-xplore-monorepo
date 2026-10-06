@@ -24,7 +24,8 @@ from curriculum.teaching_plan.compatibility import (
     response_bearing_action,
 )
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
-from curriculum.teaching_plan.models import TeachingPlanDraftV2
+from curriculum.backbone.models import BackboneFigure
+from curriculum.teaching_plan.models import TeachingPlanDraftV2, VisualSpec
 from curriculum.teaching_plan.semantic_review import (
     ADVISORY_ONLY_SEMANTIC_CODES,
     TeachingPlanSemanticReviewError,
@@ -706,6 +707,71 @@ def _repair_missing_assessment_sources(
     return ownership_errors
 
 
+def _repair_missing_figure_visuals(
+    plan: TeachingPlan, packet: ImmutableLessonPacket
+) -> list[dict[str, str]]:
+    """Attach the backbone figure a block's approved question relies on.
+
+    Deterministic and conservative: only acts when exactly one backbone figure is
+    required by the block's owned questions and the block does not already name
+    a different figure. Anything else is left for validation to report.
+    """
+    if not packet.backbone:
+        return []
+    figures = {
+        str(f["id"]): f
+        for f in (packet.backbone.get("figures") or [])
+        if isinstance(f, dict) and f.get("id")
+    }
+    changes: list[dict[str, str]] = []
+    for section in plan.sections:
+        for block in section.blocks:
+            required = list(
+                dict.fromkeys(
+                    str(ref["figure_id"])
+                    for sid in block.source_question_ids
+                    if (ref := packet.item_backbone_refs.get(sid) or {}).get("figure_id")
+                    and str(ref["figure_id"]) in figures
+                )
+            )
+            if len(required) != 1:
+                continue
+            fid = required[0]
+            figure = figures[fid]
+            try:
+                backbone_figure = BackboneFigure.model_validate(figure)
+            except ValueError:
+                continue
+            mode = backbone_figure.effective_mode
+            must_show = list(backbone_figure.must_show)
+            labels = list(backbone_figure.labels_required)
+            if block.visual is None:
+                if not must_show and mode == "diagram":
+                    must_show = [backbone_figure.purpose]
+                block.visual = VisualSpec(
+                    figure_ref=fid,
+                    mode=mode,
+                    purpose=backbone_figure.purpose,
+                    must_show=must_show,
+                    labels_required=labels,
+                )
+                changes.append(
+                    {"block_id": block.id, "figure_id": fid, "action": "created_visual"}
+                )
+            elif block.visual.figure_ref is None:
+                visual = block.visual
+                visual.figure_ref = fid
+                visual.mode = mode
+                visual.must_show = list(dict.fromkeys([*visual.must_show, *must_show]))
+                visual.labels_required = list(
+                    dict.fromkeys([*visual.labels_required, *labels])
+                )
+                changes.append(
+                    {"block_id": block.id, "figure_id": fid, "action": "linked_visual"}
+                )
+    return changes
+
+
 def _repair_invalid_evidence_refs(
     plan: TeachingPlan,
     packet: ImmutableLessonPacket,
@@ -900,7 +966,16 @@ async def run_lesson_approach_planner(
                             "must_establish, and every labels_required entry must appear "
                             "verbatim inside a must_show entry, the lesson objective or a "
                             "must_establish statement. If the block does not truly need a "
-                            "figure, omit `visual` instead."
+                            "figure, omit `visual` instead. "
+                            "When a validation error is FIGURE_REF_MISSING, the "
+                            "named block owns approved questions that rely on a "
+                            "backbone figure: set that block's `visual.figure_ref` to "
+                            "the backbone figure id and copy mode, purpose, "
+                            "must_show and labels_required from that figure; if a "
+                            "block owns questions on two different figures, move one "
+                            "question to another block. When a validation error is "
+                            "FIGURE_REF_UNKNOWN, set `visual.figure_ref` to an id from "
+                            "the backbone figures or remove it."
                         ),
                         "previous_output": previous_output,
                         "validation_errors": repair_errors,
@@ -957,6 +1032,7 @@ async def run_lesson_approach_planner(
                 packet,
                 set(assessment_source_policy["eligible_intents"]),
             )
+            _repair_missing_figure_visuals(plan, packet)
             _repair_invalid_evidence_refs(plan, packet)
 
             # Now validate the normalized plan. These errors describe the state

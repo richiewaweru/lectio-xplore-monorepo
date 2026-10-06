@@ -16,6 +16,7 @@ from curriculum.backbone.models import (
     backbone_hash,
     materialize_backbone,
 )
+from curriculum.backbone.models import BackboneFigure
 from curriculum.backbone.persistence import _record_from_state
 from curriculum.backbone.writer import build_backbone_message, generate_backbone
 from curriculum.planning.models import AnchorSpec, LessonIntent, SectionPlan, StructuralPlan
@@ -130,6 +131,78 @@ def test_stored_record_round_trip_and_tamper_detection() -> None:
     state["backbone"]["hash"] = "0" * 64
     assert _record_from_state(state) is None
     assert _record_from_state({}) is None
+
+
+def test_figure_without_mode_dumps_no_mode_key_and_hash_is_unchanged() -> None:
+    import hashlib
+    import json
+
+    backbone = materialize_backbone(LessonBackboneDraft.model_validate(_draft_payload()))
+    dumped = backbone.model_dump(mode="json")
+    assert "mode" not in dumped["figures"][0]
+    legacy = {
+        "anchor": {
+            "id": "anchor-1",
+            "story": "A bakery sells 3 trays of 12 rolls.",
+            "data": {"trays": 3, "per_tray": 12},
+            "answer": "36 rolls",
+            "figure_ids": ["fig-1"],
+        },
+        "variants": [
+            {
+                "id": "v1",
+                "change": "5 trays of 10",
+                "data": {"trays": 5, "per_tray": 10},
+                "answer": "50 rolls",
+                "figure_ids": [],
+            }
+        ],
+        "figures": [
+            {
+                "id": "fig-1",
+                "purpose": "Show the trays",
+                "must_show": ["3 trays"],
+                "labels_required": ["12 rolls"],
+                "data": {"trays": 3},
+            }
+        ],
+    }
+    expected = hashlib.sha256(
+        json.dumps(legacy, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    assert backbone_hash(backbone) == expected
+
+
+def test_stored_backbone_without_mode_still_loads() -> None:
+    backbone = materialize_backbone(LessonBackboneDraft.model_validate(_draft_payload()))
+    stored = backbone.model_dump(mode="json")
+    assert "mode" not in stored["figures"][0]
+    digest = backbone_hash(LessonBackbone.model_validate(stored))
+    state = {"backbone": {"backbone": stored, "hash": digest, "input_hash": "i"}}
+    loaded = _record_from_state(state)
+    assert loaded is not None and loaded[0].figures[0].effective_mode == "diagram"
+
+
+def test_figure_mode_round_trips_and_defaults_to_diagram() -> None:
+    plain = BackboneFigure(id="f", purpose="p")
+    assert plain.mode is None and plain.effective_mode == "diagram"
+    image = BackboneFigure(id="f", purpose="p", mode="image", must_show=["a frog on a lily pad"])
+    dumped = image.model_dump(mode="json")
+    assert dumped["mode"] == "image"
+    assert BackboneFigure.model_validate(dumped).effective_mode == "image"
+    assert BackboneFigure(id="f", purpose="p", mode="diagram").effective_mode == "diagram"
+    draft = LessonBackboneDraft.model_validate(
+        _draft_payload(figures=[dumped | {"id": "fig-1"}])
+    )
+    assert draft.figures[0].mode == "image"
+    assert "mode" in LessonBackboneDraft.model_json_schema()["$defs"]["BackboneFigure"]["properties"]
+
+
+def test_image_figure_requires_must_show() -> None:
+    with pytest.raises(ValidationError):
+        BackboneFigure(id="f", purpose="p", mode="image")
+    with pytest.raises(ValidationError):
+        BackboneFigure(id="f", purpose="p", mode="image", must_show=["  "])
 
 
 def test_node_policy_is_standard_slot_with_low_reasoning() -> None:

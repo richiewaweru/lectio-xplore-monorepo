@@ -135,6 +135,15 @@ def test_semantic_reviewer_uses_registered_standard_model_and_locked_prompt() ->
     assert "teaching-plan-semantic-reviewer" in closeout_prompt_hashes()
 
 
+def test_semantic_reviewer_prompt_carves_out_backbone_for_item_reuse() -> None:
+    from core.prompts import effective_prompt_text
+
+    prompt = " ".join(effective_prompt_text("teaching-plan-semantic-reviewer").split())
+    assert "item_backbone_refs" in prompt
+    assert "lesson_context.backbone" in prompt
+    assert "sharing the anchor scenario or its data is NOT reuse" in prompt
+
+
 def test_semantic_reviewer_runs_with_deepseek_thinking_enabled() -> None:
     from infra.authoring.model_policy import V3_NODE_REASONING
 
