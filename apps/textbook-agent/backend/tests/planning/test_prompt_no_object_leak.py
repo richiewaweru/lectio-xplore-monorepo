@@ -184,3 +184,13 @@ def test_build_lesson_packet_uses_backbone_anchor_and_refs() -> None:
     assert packet.anchor.description == _BACKBONE["anchor"]["story"]
     assert packet.item_backbone_refs == {"p:c.i1": {"target": "anchor-1", "figure_id": None}}
     assert "backbone" in packet.planner_payload()
+
+
+def test_figures_paragraph_present_only_for_backbone_packets() -> None:
+    load_all_specs()
+    guidance = project_teaching_guidance(permitted_intent_ids=_GUIDANCE_INTENTS)
+    assert "figure_ref" not in render_teaching_prompt(_packet(), guidance)
+    with_backbone = _packet().model_copy(update={"backbone": _BACKBONE})
+    rendered = render_teaching_prompt(with_backbone, guidance)
+    assert "Figures: every approved question whose backbone reference has a figure_id" in rendered
+    assert "visual has figure_ref set to that id" in rendered

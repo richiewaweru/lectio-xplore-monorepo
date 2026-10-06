@@ -65,7 +65,9 @@ never the check's own question.
 Use the backbone's exact data and figure facts; do not invent other scenarios,
 shapes or numbers. For this lesson these rules replace the general rule about
 choosing a different scenario than the approved items; they never permit copying
-an approved stem."""
+an approved stem.
+
+Figures: every approved question whose backbone reference has a figure_id must be owned by a block whose visual has figure_ref set to that id; copy mode, purpose, must_show and labels_required from that backbone figure. Teaching blocks may also show a backbone figure the same way (for example the worked example on the anchor's figure). For backbone figures this replaces the default of adding no visual; still add no other visuals for variety."""
 
 
 def render_teaching_prompt(
