@@ -158,6 +158,7 @@ async def review_teaching_plan_draft(
     plan: TeachingPlan,
     lesson_context: dict[str, Any],
     trace_id: str | None = None,
+    generation_id: str | None = None,
 ) -> TeachingPlanSemanticReviewResult:
     """Review one structurally valid V2 candidate once and bind to its content hash."""
     section_to_blocks = {
@@ -199,6 +200,7 @@ async def review_teaching_plan_draft(
                 system_prompt=teaching_plan_semantic_reviewer_prompt(),
                 user_payload=payload,
                 trace_id=trace_id,
+                generation_id=generation_id,
             )
             review = TeachingPlanSemanticReviewDraft.model_validate(
                 raw_review.model_dump(mode="json")

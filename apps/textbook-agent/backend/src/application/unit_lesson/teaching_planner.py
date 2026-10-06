@@ -1077,6 +1077,7 @@ async def run_lesson_approach_planner(
                         ],
                     },
                     trace_id=f"{tid}:semantic-review:attempt{attempt}",
+                    generation_id=generation_id,
                 )
                 if semantic_review.content_hash != teaching_plan_content_hash(plan):
                     raise TeachingPlanSemanticReviewError(
