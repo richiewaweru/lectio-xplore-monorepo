@@ -1,0 +1,4 @@
+golden  learn=['Q1', 'Q2'] print=['Q1', 'Q2'] teacher=['Q1', 'Q2'] match=True
+legacy  learn=['Q1', 'Q2'] print=['Q1', 'Q2'] teacher=['Q1', 'Q2'] match=True
+live    learn=['Q1', 'Q2', 'Q3'] print=['Q1', 'Q2', 'Q3'] teacher=['Q1', 'Q2', 'Q3'] match=True
+ALL MATCH

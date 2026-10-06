@@ -1,0 +1,5 @@
+{
+ "ts": 1791228274.3968215,
+ "status": 202,
+ "body": "{\"status\":\"queued\",\"path\":\"learn\",\"output_id\":\"learn-out-874a3e86bedf4faf\",\"editable_lesson_id\":null,\"realization_id\":\"83d604bb-2005-48e8-a432-50c5d576fd21\",\"realization_revision\":3,\"teaching_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"teaching_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"teaching_plan_revision\":1,\"open_href\":\"/builder/from-native-learn/learn-out-874a3e86bedf4faf\",\"workspace_href\":\"/units/1bc74518-cd5a-4fb8-bba7-ad088ecbced4/lessons/de9bfb9f-f1a9-4cc5-b28d-bce71f8c4a86/learn\",\"error_summary\":null,\"replayed\":false}"
+}

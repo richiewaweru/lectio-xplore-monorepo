@@ -1,0 +1,7 @@
+STATUS=200 URL=http://127.0.0.1:4174/dev/shared-lesson/golden MARKER=title-present
+STATUS=200 URL=http://127.0.0.1:4174/dev/shared-lesson/legacy MARKER=title-present
+STATUS=200 URL=http://127.0.0.1:4174/dev/shared-lesson/overlong MARKER=title-present
+STATUS=404 URL=http://127.0.0.1:4174/dev/shared-lesson/golden.json
+STATUS=200 URL=http://127.0.0.1:4174/dev/shared-lesson-asset/seedlings.svg MARKER=svg-present
+STATUS=404 URL=http://127.0.0.1:4174/dev/shared-lesson/missing
+EXIT_CODE=0

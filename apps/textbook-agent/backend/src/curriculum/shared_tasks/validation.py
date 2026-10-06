@@ -32,6 +32,19 @@ def _feedback_text_blank(value: object) -> bool:
     return not isinstance(value, str) or not value.strip()
 
 
+def _validate_predict_feedback(task: SharedTaskSpec) -> list[str]:
+    """Prediction tasks save a choice and never grade it as right or wrong."""
+    feedback = _present_feedback(task.feedback)
+    if not feedback:
+        return []
+    errors: list[str] = []
+    if set(feedback) != {"saved"}:
+        errors.append(f"task {task.id!r} prediction feedback must contain only saved")
+    elif _feedback_text_blank(feedback["saved"]):
+        errors.append(f"task {task.id!r} feedback_blank at saved")
+    return errors
+
+
 def _validate_choice_feedback(
     task: SharedTaskSpec, declared_ids: set[str], correct_ids: list[str]
 ) -> list[str]:
@@ -52,8 +65,11 @@ def _validate_choice_feedback(
         by_option = {}
     elif not isinstance(by_option, dict):
         by_option = {}
+    feedback_meta_keys = (
+        _FEEDBACK_META_KEYS | {"saved"} if task.role == "predict" else _FEEDBACK_META_KEYS
+    )
     top_level_option_keys = {
-        key: value for key, value in feedback.items() if key not in _FEEDBACK_META_KEYS
+        key: value for key, value in feedback.items() if key not in feedback_meta_keys
     }
     per_option: dict[str, object] = dict(top_level_option_keys)
     per_option.update(by_option)
@@ -82,6 +98,26 @@ def _validate_choice_feedback(
             continue
         if _feedback_text_blank(value):
             errors.append(f"task {task.id!r} feedback_blank at {key}")
+    return errors
+
+
+def _validate_option_notes(
+    task: SharedTaskSpec, declared_ids: set[str], correct_ids: list[str]
+) -> list[str]:
+    """Teacher-only notes may explain declared wrong options only."""
+    notes = task.option_notes
+    if notes is None:
+        return []
+    errors: list[str] = []
+    unknown = sorted(set(notes) - declared_ids)
+    if unknown:
+        errors.append(f"task {task.id!r} option_notes_unknown_option {unknown}")
+    correct = sorted(set(notes) & {str(value) for value in correct_ids})
+    if correct:
+        errors.append(f"task {task.id!r} option_notes_on_correct_option {correct}")
+    for option_id, note in notes.items():
+        if not isinstance(note, str) or not note.strip():
+            errors.append(f"task {task.id!r} option_notes_blank at {option_id}")
     return errors
 
 
@@ -182,9 +218,13 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
             if unknown:
                 errors.append(f"task {task.id!r} evaluation references unknown option ids {unknown}")
             elif task.feedback is not None:
-                errors.extend(
-                    _validate_choice_feedback(task, declared, [str(value) for value in correct_ids])
-                )
+                if task.role == "predict":
+                    errors.extend(_validate_predict_feedback(task))
+                else:
+                    errors.extend(
+                        _validate_choice_feedback(task, declared, [str(value) for value in correct_ids])
+                    )
+            errors.extend(_validate_option_notes(task, declared, [str(value) for value in correct_ids]))
     elif response_type == "classification":
         items = response.get("items")
         categories = response.get("categories")
@@ -194,7 +234,10 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
         if not items_valid:
             errors.append(f"task {task.id!r} classification response requires items")
         elif task.feedback is not None:
-            errors.extend(_validate_classification_feedback(task, list(items)))
+            if task.role == "predict":
+                errors.extend(_validate_predict_feedback(task))
+            else:
+                errors.extend(_validate_classification_feedback(task, list(items)))
         if not isinstance(categories, list) or not categories or any(
             not isinstance(item, str) or not item.strip() for item in categories
         ):
@@ -263,7 +306,13 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
         ):
             errors.append(f"task {task.id!r} missing-values response requires values")
 
-    if response_type not in {"single_choice", "multiple_choice", "classification"} and isinstance(
+    if (
+        task.role == "predict"
+        and response_type not in {"single_choice", "multiple_choice", "classification"}
+        and task.feedback is not None
+    ):
+        errors.extend(_validate_predict_feedback(task))
+    elif response_type not in {"single_choice", "multiple_choice", "classification"} and isinstance(
         task.feedback, dict
     ):
         for key, value in _present_feedback(task.feedback).items():

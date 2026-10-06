@@ -75,7 +75,8 @@
       "valid_objects": [
         "table",
         "prose",
-        "questions"
+        "questions",
+        "compare"
       ],
       "generation_guidance": "Compare using consistent criteria. End with the distinction that matters most.",
       "choose_when": "Two or more named things must be told apart, and the same criteria apply to each.",
@@ -104,7 +105,10 @@
       "valid_objects": [
         "prose",
         "figure",
-        "table"
+        "table",
+        "equation",
+        "quote",
+        "compare"
       ],
       "generation_guidance": "Explain why or how, not merely what. Use explicit relationships and avoid decorative segmentation.",
       "choose_when": "The learner must reason about instances they have not seen, and the difficulty is the idea itself — not its cause, its flow, its arrangement, or a representation of it.",
@@ -123,6 +127,7 @@
         "prose",
         "figure",
         "table",
+        "equation",
         "questions"
       ],
       "generation_guidance": "Identify cause, mechanism, and result. Separate correlation from mechanism when relevant.",

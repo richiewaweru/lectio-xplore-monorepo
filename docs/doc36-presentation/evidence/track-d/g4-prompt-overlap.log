@@ -1,0 +1,11 @@
+OK  [live-run vs sourcebook+plan] task-predict-light: repeated=1/5  "What is the role of light in photosynthesis?"
+OK  [live-run vs sourcebook+plan] task-practice-carbon: repeated=0/5  "Which option correctly identifies the reactants and the carbohydrate product of photosynthesis?"
+OK  [live-run vs sourcebook+plan] task-check-respiration: repeated=0/5  "Which statement best distinguishes photosynthesis from cellular respiration?"
+OK  [golden shared doc vs paragraph above] task-predict: repeated=0/4  "Where does the energy a plant uses to grow come from?"
+OK  [golden shared doc vs paragraph above] task-check: repeated=0/3  "Which observation would best challenge the student's idea?"
+OK  [legacy shared doc vs paragraph above] task-orient-b2: repeated=0/10  "Two pots hold identical soil, are watered the same amount, and stand in the same room at the same temperature. One sits on a sunny windowsill: its seedling is green and leans toward the window. The other is shut in a dark cupboard: its seedling has turned pale and stopped growing. Before we explain anything, commit to your prediction. Where does the energy a plant uses to grow come from?"
+OK  [legacy shared doc vs paragraph above] task-check-b1: repeated=0/5  "A student says, "Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it." Which observation would best challenge this idea?"
+OK  [live shared doc vs paragraph above] task-predict-light: repeated=0/4  "What is the role of light in photosynthesis?"
+OK  [live shared doc vs paragraph above] task-practice-carbon: repeated=0/4  "Which option correctly identifies the reactants and the carbohydrate product of photosynthesis?"
+OK  [live shared doc vs paragraph above] task-check-respiration: repeated=0/3  "Which statement best distinguishes photosynthesis from cellular respiration?"
+ALL OK

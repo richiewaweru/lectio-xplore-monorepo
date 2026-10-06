@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
@@ -17,7 +16,6 @@ from curriculum.planning.models import (
     Misconception,
     SectionBrief,
     StructuralPlan,
-    VariantSpec,
 )
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]

@@ -1,0 +1,853 @@
+{
+  "generation_id": "f8099d04-fd37-4fa1-9616-40fc689e2957",
+  "teaching_plan": {
+    "arc": "The lesson opens on a sealed glass tank containing a small green plant and a small animal observed over 24 hours, and uses that closed system to pose the supply question. It builds the cyclic model in which photosynthesis produces glucose and oxygen that respiration uses, and respiration produces carbon dioxide and water that photosynthesis uses. It then contrasts a plant cell in light with one in darkness to expose the boundary of the model, confronts the beliefs that the processes take turns and that the plant's oxygen is only for other organisms, and closes by asking learners to correct a written explanation that contains those errors.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Present the sealed glass tank containing a small green plant and a small animal, observed over 24 hours. State that the tank is sealed: no gases, water, or food can enter or leave. Ask learners to identify what the plant needs and what the animal needs, and to notice that those needs must be met inside the tank. Do not explain photosynthesis or respiration yet, and do not name the gases or glucose as products of either process.",
+            "intent": "orient",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Show the sealed tank as a closed system containing a plant and an animal over a full day and night.",
+              "required": true,
+              "must_show": [
+                "a sealed glass tank containing a small green plant and a small animal",
+                "the tank observed over 24 hours, including a light phase and a dark phase"
+              ],
+              "must_not_show": [
+                "arrows or labels for gases, glucose, or water",
+                "any statement about photosynthesis or respiration"
+              ],
+              "labels_required": [
+                "sealed glass tank",
+                "small green plant",
+                "small animal",
+                "24 hours"
+              ]
+            },
+            "evidence": "The objective depends on a closed cycle; without a shared concrete case of a sealed plant\u2013animal system, the later claims about products feeding the other process have no system to attach to. This block establishes the case and the supply question.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "orient",
+        "exit_state": [
+          "Learners have the sealed tank as a concrete case and a question: how can both organisms keep getting what they need in a closed system?"
+        ],
+        "transition": "The supply question is now open. The next section answers it by building the cycle of materials between photosynthesis and respiration.",
+        "entry_state": [
+          "Learners can recall that plants need light and that animals need food and oxygen."
+        ],
+        "display_title": "A sealed tank and a 24-hour puzzle",
+        "must_establish": [
+          "The tank is sealed, so no gases, water, or food can enter or leave.",
+          "The observation covers 24 hours, including both light and dark phases.",
+          "The plant and animal must meet their needs using materials already inside the tank and each other's outputs."
+        ],
+        "avoid_repeating": [
+          "Do not explain photosynthesis or respiration yet.",
+          "Do not name glucose, oxygen, carbon dioxide, or water as products in this section."
+        ],
+        "specific_purpose": "Open attention with the sealed tank and establish the supply question that the cycle must answer.",
+        "bridge_from_previous": null
+      },
+      {
+        "blocks": [
+          {
+            "id": "explain-b1",
+            "brief": "Trace the materials through the sealed tank. Start with carbon dioxide and water entering the plant's chloroplasts; photosynthesis uses light energy to produce glucose and oxygen. Follow the glucose and oxygen to the plant's own mitochondria and to the animal's cells, where respiration uses them and releases carbon dioxide and water. Follow those products back to the chloroplasts. State explicitly that the oxygen made in photosynthesis is not only released to the animal: it is also available for the plant's own respiration. Describe the two processes as simultaneous in the light, not as alternating.",
+            "intent": "trace-flow",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Show the cyclic exchange of materials between photosynthesis and respiration within the sealed tank.",
+              "required": true,
+              "must_show": [
+                "carbon dioxide and water entering chloroplasts in the plant's cells",
+                "light energy driving photosynthesis in chloroplasts",
+                "glucose and oxygen produced by photosynthesis",
+                "glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells",
+                "carbon dioxide and water produced by respiration",
+                "those products returning to the chloroplasts",
+                "oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal"
+              ],
+              "must_not_show": [
+                "the idea that photosynthesis and respiration alternate",
+                "the claim that oxygen is only for the animal"
+              ],
+              "labels_required": [
+                "chloroplasts",
+                "light energy",
+                "carbon dioxide",
+                "water",
+                "glucose",
+                "oxygen",
+                "mitochondria",
+                "respiration",
+                "photosynthesis"
+              ]
+            },
+            "evidence": "The objective names two product-to-input relationships that form a cycle, so the learner must follow matter through both processes at once; a trace-flow is the only move that keeps the products visible as they move from one process to the other.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "prior-3",
+              "prior-4",
+              "prior-7",
+              "prior-8",
+              "prior-11",
+              "prior-12",
+              "prior-13",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "explain-b2",
+            "brief": "Explain why respiration cannot stop when light is available. Cells need a continuous supply of energy from respiration, so mitochondria keep using glucose and oxygen day and night. Photosynthesis, by contrast, can only supply glucose and oxygen when light is available. In bright light both processes run at the same time; in darkness only respiration runs. Use the sealed tank to make the consequence concrete: during the dark phase the plant and animal continue respiring, adding carbon dioxide and water that the plant will use when light returns. Do not re-trace the full cycle from the previous block; focus on why the two processes are not alternatives.",
+            "intent": "explain-cause",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Show that respiration runs continuously while photosynthesis requires light.",
+              "required": true,
+              "must_show": [
+                "a timeline covering 24 hours with a light phase and a dark phase",
+                "respiration active during both the light phase and the dark phase",
+                "photosynthesis active only during the light phase"
+              ],
+              "must_not_show": [
+                "alternation of the two processes",
+                "cessation of respiration in light"
+              ],
+              "labels_required": [
+                "24 hours",
+                "light",
+                "dark",
+                "respiration",
+                "photosynthesis"
+              ]
+            },
+            "evidence": "The objective requires explaining how products are used, and the timing of respiration is the reason the cycle never stops. Without stating that respiration is continuous, learners can treat photosynthesis and respiration as alternating phases, which would break the product-to-input relationship at night.",
+            "position": 1,
+            "task_mode": "none",
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "prior-9",
+              "prior-12",
+              "prior-13",
+              "M1",
+              "M2",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "explain",
+        "exit_state": [
+          "Learners can state that photosynthesis produces glucose and oxygen, respiration uses glucose and oxygen and produces carbon dioxide and water, and that each process's products feed the other.",
+          "Learners can say that the plant's own respiration uses its own glucose and oxygen, and that respiration continues in both light and dark."
+        ],
+        "transition": "The cycle is now stated. The contrast section tests its boundary by comparing a plant cell in light with one in darkness.",
+        "entry_state": [
+          "Learners have the sealed tank and the question of how the plant and animal obtain what they need inside it."
+        ],
+        "display_title": "The product-to-input cycle",
+        "must_establish": [
+          "Photosynthesis in chloroplasts uses carbon dioxide and water and produces glucose and oxygen.",
+          "Respiration in mitochondria uses glucose and oxygen and produces carbon dioxide and water.",
+          "The products of photosynthesis are the inputs for respiration, and the products of respiration are the inputs for photosynthesis.",
+          "The plant's own mitochondria use glucose and oxygen, including oxygen produced by the plant's own photosynthesis.",
+          "Respiration occurs continuously; photosynthesis occurs only when light is available."
+        ],
+        "avoid_repeating": [
+          "Do not re-describe the sealed tank at length; use it only as the setting for the cycle.",
+          "Do not yet name or refute the belief that the processes alternate; that belongs to the confront section."
+        ],
+        "specific_purpose": "Build the cyclic model in which photosynthesis products feed respiration and respiration products feed photosynthesis, with the plant's own respiration included.",
+        "bridge_from_previous": "The orient section left the sealed tank as an unanswered supply puzzle. This section answers it by building the cycle of materials between photosynthesis and respiration."
+      },
+      {
+        "blocks": [
+          {
+            "id": "contrast-b1",
+            "brief": "Compare a plant cell in the light with the same type of plant cell in darkness. In the light cell, chloroplasts carry out photosynthesis and mitochondria carry out respiration at the same time; glucose and oxygen from photosynthesis are available to the mitochondria, and carbon dioxide and water from respiration are available to the chloroplasts. In the dark cell, chloroplasts cannot carry out photosynthesis because there is no light, but mitochondria continue respiration, using glucose and oxygen available in the cell and releasing carbon dioxide and water. State that the dark cell has not switched off respiration; it has only lost the photosynthesis contribution. Do not use a sealed chamber or gas sensors; keep the focus on the cell's organelles.",
+            "intent": "compare",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Contrast a plant cell in light with a plant cell in darkness to show that respiration continues in both while photosynthesis only occurs in the light cell.",
+              "required": true,
+              "must_show": [
+                "a plant cell in light with active chloroplasts and active mitochondria",
+                "glucose and oxygen from photosynthesis available to mitochondria in the light cell",
+                "carbon dioxide and water from respiration available to chloroplasts in the light cell",
+                "a plant cell in darkness with inactive chloroplasts and active mitochondria",
+                "mitochondria in the dark cell continuing to use glucose and oxygen and release carbon dioxide and water"
+              ],
+              "must_not_show": [
+                "respiration stopping in the light cell",
+                "photosynthesis occurring in the dark cell"
+              ],
+              "labels_required": [
+                "plant cell in light",
+                "plant cell in darkness",
+                "chloroplasts",
+                "mitochondria",
+                "glucose",
+                "oxygen",
+                "carbon dioxide",
+                "water"
+              ]
+            },
+            "evidence": "The boundary between light and dark is where the cyclic model can be misread as two separate processes. Contrasting a plant cell in light with one in darkness shows that respiration is present in both states while photosynthesis is added only in the light, which is exactly the distinction the objective requires.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "lesson.objective",
+              "prior-10",
+              "prior-11",
+              "prior-12",
+              "prior-13",
+              "anchor.anchor-1",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "contrast",
+        "exit_state": [
+          "Learners can distinguish a plant cell in light from a plant cell in darkness and explain that respiration continues in both, while photosynthesis operates only in the light cell."
+        ],
+        "transition": "Seeing the boundary between light and dark exposes a common wrong belief: that the two processes take turns. The confront section now names that belief and shows it failing.",
+        "entry_state": [
+          "Learners can state the cyclic product-to-input relationships and that respiration is continuous while photosynthesis requires light."
+        ],
+        "display_title": "Light and dark in the plant cell",
+        "must_establish": [
+          "In a plant cell in the light, both chloroplasts and mitochondria are active; photosynthesis and respiration occur at the same time.",
+          "In a plant cell in darkness, chloroplasts cannot carry out photosynthesis because there is no light, but mitochondria continue respiration.",
+          "The difference between light and dark is the presence or absence of photosynthesis, not the presence or absence of respiration."
+        ],
+        "avoid_repeating": [
+          "Do not re-state the full cycle from the explain section.",
+          "Do not yet name or refute the belief that the processes alternate; that is the confront section's job."
+        ],
+        "specific_purpose": "Use a cell-level contrast to show that respiration continues in darkness and in light, while photosynthesis is added only in light.",
+        "bridge_from_previous": "The explain section established that respiration is continuous and photosynthesis is light-dependent. This section makes that distinction visible by contrasting a plant cell in light with a plant cell in darkness."
+      },
+      {
+        "blocks": [
+          {
+            "id": "confront-b1",
+            "brief": "Name the belief that photosynthesis and respiration are alternatives: photosynthesis happens in sunlight and respiration happens in darkness, so the plant switches from one to the other. Show why this belief feels right: in a dark chamber the plant releases carbon dioxide and takes in oxygen, and in bright light it releases oxygen and takes in carbon dioxide, so the net changes look like opposite processes. Then show it failing: in a plant cell in bright light, mitochondria continue respiring and using glucose and oxygen while chloroplasts are photosynthesising; the light does not switch respiration off. State plainly that the correct understanding is that respiration is continuous, day and night, and photosynthesis occurs whenever light is available, so both processes run at the same time in the light.",
+            "intent": "diagnose-misconception",
+            "evidence": "M1 and M2 are held beliefs, not slips, and they predict a wrong answer about when respiration occurs. Naming the alternating model and then breaking it against the light-cell evidence is the only way to replace the belief rather than repeat the correct model.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "M1",
+              "M2",
+              "lesson.objective",
+              "prior-12",
+              "prior-13",
+              "anchor.anchor-1",
+              "slot.confront.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "confront-b2",
+            "brief": "Name the belief that the oxygen produced by photosynthesis is only for other organisms, not for the plant itself. Show why it feels right: textbooks often say plants release oxygen for animals, and the plant's own need for oxygen is less obvious. Then show it failing: in the same plant cell, oxygen made by the chloroplasts diffuses to the mitochondria of that cell and is used there in respiration; the plant also uses oxygen from the surrounding air. There is no delivery system that sends the oxygen only to other organisms \u2014 the gas is available to the cell that made it. State plainly that the correct understanding is that the oxygen from photosynthesis is available to the plant's own respiration as well as to other organisms.",
+            "intent": "diagnose-misconception",
+            "evidence": "M3 is a specific wrong model about ownership of the oxygen. The objective explicitly says products of photosynthesis are used in respiration, and that includes the plant's own respiration; showing the chloroplast-to-mitochondria oxygen route is necessary to correct it.",
+            "position": 1,
+            "task_mode": "none",
+            "evidence_refs": [
+              "M3",
+              "lesson.objective",
+              "prior-7",
+              "prior-11",
+              "anchor.anchor-1",
+              "slot.confront.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "confront",
+        "exit_state": [
+          "Learners can state that the two processes can occur simultaneously in the same plant cell, that respiration never stops, and that the plant uses its own oxygen in respiration as well as releasing it to other organisms."
+        ],
+        "transition": "The wrong beliefs have been surfaced and broken. The check now asks learners to correct a written explanation that contains the same errors.",
+        "entry_state": [
+          "Learners have contrasted a plant cell in light and darkness and can see that respiration is present in both."
+        ],
+        "display_title": "Why the 'take turns' and 'only for animals' ideas fail",
+        "must_establish": [
+          "The belief that photosynthesis and respiration take turns \u2014 with photosynthesis in light and respiration in darkness \u2014 is wrong: respiration is continuous and photosynthesis runs whenever light is available, so both can run at once in the light.",
+          "The belief that the oxygen from photosynthesis is only for other organisms is wrong: the plant's own mitochondria use oxygen, including oxygen produced by its own chloroplasts, as well as oxygen from the surrounding air.",
+          "In a plant cell in the light, oxygen produced by chloroplasts can be used by the same cell's mitochondria and can also diffuse to other organisms."
+        ],
+        "avoid_repeating": [
+          "Do not re-teach the full cycle from the explain section; use the cycle only to show where the wrong belief breaks.",
+          "Do not re-describe the cell contrast from the contrast section in full; refer to it as evidence."
+        ],
+        "specific_purpose": "Surface the two wrong beliefs, show why they feel right, and break them against the simultaneous processes in a plant cell.",
+        "bridge_from_previous": "The contrast section showed that respiration continues in darkness and in light. That evidence is now used to test the common beliefs that the two processes take turns or that the plant's oxygen is only for other organisms."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Present the approved item. The learner selects the correction that makes the student's explanation accurate. The check measures whether the learner can correct the belief that oxygen is only for animals and that respiration happens only at night.",
+            "intent": "check-understanding",
+            "evidence": "The objective asks learners to explain how products are used across both processes. Item i5 presents a written explanation that makes both target errors \u2014 oxygen only for animals and respiration only at night \u2014 so it directly measures whether the corrective model has landed.",
+            "position": 0,
+            "task_mode": "assessment",
+            "evidence_refs": [
+              "lesson.objective",
+              "M1",
+              "M2",
+              "M3",
+              "slot.check.purpose",
+              "item.f8099d04-fd37-4fa1-9616-40fc689e2957:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8.i5"
+            ],
+            "learner_action": {
+              "action": "select-one",
+              "target": "the correction that makes the written explanation accurate",
+              "purpose": "check whether learners can correct an explanation that contains the alternating-process and oxygen-only-for-animals errors",
+              "difficulty": "independent",
+              "expected_evidence": "the learner selects the correction that states respiration uses glucose and oxygen continuously, including oxygen made by the plant's own photosynthesis, rather than only at night or only for animals"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [
+              "f8099d04-fd37-4fa1-9616-40fc689e2957:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8.i5"
+            ],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "check",
+        "exit_state": [
+          "Learners have a measure of whether they can apply the cycle to correct a written explanation."
+        ],
+        "transition": "This check completes the lesson by measuring whether the corrected model can be applied.",
+        "entry_state": [
+          "Learners have confronted the beliefs that the processes alternate and that the plant's oxygen is only for other organisms."
+        ],
+        "display_title": "Check: correcting an explanation of gas exchange",
+        "must_establish": [
+          "Learners can identify the correction that makes the written explanation match the continuous, simultaneous cycle of photosynthesis and respiration."
+        ],
+        "avoid_repeating": [
+          "Do not re-teach the cycle or the misconceptions in this section; the check only measures whether the learner can apply the correction."
+        ],
+        "specific_purpose": "Check whether learners can correct a written explanation that treats oxygen as only for animals and respiration as only at night.",
+        "bridge_from_previous": "The confront section replaced the wrong beliefs with the correct model. The check now asks learners to use that model to correct a written explanation that contains the same wrong beliefs."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Introduce the sealed tank with the small green plant and small animal over 24 hours as the concrete case that raises the supply question.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Use the sealed tank as the setting for tracing carbon dioxide, water, glucose, and oxygen through photosynthesis and respiration.",
+        "slot_id": "explain"
+      },
+      {
+        "usage": "Refer back to the sealed tank only as the same closed system, then shift to a cell-level contrast to show that respiration continues in both light and darkness.",
+        "slot_id": "contrast"
+      },
+      {
+        "usage": "Use the sealed tank's 24-hour cycle to surface the belief that the processes alternate, and the plant cell to break the belief that oxygen is only for other organisms.",
+        "slot_id": "confront"
+      },
+      {
+        "usage": "Do not reuse the anchor in the check; the check is bound to the approved written-explanation item and measures correction of the same wrong beliefs.",
+        "slot_id": "check"
+      }
+    ],
+    "target_state": [
+      "Learners can explain that the products of photosynthesis \u2014 glucose and oxygen \u2014 are used in respiration, including the plant's own respiration.",
+      "Learners can explain that the products of respiration \u2014 carbon dioxide and water \u2014 are used in photosynthesis.",
+      "Learners can state that respiration is continuous while photosynthesis requires light, and use this to correct an explanation that says oxygen is only for animals or that respiration happens only at night."
+    ],
+    "learner_title": "How photosynthesis and respiration feed each other",
+    "starting_state": [
+      "Learners know that plants make food using light and that living things release energy from food.",
+      "Learners know photosynthesis uses carbon dioxide and water and produces glucose and oxygen, and that respiration uses glucose and oxygen and produces carbon dioxide and water.",
+      "Learners may treat photosynthesis and respiration as separate processes rather than as a cycle."
+    ],
+    "approval_status": "pending",
+    "contract_version": 2,
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "af070978-797b-4c21-b744-29f404128830",
+    "misconception_focus_ids": [
+      "M1",
+      "M2",
+      "M3"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [
+    {
+      "code": "LATE_BRIEF_THINNING",
+      "path": "",
+      "message": "final-quarter briefs average 38.0 words vs first-quarter 78.0"
+    },
+    {
+      "code": "TEACHING_PLAN_SEMANTIC_REVIEW_PASS",
+      "content_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f"
+    }
+  ],
+  "teaching_flags": [
+    {
+      "code": "LATE_BRIEF_THINNING",
+      "source": "validator",
+      "message": "final-quarter briefs average 38.0 words vs first-quarter 78.0",
+      "severity": "warning",
+      "block_ids": [],
+      "section_ids": [],
+      "repair_instruction": "final-quarter briefs average 38.0 words vs first-quarter 78.0"
+    }
+  ],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "teaching_plan_identity": {
+    "revision": 1,
+    "pending_content_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+    "pending_hash_verified": true,
+    "approved_revision": null,
+    "approved_content_hash": null,
+    "approved_hash_verified": false,
+    "approval_hash_binding": null,
+    "recovery_action": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ]
+      },
+      {
+        "purpose": "Build the idea itself. State it, ground it, make it usable.",
+        "slot_id": "explain",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "explain-cause",
+          "explain",
+          "define",
+          "show-structure",
+          "trace-flow",
+          "compare",
+          "name-parts"
+        ]
+      },
+      {
+        "purpose": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.\n",
+        "slot_id": "contrast",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "compare",
+          "classify",
+          "explain",
+          "warn",
+          "show-structure"
+        ]
+      },
+      {
+        "purpose": "Name the wrong belief, show why it feels right, then show it failing on a case. Correct exposition alone does not count.\n",
+        "slot_id": "confront",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "diagnose-misconception",
+          "warn",
+          "compare",
+          "explain"
+        ]
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ]
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A sealed glass tank containing a small green plant and a small animal, observed over 24 hours. By day, the plant produces the gas the animal needs; by night, the animal's output becomes the plant's input. Neither could survive alone in the sealed tank \u2014 the plant's glucose and oxygen feed the animal's respiration, and the animal's carbon dioxide and water feed the plant's photosynthesis."
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "Explain how the products of photosynthesis are used in respiration and how the products of respiration are used in photosynthesis.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "f8099d04-fd37-4fa1-9616-40fc689e2957"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "f8099d04-fd37-4fa1-9616-40fc689e2957:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8.i1",
+        "stem": "A potted mint plant is sealed in a clear, transparent container with a small amount of carbon dioxide and plenty of water. The container is placed in bright sunlight for several hours. Which statement best describes the gas exchanges happening inside the plant's cells?",
+        "card_id": "f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8",
+        "options": [
+          {
+            "key": "a",
+            "text": "Photosynthesis and respiration both occur at the same time, with photosynthesis using carbon dioxide and respiration producing carbon dioxide.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Photosynthesis occurs because light is available, while respiration stops until the light is removed and darkness returns.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Respiration occurs because the plant needs energy, while photosynthesis stops because the leaf is already making enough glucose.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Only photosynthesis occurs in the leaf, and the plant does not respire at any time because it can make its own food.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M2",
+          "c": null,
+          "d": "M1"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "f8099d04-fd37-4fa1-9616-40fc689e2957:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8.i2",
+        "stem": "A student places a green water plant in a sealed tank with a small fish. The tank is kept in bright light. The fish needs oxygen and releases carbon dioxide. Which statement correctly explains the gas exchange between the plant and the fish over a full day?",
+        "card_id": "f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8",
+        "options": [
+          {
+            "key": "a",
+            "text": "The plant only produces oxygen for the fish during photosynthesis and uses none of that oxygen for its own respiration.",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The plant produces oxygen that the fish can use, and the plant also uses some of the oxygen produced during photosynthesis for its own respiration.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The plant switches between photosynthesis in the light and respiration in the dark, so it only helps the fish during the daytime.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The plant releases oxygen only for the fish, and the plant's own respiration uses carbon dioxide from the water instead of oxygen.",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M3",
+          "b": null,
+          "c": "M2",
+          "d": "M3"
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "f8099d04-fd37-4fa1-9616-40fc689e2957:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8.i3",
+        "stem": "A leaf is kept in a sealed, clear chamber with a carbon dioxide sensor and an oxygen sensor. The chamber is placed in bright light. The carbon dioxide level drops while the oxygen level rises. Which conclusion is best supported by this evidence?",
+        "card_id": "f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8",
+        "options": [
+          {
+            "key": "a",
+            "text": "Photosynthesis is happening, and respiration must have stopped because the plant has no need to respire while it is in the light.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Photosynthesis and respiration are both taking place, but the rate of photosynthesis is greater than the rate of respiration.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Respiration is happening and producing oxygen, while photosynthesis is happening and using carbon dioxide.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Photosynthesis is happening only because the light is on, and respiration will begin only after the light is turned off.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M1",
+          "b": null,
+          "c": null,
+          "d": "M2"
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "f8099d04-fd37-4fa1-9616-40fc689e2957:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8.i4",
+        "stem": "A plant is kept in a sealed chamber in the dark for 24 hours. The chamber contains a carbon dioxide sensor. Which statement best explains what happens to the carbon dioxide level?",
+        "card_id": "f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8",
+        "options": [
+          {
+            "key": "a",
+            "text": "Carbon dioxide decreases because the plant continues to photosynthesise in the dark, using carbon dioxide as its energy source.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Carbon dioxide increases because respiration releases carbon dioxide, while photosynthesis has stopped in the absence of light.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Carbon dioxide stays the same because respiration and photosynthesis continue at equal rates even without light.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Carbon dioxide increases because respiration produces carbon dioxide, and the plant cannot use that carbon dioxide until it receives light again.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M1",
+          "b": null,
+          "c": "M2",
+          "d": null
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "f8099d04-fd37-4fa1-9616-40fc689e2957:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8.i5",
+        "stem": "A student writes: \"A plant's cells make glucose and oxygen during photosynthesis. The oxygen is released for animals, and the glucose is stored as starch. At night, the plant respires and uses the glucose and oxygen it stored during the day.\" Which correction should be made to this explanation?",
+        "card_id": "f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8",
+        "options": [
+          {
+            "key": "a",
+            "text": "Photosynthesis also supplies oxygen for the plant's own respiration, and respiration occurs continuously, not only at night.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The correction is that photosynthesis produces carbon dioxide and water, while respiration produces glucose and oxygen.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The correction is that the plant respires only during the day, because respiration requires the light energy captured by photosynthesis.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The correction is that oxygen made in photosynthesis is only for the plant itself, and no oxygen is available to other organisms.",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": null,
+          "c": "M1",
+          "d": "M3"
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "statement": "{'id': 'M1', 'description': 'Plants only photosynthesise and never respire, or respire only at night.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M2",
+        "statement": "{'id': 'M2', 'description': 'Photosynthesis happens in sunlight and respiration happens in darkness, so they are alternatives rather than simultaneous processes.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M3",
+        "statement": "{'id': 'M3', 'description': \"The oxygen produced by photosynthesis is only for other organisms, not for the plant's own respiration.\", 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "plants make food using light"
+      },
+      {
+        "id": "prior-2",
+        "statement": "living things release energy from food"
+      },
+      {
+        "id": "prior-3",
+        "statement": "photosynthesis uses carbon dioxide and water"
+      },
+      {
+        "id": "prior-4",
+        "statement": "photosynthesis produces glucose and oxygen"
+      },
+      {
+        "id": "prior-5",
+        "statement": "light is required as an energy source"
+      },
+      {
+        "id": "prior-6",
+        "statement": "chlorophyll absorbs light"
+      },
+      {
+        "id": "prior-7",
+        "statement": "respiration uses glucose and oxygen"
+      },
+      {
+        "id": "prior-8",
+        "statement": "respiration produces carbon dioxide and water"
+      },
+      {
+        "id": "prior-9",
+        "statement": "respiration releases energy from food"
+      },
+      {
+        "id": "prior-10",
+        "statement": "photosynthesis occurs in chloroplasts"
+      },
+      {
+        "id": "prior-11",
+        "statement": "respiration occurs in mitochondria"
+      },
+      {
+        "id": "prior-12",
+        "statement": "photosynthesis occurs only in the presence of light"
+      },
+      {
+        "id": "prior-13",
+        "statement": "respiration occurs continuously, day and night"
+      }
+    ],
+    "required_assessment_slots": [
+      "check"
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

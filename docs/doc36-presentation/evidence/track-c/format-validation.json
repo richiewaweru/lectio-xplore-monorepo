@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "lessons": [
+    {
+      "lesson": "comparison",
+      "shared_document": "C:\\Users\\richi\\.codex\\worktrees\\doc36-writer\\lectio\\docs\\doc36-presentation\\evidence\\track-c\\comparison-shared-document.json",
+      "learn_document": "C:\\Users\\richi\\.codex\\worktrees\\doc36-writer\\lectio\\docs\\doc36-presentation\\evidence\\track-c\\comparison-learn-v2.json",
+      "shared_hash": "853c9caddaff3200d31d365a7a37b40611b7dde82cd995d126f9e407db14387d",
+      "shared_node_count": 2,
+      "warnings": [],
+      "learn_errors": []
+    },
+    {
+      "lesson": "formula",
+      "shared_document": "C:\\Users\\richi\\.codex\\worktrees\\doc36-writer\\lectio\\docs\\doc36-presentation\\evidence\\track-c\\formula-shared-document.json",
+      "learn_document": "C:\\Users\\richi\\.codex\\worktrees\\doc36-writer\\lectio\\docs\\doc36-presentation\\evidence\\track-c\\formula-learn-v2.json",
+      "shared_hash": "e6083f2f99564bbfd4c64d5b153afe759a64c86884b4071c90e8b65c31f82ced",
+      "shared_node_count": 2,
+      "warnings": [
+        {
+          "code": "shape_missing",
+          "path": "section/key_idea"
+        }
+      ],
+      "learn_errors": []
+    },
+    {
+      "lesson": "photosynthesis",
+      "shared_document": "C:\\Users\\richi\\.codex\\worktrees\\doc36-writer\\lectio\\docs\\doc36-presentation\\evidence\\track-c\\photosynthesis-shared-document.json",
+      "learn_document": "C:\\Users\\richi\\.codex\\worktrees\\doc36-writer\\lectio\\docs\\doc36-presentation\\evidence\\track-c\\photosynthesis-learn-v2.json",
+      "shared_hash": "18c1a0f0edfc4b48cc9b19d238d271d1fa1d06c02d96afa870fb756e23c6b237",
+      "shared_node_count": 2,
+      "warnings": [],
+      "learn_errors": []
+    }
+  ]
+}

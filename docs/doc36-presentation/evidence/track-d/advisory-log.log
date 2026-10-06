@@ -1,0 +1,8 @@
+
+apps\textbook-agent\backend\tests\curriculum\test_shared_task_authoring.py::test_presentation_targets_are_advisory_and_do_not_repair_or_change_text 
+-------------------------------- live log call --------------------------------
+WARNING  curriculum.shared_task_authoring:shared_task_authoring.py:557 shared task presentation advisory
+WARNING  curriculum.shared_task_authoring:shared_task_authoring.py:557 shared task presentation advisory
+PASSED                                                                   [100%]
+
+============================= 1 passed in 14.11s ==============================

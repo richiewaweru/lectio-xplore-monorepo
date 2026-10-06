@@ -1,0 +1,223 @@
+{
+  "capturedAt": "2026-10-05T14:56:46.436Z",
+  "commit": "c34645b2 + final G1 corrections",
+  "fixtureRoute": "dev-only public path; page, JSON, and asset endpoints remain dev-guarded",
+  "checks": [
+    {
+      "fixture": "golden",
+      "label": "desktop",
+      "url": "http://127.0.0.1:5181/dev/shared-lesson/golden",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "ids": 0,
+      "internalText": false,
+      "choiceButtons": [
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        }
+      ],
+      "textLength": 5267
+    },
+    {
+      "fixture": "golden",
+      "label": "mobile",
+      "url": "http://127.0.0.1:5181/dev/shared-lesson/golden",
+      "innerWidth": 390,
+      "scrollWidth": 390,
+      "ids": 0,
+      "internalText": false,
+      "choiceButtons": [
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        }
+      ],
+      "textLength": 5267
+    },
+    {
+      "fixture": "legacy",
+      "label": "desktop",
+      "url": "http://127.0.0.1:5181/dev/shared-lesson/legacy",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "ids": 0,
+      "internalText": false,
+      "choiceButtons": [
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        }
+      ],
+      "textLength": 7128
+    },
+    {
+      "fixture": "legacy",
+      "label": "mobile",
+      "url": "http://127.0.0.1:5181/dev/shared-lesson/legacy",
+      "innerWidth": 390,
+      "scrollWidth": 390,
+      "ids": 0,
+      "internalText": false,
+      "choiceButtons": [
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        }
+      ],
+      "textLength": 7128
+    },
+    {
+      "fixture": "overlong",
+      "label": "desktop",
+      "url": "http://127.0.0.1:5181/dev/shared-lesson/overlong",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "ids": 0,
+      "internalText": false,
+      "choiceButtons": [
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        }
+      ],
+      "textLength": 10187
+    },
+    {
+      "fixture": "overlong",
+      "label": "mobile",
+      "url": "http://127.0.0.1:5181/dev/shared-lesson/overlong",
+      "innerWidth": 390,
+      "scrollWidth": 390,
+      "ids": 0,
+      "internalText": false,
+      "choiceButtons": [
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        },
+        {
+          "role": null,
+          "pressed": "false"
+        }
+      ],
+      "textLength": 10187
+    }
+  ]
+}

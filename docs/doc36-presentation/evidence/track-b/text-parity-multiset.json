@@ -1,0 +1,136 @@
+{
+  "ordered_sequence_note": "PDF layout adds running furniture and line wrapping; multiset multiplicity proves every authored token is present. Hyphenated line wraps and typed inline delimiters are normalized before comparison.",
+  "fixtures": [
+    {
+      "fixture": "shared-lesson-legacy",
+      "edition": "student",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\shared-lesson-legacy-student.pdf",
+      "source_tokens": 1257,
+      "pdf_tokens": 1305,
+      "missing_multiplicity": {},
+      "source_unique": 326,
+      "missing_unique": 0,
+      "pass": true
+    },
+    {
+      "fixture": "shared-lesson-golden",
+      "edition": "student",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\shared-lesson-golden-student.pdf",
+      "source_tokens": 884,
+      "pdf_tokens": 962,
+      "missing_multiplicity": {},
+      "source_unique": 282,
+      "missing_unique": 0,
+      "pass": true
+    },
+    {
+      "fixture": "shared-lesson-golden",
+      "edition": "teacher",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\shared-lesson-golden-bg-on.pdf",
+      "source_tokens": 983,
+      "pdf_tokens": 1092,
+      "missing_multiplicity": {},
+      "source_unique": 293,
+      "missing_unique": 0,
+      "pass": true
+    },
+    {
+      "fixture": "shared-lesson-overlong",
+      "edition": "student",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\shared-lesson-overlong-student.pdf",
+      "source_tokens": 1762,
+      "pdf_tokens": 1906,
+      "missing_multiplicity": {},
+      "source_unique": 282,
+      "missing_unique": 0,
+      "pass": true
+    },
+    {
+      "fixture": "shared-lesson-overlong",
+      "edition": "teacher",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\shared-lesson-overlong-bg-on.pdf",
+      "source_tokens": 1954,
+      "pdf_tokens": 2136,
+      "missing_multiplicity": {},
+      "source_unique": 293,
+      "missing_unique": 0,
+      "pass": true
+    },
+    {
+      "fixture": "oversized-stress",
+      "edition": "student",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\oversized-stress-student.pdf",
+      "source_tokens": 10298,
+      "pdf_tokens": 10619,
+      "missing_multiplicity": {},
+      "source_unique": 457,
+      "missing_unique": 0,
+      "pass": true
+    },
+    {
+      "fixture": "oversized-stress",
+      "edition": "teacher",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\oversized-stress-bg-on.pdf",
+      "source_tokens": 10397,
+      "pdf_tokens": 10749,
+      "missing_multiplicity": {},
+      "source_unique": 467,
+      "missing_unique": 0,
+      "pass": true
+    },
+    {
+      "fixture": "track-c-photosynthesis-print",
+      "edition": "student",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\track-c-photosynthesis-print-student.pdf",
+      "source_tokens": 93,
+      "pdf_tokens": 104,
+      "missing_multiplicity": {},
+      "source_unique": 48,
+      "missing_unique": 0,
+      "pass": true
+    },
+    {
+      "fixture": "track-c-formula-print",
+      "edition": "student",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\track-c-formula-print-student.pdf",
+      "source_tokens": 43,
+      "pdf_tokens": 54,
+      "missing_multiplicity": {},
+      "source_unique": 20,
+      "missing_unique": 0,
+      "pass": true
+    },
+    {
+      "fixture": "track-c-comparison-print",
+      "edition": "student",
+      "pdf": "C:\\Users\\richi\\.codex\\worktrees\\doc36-print\\lectio\\docs\\doc36-presentation\\evidence\\track-b\\pdf\\track-c-comparison-print-student.pdf",
+      "source_tokens": 112,
+      "pdf_tokens": 122,
+      "missing_multiplicity": {},
+      "source_unique": 46,
+      "missing_unique": 0,
+      "pass": true
+    }
+  ],
+  "answer_separation": [
+    {
+      "fixture": "shared-lesson-golden",
+      "student_excludes_answer_key": true,
+      "teacher_includes_answer_key": true,
+      "student_answer_leaks": []
+    },
+    {
+      "fixture": "shared-lesson-overlong",
+      "student_excludes_answer_key": true,
+      "teacher_includes_answer_key": true,
+      "student_answer_leaks": []
+    },
+    {
+      "fixture": "oversized-stress",
+      "student_excludes_answer_key": true,
+      "teacher_includes_answer_key": true,
+      "student_answer_leaks": []
+    }
+  ],
+  "all_pass": true
+}

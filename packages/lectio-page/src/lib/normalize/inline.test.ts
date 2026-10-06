@@ -10,8 +10,7 @@ describe('inline normalization', () => {
       { type: 'emphasis', children: [{ type: 'text', value: 'evidence' }] },
       { type: 'text', value: '.' }
     ]);
-  });
-
+});
   it('preserves the visible text while removing raw markup', () => {
     const value = '<strong>Evidence</strong> supports the claim.';
     expect(plainText(value)).toBe('Evidence supports the claim.');
@@ -25,4 +24,5 @@ describe('inline normalization', () => {
       { type: 'text', value: '.' }
     ]);
   });
+
 });

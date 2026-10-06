@@ -35,7 +35,10 @@ const FORM_SELECTABLE = [
 	'aside',
 	'worked-example',
 	'questions',
-	'choices'
+	'choices',
+	'equation',
+	'quote',
+	'compare'
 ] as const;
 
 function collectKeys(value: unknown, into = new Set<string>()): Set<string> {
@@ -145,7 +148,7 @@ describe('P01-K02 — object records are complete and every ref resolves', () =>
 		expect(map.object_to_intents.heading).toEqual([]);
 		expect(map.object_to_intents['answer-key']).toEqual(['answer-key']);
 		expect(map.selectable_intent_to_forms['answer-key']).toBeUndefined();
-		expect(map.selectable_intent_to_forms.compare).toEqual(['table', 'prose', 'questions']);
+		expect(map.selectable_intent_to_forms.compare).toEqual(['table', 'prose', 'questions', 'compare']);
 	});
 
 	it('validates the reference fixture against the exact per-object payload schemas', () => {

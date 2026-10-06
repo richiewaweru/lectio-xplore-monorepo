@@ -23,6 +23,7 @@
 		editable?: boolean;
 		assets?: Record<string, AssetRef> | null;
 		attemptsByInteraction?: Map<string, InteractionAttemptState>;
+		interactionOffset?: number;
 		onSubmitInteraction?: (args: {
 			interactionId: string;
 			response: Record<string, unknown>;
@@ -62,6 +63,7 @@
 		editable = false,
 		assets = null,
 		attemptsByInteraction = new Map(),
+		interactionOffset = 0,
 		onSubmitInteraction = undefined,
 		onUpdateNodeText = undefined,
 		onUpdateListItems = undefined,
@@ -106,21 +108,23 @@
 <div
 	class="document-canvas"
 	data-testid="document-canvas"
-	data-document-id={document.id}
-	data-node-count={nodes.length}
+	data-document-id={editable ? document.id : undefined}
+	data-node-count={editable ? nodes.length : undefined}
 	data-editable={editable ? 'true' : 'false'}
 >
-	{#each nodes as node (node.id)}
+	{#each nodes as node, index (node.id)}
 		{@const selected = selectedNodeId === node.id}
+		{@const figureNumber = node.kind === 'figure' ? nodes.slice(0, index).filter((item) => item.kind === 'figure').length + 1 : undefined}
+		{@const questionNumber = node.kind === 'interaction' ? interactionOffset + nodes.slice(0, index).filter((item) => item.kind === 'interaction').length + 1 : undefined}
 		<div
 			class="canvas-node"
 			class:selected
 			data-testid="canvas-node"
-			data-node-id={node.id}
+			data-node-id={editable ? node.id : undefined}
 			data-kind={node.kind}
 			data-selected={selected ? 'true' : 'false'}
-			role={onSelectNode ? 'button' : undefined}
-			tabindex={onSelectNode ? 0 : undefined}
+			role={editable && onSelectNode ? 'button' : undefined}
+			tabindex={editable && onSelectNode ? 0 : undefined}
 			onclick={() => onSelectNode && select(node)}
 			onkeydown={(e) => onKeydown(e, node)}
 		>
@@ -146,7 +150,7 @@
 						/>
 					{:else if node.kind === 'callout'}
 						<CalloutEditor
-							body={node.body}
+							body={node.body ?? ''}
 							title={node.title ?? ''}
 							tone={node.tone ?? 'note'}
 							onChange={(patch) => onUpdateCallout?.(node.id, patch)}
@@ -177,11 +181,12 @@
 			{:else if node.kind === 'interaction'}
 				<InteractionNodeRenderer
 					{node}
+					{questionNumber}
 					onSubmit={submitFor(node.id)}
 					initialEvaluation={initialEval(node.id)}
 				/>
 			{:else}
-				<DocumentNodeRenderer {node} {assets} />
+				<DocumentNodeRenderer {node} {assets} {figureNumber} />
 			{/if}
 		</div>
 	{/each}
@@ -193,11 +198,11 @@
 <style>
 	.document-canvas {
 		display: grid;
-		gap: 16px;
+		gap: 22px;
 	}
 	.canvas-node {
 		min-width: 0;
-		border-radius: 10px;
+		border-radius: 12px;
 		outline: 2px solid transparent;
 		outline-offset: 2px;
 		transition: outline-color 120ms ease;

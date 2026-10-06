@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -9,9 +10,12 @@ from typing import Any
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
+from document.shared_lesson.inline import parse_inline_markup
 from document.shared_lesson.media import FigureMediaResult, SharedFigureMediaError, verify_bound_figure_media
 from document.shared_lesson.models import (
     CalloutNode,
+    CompareNode,
+    EquationNode,
     FigureNode,
     HeadingNode,
     ListNode,
@@ -19,6 +23,7 @@ from document.shared_lesson.models import (
     SharedLessonDocument,
     TableNode,
     TaskAnchor,
+    QuoteNode,
 )
 from document.shared_lesson.repository import StoredSharedLessonDocument
 from infra.execution.checkpoints import content_hash
@@ -51,13 +56,25 @@ def _human_label(index: int, *, prefix: str) -> str:
 
 
 def _object_block(node_id: str, position: int, object_id: str, content: dict[str, Any]) -> dict[str, Any]:
+    intent = "check-understanding" if object_id in {"questions", "choices"} else "explain"
+    if object_id == "list":
+        intent = "show-structure"
     return {
         "id": node_id,
         "object": object_id,
-        "intent": "check-understanding" if object_id in {"questions", "choices"} else "explain",
+        "intent": intent,
         "position": position,
         "content": content,
     }
+
+
+def _inline(value: str) -> list[dict[str, Any]]:
+    """Lower frozen shared inline markup to the Page rich-text contract."""
+    return [dict(node) for node in parse_inline_markup(value)]
+
+
+def _paragraphs(value: str) -> list[dict[str, Any]]:
+    return [{"children": _inline(part)} for part in value.split("\n\n") if part]
 
 
 _USABLE_MEDIA_STATUSES = frozenset({"ready", "ready_with_quality_warning"})
@@ -65,13 +82,18 @@ _USABLE_MEDIA_STATUSES = frozenset({"ready", "ready_with_quality_warning"})
 
 def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, FigureMediaResult]) -> dict[str, Any]:
     if isinstance(node, ParagraphNode):
-        return _object_block(node.id, position, "prose", {"paragraphs": [node.display.text]})
+        return _object_block(
+            node.id,
+            position,
+            "prose",
+            {"paragraphs": _paragraphs(node.display.text)},
+        )
     if isinstance(node, HeadingNode):
         return {
             "id": node.id,
             "object": "heading",
             "position": position,
-            "content": {"text": node.display.text, "level": node.display.level},
+            "content": {"text": _inline(node.display.text), "level": node.display.level},
         }
     if isinstance(node, ListNode):
         return _object_block(
@@ -80,7 +102,7 @@ def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, Figu
             "list",
             {
                 "style": "ordered" if node.display.ordered else "unordered",
-                "items": [{"text": item} for item in node.display.items],
+                "items": [{"text": _inline(item)} for item in node.display.items],
             },
         )
     if isinstance(node, FigureNode):
@@ -96,7 +118,7 @@ def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, Figu
             {
                 "asset": {"kind": "image", "status": "ready", "src": media.asset_url},
                 "alt_text": node.accessibility.alt_text or media.alt_text,
-                **({"caption": node.display.caption} if node.display.caption else {}),
+                **({"caption": _inline(node.display.caption)} if node.display.caption else {}),
             },
         )
     if isinstance(node, TableNode):
@@ -108,19 +130,78 @@ def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, Figu
             "table",
             {
                 "columns": [
-                    {"id": f"column-{index + 1}", "label": label}
+                    {"id": f"column-{index + 1}", "label": _inline(label)}
                     for index, label in enumerate(node.display.headers)
                 ],
                 "rows": [
-                    {"cells": {f"column-{index + 1}": value for index, value in enumerate(row)}}
+                    {"cells": {f"column-{index + 1}": _inline(value) for index, value in enumerate(row)}}
                     for row in node.display.rows
                 ],
-                **({"caption": node.display.caption} if node.display.caption else {}),
+                **({"caption": _inline(node.display.caption)} if node.display.caption else {}),
             },
         )
     if isinstance(node, CalloutNode):
-        body = f"{node.display.title}\n{node.display.body}" if node.display.title else node.display.body
-        return _object_block(node.id, position, "aside", {"body": body, "label": node.display.tone})
+        display = node.display
+        content: dict[str, Any] = {
+            "body": _inline(display.body or ""),
+            # Learn labels every key idea "Key idea"; Print must say the same words.
+            "label": _inline("Key idea" if display.variant == "key_idea" else (display.title or display.tone)),
+        }
+        if display.variant:
+            content["variant"] = display.variant
+        for field in ("belief", "evidence", "conclusion", "aside"):
+            value = getattr(display, field)
+            if value is not None:
+                content[field] = _inline(value)
+        block = _object_block(node.id, position, "aside", content)
+        if display.variant == "misconception":
+            block["intent"] = "diagnose-misconception"
+        elif display.variant == "key_idea":
+            block["intent"] = "emphasise"
+        elif display.tone == "warning":
+            block["intent"] = "warn"
+        else:
+            block["intent"] = "define"
+        block["layout"] = {"placement": "spanning"}
+        return block
+    if isinstance(node, EquationNode):
+        display = node.display
+        block = _object_block(
+            node.id,
+            position,
+            "equation",
+            {
+                "label": _inline(display.label) if display.label else None,
+                "inputs": [_inline(value) for value in display.inputs],
+                "condition": _inline(display.condition) if display.condition is not None else None,
+                "outputs": [_inline(value) for value in display.outputs],
+            },
+        )
+        block["layout"] = {"placement": "spanning"}
+        return block
+    if isinstance(node, QuoteNode):
+        block = _object_block(
+            node.id,
+            position,
+            "quote",
+            {"text": _inline(node.display.text), "attribution": _inline(node.display.attribution) if node.display.attribution else None},
+        )
+        block["layout"] = {"placement": "spanning"}
+        return block
+    if isinstance(node, CompareNode):
+        block = _object_block(
+            node.id,
+            position,
+            "compare",
+            {
+                "items": [
+                    {"label": _inline(item.label) if item.label else None, "title": _inline(item.title), "body": _inline(item.body)}
+                    for item in node.display.items
+                ]
+            },
+        )
+        block["layout"] = {"placement": "spanning"}
+        return block
     raise SharedDocumentPrintMappingError(
         f"shared node {getattr(node, 'id', '<unknown>')!r} has no Print primitive mapping"
     )
@@ -144,12 +225,33 @@ def _single_choice_answer(task: SharedTaskSpec, labels: Mapping[str, str]) -> st
     return labels[value]
 
 
-def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], str]:
+def _letters(n: int) -> str:
+    """Paper labels A, B, ..., Z, AA, ..."""
+    letters = ""
+    while n:
+        n, remainder = divmod(n - 1, 26)
+        letters = chr(65 + remainder) + letters
+    return letters
+
+
+_PLAN_ID_NOTE = re.compile(r"\s*\(\s*m\d+\s*\)")
+
+
+def _relabel_note(note: str, option_labels: Mapping[str, str]) -> str:
+    """Show the displayed option label wherever a note cites an option id; drop plan ids like (m1)."""
+    for option_id, label in option_labels.items():
+        if option_id != label:
+            note = re.sub(rf"\(\s*{re.escape(option_id)}\s*\)", f"({label})", note)
+    return _PLAN_ID_NOTE.sub("", note)
+
+
+def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, str]]:
     response = _mapping(task.response, field="response", task=task)
     options = response.get("options")
     if not isinstance(options, list) or len(options) < 2:
         raise SharedDocumentPrintMappingError(f"task {task.id!r} needs at least two choice options")
     labels: dict[str, str] = {}
+    texts: dict[str, str] = {}
     paper_options: list[dict[str, str]] = []
     for index, option in enumerate(options):
         if not isinstance(option, Mapping):
@@ -159,14 +261,10 @@ def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], str]:
         if not option_id or not text.strip() or option_id in labels:
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has invalid or duplicate choice options")
         # Paper choices use A, B, …, AA; these are the answer labels shown to learners.
-        n = index + 1
-        letters = ""
-        while n:
-            n, remainder = divmod(n - 1, 26)
-            letters = chr(65 + remainder) + letters
-        label = letters
+        label = _letters(index + 1)
         labels[option_id] = label
-        paper_options.append({"letter": label, "text": text})
+        texts[option_id] = text
+        paper_options.append({"letter": label, "text": _inline(text)})
 
     evaluation = _mapping(task.evaluation, field="evaluation", task=task)
     if task.action == "select-one":
@@ -178,19 +276,25 @@ def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], str]:
             raw = [one] if isinstance(one, str) else None
         if not isinstance(raw, list) or not raw or any(not isinstance(key, str) or key not in labels for key in raw):
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has invalid Print choice answer labels")
-        answer = ", ".join(labels[key] for key in raw)
-    return {"stem": task.prompt, "options": paper_options}, answer
+        answer = None
+        answer_keys = list(raw)
+    if task.action == "select-one":
+        answer_keys = [key for key, label in labels.items() if label == answer]
+    # Teacher copy shows the letter and the option text, e.g. "B — The plant ...".
+    answer_runs = _inline("; ".join(f"{labels[key]} — {texts[key]}" for key in answer_keys))
+    return {"stem": _inline(task.display_prompt or task.prompt), "options": paper_options}, answer_runs, labels
 
 
 def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]]:
     response = _mapping(task.response, field="response", task=task)
     evaluation = _mapping(task.evaluation, field="evaluation", task=task)
     response_type = str(response.get("type") or "")
-    prompt = task.prompt
+    prompt = task.display_prompt or task.prompt
     answer_lines = response.get("answer_lines")
     answer: str | None = None
     alternatives: list[str] = []
     rubric: str | None = None
+    match: dict[str, Any] | None = None
 
     if response_type == "missing_values":
         values = response.get("values", response.get("answers"))
@@ -224,9 +328,16 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
                 raise SharedDocumentPrintMappingError(f"task {task.id!r} has malformed matching pairs")
             left.append(str(pair["left"]))
             right.append(str(pair["right"]))
-        prompt += "\nMatch each item to its pair. Items: " + "; ".join(left)
-        prompt += "\nPossible matches: " + "; ".join(right)
-        answer = "; ".join(f"{pair['left']}: {pair['right']}" for pair in pairs)
+        # Two columns on paper: numbered items on the left, lettered matches on the
+        # right. The right column is rotated so no row lines up with its own answer.
+        unique_right = list(dict.fromkeys(right))
+        shift = len(unique_right) // 2
+        shown_right = unique_right[shift:] + unique_right[:shift]
+        letters = {text: _letters(index + 1) for index, text in enumerate(shown_right)}
+        match = {"left": [_inline(text) for text in left], "right": [_inline(text) for text in shown_right]}
+        answer = "; ".join(
+            f"{index + 1} ({left[index]}) → {letters[right[index]]} ({right[index]})" for index in range(len(left))
+        )
     elif response_type == "ordered_items":
         items = response.get("items")
         order = evaluation.get("correct_order", evaluation.get("order"))
@@ -272,15 +383,38 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
             answer = task.expected_evidence
         else:
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has no representable Print answer key")
-    item: dict[str, Any] = {"id": "", "prompt": prompt}
+    item: dict[str, Any] = {"id": "", "prompt": _inline(prompt)}
+    if match is not None:
+        item["match"] = match
+        # The match blanks are the answer space; no extra ruled lines.
+        answer_lines = 0
     if answer_lines is not None:
         item["answer_lines"] = answer_lines
     entry: dict[str, Any] = {"answer": answer}
     if alternatives:
-        entry["alternatives"] = alternatives
-    if rubric:
-        entry["rubric"] = rubric
+        entry["alternatives"] = [_inline(value) for value in alternatives]
+    # A rubric that only repeats the answer would print the same text twice.
+    if rubric and rubric.strip() != str(answer).strip():
+        entry["rubric"] = _inline(rubric)
     return item, entry
+
+
+def _teacher_task_details(task: SharedTaskSpec, option_labels: Mapping[str, str] | None = None) -> dict[str, Any]:
+    """Project teacher-only task guidance without changing shared task semantics."""
+    details: dict[str, Any] = {}
+    feedback = task.feedback if isinstance(task.feedback, Mapping) else {}
+    correct = feedback.get("correct") or feedback.get("on_correct_option")
+    if isinstance(correct, str) and correct.strip():
+        details["feedback"] = _inline(correct)
+    if isinstance(task.option_notes, Mapping) and task.option_notes:
+        details["option_notes"] = {
+            (option_labels or {}).get(str(option), str(option)): _inline(_relabel_note(str(note), option_labels or {}))
+            for option, note in task.option_notes.items()
+            if str(note).strip()
+        }
+    if task.role == "predict":
+        details["not_marked"] = True
+    return details
 
 
 def _task_block(task: SharedTaskSpec, *, index: int, position: int, anchor: TaskAnchor) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -295,9 +429,10 @@ def _task_block(task: SharedTaskSpec, *, index: int, position: int, anchor: Task
         raise SharedDocumentPrintMappingError(f"task {task.id!r} has no closed Print paper treatment")
 
     label = _human_label(index, prefix="Q")
+    option_labels: dict[str, str] = {}
     if treatment == "choices":
-        content, answer = _choice_task(task)
-        block_id = _human_label(index, prefix="Choice-")
+        content, answer, option_labels = _choice_task(task)
+        block_id = label
         block = _object_block(block_id, position, "choices", content)
     else:
         item, answer_entry = _question_task(task)
@@ -306,9 +441,18 @@ def _task_block(task: SharedTaskSpec, *, index: int, position: int, anchor: Task
         block = _object_block(block_id, position, "questions", {"items": [item]})
         answer = answer_entry["answer"]
 
-    entry: dict[str, Any] = {"question_id": block_id, "answer": answer}
+    if task.role:
+        block["role"] = task.role
+
+    # Predictions are learner commitments rather than right/wrong questions.
+    # Keep the learner options unchanged, but avoid exposing the selected
+    # option as a teacher answer.
+    answer_for_teacher = "Prediction (not marked)" if task.role == "predict" else answer
+    entry: dict[str, Any] = {"question_id": block_id, "answer": answer_for_teacher}
     if treatment == "questions":
         entry.update({key: value for key, value in answer_entry.items() if key != "answer"})
+        entry["answer"] = _inline(answer)
+    entry.update(_teacher_task_details(task, option_labels))
     return block, {"label": label, "anchor_id": anchor.id, "task_spec_id": task.id, "answer_entry": entry}
 
 
@@ -388,6 +532,12 @@ def realize_shared_document_for_print(
         "id": doc_id,
         "title": normalized.title,
         "language": "en",
+        "front_matter": {
+            "cover": False,
+            "contents": len(normalized.sections) >= 5,
+            "running_head": normalized.title,
+            "fields": ["Name", "Date"],
+        },
         "metadata": {
             "catalogue_version": "1.2.0",
             "resource_type": "lesson",

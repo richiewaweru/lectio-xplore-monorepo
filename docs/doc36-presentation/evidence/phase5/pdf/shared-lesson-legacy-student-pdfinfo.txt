@@ -1,0 +1,19 @@
+Title:           @lectio/page — print-native documents
+Creator:         Chromium
+Producer:        Skia/PDF m151
+CreationDate:    Tue Oct  6 00:05:46 2026 E. Africa Standard Time
+ModDate:         Tue Oct  6 00:05:46 2026 E. Africa Standard Time
+Custom Metadata: no
+Metadata Stream: no
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           3
+Encrypted:       no
+Page size:       594.96 x 841.92 pts (A4)
+Page rot:        0
+File size:       78872 bytes
+Optimized:       no
+PDF version:     1.4

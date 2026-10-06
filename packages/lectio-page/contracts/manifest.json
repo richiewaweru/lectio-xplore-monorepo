@@ -4,27 +4,27 @@
   "contract_version": "1.1.0",
   "intent_catalogue_version": "1.1.0",
   "object_catalogue_version": "1.2.0",
-  "generated_at": "2026-09-10T17:57:42.165Z",
+  "generated_at": "2026-10-05T21:25:31.025Z",
   "files": [
     {
       "path": "lectio-document-v2.schema.json",
-      "sha256": "6b63a908811485b71443fe178cde55f2aff9ee7a576d73db110dfeeaafde0e61",
-      "bytes": 17373
+      "sha256": "c560bf52d8c0df124766c97d618c974f71577f9a0531a37d3904c0a9f1266695",
+      "bytes": 22768
     },
     {
       "path": "object-catalogue.v1.json",
-      "sha256": "2e57f9bc8369f089886349527fe54fdece2d2e586e208ef096a92f8a60ca4c73",
-      "bytes": 17970
+      "sha256": "d92b1e0424869760feb93c97a6c7295404b23bcf36a205a81d10763d95348e48",
+      "bytes": 22044
     },
     {
       "path": "intent-catalogue.v1.json",
-      "sha256": "f32ddc947a5b70d4f2cb926d3eeacf1d83a0f7331edfa28846d53593df00855c",
-      "bytes": 17311
+      "sha256": "eb6812ac7680bebb1f7ee772e9d362da92e038a725ccd46f78da835fcdf6e23a",
+      "bytes": 17406
     },
     {
       "path": "base-print.css",
-      "sha256": "b62e788d5186ff654f7c60d3aa24928f354d4f89e6df2b90845b4b5b43f8b060",
-      "bytes": 7482
+      "sha256": "e258f2790a243deb0ffc8d461da6c7265197f5786cd05f724c6da63d2cded98c",
+      "bytes": 15310
     },
     {
       "path": "authoring/instructions/answer-key-system-v1.txt",
@@ -40,6 +40,16 @@
       "path": "authoring/instructions/choices-converter-v1.txt",
       "sha256": "2d0dae057135f80f36ba388f15523650eb5f62627545830f03c299b35afb4636",
       "bytes": 503
+    },
+    {
+      "path": "authoring/instructions/compare-writer-v1.txt",
+      "sha256": "bd5309782484d47593a2d5b36e05837c85819ac63c94d3c81a555838f0f4d1d1",
+      "bytes": 123
+    },
+    {
+      "path": "authoring/instructions/equation-writer-v1.txt",
+      "sha256": "9fc70ce528dac72bfb56bb92debd128897ecb0658e2758b00e77b102fb544d17",
+      "bytes": 154
     },
     {
       "path": "authoring/instructions/figure-brief-writer-v1.txt",
@@ -67,6 +77,11 @@
       "bytes": 498
     },
     {
+      "path": "authoring/instructions/quote-writer-v1.txt",
+      "sha256": "f9cdb48b0704577c875162c9567c3cceea901128a49a1958982dfdf6011d9d8d",
+      "bytes": 93
+    },
+    {
       "path": "authoring/instructions/table-writer-v1.txt",
       "sha256": "3575bd5db7e37bbe9167346b93da64c6ac4ee65bfdba6b0d59514e8080ce534d",
       "bytes": 992
@@ -78,18 +93,18 @@
     },
     {
       "path": "generated/form-selection-view.v1.json",
-      "sha256": "69cd25809c6f860429d78348f48ccebf4434e835d9601af695609508d1f61c42",
-      "bytes": 8023
+      "sha256": "5e630f5769cb4b372058a274b03bc21dc91a31bf86d2f254a536d33a4c7b0434",
+      "bytes": 9956
     },
     {
       "path": "generated/form-writer-view.v1.json",
-      "sha256": "ab7387765b772776dcf7aa255fbde7661c530346d9e9af2b8bb1ab0eef67f7ff",
-      "bytes": 46982
+      "sha256": "2d393c9e04cf772303babc20ff55094021b29fe729bcb97bb77b38cf824b6873",
+      "bytes": 60229
     },
     {
       "path": "generated/intent-object-map.v1.json",
-      "sha256": "d536470d724a36a35c9fb8c92167d8925ad314416adbdfcf38c8e2e09c15f723",
-      "bytes": 6923
+      "sha256": "dc7b01212e7626dd6de641775d9064dc8e9a30f7ddf847975b9d5b7753c1c906",
+      "bytes": 7252
     }
   ]
 }

@@ -1,0 +1,1455 @@
+[
+  {
+    "id": "29f27823-4b35-453d-87e4-2a5b69cf8aa1",
+    "run_id": "36a90fdc-74ea-457e-9b12-1971580eff2c",
+    "work_item_id": "397cd36e-1eca-4872-bf85-70cadc439b65",
+    "seq": "1",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "item_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "45d831e3b703d5d40fdb794b68a81dbb3842c606129ddda2a96b499c976ddd91"
+    },
+    "created_at": "2026-10-05 18:44:22.086593"
+  },
+  {
+    "id": "442d65ec-3ee3-47c9-90e6-1d31d29d6d87",
+    "run_id": "36a90fdc-74ea-457e-9b12-1971580eff2c",
+    "work_item_id": "952180a3-b23d-4fe1-b31a-c73c90c599b0",
+    "seq": "2",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "planning_teaching",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "1f2c744f5c938cf85402392c639f26d09ee3d5ed28bd11b4489ba1a06b8d9cf6"
+    },
+    "created_at": "2026-10-05 18:54:38.875066"
+  },
+  {
+    "id": "92b6ec15-58d1-4a2e-b6e2-113968141b6d",
+    "run_id": "36a90fdc-74ea-457e-9b12-1971580eff2c",
+    "work_item_id": "None",
+    "seq": "3",
+    "event_type": "run_ready",
+    "status": "ready",
+    "stage": "preparation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "aac250158a302dff3bca575f77f9a55f7f721e4c6ecb6fed7aae173c00dd2cc4",
+      "output_revision": 1,
+      "output_artifact_id": "af070978-797b-4c21-b744-29f404128830",
+      "output_artifact_type": "teaching_plan_revision"
+    },
+    "created_at": "2026-10-05 18:54:39.032354"
+  },
+  {
+    "id": "16f7a172-abb7-4671-b82d-3574537a0b9e",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "e305f170-eb0c-4b17-8588-2c7c1ac3bcd4",
+    "seq": "1",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "sourcebook_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "43733d32986877d324f937d44786a8f8180851516eff4527bc9745869bb1ec90"
+    },
+    "created_at": "2026-10-05 18:55:13.101351"
+  },
+  {
+    "id": "058e20e5-090e-4451-94ea-a70e4207386f",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "5fe6854e-77ab-4cc8-b604-541df8e0c46d",
+    "seq": "2",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "shared_task_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "9a8c126edfe8528c4ceb775153d73405f2d53474c5e3fa1a775bbd44c291287b"
+    },
+    "created_at": "2026-10-05 18:55:17.669426"
+  },
+  {
+    "id": "b4ebfcc4-2cd7-4a19-953c-37300c644a9b",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "e634747c-bc37-4792-b3fb-a4b0630e3101",
+    "seq": "3",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+    },
+    "created_at": "2026-10-05 18:55:19.711964"
+  },
+  {
+    "id": "a132619d-829b-40f1-9d0b-6203f9d6db43",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "e8f12bbb-4dd8-43aa-8e55-e903d0a03461",
+    "seq": "4",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1"
+    },
+    "created_at": "2026-10-05 18:55:21.336854"
+  },
+  {
+    "id": "b0864a52-5020-48fb-9f6b-2e2c4c15cada",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "a0f9a371-4e66-47bb-8bca-71f03adabafe",
+    "seq": "5",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38"
+    },
+    "created_at": "2026-10-05 18:55:22.899735"
+  },
+  {
+    "id": "4141a6b3-42b6-4909-bedf-ed1a1fa42fdc",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "18275c9a-e45d-4e54-8510-92380d2fc0f1",
+    "seq": "6",
+    "event_type": "composition_style_warning",
+    "status": "running",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "section_exceeds_callout_limit"
+      ],
+      "warning_paths": [
+        "choices[1].kind"
+      ]
+    },
+    "created_at": "2026-10-05 18:55:24.167341"
+  },
+  {
+    "id": "7ad1a390-25b7-466d-9d4e-00381ac431a0",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "18275c9a-e45d-4e54-8510-92380d2fc0f1",
+    "seq": "7",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3"
+    },
+    "created_at": "2026-10-05 18:55:24.271923"
+  },
+  {
+    "id": "6b9d04e8-c580-4400-a501-3ad40ee31e41",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "16e42b6e-31b0-4a03-be23-916832f2f413",
+    "seq": "8",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262"
+    },
+    "created_at": "2026-10-05 18:55:25.715987"
+  },
+  {
+    "id": "002fe8c3-4bc1-430f-95f8-15c3e6326c1f",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "b3bbba08-1fc5-426f-ba36-b7876001c2ef",
+    "seq": "9",
+    "event_type": "work_item_failed",
+    "status": "failed_recoverable",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "database_transient",
+    "safe_payload_json": {
+      "retryable": true,
+      "error_class": "provider_transport",
+      "safe_summary": "A transient database error interrupted the section.",
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 18:55:31.186466"
+  },
+  {
+    "id": "6b89db9d-ff61-46aa-88cc-f6094678043c",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "b3bbba08-1fc5-426f-ba36-b7876001c2ef",
+    "seq": "10",
+    "event_type": "section_writer_failure_diagnostic",
+    "status": "failed_recoverable",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "database_transient",
+    "safe_payload_json": {
+      "original_exception_type": "DBAPIError"
+    },
+    "created_at": "2026-10-05 18:55:31.211732"
+  },
+  {
+    "id": "1e6af757-73d4-4452-8f49-f490fcae41fa",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "59230137-77c3-4d50-9480-53b5238b82c7",
+    "seq": "11",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "5c8a1bd3d7aac23b5f6bb91eacd294ad95bc979c61c26e5bd33f60a4e177f944"
+    },
+    "created_at": "2026-10-05 18:55:45.148700"
+  },
+  {
+    "id": "35912457-d511-4ea2-bdf6-5806bbbd8728",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "5bfd2ad3-631a-4b3e-ae8b-edbe8caa7a70",
+    "seq": "12",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "75acc44a58594b70e54cbb4bbaf1d57b7535aa80e02c047f40700016b6053783"
+    },
+    "created_at": "2026-10-05 18:55:55.651882"
+  },
+  {
+    "id": "23065d7e-75e2-45a6-92f8-694b19cc0c11",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "25052d49-46f5-4dcf-94b3-c032326eb533",
+    "seq": "13",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "0219ca96e6891a46bb02c2a9ed18bddbd173a5c90c23f8dff36fae506f332211"
+    },
+    "created_at": "2026-10-05 18:56:01.259235"
+  },
+  {
+    "id": "799c9548-49b7-444c-a6d8-396f80854f06",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "25052d49-46f5-4dcf-94b3-c032326eb533",
+    "seq": "14",
+    "event_type": "section_write_warning",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "length_over_target"
+      ],
+      "warning_paths": [
+        "nodes[0].text/79/60"
+      ]
+    },
+    "created_at": "2026-10-05 18:56:01.282971"
+  },
+  {
+    "id": "13222c14-59e2-476b-9897-5412019570ec",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "e25cbe28-bf1e-49ab-acd3-6bc6e0882056",
+    "seq": "15",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "e428819212882bb4b834006fc5a020dd9f5e262420be2dca03ef316f6bb76df7"
+    },
+    "created_at": "2026-10-05 18:56:34.358158"
+  },
+  {
+    "id": "b7d2c058-0707-475c-bd59-7c0785ef36c4",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "e25cbe28-bf1e-49ab-acd3-6bc6e0882056",
+    "seq": "16",
+    "event_type": "section_write_warning",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "length_over_target",
+        "shape_missing"
+      ],
+      "warning_paths": [
+        "nodes[0].text/105/60",
+        "nodes[2].text/80/60",
+        "section/key_idea",
+        "section/subheading"
+      ]
+    },
+    "created_at": "2026-10-05 18:56:34.401755"
+  },
+  {
+    "id": "5ff30623-8326-4f50-8ac3-1f64000f0c8b",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "b3bbba08-1fc5-426f-ba36-b7876001c2ef",
+    "seq": "17",
+    "event_type": "work_item_retry_queued",
+    "status": "queued",
+    "stage": "section_writing",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempt": 2,
+      "from_attempt": 1,
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 18:57:29.093633"
+  },
+  {
+    "id": "db50e36d-84b7-4375-8c1f-96d0e8e4afee",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "None",
+    "seq": "18",
+    "event_type": "auto_retry_scheduled",
+    "status": "queued",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempts": [
+        1
+      ],
+      "error_codes": [
+        "database_transient"
+      ],
+      "work_item_ids": [
+        "b3bbba08-1fc5-426f-ba36-b7876001c2ef"
+      ]
+    },
+    "created_at": "2026-10-05 18:57:29.155861"
+  },
+  {
+    "id": "3b5b7c85-344d-4690-bff2-a5585b3d05b9",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "b3bbba08-1fc5-426f-ba36-b7876001c2ef",
+    "seq": "19",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "a8e38c04cc8aa51a75dc846b86c8c46b9f353722ef1e912399e1a355c764ab2b"
+    },
+    "created_at": "2026-10-05 18:57:38.868947"
+  },
+  {
+    "id": "a06efeb9-c4f4-4b68-ac0c-f05afd5f9180",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "b9264e4f-e3a1-487b-bbc2-ec88853c0871",
+    "seq": "20",
+    "event_type": "work_item_failed",
+    "status": "failed_recoverable",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "database_transient",
+    "safe_payload_json": {
+      "retryable": true,
+      "error_class": "provider_transport",
+      "safe_summary": "A transient database error interrupted boundary validation.",
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 18:57:47.559491"
+  },
+  {
+    "id": "e081855f-fea1-4fef-8a70-51aaaadde4cc",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "b9264e4f-e3a1-487b-bbc2-ec88853c0871",
+    "seq": "21",
+    "event_type": "boundary_failure_diagnostic",
+    "status": "failed_recoverable",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "database_transient",
+    "safe_payload_json": {
+      "original_exception_type": "DBAPIError"
+    },
+    "created_at": "2026-10-05 18:57:47.586284"
+  },
+  {
+    "id": "995d4550-0154-4355-a3bc-a228211f0912",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "70ed4f7b-d143-4a57-8de3-3ff372abd1e7",
+    "seq": "22",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "af3b2df1416787425eb9108bc7d3efcaa4a44f9e0a608597e287f41b347fdc29"
+    },
+    "created_at": "2026-10-05 18:57:58.106059"
+  },
+  {
+    "id": "57f36425-b25b-4384-a594-34d632a08a2e",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "9375ee26-06e9-4a77-9349-f41ed4c3b1e2",
+    "seq": "23",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "4be5a3d7b6eb49af940da1cb7b7d1580ae24bb249d43b22f538e8d3358e66d85"
+    },
+    "created_at": "2026-10-05 18:57:58.330037"
+  },
+  {
+    "id": "dd491aa4-4b1d-4641-b411-35c024604c4d",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "b164701a-231d-4f01-a6e5-4b1d2c5e03d6",
+    "seq": "24",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "ce165377352da96775ee41e481c00ca3373ae33a9e70c01278e247dae27c833b"
+    },
+    "created_at": "2026-10-05 18:57:58.445606"
+  },
+  {
+    "id": "bd5656d7-e0c8-4bd1-a94e-f572bb67e78d",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "b9264e4f-e3a1-487b-bbc2-ec88853c0871",
+    "seq": "25",
+    "event_type": "work_item_retry_queued",
+    "status": "queued",
+    "stage": "continuity_validation",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempt": 2,
+      "from_attempt": 1,
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 18:58:07.910288"
+  },
+  {
+    "id": "e0f06c4a-fda2-4106-a637-61a1f9346202",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "None",
+    "seq": "26",
+    "event_type": "auto_retry_scheduled",
+    "status": "queued",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempts": [
+        1
+      ],
+      "error_codes": [
+        "database_transient"
+      ],
+      "work_item_ids": [
+        "b9264e4f-e3a1-487b-bbc2-ec88853c0871"
+      ]
+    },
+    "created_at": "2026-10-05 18:58:07.989320"
+  },
+  {
+    "id": "1a81aeb6-5b07-4778-8bd7-584c33ebdd71",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "b9264e4f-e3a1-487b-bbc2-ec88853c0871",
+    "seq": "27",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "bdc7921c76ab31f9990a8f0e3b30c7c604f4a523d06c72e5c02b3eda92083094"
+    },
+    "created_at": "2026-10-05 18:58:10.573709"
+  },
+  {
+    "id": "f0c7f6fc-458e-4a11-b824-77f231a95ce3",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "5d3b6589-10ec-465a-97b1-c15f71b64006",
+    "seq": "28",
+    "event_type": "figure_label_missing",
+    "status": "queued",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warnings": [
+        "label_missing:24 hours"
+      ],
+      "figure_node_id": "shared-figure-node-da97809d175b54895719"
+    },
+    "created_at": "2026-10-05 18:58:11.081286"
+  },
+  {
+    "id": "8178ae66-1187-4978-8dff-02176b2615dc",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "4264eb22-dcc6-4799-baf0-e781bdd50ef3",
+    "seq": "29",
+    "event_type": "work_item_failed",
+    "status": "failed_recoverable",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "database_transient",
+    "safe_payload_json": {
+      "retryable": true,
+      "error_class": "provider_transport",
+      "safe_summary": "A transient database error interrupted figure media work.",
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 18:58:19.142052"
+  },
+  {
+    "id": "f6471cb6-73d6-4b3c-818e-342412757e30",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "3a1d041f-871a-4a0b-9296-d644dc5a26c2",
+    "seq": "30",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "a93d4a7946ae1b62c6a1f61de51e49baeafe3413d762acd6b220962f6667b102"
+    },
+    "created_at": "2026-10-05 18:58:26.124410"
+  },
+  {
+    "id": "e366362d-485d-4cf2-9f9d-ceae9c066caf",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "3a1d041f-871a-4a0b-9296-d644dc5a26c2",
+    "seq": "31",
+    "event_type": "media_deferred",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "media_provider_failed",
+    "safe_payload_json": {
+      "reason_code": "media_provider_failed",
+      "media_status": "deferred"
+    },
+    "created_at": "2026-10-05 18:58:26.156162"
+  },
+  {
+    "id": "38e09e2f-b9be-470d-84e5-ed987101fbb9",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "5d3b6589-10ec-465a-97b1-c15f71b64006",
+    "seq": "32",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "7659df3222e065ff2575aeae08863ece33e94f217eddd844f4374ddc8f530d62"
+    },
+    "created_at": "2026-10-05 18:58:26.265598"
+  },
+  {
+    "id": "3baa208c-8ab4-41c9-a3ca-10d947b427e4",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "5d3b6589-10ec-465a-97b1-c15f71b64006",
+    "seq": "33",
+    "event_type": "media_deferred",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "media_provider_failed",
+    "safe_payload_json": {
+      "reason_code": "media_provider_failed",
+      "media_status": "deferred"
+    },
+    "created_at": "2026-10-05 18:58:26.317251"
+  },
+  {
+    "id": "7fdf48e9-a5dc-4567-88a9-3c30070fb335",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "fab27bbd-221d-4145-881d-3aaeac2f020a",
+    "seq": "34",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "94e843f7c815d1baaaa73110d7da40d1f51c62d3d4b5509131023ba6e00a1090"
+    },
+    "created_at": "2026-10-05 18:58:26.492076"
+  },
+  {
+    "id": "e68529bb-72a9-4614-942e-61a929894469",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "fab27bbd-221d-4145-881d-3aaeac2f020a",
+    "seq": "35",
+    "event_type": "media_deferred",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "media_provider_failed",
+    "safe_payload_json": {
+      "reason_code": "media_provider_failed",
+      "media_status": "deferred"
+    },
+    "created_at": "2026-10-05 18:58:26.518529"
+  },
+  {
+    "id": "9fc81123-a248-4cdf-b121-fdf0392ef574",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "4264eb22-dcc6-4799-baf0-e781bdd50ef3",
+    "seq": "36",
+    "event_type": "work_item_retry_queued",
+    "status": "queued",
+    "stage": "media_generation",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempt": 2,
+      "from_attempt": 1,
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 19:03:23.756736"
+  },
+  {
+    "id": "c8ec86b3-92bf-4f5a-be62-edb82c8f19fc",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "None",
+    "seq": "37",
+    "event_type": "auto_retry_scheduled",
+    "status": "queued",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempts": [
+        1
+      ],
+      "error_codes": [
+        "database_transient"
+      ],
+      "work_item_ids": [
+        "4264eb22-dcc6-4799-baf0-e781bdd50ef3"
+      ]
+    },
+    "created_at": "2026-10-05 19:03:23.820945"
+  },
+  {
+    "id": "d261fa06-1bd0-4b95-902a-0f9a1c4dca6e",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "4264eb22-dcc6-4799-baf0-e781bdd50ef3",
+    "seq": "38",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "3dea34494226fc4b2f05b1480e8ca423598c3b232eb02feb92db81860a820f50"
+    },
+    "created_at": "2026-10-05 19:03:26.748894"
+  },
+  {
+    "id": "0d60be12-1555-4350-b1d2-37a3727d0322",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "4264eb22-dcc6-4799-baf0-e781bdd50ef3",
+    "seq": "39",
+    "event_type": "media_deferred",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "2",
+    "error_code": "media_provider_failed",
+    "safe_payload_json": {
+      "reason_code": "media_provider_failed",
+      "media_status": "deferred"
+    },
+    "created_at": "2026-10-05 19:03:26.780478"
+  },
+  {
+    "id": "51d75aa9-4a80-4d42-9d4a-a2ec47d330c8",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "9ff6e4d9-bd88-4d27-b1f8-366d6248ac0f",
+    "seq": "40",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "document_qa",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "871c2a48183e024eaab0820d4a712d65a36da73899865e352171927e83504466"
+    },
+    "created_at": "2026-10-05 19:04:43.580404"
+  },
+  {
+    "id": "d66f68dc-cf0c-44ef-b22d-1a482fe113a7",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "9ff6e4d9-bd88-4d27-b1f8-366d6248ac0f",
+    "seq": "41",
+    "event_type": "document_qa_advisory_flags",
+    "status": "ready",
+    "stage": "document_qa",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "codes": [
+        "length_over_target",
+        "section_exceeds_callout_limit",
+        "shape_missing"
+      ],
+      "flag_count": 6,
+      "document_id": "shared-document:a6fa83c4-9b20-4b45-97e6-246cba127d32:revision:1",
+      "document_revision": 1
+    },
+    "created_at": "2026-10-05 19:04:43.616522"
+  },
+  {
+    "id": "452fb55c-f0ee-4b43-969a-76cc6593dc70",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "work_item_id": "None",
+    "seq": "42",
+    "event_type": "run_failed",
+    "status": "failed_terminal",
+    "stage": "document_finalization",
+    "attempt": "1",
+    "error_code": "shared_document_post_section_blocked",
+    "safe_payload_json": {
+      "error_class": "unsupported_contract",
+      "safe_summary": "The SharedDocument post-section stages could not produce a ready document.",
+      "recovery_action": "none"
+    },
+    "created_at": "2026-10-05 19:04:44.058302"
+  },
+  {
+    "id": "2a2f6ad2-6a69-400a-aaea-99bb4d233160",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "d1fd16f0-7745-48f4-8835-6bf93994d0d9",
+    "seq": "1",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "sourcebook_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "43733d32986877d324f937d44786a8f8180851516eff4527bc9745869bb1ec90"
+    },
+    "created_at": "2026-10-05 19:12:50.090205"
+  },
+  {
+    "id": "45100c42-f2a8-4353-bdd6-2702f5626a0a",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "0f06650a-f87b-41be-be51-cf2609e32dc2",
+    "seq": "2",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "shared_task_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "54c744936de07b20369de9aad6c0d54c0ee4f60043df6eac71f06884ededec76"
+    },
+    "created_at": "2026-10-05 19:12:54.996879"
+  },
+  {
+    "id": "e95bb9e1-56c1-4a77-9169-6b43d69d4495",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "d83992cb-39f4-48d4-9072-a629e547c088",
+    "seq": "3",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+    },
+    "created_at": "2026-10-05 19:12:56.952217"
+  },
+  {
+    "id": "3404ec10-9482-490f-b784-6c88ad3da853",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "dad516c7-cfbc-4131-a06a-4f9712fffbc9",
+    "seq": "4",
+    "event_type": "composition_style_warning",
+    "status": "running",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "callout_missing_cautionary_cue"
+      ],
+      "warning_paths": [
+        "blocks/explain-b2"
+      ]
+    },
+    "created_at": "2026-10-05 19:12:58.363316"
+  },
+  {
+    "id": "345811f1-8020-4bf1-b956-b7d31076e5ab",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "dad516c7-cfbc-4131-a06a-4f9712fffbc9",
+    "seq": "5",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "c60d758d7b325059c678e363c29c581c48cc1356c81e4783bb1e9ff98214f42c"
+    },
+    "created_at": "2026-10-05 19:12:58.507321"
+  },
+  {
+    "id": "c3424388-a85e-4eee-9fd8-5476bd7d49f0",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "a1a9d0cb-8ba2-4f76-9913-fa3a3556a8f0",
+    "seq": "6",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38"
+    },
+    "created_at": "2026-10-05 19:13:00.286628"
+  },
+  {
+    "id": "cd445ecb-a496-463e-ad48-2f6934c30675",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "b8cea942-d283-411e-80c9-fd6c4ed3f506",
+    "seq": "7",
+    "event_type": "composition_style_warning",
+    "status": "running",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "section_exceeds_callout_limit"
+      ],
+      "warning_paths": [
+        "choices[1].kind"
+      ]
+    },
+    "created_at": "2026-10-05 19:13:01.516382"
+  },
+  {
+    "id": "ea9d0bc5-bf75-4920-b66b-8ab959a8b488",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "b8cea942-d283-411e-80c9-fd6c4ed3f506",
+    "seq": "8",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3"
+    },
+    "created_at": "2026-10-05 19:13:01.640958"
+  },
+  {
+    "id": "b03887d2-f12d-402e-bd35-136eafada9c5",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "4705a5ec-f41e-47d5-b225-7fc055a4d801",
+    "seq": "9",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958"
+    },
+    "created_at": "2026-10-05 19:13:02.993775"
+  },
+  {
+    "id": "db64486c-8868-4471-8352-987b96220dac",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "2726fe51-093f-44ad-8335-f3b16e1e4d1d",
+    "seq": "10",
+    "event_type": "work_item_failed",
+    "status": "failed_recoverable",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "database_transient",
+    "safe_payload_json": {
+      "retryable": true,
+      "error_class": "provider_transport",
+      "safe_summary": "A transient database error interrupted the section.",
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 19:13:12.510452"
+  },
+  {
+    "id": "f442df25-1d30-4bce-b82b-62f1d83ea810",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "2726fe51-093f-44ad-8335-f3b16e1e4d1d",
+    "seq": "11",
+    "event_type": "section_writer_failure_diagnostic",
+    "status": "failed_recoverable",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "database_transient",
+    "safe_payload_json": {
+      "original_exception_type": "DBAPIError"
+    },
+    "created_at": "2026-10-05 19:13:12.540276"
+  },
+  {
+    "id": "869295e6-5eb4-4d66-a35c-f7b81bca914f",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "4d613605-c052-42ca-b029-4c9d4e130154",
+    "seq": "12",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "2620bcb388ac76d677bb18a1c98cedac2c0dae05c68431f1f92ee696181bf5d4"
+    },
+    "created_at": "2026-10-05 19:13:20.323593"
+  },
+  {
+    "id": "93bc41f7-31bd-4d84-8829-f1ae9c7a7c7e",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "3352554f-507c-4e7a-91a1-20b48135d894",
+    "seq": "13",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "5ef03847829af29d20c37416fc34a34af54e06cb8a5c139710c649658eac0013"
+    },
+    "created_at": "2026-10-05 19:13:24.627118"
+  },
+  {
+    "id": "a6d9e819-e2fd-4f03-8410-917041b91191",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "3352554f-507c-4e7a-91a1-20b48135d894",
+    "seq": "14",
+    "event_type": "section_write_warning",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "length_over_target"
+      ],
+      "warning_paths": [
+        "nodes[0].text/114/60"
+      ]
+    },
+    "created_at": "2026-10-05 19:13:24.654969"
+  },
+  {
+    "id": "6096c143-9e7e-4e0b-8a0f-70f34e440d09",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "723fdf22-7259-4db3-8e79-75cbbbddc45a",
+    "seq": "15",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "f2b05bf60cfa42f07fb048b1a65f7ee3a78cd2fc20669ab9c0652159dd3c2e52"
+    },
+    "created_at": "2026-10-05 19:13:25.168146"
+  },
+  {
+    "id": "851b3657-cd1c-4970-b492-ff2ae17128d9",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "88f0ca0c-ef07-459c-a2c4-d91ca50eaf59",
+    "seq": "16",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "488bca1c774cf6ff5dbdbd6ad184f33402c26754a198e0cb78c70d6aaa4e469e"
+    },
+    "created_at": "2026-10-05 19:14:39.560725"
+  },
+  {
+    "id": "b363d34f-d58a-404f-9a57-8f3d99270fbd",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "88f0ca0c-ef07-459c-a2c4-d91ca50eaf59",
+    "seq": "17",
+    "event_type": "section_write_warning",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "length_over_target",
+        "shape_missing"
+      ],
+      "warning_paths": [
+        "nodes[0].text/136/60",
+        "section/key_idea",
+        "section/subheading"
+      ]
+    },
+    "created_at": "2026-10-05 19:14:39.590358"
+  },
+  {
+    "id": "39ab4ad1-d959-4ba4-bf75-214b5a3895b7",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "2726fe51-093f-44ad-8335-f3b16e1e4d1d",
+    "seq": "18",
+    "event_type": "work_item_retry_queued",
+    "status": "queued",
+    "stage": "section_writing",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempt": 2,
+      "from_attempt": 1,
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 19:14:40.455242"
+  },
+  {
+    "id": "6178e54f-0a15-4ede-b9d2-e99609f15a4a",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "None",
+    "seq": "19",
+    "event_type": "auto_retry_scheduled",
+    "status": "queued",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempts": [
+        1
+      ],
+      "error_codes": [
+        "database_transient"
+      ],
+      "work_item_ids": [
+        "2726fe51-093f-44ad-8335-f3b16e1e4d1d"
+      ]
+    },
+    "created_at": "2026-10-05 19:14:40.512049"
+  },
+  {
+    "id": "58391953-1edb-4457-b100-981b486fc31c",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "2726fe51-093f-44ad-8335-f3b16e1e4d1d",
+    "seq": "20",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "fd093cad1f4c87435ac11bf582075fa442b25af236c92ca16c48ffee09b0fa5e"
+    },
+    "created_at": "2026-10-05 19:15:25.072841"
+  },
+  {
+    "id": "3502ef3e-a27e-425d-bfc3-cb7ac40423b9",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "ad2cf2ba-65ea-4026-86c4-1bb41df59a5b",
+    "seq": "21",
+    "event_type": "work_item_failed",
+    "status": "failed_recoverable",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "database_transient",
+    "safe_payload_json": {
+      "retryable": true,
+      "error_class": "provider_transport",
+      "safe_summary": "A transient database error interrupted boundary validation.",
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 19:15:37.484212"
+  },
+  {
+    "id": "1bae2e69-5d6d-4a73-9744-6ce7554a9794",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "ad2cf2ba-65ea-4026-86c4-1bb41df59a5b",
+    "seq": "22",
+    "event_type": "boundary_failure_diagnostic",
+    "status": "failed_recoverable",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "database_transient",
+    "safe_payload_json": {
+      "original_exception_type": "DBAPIError"
+    },
+    "created_at": "2026-10-05 19:15:37.507738"
+  },
+  {
+    "id": "cf7cc4b6-be05-4b93-801a-6c5491ad54a0",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "ed59c38f-28d0-4428-8f56-778167de4e78",
+    "seq": "23",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "ffce5a83b082882362ed2baadcd43a210edc3356a633a21135498248345a04da"
+    },
+    "created_at": "2026-10-05 19:16:21.585713"
+  },
+  {
+    "id": "4469f424-3406-4761-b2b6-888b203619bd",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "834688e5-6334-4c10-85d8-c10bdf829d95",
+    "seq": "24",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "0fdb88a20232c6de246359bc3d98b3cc9cdc9eb5a6e1b2d33fa4ccd6d014b2fe"
+    },
+    "created_at": "2026-10-05 19:16:21.769349"
+  },
+  {
+    "id": "6b434766-cfb5-406a-87e4-8e8d2c0e98d6",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "c946a387-1b32-4941-9749-abf6e43a4118",
+    "seq": "25",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "d68f31313e85b42195904f8393d497b5bfd0779abac02c774dd546eac9240b01"
+    },
+    "created_at": "2026-10-05 19:16:22.094724"
+  },
+  {
+    "id": "d3afc05a-bf50-4b9a-8ef0-5b203b083953",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "ad2cf2ba-65ea-4026-86c4-1bb41df59a5b",
+    "seq": "26",
+    "event_type": "work_item_retry_queued",
+    "status": "queued",
+    "stage": "continuity_validation",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempt": 2,
+      "from_attempt": 1,
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 19:16:26.725686"
+  },
+  {
+    "id": "43a432af-00a6-48c5-98a9-a081568978a9",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "None",
+    "seq": "27",
+    "event_type": "auto_retry_scheduled",
+    "status": "queued",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempts": [
+        1
+      ],
+      "error_codes": [
+        "database_transient"
+      ],
+      "work_item_ids": [
+        "ad2cf2ba-65ea-4026-86c4-1bb41df59a5b"
+      ]
+    },
+    "created_at": "2026-10-05 19:16:26.879439"
+  },
+  {
+    "id": "07b0c0d2-2fc6-4a4d-8203-7aabe86e4886",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "ad2cf2ba-65ea-4026-86c4-1bb41df59a5b",
+    "seq": "28",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "e4e461606fc065f57fc52c46530b1c9a7dffeea4f568bb59b2d4c13bdf9cfb4f"
+    },
+    "created_at": "2026-10-05 19:16:28.792201"
+  },
+  {
+    "id": "de0c19ee-caff-44c9-9503-0079aecca534",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "2b93ed93-92b7-4163-8101-96956eee3e63",
+    "seq": "29",
+    "event_type": "figure_label_missing",
+    "status": "queued",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warnings": [
+        "label_missing:24 hours"
+      ],
+      "figure_node_id": "shared-figure-node-da97809d175b54895719"
+    },
+    "created_at": "2026-10-05 19:16:29.207311"
+  },
+  {
+    "id": "ffc87bcd-6b64-47dd-bdae-fa30e0a86231",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "8f7b93ab-dc0b-40d3-b04a-8b0faf6408f4",
+    "seq": "30",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "d5b7617587976a66ddd7fcd7706713a6dcf1693c8ba27894c6b834391b839b12"
+    },
+    "created_at": "2026-10-05 19:16:35.437543"
+  },
+  {
+    "id": "4d34a0ff-49ac-4204-bde9-3703693f3937",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "8f7b93ab-dc0b-40d3-b04a-8b0faf6408f4",
+    "seq": "31",
+    "event_type": "media_deferred",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "media_provider_failed",
+    "safe_payload_json": {
+      "reason_code": "media_provider_failed",
+      "media_status": "deferred"
+    },
+    "created_at": "2026-10-05 19:16:35.502757"
+  },
+  {
+    "id": "59034c7f-d177-422c-b60f-357140e325fb",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "7af9d131-767f-4544-b6c2-3cce8170793a",
+    "seq": "32",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "d4d8e9bfebf279a644f945915f0ffe80b5cb1fe63677241ed164b462d04676e6"
+    },
+    "created_at": "2026-10-05 19:16:44.822121"
+  },
+  {
+    "id": "bf8947d9-afe8-4608-98ab-aa555fcbc0b4",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "7af9d131-767f-4544-b6c2-3cce8170793a",
+    "seq": "33",
+    "event_type": "media_deferred",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "media_provider_failed",
+    "safe_payload_json": {
+      "reason_code": "media_provider_failed",
+      "media_status": "deferred"
+    },
+    "created_at": "2026-10-05 19:16:44.856525"
+  },
+  {
+    "id": "c7020922-da45-41f4-bb02-2758e71ec99a",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "2b93ed93-92b7-4163-8101-96956eee3e63",
+    "seq": "34",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "245394a69fecb032c079a70928529afc88c2ff95078451a02e6f5792b9c2c6f3"
+    },
+    "created_at": "2026-10-05 19:16:45.311082"
+  },
+  {
+    "id": "aa4b2025-9c4c-4bef-9e26-b9b044e9c814",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "2b93ed93-92b7-4163-8101-96956eee3e63",
+    "seq": "35",
+    "event_type": "media_deferred",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "media_provider_failed",
+    "safe_payload_json": {
+      "reason_code": "media_provider_failed",
+      "media_status": "deferred"
+    },
+    "created_at": "2026-10-05 19:16:45.336069"
+  },
+  {
+    "id": "65531cd2-2344-4636-a0f2-a9e6b53a6adf",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "aa788b27-21e3-4c98-9bb3-32a82cc6e0ca",
+    "seq": "36",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "456423425da753af96937286e2d590b6ec3334fcb6d857d638d5bc5ef6de50a4"
+    },
+    "created_at": "2026-10-05 19:16:45.434655"
+  },
+  {
+    "id": "7e32eb8c-2905-442e-905b-05533e49c0ad",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "aa788b27-21e3-4c98-9bb3-32a82cc6e0ca",
+    "seq": "37",
+    "event_type": "media_deferred",
+    "status": "ready",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "media_provider_failed",
+    "safe_payload_json": {
+      "reason_code": "media_provider_failed",
+      "media_status": "deferred"
+    },
+    "created_at": "2026-10-05 19:16:45.462093"
+  },
+  {
+    "id": "5eead458-8b2b-42cd-91af-addbcbfbb77d",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "4ccbce98-ed27-40c2-98b8-cef13ff65bd6",
+    "seq": "38",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "document_qa",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "e3666ed3d7e863a554afaae0333e561325cf1589f93eea99ec7254d4df975ec1"
+    },
+    "created_at": "2026-10-05 19:17:15.528482"
+  },
+  {
+    "id": "58e256ff-6629-4877-a680-eb5e05cab5a7",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "4ccbce98-ed27-40c2-98b8-cef13ff65bd6",
+    "seq": "39",
+    "event_type": "document_qa_advisory_flags",
+    "status": "ready",
+    "stage": "document_qa",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "codes": [
+        "callout_missing_cautionary_cue",
+        "factual_inaccuracy",
+        "length_over_target",
+        "section_exceeds_callout_limit",
+        "shape_missing"
+      ],
+      "flag_count": 7,
+      "document_id": "shared-document:f23841a2-eab1-43cc-aa02-ce2c41b692d2:revision:1",
+      "document_revision": 1
+    },
+    "created_at": "2026-10-05 19:17:15.559576"
+  },
+  {
+    "id": "2a785c79-1697-4d7b-be1a-2ebf1b992539",
+    "run_id": "f23841a2-eab1-43cc-aa02-ce2c41b692d2",
+    "work_item_id": "None",
+    "seq": "40",
+    "event_type": "run_ready",
+    "status": "ready",
+    "stage": "document_finalization",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "738296b4b10c276be70e9047eb337c39e75ff39981fba029d6f245e086259a88",
+      "output_revision": 1,
+      "output_artifact_id": "shared-document:f23841a2-eab1-43cc-aa02-ce2c41b692d2:revision:1",
+      "output_artifact_type": "shared_lesson_document"
+    },
+    "created_at": "2026-10-05 19:17:16.341816"
+  },
+  {
+    "id": "46409cbf-0091-402a-b9fe-8939fc40acef",
+    "run_id": "12f24b9f-ca4a-4bff-9f43-cb15ab14b862",
+    "work_item_id": "d0efb9e8-4ff3-4ca1-ab2e-00bf039b4bec",
+    "seq": "1",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "realize",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "661d8cdb2e35d196240b9dacd7fddf1971e4bfb3e87c8061002d71c7adb8a245"
+    },
+    "created_at": "2026-10-05 19:24:35.219106"
+  },
+  {
+    "id": "548e8ffb-59f6-47af-a56f-87692a2bda07",
+    "run_id": "12f24b9f-ca4a-4bff-9f43-cb15ab14b862",
+    "work_item_id": "None",
+    "seq": "2",
+    "event_type": "run_ready",
+    "status": "ready",
+    "stage": "realization",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "1456b7fabcf3bbff99757821289db024e8d0ec13c2ede9d111bd87e964c8886d",
+      "output_revision": 3,
+      "output_artifact_id": "learn-out-874a3e86bedf4faf",
+      "output_artifact_type": "learn_output"
+    },
+    "created_at": "2026-10-05 19:24:35.394753"
+  }
+]

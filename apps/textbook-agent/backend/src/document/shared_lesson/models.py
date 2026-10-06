@@ -109,7 +109,36 @@ class TableDisplay(_ClosedModel):
 class CalloutDisplay(_ClosedModel):
     tone: Literal["note", "warning", "tip", "important"] = "note"
     title: str = ""
+    body: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    variant: Literal["key_idea", "note", "misconception"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    belief: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    evidence: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    conclusion: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    aside: str | None = Field(default=None, exclude_if=lambda value: value is None)
+
+
+class EquationDisplay(_ClosedModel):
+    label: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    inputs: tuple[str, ...] = Field(min_length=1)
+    condition: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    outputs: tuple[str, ...] = Field(min_length=1)
+
+
+class QuoteDisplay(_ClosedModel):
+    text: str = Field(min_length=1)
+    attribution: str | None = Field(default=None, exclude_if=lambda value: value is None)
+
+
+class CompareItem(_ClosedModel):
+    label: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    title: str = Field(min_length=1)
     body: str = Field(min_length=1)
+
+
+class CompareDisplay(_ClosedModel):
+    items: tuple[CompareItem, ...] = Field(min_length=2)
 
 
 class ParagraphNode(_NodeBase):
@@ -148,6 +177,24 @@ class CalloutNode(_NodeBase):
     accessibility: NodeAccessibility = Field(default_factory=NodeAccessibility)
 
 
+class EquationNode(_NodeBase):
+    kind: Literal["equation"] = "equation"
+    display: EquationDisplay
+    accessibility: NodeAccessibility = Field(default_factory=NodeAccessibility)
+
+
+class QuoteNode(_NodeBase):
+    kind: Literal["quote"] = "quote"
+    display: QuoteDisplay
+    accessibility: NodeAccessibility = Field(default_factory=NodeAccessibility)
+
+
+class CompareNode(_NodeBase):
+    kind: Literal["compare"] = "compare"
+    display: CompareDisplay
+    accessibility: NodeAccessibility = Field(default_factory=NodeAccessibility)
+
+
 class TaskAnchor(_ClosedModel):
     id: str = Field(min_length=1)
     kind: Literal["task_anchor"] = "task_anchor"
@@ -157,7 +204,16 @@ class TaskAnchor(_ClosedModel):
 
 
 SharedLessonNode = Annotated[
-    ParagraphNode | HeadingNode | ListNode | FigureNode | TableNode | CalloutNode | TaskAnchor,
+    ParagraphNode
+    | HeadingNode
+    | ListNode
+    | FigureNode
+    | TableNode
+    | CalloutNode
+    | EquationNode
+    | QuoteNode
+    | CompareNode
+    | TaskAnchor,
     Field(discriminator="kind"),
 ]
 shared_lesson_node_adapter: TypeAdapter[SharedLessonNode] = TypeAdapter(SharedLessonNode)
@@ -200,6 +256,8 @@ class FrozenSharedTaskSpec(SharedTaskSpec):
         object.__setattr__(self, "evaluation", _freeze_json(self.evaluation))
         if self.feedback is not None:
             object.__setattr__(self, "feedback", _freeze_json(self.feedback))
+        if self.option_notes is not None:
+            object.__setattr__(self, "option_notes", _freeze_json(self.option_notes))
         return self
 
 
@@ -281,8 +339,13 @@ def build_shared_lesson_document(payload: Mapping[str, Any]) -> SharedLessonDocu
 
 
 __all__ = [
+    "CompareDisplay",
+    "CompareItem",
+    "CompareNode",
     "CalloutDisplay",
     "CalloutNode",
+    "EquationDisplay",
+    "EquationNode",
     "FigureAccessibility",
     "FigureDisplay",
     "FigureNode",
@@ -294,6 +357,8 @@ __all__ = [
     "NodeAccessibility",
     "ParagraphDisplay",
     "ParagraphNode",
+    "QuoteDisplay",
+    "QuoteNode",
     "SharedLessonDocument",
     "SharedLessonNode",
     "SharedProvenance",

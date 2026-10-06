@@ -1,0 +1,141 @@
+{
+ "blocks": [
+  {
+   "index": 0,
+   "kind": "paragraph",
+   "learn_tokens": 104,
+   "status": "identical",
+   "pdf_offset": 76
+  },
+  {
+   "index": 1,
+   "kind": "list",
+   "learn_tokens": 45,
+   "status": "identical",
+   "pdf_offset": 180
+  },
+  {
+   "index": 3,
+   "kind": "callout",
+   "learn_tokens": 23,
+   "status": "identical",
+   "pdf_offset": 238
+  },
+  {
+   "index": 4,
+   "kind": "paragraph",
+   "learn_tokens": 169,
+   "status": "identical",
+   "pdf_offset": 340
+  },
+  {
+   "index": 5,
+   "kind": "figure",
+   "learn_tokens": 0,
+   "status": "learn renders no text",
+   "detail": "figure with no asset: nothing rendered in Learn (A7); Print renders frame + caption"
+  },
+  {
+   "index": 6,
+   "kind": "callout",
+   "learn_tokens": 24,
+   "status": "identical",
+   "pdf_offset": 622
+  },
+  {
+   "index": 7,
+   "kind": "callout",
+   "learn_tokens": 80,
+   "status": "identical",
+   "pdf_offset": 646
+  },
+  {
+   "index": 9,
+   "kind": "paragraph",
+   "learn_tokens": 148,
+   "status": "identical",
+   "pdf_offset": 726
+  },
+  {
+   "index": 10,
+   "kind": "callout",
+   "learn_tokens": 81,
+   "status": "identical",
+   "pdf_offset": 911
+  },
+  {
+   "index": 11,
+   "kind": "paragraph",
+   "learn_tokens": 40,
+   "status": "identical",
+   "pdf_offset": 998
+  },
+  {
+   "index": 12,
+   "kind": "paragraph",
+   "learn_tokens": 49,
+   "status": "identical",
+   "pdf_offset": 1038
+  },
+  {
+   "index": 14,
+   "kind": "paragraph",
+   "learn_tokens": 32,
+   "status": "identical",
+   "pdf_offset": 1087
+  },
+  {
+   "index": 16,
+   "kind": "paragraph",
+   "learn_tokens": 40,
+   "status": "identical",
+   "pdf_offset": 1175
+  }
+ ],
+ "tasks": [
+  {
+   "task": "task-orient-b2",
+   "parts": 7,
+   "missing_in_learn": [],
+   "missing_in_print": []
+  },
+  {
+   "task": "task-contrast-b1",
+   "parts": 1,
+   "missing_in_learn": [],
+   "missing_in_print": []
+  },
+  {
+   "task": "task-apply-b1",
+   "parts": 1,
+   "missing_in_learn": [],
+   "missing_in_print": []
+  },
+  {
+   "task": "task-apply-b2",
+   "parts": 1,
+   "missing_in_learn": [],
+   "missing_in_print": []
+  },
+  {
+   "task": "task-check-b1",
+   "parts": 5,
+   "missing_in_learn": [],
+   "missing_in_print": []
+  }
+ ],
+ "summary": {
+  "non_task_blocks": 13,
+  "identical": 12,
+  "diff": [],
+  "no_learn_text": [
+   {
+    "index": 5,
+    "kind": "figure",
+    "learn_tokens": 0,
+    "status": "learn renders no text",
+    "detail": "figure with no asset: nothing rendered in Learn (A7); Print renders frame + caption"
+   }
+  ]
+ }
+}

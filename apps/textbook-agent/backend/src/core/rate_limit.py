@@ -5,4 +5,4 @@ Temporary (R3). Remove when all call sites import the infra/curriculum path (R7)
 
 from __future__ import annotations
 
-from infra.rate_limit import *
+from infra.rate_limit import *  # noqa: F403 - compatibility re-export shim

@@ -1,0 +1,294 @@
+F403 `from learn.contracts.lectio import *` used; unable to detect undefined names
+ --> src\contracts\lectio.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from learn.contracts.lectio import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+9 | from learn.contracts.lectio import _EXTERNAL_FIELDS  # noqa: F401
+  |
+
+F403 `from print.contracts.lectio_page import *` used; unable to detect undefined names
+ --> src\contracts\lectio_page.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from print.contracts.lectio_page import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from learn.contracts.lesson_document import *` used; unable to detect undefined names
+ --> src\contracts\lesson_document.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from learn.contracts.lesson_document import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from infra.config import *` used; unable to detect undefined names
+  --> src\core\config.py:8:1
+   |
+ 6 | from __future__ import annotations
+ 7 |
+ 8 | from infra.config import *
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 9 | from infra.config import (  # noqa: F401
+10 |     _ENV_FILE,
+   |
+
+F403 `from infra.database.models import *` used; unable to detect undefined names
+ --> src\core\database\models.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from infra.database.models import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from infra.database.session import *` used; unable to detect undefined names
+ --> src\core\database\session.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from infra.database.session import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from infra.dependencies import *` used; unable to detect undefined names
+ --> src\core\dependencies.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from infra.dependencies import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from infra.events import *` used; unable to detect undefined names
+ --> src\core\events.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from infra.events import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from print.rendering.pdf.runtime import *` used; unable to detect undefined names
+ --> src\core\pdf_export_runtime.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from print.rendering.pdf.runtime import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from infra.rate_limit import *` used; unable to detect undefined names
+ --> src\core\rate_limit.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from infra.rate_limit import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from curriculum.models import *` used; unable to detect undefined names
+ --> src\curriculum\path_models.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from curriculum.models import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F401 [*] `asyncio` imported but unused
+ --> src\curriculum\planning\persistence.py:3:8
+  |
+1 | from __future__ import annotations
+2 |
+3 | import asyncio
+  |        ^^^^^^^
+4 | import json
+5 | from collections.abc import Awaitable, Callable, Mapping
+  |
+help: Remove unused import: `asyncio`
+
+F401 [*] `curriculum.planning.models.VariantSpec` imported but unused
+  --> src\curriculum\planning\persistence.py:20:5
+   |
+18 |     SectionBrief,
+19 |     StructuralPlan,
+20 |     VariantSpec,
+   |     ^^^^^^^^^^^
+21 | )
+   |
+help: Remove unused import: `curriculum.planning.models.VariantSpec`
+
+F403 `from learn.runtime.class_service import *` used; unable to detect undefined names
+ --> src\learn\class_service.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from learn.runtime.class_service import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from learn.analytics.insight_service import *` used; unable to detect undefined names
+ --> src\learn\insight_service.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from learn.analytics.insight_service import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from learn.runtime.runtime_models import *` used; unable to detect undefined names
+ --> src\learn\runtime_models.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from learn.runtime.runtime_models import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F403 `from learn.runtime.runtime_service import *` used; unable to detect undefined names
+ --> src\learn\runtime_service.py:8:1
+  |
+6 | from __future__ import annotations
+7 |
+8 | from learn.runtime.runtime_service import *
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+E402 Module level import not at top of file
+  --> tests\conftest.py:33:1
+   |
+31 | os.environ["SHARED_DOCUMENT_MEDIA_OPTIONAL"] = "false"
+32 |
+33 | from core.database.models import Base
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+34 | from core.database.session import engine as runtime_engine
+   |
+
+E402 Module level import not at top of file
+  --> tests\conftest.py:34:1
+   |
+33 | from core.database.models import Base
+34 | from core.database.session import engine as runtime_engine
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+F401 [*] `document.shared_lesson.media_runtime.frozen_figure_semantic_hash` imported but unused
+  --> tests\document\test_shared_lesson_media_runtime.py:25:5
+   |
+23 |     execute_figure_media_work_items,
+24 |     find_active_figure_media_work_item,
+25 |     frozen_figure_semantic_hash,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+26 |     project_media_readiness,
+27 |     work_order_from_composition_identity,
+   |
+help: Remove unused import: `document.shared_lesson.media_runtime.frozen_figure_semantic_hash`
+
+E402 Module level import not at top of file
+  --> tests\document\test_shared_run_admission_postgres.py:10:1
+   |
+ 8 | pytest_plugins = ("tests.generation_runtime.test_runtime_postgres",)
+ 9 |
+10 | from test_shared_composer_admission import _source
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+11 | from test_shared_run_admission import _snapshot
+   |
+
+E402 Module level import not at top of file
+  --> tests\document\test_shared_run_admission_postgres.py:11:1
+   |
+10 | from test_shared_composer_admission import _source
+11 | from test_shared_run_admission import _snapshot
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 |
+13 | from document.shared_lesson import run_admission
+   |
+
+E402 Module level import not at top of file
+  --> tests\document\test_shared_run_admission_postgres.py:13:1
+   |
+11 | from test_shared_run_admission import _snapshot
+12 |
+13 | from document.shared_lesson import run_admission
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 | from document.shared_lesson.run_admission import admit_shared_document_run
+15 | from infra.database.models import GenerationBuildModel, GenerationRunModel, GenerationWorkItemModel
+   |
+
+E402 Module level import not at top of file
+  --> tests\document\test_shared_run_admission_postgres.py:14:1
+   |
+13 | from document.shared_lesson import run_admission
+14 | from document.shared_lesson.run_admission import admit_shared_document_run
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+15 | from infra.database.models import GenerationBuildModel, GenerationRunModel, GenerationWorkItemModel
+   |
+
+E402 Module level import not at top of file
+  --> tests\document\test_shared_run_admission_postgres.py:15:1
+   |
+13 | from document.shared_lesson import run_admission
+14 | from document.shared_lesson.run_admission import admit_shared_document_run
+15 | from infra.database.models import GenerationBuildModel, GenerationRunModel, GenerationWorkItemModel
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+F401 [*] `v3_execution.booklet_status.collect_fatal_issue_categories` imported but unused
+ --> tests\v3_execution\test_booklet_status.py:3:41
+  |
+1 | from __future__ import annotations
+2 |
+3 | from v3_execution.booklet_status import collect_fatal_issue_categories, derive_booklet_status
+  |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+4 | from v3_execution.models import DraftPack
+  |
+help: Remove unused import: `v3_execution.booklet_status.collect_fatal_issue_categories`
+
+F401 [*] `v3_execution.models.DraftPack` imported but unused
+ --> tests\v3_execution\test_booklet_status.py:4:33
+  |
+3 | from v3_execution.booklet_status import collect_fatal_issue_categories, derive_booklet_status
+4 | from v3_execution.models import DraftPack
+  |                                 ^^^^^^^^^
+  |
+help: Remove unused import: `v3_execution.models.DraftPack`
+
+F401 [*] `contracts.lectio.get_section_field_for_component` imported but unused
+  --> tests\v3_execution\test_v3_execution_core.py:11:30
+   |
+ 9 | from PIL import Image
+10 |
+11 | from contracts.lectio import get_section_field_for_component
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 | from media.qc.visual_qc import VisualQCVerdict
+13 | from v3_blueprint.models import ProductionBlueprint
+   |
+help: Remove unused import: `contracts.lectio.get_section_field_for_component`
+
+F401 [*] `v3_review.models.CoherenceReport` imported but unused
+  --> tests\v3_execution\test_v3_execution_core.py:23:30
+   |
+21 |     VisualPlanItem,
+22 | )
+23 | from v3_review.models import CoherenceReport, ReviewIssue
+   |                              ^^^^^^^^^^^^^^^
+   |
+help: Remove unused import
+
+F401 [*] `v3_review.models.ReviewIssue` imported but unused
+  --> tests\v3_execution\test_v3_execution_core.py:23:47
+   |
+21 |     VisualPlanItem,
+22 | )
+23 | from v3_review.models import CoherenceReport, ReviewIssue
+   |                                               ^^^^^^^^^^^
+   |
+help: Remove unused import
+
+Found 30 errors.
+[*] 8 fixable with the `--fix` option.

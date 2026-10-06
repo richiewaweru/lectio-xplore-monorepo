@@ -1,0 +1,24 @@
+{
+  "generation_id": "910bef47-fcc3-4eca-a8a4-845c986d2d99",
+  "path_lesson_id": "cfe2697f-de31-4642-afe1-79a5be199868",
+  "objective": "Explain how light, water and carbon dioxide combine in the leaves to make the food a plant needs to grow, naming the process as photosynthesis.",
+  "objective_hash": "908d6eee5636618d2e1ec30ad5e2b6b2d03801ac8034029ed6609678e8b1fe7b",
+  "skeleton_id": "evaluative.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "criteria",
+    "contrast",
+    "apply",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "criteria",
+    "contrast",
+    "apply",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

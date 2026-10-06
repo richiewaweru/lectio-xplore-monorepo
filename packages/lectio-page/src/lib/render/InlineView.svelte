@@ -21,6 +21,10 @@
 		<strong><InlineView nodes={node.children} /></strong>
 	{:else if node.type === 'emphasis'}
 		<em><InlineView nodes={node.children} /></em>
+	{:else if node.type === 'subscript'}
+		<sub><InlineView nodes={node.children} /></sub>
+	{:else if node.type === 'superscript'}
+		<sup><InlineView nodes={node.children} /></sup>
 	{:else if node.type === 'small-caps'}
 		<span style="font-variant: small-caps"><InlineView nodes={node.children} /></span>
 	{:else if node.type === 'term'}

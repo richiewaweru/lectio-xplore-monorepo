@@ -39,8 +39,7 @@
             ]
           },
           "text": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/$defs/rich-text"
           },
           "number": {
             "type": [
@@ -56,11 +55,13 @@
         "number": "string|null"
       },
       "field_guidance": {
+        "label": "Name the relation when a short label helps the learner.",
         "level": "1 for the lesson title, 2 for a section, 3 for a subsection. Never skip a level.",
         "text": "Name the content, not the pedagogy. No trailing punctuation.",
         "number": "Only when the document numbers sections. Null otherwise — never invent numbering."
       },
       "writer_guidance": {
+        "label": "Name the relation when a short label helps the learner.",
         "level": "1 for the lesson title, 2 for a section, 3 for a subsection. Never skip a level.",
         "text": "Name the content, not the pedagogy. No trailing punctuation.",
         "number": "Only when the document numbers sections. Null otherwise — never invent numbering."
@@ -90,7 +91,7 @@
           "objective_development"
         ]
       },
-      "definition_hash": "6775560a928f466f08ac1694160f2f32d1633f42369b549ab34bf271240a159e",
+      "definition_hash": "6d74c11f4c2657b7f08b8632e3edf44322e61db1e7a6bc713d14c9e86b413613",
       "fragmentation": "Must be bound with the first following block in one break-inside:avoid wrapper. Never render alone.",
       "emphasis": "Type size, weight, rule, and spacing only. No box.",
       "placement": [
@@ -341,7 +342,7 @@
                   "minLength": 1
                 },
                 "label": {
-                  "type": "string"
+                  "$ref": "#/$defs/rich-text"
                 }
               }
             }
@@ -366,9 +367,13 @@
             }
           },
           "caption": {
-            "type": [
-              "string",
-              "null"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
             ]
           },
           "presentation": {
@@ -431,7 +436,7 @@
           "objective_development"
         ]
       },
-      "definition_hash": "93d0e81eb0ecdcfa25a6bbbc2145bf44cf350c7f46b5fabe976111e5c02d50dd",
+      "definition_hash": "52e7cd299b5d55817b386dbf4f90a5f5f00556a77d8cda6e5a7bf16dc12f2b2b",
       "fragmentation": "May split across pages. thead repeats. Rows avoid splitting.",
       "emphasis": "Rules, alignment, weight, and sparse header tint only when photocopy-safe. No enclosing box.",
       "placement": [
@@ -496,9 +501,13 @@
             }
           },
           "caption": {
-            "type": [
-              "string",
-              "null"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
             ]
           },
           "alt_text": {
@@ -561,7 +570,7 @@
         ]
       },
       "postprocessor_ref": "print.figure_asset_postprocessor",
-      "definition_hash": "f334dd491e2c0a1774fbf6dffe09ae4bee929cdc2b8fd3459a11b80c287a5c6f",
+      "definition_hash": "597ced469a3ff90c0f6f4ab60ebabcbb3af689759afe820c581a3d5b9b93a484",
       "fragmentation": "Figure and caption are atomic. May move to next page.",
       "emphasis": "Scale, whitespace, caption typography, and optional hairline around the plate only—not a card.",
       "placement": [
@@ -597,18 +606,70 @@
         ],
         "properties": {
           "label": {
-            "type": [
-              "string",
-              "null"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
             ]
           },
           "body": {
             "$ref": "#/$defs/rich-text"
+          },
+          "variant": {
+            "enum": [
+              "key_idea",
+              "note",
+              "misconception",
+              null
+            ]
+          },
+          "belief": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
+          },
+          "evidence": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
+          },
+          "conclusion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
+          },
+          "aside": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
           }
         }
       },
       "content_schema": {
-        "label": "string|null",
+        "label": "RichText|null",
         "body": "RichText"
       },
       "field_guidance": {
@@ -649,16 +710,330 @@
           "objective_development"
         ]
       },
-      "definition_hash": "bee27442591b00d25fcd2a2d3c342cf5a62f7d02ff1827d28a2a12cc7e49941c",
-      "fragmentation": "Atomic. Margin placement uses float, clear:right, and negative margin. Move cleanly if it does not fit.",
+      "definition_hash": "6248963a6b41ce76c52cd19c77dd1ed7878d2ba98530e3e2624e1a1799e53297",
+      "fragmentation": "Keep a normal callout together when it fits; a spanning misconception continues at its row boundaries when intrinsically taller than the page. Margin placement uses float and clear:right.",
       "emphasis": "The only object allowed a border or background. Default is a single vertical rule with restrained label.",
       "placement": [
         "margin",
-        "main"
+        "main",
+        "spanning"
       ],
       "source_refs": [
         "object-catalogue.v1.json#/objects/aside",
         "lectio-document-v2.schema.json#/$defs/aside-content"
+      ]
+    },
+    "equation": {
+      "id": "equation",
+      "definition_version": "2.0.0",
+      "capability_id": "equation",
+      "native_path": "print",
+      "lane": "content",
+      "purpose": "Inputs, an optional condition, and outputs for a process or relationship.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/equation-writer-v1.txt",
+        "text": "Write a compact equation with one or more input terms, an optional condition, and one or more output terms. Preserve the authored order and all notation."
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/equation-content",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/equation-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "inputs",
+          "outputs"
+        ],
+        "properties": {
+          "label": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
+          },
+          "inputs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/rich-text"
+            }
+          },
+          "condition": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
+          },
+          "outputs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/rich-text"
+            }
+          }
+        }
+      },
+      "content_schema": {
+        "label": "RichText|null",
+        "inputs": "RichText[]",
+        "condition": "RichText|null",
+        "outputs": "RichText[]"
+      },
+      "field_guidance": {
+        "label": "Name the relation when a short label helps the learner.",
+        "inputs": "List each input term in process order. The capacity is advisory; preserve every authored term when more are needed.",
+        "condition": "State the condition above the arrow when one matters.",
+        "outputs": "List each resulting term in process order. The capacity is advisory; preserve every authored term when more are needed."
+      },
+      "writer_guidance": {
+        "label": "Name the relation when a short label helps the learner.",
+        "inputs": "List each input term in process order. The capacity is advisory; preserve every authored term when more are needed.",
+        "condition": "State the condition above the arrow when one matters.",
+        "outputs": "List each resulting term in process order. The capacity is advisory; preserve every authored term when more are needed."
+      },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
+      "negative_cases": [
+        "missing inputs",
+        "missing outputs"
+      ],
+      "capacity": {
+        "inputsMax": 4,
+        "outputsMax": 3
+      },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "2ecbcb317f3e683790e6ef58bf3f933f122e8ea9ef8de4038e827c367409dd82",
+      "fragmentation": "Atomic when it fits; move to the next page when it does not.",
+      "emphasis": "Outlined equation row with readable labels; no colour dependency.",
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/equation",
+        "lectio-document-v2.schema.json#/$defs/equation-content"
+      ]
+    },
+    "quote": {
+      "id": "quote",
+      "definition_version": "2.0.0",
+      "capability_id": "quote",
+      "native_path": "print",
+      "lane": "content",
+      "purpose": "A claim or learner voice with optional attribution.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/quote-writer-v1.txt",
+        "text": "Preserve the quoted claim exactly. Include an attribution only when the source provides one."
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/quote-content",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/quote-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "$ref": "#/$defs/rich-text"
+          },
+          "attribution": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
+          }
+        }
+      },
+      "content_schema": {
+        "text": "RichText",
+        "attribution": "RichText|null"
+      },
+      "field_guidance": {
+        "text": "Preserve the speaker's exact claim.",
+        "attribution": "Name the speaker when supplied."
+      },
+      "writer_guidance": {
+        "text": "Preserve the speaker's exact claim.",
+        "attribution": "Name the speaker when supplied."
+      },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
+      "negative_cases": [
+        "quote without text"
+      ],
+      "capacity": {},
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "3b2b15e2953883ada2b62078e153f93a732b8df9b66e209a2b6de36284021cf6",
+      "fragmentation": "Atomic when it fits; move to the next page when it does not.",
+      "emphasis": "Indented grey block with serif quote text.",
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/quote",
+        "lectio-document-v2.schema.json#/$defs/quote-content"
+      ]
+    },
+    "compare": {
+      "id": "compare",
+      "definition_version": "2.0.0",
+      "capability_id": "compare",
+      "native_path": "print",
+      "lane": "content",
+      "purpose": "Two or three labelled alternatives presented side by side.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/compare-writer-v1.txt",
+        "text": "Write two or three comparable alternatives. Give each a short label when useful, a title, and a parallel explanatory body."
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/compare-content",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/compare-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "title",
+                "body"
+              ],
+              "properties": {
+                "label": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/$defs/rich-text"
+                    }
+                  ]
+                },
+                "title": {
+                  "$ref": "#/$defs/rich-text"
+                },
+                "body": {
+                  "$ref": "#/$defs/rich-text"
+                }
+              }
+            }
+          }
+        }
+      },
+      "content_schema": {
+        "items": "CompareItem[]",
+        "label": "RichText|null",
+        "title": "RichText",
+        "body": "RichText"
+      },
+      "field_guidance": {
+        "items": "Use two or three alternatives with a title and body for each. The item capacity is advisory; preserve every authored card when more are needed.",
+        "label": "Use a short label when it clarifies the alternative.",
+        "title": "Name each alternative.",
+        "body": "Explain each alternative in parallel wording."
+      },
+      "writer_guidance": {
+        "items": "Use two or three alternatives with a title and body for each. The item capacity is advisory; preserve every authored card when more are needed.",
+        "label": "Use a short label when it clarifies the alternative.",
+        "title": "Name each alternative.",
+        "body": "Explain each alternative in parallel wording."
+      },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
+      "negative_cases": [
+        "fewer than two items"
+      ],
+      "capacity": {
+        "itemsMin": 2,
+        "itemsMax": 3
+      },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "48c7e305f77e1abbce25c078ec715a0deb2142a0e56c2104a50975dc25b6f43c",
+      "fragmentation": "Items stay together when they fit; an oversized item continues at paragraph boundaries.",
+      "emphasis": "Bordered comparison boxes that remain distinct in greyscale.",
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/compare",
+        "lectio-document-v2.schema.json#/$defs/compare-content"
       ]
     },
     "worked-example": {
@@ -850,6 +1225,30 @@
                 "answer_lines": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "match": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "left",
+                    "right"
+                  ],
+                  "properties": {
+                    "left": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "$ref": "#/$defs/rich-text"
+                      }
+                    },
+                    "right": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "$ref": "#/$defs/rich-text"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -899,7 +1298,7 @@
         ]
       },
       "converter_ref": "print.approved_assessment_converter",
-      "definition_hash": "cffa8c93e83ca7c965eabcd1f49bd5ec171ce0f733b12a662a82facfadbf896d",
+      "definition_hash": "7723f5436a1ea8ed3d0cba9114632dc208a48950fcbcb1577bab31313d7b3440",
       "fragmentation": "Split between questions, never inside a question. Prompt stays with minimum answer space.",
       "emphasis": "Hanging numbers, marks aligned to edge, ruled answer space. No cards.",
       "placement": [
@@ -1107,6 +1506,25 @@
                             "$ref": "#/$defs/rich-text"
                           }
                         ]
+                      },
+                      "feedback": {
+                        "oneOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "$ref": "#/$defs/rich-text"
+                          }
+                        ]
+                      },
+                      "option_notes": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "$ref": "#/$defs/rich-text"
+                        }
+                      },
+                      "not_marked": {
+                        "type": "boolean"
                       }
                     }
                   }
@@ -1151,7 +1569,7 @@
           "supplied_only"
         ]
       },
-      "definition_hash": "2a2207e2815db1c58c94dc5b02db7a915e899c390df574fb60a65c935afeafa7",
+      "definition_hash": "d3b98649bb98dd3d04af67d67041c335d1f7b95f6f4433d97307d01bec29f8c2",
       "fragmentation": "Split between entries. Entry keeps question reference with first answer line.",
       "emphasis": "Heading hierarchy, compact typography, rules. No card.",
       "placement": [

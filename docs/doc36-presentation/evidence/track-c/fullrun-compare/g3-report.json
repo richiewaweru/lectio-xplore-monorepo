@@ -1,0 +1,259 @@
+{
+ "run": "fullrun-compare",
+ "document_id": "shared-document:f23841a2-eab1-43cc-aa02-ce2c41b692d2:revision:1",
+ "sections": [
+  {
+   "id": "orient",
+   "title": "A sealed tank and a 24-hour puzzle",
+   "node_sequence": [
+    "paragraph",
+    "figure"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-8db81c2aad956244b743",
+     "segments": 2,
+     "words_per_segment": [
+      57,
+      57
+     ],
+     "total_words": 114
+    }
+   ]
+  },
+  {
+   "id": "explain",
+   "title": "The product-to-input cycle",
+   "node_sequence": [
+    "paragraph",
+    "figure",
+    "callout:misconception",
+    "figure"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-7462b6b3696539942ba6",
+     "segments": 4,
+     "words_per_segment": [
+      18,
+      26,
+      41,
+      51
+     ],
+     "total_words": 136
+    }
+   ]
+  },
+  {
+   "id": "contrast",
+   "title": "Light and dark in the plant cell",
+   "node_sequence": [
+    "compare",
+    "figure"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": []
+  },
+  {
+   "id": "confront",
+   "title": "Why the 'take turns' and 'only for animals' ideas fail",
+   "node_sequence": [
+    "callout:misconception",
+    "callout:misconception"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": []
+  },
+  {
+   "id": "check",
+   "title": "Check: correcting an explanation of gas exchange",
+   "node_sequence": [
+    "paragraph",
+    "task_anchor"
+   ],
+   "has_content": true,
+   "key_idea_count": 0,
+   "key_idea_index": null,
+   "key_idea_opens_section": false,
+   "key_idea_before_blocky": false,
+   "paragraphs": [
+    {
+     "id": "shared-node-de29f59a1337f2019e9c",
+     "segments": 1,
+     "words_per_segment": [
+      50
+     ],
+     "total_words": 50
+    }
+   ]
+  }
+ ],
+ "totals": {
+  "paragraph_nodes": 3,
+  "paragraph_over80_segments": 0,
+  "strong_spans": 6,
+  "sub_spans": 4,
+  "sup_spans": 0,
+  "unicode_subsup": 0,
+  "bare_formula_or_unit": 0,
+  "literal_fallbacks": 0,
+  "equations": 0,
+  "tables": 0,
+  "compares": 1,
+  "lists": 0,
+  "misconception_callouts": 3,
+  "misconceptions_three_part": 3,
+  "key_idea_callouts": 0,
+  "figures": 4
+ },
+ "list_items_review": [],
+ "list_summary_marker_hits": [],
+ "literal_markup_fallbacks": [],
+ "bare_formulas_or_units": [],
+ "advisory_event_codes": {
+  "composition_style_warning": {
+   "callout_missing_cautionary_cue": 1,
+   "section_exceeds_callout_limit": 1
+  },
+  "section_write_warning": {
+   "length_over_target": 2,
+   "shape_missing": 1
+  },
+  "document_qa_advisory_flags": {
+   "callout_missing_cautionary_cue": 1,
+   "factual_inaccuracy": 1,
+   "length_over_target": 1,
+   "section_exceeds_callout_limit": 1,
+   "shape_missing": 1
+  }
+ },
+ "diagnostics_in_document": [],
+ "retried_work_items": [
+  {
+   "item": "boundary:contrast->confront",
+   "attempt": "2"
+  },
+  {
+   "item": "write:check",
+   "attempt": "2"
+  }
+ ],
+ "failure_events": [
+  {
+   "seq": "10",
+   "type": "work_item_failed",
+   "stage": "section_writing",
+   "code": "database_transient",
+   "payload": {
+    "retryable": true,
+    "error_class": "provider_transport",
+    "safe_summary": "A transient database error interrupted the section.",
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "11",
+   "type": "section_writer_failure_diagnostic",
+   "stage": "section_writing",
+   "code": "database_transient",
+   "payload": {
+    "original_exception_type": "DBAPIError"
+   }
+  },
+  {
+   "seq": "18",
+   "type": "work_item_retry_queued",
+   "stage": "section_writing",
+   "code": "None",
+   "payload": {
+    "attempt": 2,
+    "from_attempt": 1,
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "19",
+   "type": "auto_retry_scheduled",
+   "stage": "section_writing",
+   "code": "None",
+   "payload": {
+    "attempts": [
+     1
+    ],
+    "error_codes": [
+     "database_transient"
+    ],
+    "work_item_ids": [
+     "2726fe51-093f-44ad-8335-f3b16e1e4d1d"
+    ]
+   }
+  },
+  {
+   "seq": "21",
+   "type": "work_item_failed",
+   "stage": "continuity_validation",
+   "code": "database_transient",
+   "payload": {
+    "retryable": true,
+    "error_class": "provider_transport",
+    "safe_summary": "A transient database error interrupted boundary validation.",
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "22",
+   "type": "boundary_failure_diagnostic",
+   "stage": "continuity_validation",
+   "code": "database_transient",
+   "payload": {
+    "original_exception_type": "DBAPIError"
+   }
+  },
+  {
+   "seq": "26",
+   "type": "work_item_retry_queued",
+   "stage": "continuity_validation",
+   "code": "None",
+   "payload": {
+    "attempt": 2,
+    "from_attempt": 1,
+    "recovery_action": "retry"
+   }
+  },
+  {
+   "seq": "27",
+   "type": "auto_retry_scheduled",
+   "stage": "continuity_validation",
+   "code": "None",
+   "payload": {
+    "attempts": [
+     1
+    ],
+    "error_codes": [
+     "database_transient"
+    ],
+    "work_item_ids": [
+     "ad2cf2ba-65ea-4026-86c4-1bb41df59a5b"
+    ]
+   }
+  }
+ ]
+}

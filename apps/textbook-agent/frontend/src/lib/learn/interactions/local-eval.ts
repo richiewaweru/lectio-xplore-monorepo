@@ -5,6 +5,11 @@
 
 import type { FeedbackSpec, ServerEvaluation } from './types';
 
+/** Prediction submissions are recorded but never receive a right/wrong result. */
+export function savePrediction(feedback: FeedbackSpec): ServerEvaluation {
+	return { outcome: 'pending-review', feedback: feedback.saved ?? 'Prediction saved.' };
+}
+
 function feedbackFor(
 	outcome: 'correct' | 'incorrect' | 'partial',
 	feedback: FeedbackSpec

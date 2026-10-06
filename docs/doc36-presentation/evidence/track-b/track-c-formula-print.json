@@ -1,0 +1,105 @@
+{
+  "document_version": 2,
+  "contract_version": "1.0.0",
+  "id": "print-doc36:doc36-track-c-formula-6908e512395d:revision:1-r1",
+  "title": "Area of a rectangle",
+  "language": "en",
+  "front_matter": {
+    "cover": false,
+    "contents": false,
+    "running_head": "Area of a rectangle",
+    "fields": [
+      "Name",
+      "Date"
+    ]
+  },
+  "metadata": {
+    "catalogue_version": "1.2.0",
+    "resource_type": "lesson",
+    "source_document": {
+      "id": "doc36:doc36-track-c-formula-6908e512395d:revision:1",
+      "revision": 1,
+      "content_hash": "e6083f2f99564bbfd4c64d5b153afe759a64c86884b4071c90e8b65c31f82ced"
+    },
+    "shared_tasks": []
+  },
+  "sections": [
+    {
+      "id": "formula-section",
+      "title": "Area of a rectangle",
+      "blocks": [
+        {
+          "id": "shared-node-240485b6ce392347255e",
+          "object": "equation",
+          "intent": "explain",
+          "position": 0,
+          "content": {
+            "label": [
+              {
+                "type": "text",
+                "value": "Area of a rectangle"
+              }
+            ],
+            "inputs": [
+              [
+                {
+                  "type": "text",
+                  "value": "length"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "width"
+                }
+              ]
+            ],
+            "condition": null,
+            "outputs": [
+              [
+                {
+                  "type": "text",
+                  "value": "area"
+                }
+              ]
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "shared-node-3147ef18c10edb684e89",
+          "object": "prose",
+          "intent": "explain",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "An 8 m by 3 m rectangle has an "
+                  },
+                  {
+                    "type": "strong",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "area"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "value": " of 8 × 3 = 24 square metres. Multiplying the length by the width gives the result in square metres."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

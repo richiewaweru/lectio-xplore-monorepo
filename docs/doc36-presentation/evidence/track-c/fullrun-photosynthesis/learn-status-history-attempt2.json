@@ -1,0 +1,22 @@
+[
+ {
+  "t": 1791228284.7824352,
+  "learn": {
+   "state": "ready",
+   "realization_id": "12d33e07-dafa-40ec-b7b6-e79e0e8d365b",
+   "output_id": "learn-out-50bf14276ef94383",
+   "open_href": "/builder/from-native-learn/learn-out-50bf14276ef94383",
+   "stale": false,
+   "legacy_ambiguous": false,
+   "error": null,
+   "shared_document_state": "ready",
+   "shared_document_run_id": "96113be7-b9a6-45b4-8516-09b719c7bd6c",
+   "shared_document_id": "shared-document:96113be7-b9a6-45b4-8516-09b719c7bd6c:revision:1",
+   "shared_document_revision": 1,
+   "shared_document_hash": "e86357d7ce88633e0776cd1f852c7841aa9b0759e4aa0921c3bd4688ce52b6a1",
+   "run_id": "8d69b9d0-7221-4992-8ff4-5f8f47d80f6a",
+   "recovery_action": null,
+   "progress": null
+  }
+ }
+]

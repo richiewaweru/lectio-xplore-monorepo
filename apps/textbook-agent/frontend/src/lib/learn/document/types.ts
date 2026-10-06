@@ -9,7 +9,10 @@ export const DOCUMENT_PRIMITIVE_KINDS = [
 	'list',
 	'figure',
 	'table',
-	'callout'
+	'callout',
+	'equation',
+	'quote',
+	'compare'
 ] as const;
 
 export type DocumentPrimitiveKind = (typeof DOCUMENT_PRIMITIVE_KINDS)[number];
@@ -28,6 +31,7 @@ export const RETAINED_INTERACTION_TYPES = [
 export type InteractionType = (typeof RETAINED_INTERACTION_TYPES)[number];
 
 export type CalloutTone = 'note' | 'warning' | 'tip' | 'important';
+export type CalloutVariant = 'key_idea' | 'note' | 'misconception';
 
 interface NodeBase {
 	id: string;
@@ -69,7 +73,37 @@ export interface CalloutNode extends NodeBase {
 	kind: 'callout';
 	tone?: CalloutTone;
 	title?: string;
+	body?: string;
+	variant?: CalloutVariant | null;
+	belief?: string | null;
+	evidence?: string | null;
+	conclusion?: string | null;
+	aside?: string | null;
+}
+
+export interface EquationNode extends NodeBase {
+	kind: 'equation';
+	label?: string | null;
+	inputs: string[];
+	condition?: string | null;
+	outputs: string[];
+}
+
+export interface QuoteNode extends NodeBase {
+	kind: 'quote';
+	text: string;
+	attribution?: string | null;
+}
+
+export interface CompareItem {
+	label?: string | null;
+	title: string;
 	body: string;
+}
+
+export interface CompareNode extends NodeBase {
+	kind: 'compare';
+	items: CompareItem[];
 }
 
 export type DocumentNode =
@@ -78,8 +112,10 @@ export type DocumentNode =
 	| ListNode
 	| FigureNode
 	| TableNode
-	| CalloutNode;
-
+	| CalloutNode
+	| EquationNode
+	| QuoteNode
+	| CompareNode;
 export interface InteractionNode extends NodeBase {
 	kind: 'interaction';
 	interaction_type: InteractionType;
@@ -89,6 +125,9 @@ export interface InteractionNode extends NodeBase {
 	assessment_mode?: string | null;
 	attempt_policy?: Record<string, unknown> | null;
 	completion?: Record<string, unknown> | string | null;
+	role?: 'predict' | 'practice' | 'check' | null;
+	display_prompt?: string | null;
+	option_notes?: Record<string, string> | null;
 	/** Full authored contract for evaluate/reload. */
 	contract?: Record<string, unknown> | null;
 }

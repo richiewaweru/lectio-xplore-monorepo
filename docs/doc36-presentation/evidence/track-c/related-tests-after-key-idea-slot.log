@@ -1,0 +1,10 @@
+........................................................................ [ 37%]
+........................................................................ [ 75%]
+...............................................                          [100%]
+============================== warnings summary ===============================
+tests/architecture/test_p16_final_sweep_guard.py::test_retired_module_cannot_be_imported[print.generation.whole_lesson.worker]
+  C:\Users\richi\.codex\worktrees\doc36-writer\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+191 passed, 1 warning in 177.65s (0:02:57)

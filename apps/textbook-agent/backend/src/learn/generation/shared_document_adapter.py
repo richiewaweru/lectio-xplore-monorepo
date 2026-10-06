@@ -16,6 +16,8 @@ from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import (
     CalloutNode as SharedCalloutNode,
+    CompareNode as SharedCompareNode,
+    EquationNode as SharedEquationNode,
 )
 from document.shared_lesson.models import (
     FigureNode as SharedFigureNode,
@@ -32,6 +34,7 @@ from document.shared_lesson.models import (
 from document.shared_lesson.models import (
     SharedLessonDocument,
     TaskAnchor,
+    QuoteNode as SharedQuoteNode,
 )
 from document.shared_lesson.models import (
     TableNode as SharedTableNode,
@@ -60,6 +63,7 @@ class SharedDocumentLearnRealization:
 
 
 _DEFAULT_FEEDBACK = {"correct": "Correct.", "incorrect": "Not yet — try again."}
+_DEFAULT_PREDICTION_FEEDBACK = "Prediction saved."
 _DEFAULT_ATTEMPT_POLICY = {
     "max_attempts": None,
     "show_feedback_after_submit": True,
@@ -313,12 +317,20 @@ def _task_contract(
             f"task {task.id!r} action has no existing Learn interaction mapping"
         )
     config = _learn_config(task, interaction_kind)
-    return {
+    contract = {
         "id": anchor.id,
         "kind": interaction_kind,
         "prompt": task.prompt,
         "config": config,
-        "feedback": dict(_DEFAULT_FEEDBACK),
+        "feedback": (
+            dict(task.feedback)
+            if task.role is not None and task.feedback
+            else (
+                {"saved": _DEFAULT_PREDICTION_FEEDBACK}
+                if task.role == "predict"
+                else dict(_DEFAULT_FEEDBACK)
+            )
+        ),
         "assessment_mode": "graded" if task.mode == "assessment" else "practice",
         "attempt_policy": dict(_DEFAULT_ATTEMPT_POLICY),
         "completion": dict(_DEFAULT_COMPLETION),
@@ -346,6 +358,19 @@ def _task_contract(
             "content_hash": source.content_hash,
         },
     }
+    # These fields are authored task presentation semantics.  They are copied
+    # through for Learn consumers while legacy tasks keep their old omission
+    # behavior through the conditional entries below.
+    if task.role is not None:
+        contract["role"] = task.role
+        contract["shared_task"]["role"] = task.role
+    if task.display_prompt is not None:
+        contract["display_prompt"] = task.display_prompt
+        contract["shared_task"]["display_prompt"] = task.display_prompt
+    if task.option_notes is not None:
+        contract["option_notes"] = dict(task.option_notes)
+        contract["shared_task"]["option_notes"] = dict(task.option_notes)
+    return contract
 
 
 def _ordinary_node(node: Any) -> dict[str, Any]:
@@ -373,11 +398,36 @@ def _ordinary_node(node: Any) -> dict[str, Any]:
             "caption": node.display.caption,
         }
     if isinstance(node, SharedCalloutNode):
-        return {
+        result = {
             **base,
             "tone": node.display.tone,
             "title": node.display.title,
-            "body": node.display.body,
+        }
+        for field in ("body", "variant", "belief", "evidence", "conclusion", "aside"):
+            value = getattr(node.display, field)
+            if value is not None:
+                result[field] = value
+        return result
+    if isinstance(node, SharedEquationNode):
+        result = {
+            **base,
+            "inputs": list(node.display.inputs),
+            "outputs": list(node.display.outputs),
+        }
+        if node.display.label is not None:
+            result["label"] = node.display.label
+        if node.display.condition is not None:
+            result["condition"] = node.display.condition
+        return result
+    if isinstance(node, SharedQuoteNode):
+        result = {**base, "text": node.display.text}
+        if node.display.attribution is not None:
+            result["attribution"] = node.display.attribution
+        return result
+    if isinstance(node, SharedCompareNode):
+        return {
+            **base,
+            "items": [item.model_dump(mode="json") for item in node.display.items],
         }
     raise SharedDocumentLearnMappingError(
         f"shared node {getattr(node, 'id', '<unknown>')!r} has no Learn primitive mapping"
@@ -449,6 +499,9 @@ def realize_shared_document_for_learn(
                     "completion": contract["completion"],
                     "contract": contract,
                 }
+                for field in ("role", "display_prompt", "option_notes"):
+                    if field in contract:
+                        learn_node[field] = contract[field]
             else:
                 learn_node = _ordinary_node(shared_node)
             nodes.append(learn_node)

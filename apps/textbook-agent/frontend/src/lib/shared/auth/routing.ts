@@ -1,8 +1,10 @@
 import { isApiError } from '$lib/api/errors';
 import type { User } from '$lib/types';
+import { dev } from '$app/environment';
 
 /** Public / learner routes that must not bounce to Google login. */
-export function isPublicLearnerPath(path: string): boolean {
+export function isPublicLearnerPath(path: string, options: { devFixture?: boolean } = {}): boolean {
+	if ((options.devFixture ?? dev) && path.startsWith('/dev/shared-lesson/')) return true;
 	if (path === '/join' || path.startsWith('/join/')) return true;
 	if (path.startsWith('/learn/home/')) return true;
 	if (path.startsWith('/learn/instances/')) return true;

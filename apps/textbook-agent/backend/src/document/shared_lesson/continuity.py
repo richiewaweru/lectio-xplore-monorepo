@@ -55,6 +55,9 @@ class ExpectedNodeShape(BaseModel):
         "figure",
         "table",
         "callout",
+        "equation",
+        "quote",
+        "compare",
         "task_anchor",
     ]
     teaching_block_id: str = Field(min_length=1)

@@ -500,11 +500,40 @@ async def submit_attempt(
             "assessment_mode": existing.assessment_mode,
             "idempotent_replay": True,
         }
+        is_prediction = contract.get("role") == "predict"
+        if is_prediction:
+            saved = contract.get("feedback")
+            saved_text = (
+                str(saved.get("saved") or "Prediction saved.")
+                if isinstance(saved, dict)
+                else "Prediction saved."
+            )
+            # Establish the neutral replay payload before re-evaluation so an
+            # old malformed release cannot fall through with stored grading.
+            payload.update(
+                {
+                    "outcome": "pending-review",
+                    "score_earned": 0.0,
+                    "score_possible": 0.0,
+                    "feedback": saved_text,
+                }
+            )
         try:
             # Refresh feedback text from release without trusting stored client fields.
             re_eval = evaluate_interaction(contract, existing.response_json)
             payload["feedback"] = re_eval.feedback
             payload["completed"] = is_complete(re_eval, contract.get("completion"))
+            if is_prediction:
+                # Older prediction attempts may have been persisted before the
+                # ungraded runtime path existed. Never expose their historical
+                # grading state to the learner on replay.
+                payload.update(
+                    {
+                        "outcome": re_eval.outcome,
+                        "score_earned": re_eval.score_earned,
+                        "score_possible": re_eval.score_possible,
+                    }
+                )
         except (InteractionConfigError, InteractionResponseError):
             pass
         return existing, payload, False

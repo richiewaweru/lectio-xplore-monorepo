@@ -37,6 +37,8 @@ from document.shared_lesson.hashing import (
     shared_lesson_content_hash,
     verify_shared_lesson_source,
 )
+from document.shared_lesson.fixtures import load_shared_lesson_fixture
+from document.shared_lesson.inline import InlineNode, parse_inline_markup
 from document.shared_lesson.media import (
     FigureExecutor,
     FigureMediaBatchResult,
@@ -55,6 +57,8 @@ from document.shared_lesson.media import (
 )
 from document.shared_lesson.models import (
     CalloutNode,
+    CompareNode,
+    EquationNode,
     FigureNode,
     HeadingNode,
     ListNode,
@@ -64,6 +68,7 @@ from document.shared_lesson.models import (
     SharedSection,
     TableNode,
     TaskAnchor,
+    QuoteNode,
     build_shared_lesson_document,
 )
 from document.shared_lesson.repository import (
@@ -126,10 +131,12 @@ __all__ = [
     "BoundarySemanticVerdict",
     "BoundaryValidationResult",
     "CalloutNode",
+    "CompareNode",
     "CompositionChoice",
     "CompositionItem",
     "CompositionPolicy",
     "CompositionValidationError",
+    "EquationNode",
     "FigureExecutor",
     "FigureMediaBatchResult",
     "FigureMediaFailure",
@@ -137,7 +144,9 @@ __all__ = [
     "FigureNode",
     "HeadingNode",
     "ListNode",
+    "InlineNode",
     "ParagraphNode",
+    "QuoteNode",
     "ReadyFigureMediaResult",
     "SectionCompositionDraft",
     "SectionCompositionPlan",
@@ -186,6 +195,7 @@ __all__ = [
     "execute_figure_work_orders",
     "fail_section_work_item",
     "load_approved_item_snapshot",
+    "load_shared_lesson_fixture",
     "load_shared_lesson_document",
     "load_verified_semantic_inputs",
     "load_verified_shared_lesson_artifact",
@@ -195,6 +205,7 @@ __all__ = [
     "retry_failed_section",
     "save_shared_lesson_document",
     "shared_lesson_content_hash",
+    "parse_inline_markup",
     "validate_and_build_composition",
     "validate_and_build_section",
     "validate_and_repair_boundary",

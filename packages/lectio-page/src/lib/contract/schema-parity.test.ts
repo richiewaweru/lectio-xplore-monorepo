@@ -17,12 +17,12 @@ const objectCatalogue = JSON.parse(
 
 describe('contract export parity', () => {
 	it('keeps page-object constants aligned with catalogues and schema', () => {
-		expect(PAGE_OBJECTS).toHaveLength(10);
+		expect(PAGE_OBJECTS).toHaveLength(13);
 		expect(listObjects().sort()).toEqual([...PAGE_OBJECTS].sort());
 		expect(Object.keys(objectCatalogue.objects).sort()).toEqual([...PAGE_OBJECTS].sort());
 
 		const blockOneOf = schema.$defs.block.oneOf as Array<{ $ref: string }>;
-		expect(blockOneOf).toHaveLength(10);
+		expect(blockOneOf).toHaveLength(13);
 
 		expect(INTENT_IDS).toHaveLength(32);
 		expect(listIntents().sort()).toEqual([...INTENT_IDS].sort());

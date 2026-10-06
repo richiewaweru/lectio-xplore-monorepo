@@ -1,0 +1,152 @@
+{
+ "key_idea": [
+  {
+   "section": "orient",
+   "title": "Two bean plants, one difference",
+   "explaining": false,
+   "intents": [
+    "activate-prior-knowledge",
+    "orient"
+   ],
+   "opens_with_key_idea_callout": false,
+   "filled": false,
+   "key_idea_words": null,
+   "first_node": "paragraph",
+   "other_key_ideas": 0
+  },
+  {
+   "section": "criteria",
+   "title": "What photosynthesis is, and what a full answer must contain",
+   "explaining": true,
+   "intents": [
+    "define"
+   ],
+   "opens_with_key_idea_callout": true,
+   "filled": true,
+   "key_idea_words": 23,
+   "first_node": "callout",
+   "other_key_ideas": 0
+  },
+  {
+   "section": "contrast",
+   "title": "Explaining the two plants — and the accounts that fail",
+   "explaining": true,
+   "intents": [
+    "diagnose-misconception",
+    "explain-cause"
+   ],
+   "opens_with_key_idea_callout": true,
+   "filled": true,
+   "key_idea_words": 24,
+   "first_node": "callout",
+   "other_key_ideas": 0
+  },
+  {
+   "section": "apply",
+   "title": "Using the idea somewhere new",
+   "explaining": false,
+   "intents": [
+    "practise-guided",
+    "practise-independent"
+   ],
+   "opens_with_key_idea_callout": false,
+   "filled": false,
+   "key_idea_words": null,
+   "first_node": "paragraph",
+   "other_key_ideas": 0
+  },
+  {
+   "section": "check",
+   "title": "Check: what explains a plant's growth",
+   "explaining": false,
+   "intents": [
+    "check-understanding"
+   ],
+   "opens_with_key_idea_callout": false,
+   "filled": false,
+   "key_idea_words": null,
+   "first_node": "paragraph",
+   "other_key_ideas": 0
+  }
+ ],
+ "task_overlap": [
+  {
+   "task": "task-orient-b2",
+   "role": "practice",
+   "display_prompt_words": 17,
+   "prompt_sentences": 1,
+   "sentences_repeating_prior_paragraph_exact": 0,
+   "fuzzy_repeats": 0,
+   "prior_paragraph_present": true,
+   "display_prompt": "Match each thing the plant relies on with how it reaches or is captured by the plant."
+  },
+  {
+   "task": "task-contrast-b1",
+   "role": "practice",
+   "display_prompt_words": 16,
+   "prompt_sentences": 1,
+   "sentences_repeating_prior_paragraph_exact": 0,
+   "fuzzy_repeats": 0,
+   "prior_paragraph_present": false,
+   "display_prompt": "Why can identical soil and identical watering not account for the difference between the two plants?"
+  },
+  {
+   "task": "task-apply-b1",
+   "role": "practice",
+   "display_prompt_words": 17,
+   "prompt_sentences": 1,
+   "sentences_repeating_prior_paragraph_exact": 0,
+   "fuzzy_repeats": 0,
+   "prior_paragraph_present": true,
+   "display_prompt": "Why does added carbon dioxide speed growth on a bright morning but not on a dull day?"
+  },
+  {
+   "task": "task-apply-b2",
+   "role": "practice",
+   "display_prompt_words": 7,
+   "prompt_sentences": 1,
+   "sentences_repeating_prior_paragraph_exact": 0,
+   "fuzzy_repeats": 0,
+   "prior_paragraph_present": true,
+   "display_prompt": "Why has the dust-covered houseplant's growth slowed?"
+  },
+  {
+   "task": "task-check-b1",
+   "role": "check",
+   "display_prompt_words": 7,
+   "prompt_sentences": 1,
+   "sentences_repeating_prior_paragraph_exact": 0,
+   "fuzzy_repeats": 0,
+   "prior_paragraph_present": true,
+   "display_prompt": "Which statement best explains the plant's growth?"
+  }
+ ],
+ "section_intents": {
+  "orient": [
+   "activate-prior-knowledge",
+   "orient"
+  ],
+  "criteria": [
+   "define"
+  ],
+  "contrast": [
+   "diagnose-misconception",
+   "explain-cause"
+  ],
+  "apply": [
+   "practise-guided",
+   "practise-independent"
+  ],
+  "check": [
+   "check-understanding"
+  ]
+ },
+ "generic_feedback": [],
+ "task_roles": {
+  "task-orient-b2": "practice",
+  "task-contrast-b1": "practice",
+  "task-apply-b1": "practice",
+  "task-apply-b2": "practice",
+  "task-check-b1": "check"
+ }
+}

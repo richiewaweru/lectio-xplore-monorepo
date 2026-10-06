@@ -13,7 +13,11 @@ import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type Page } from 'playwright';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const outDir = join(root, 'out');
+const outDir = process.env.PDF_OUT_DIR
+	? process.env.PDF_OUT_DIR.startsWith('/') || /^[A-Za-z]:[\\/]/.test(process.env.PDF_OUT_DIR)
+		? process.env.PDF_OUT_DIR
+		: join(root, process.env.PDF_OUT_DIR)
+	: join(root, 'out');
 mkdirSync(outDir, { recursive: true });
 
 const PREVIEW_PORT = Number(process.env.PDF_PREVIEW_PORT ?? 4173);
@@ -26,6 +30,9 @@ const OBJECT_SELECTORS: Record<string, string> = {
 	table: '.lectio-table',
 	figure: '.lectio-figure',
 	aside: '.lectio-aside',
+	equation: '.lectio-equation',
+	quote: '.lectio-quote',
+	compare: '.lectio-compare',
 	'worked-example': '.lectio-worked-example',
 	questions: '.lectio-question',
 	choices: '.lectio-choices',
@@ -175,6 +182,12 @@ async function writeEditionPdfs(
 	if (reviewChrome > 0) {
 		fail('Print route must not include review chrome');
 	}
+	// Chromium's PDF engine supplies reliable pageNumber/totalPages tokens;
+	// remove the screen-only fixed footer before emitting the PDF.
+	await page.locator('.lectio-page-footer').evaluateAll((nodes) => nodes.forEach((node) => node.remove()));
+	const runningHeadText = await page.locator('.lectio-running-head').innerText();
+	await page.locator('.lectio-running-head').evaluateAll((nodes) => nodes.forEach((node) => node.remove()));
+	const safeRunningHead = runningHeadText.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 	const targets =
 		edition === 'teacher'
@@ -193,7 +206,11 @@ async function writeEditionPdfs(
 			path: outPath,
 			format: 'A4',
 			printBackground: target.background,
-			preferCSSPageSize: true
+			preferCSSPageSize: true,
+			displayHeaderFooter: true,
+			headerTemplate: '<span></span>',
+			footerTemplate:
+				`<div style="width:100%;padding:0 16mm;box-sizing:border-box;"><div style="display:flex;justify-content:space-between;border-top:1px solid #767676;padding-top:2pt;color:#767676;font:9pt Atkinson Hyperlegible,sans-serif;"><span>${safeRunningHead}</span><span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div></div>`
 		});
 
 		if (!existsSync(outPath) || statSync(outPath).size === 0) {
@@ -224,8 +241,22 @@ async function writeEditionPdfs(
 // answer_key or every object type, so it skips that coverage assertion.
 const FIXTURES: Array<{ id: string; requireFullCoverage: boolean; editions: Array<'teacher' | 'student'> }> = [
 	{ id: 'photosynthesis-ref', requireFullCoverage: true, editions: ['teacher', 'student'] },
-	{ id: 'margin-stress', requireFullCoverage: false, editions: ['teacher'] }
+	{ id: 'margin-stress', requireFullCoverage: false, editions: ['teacher'] },
+	{ id: 'shared-lesson-legacy', requireFullCoverage: false, editions: ['student'] },
+	{ id: 'shared-lesson-golden', requireFullCoverage: false, editions: ['student', 'teacher'] },
+	{ id: 'oversized-stress', requireFullCoverage: true, editions: ['student', 'teacher'] },
+	{ id: 'shared-lesson-overlong', requireFullCoverage: false, editions: ['student', 'teacher'] }
+	,
+	{ id: 'track-c-photosynthesis-print', requireFullCoverage: false, editions: ['student'] },
+	{ id: 'track-c-formula-print', requireFullCoverage: false, editions: ['student'] },
+	{ id: 'track-c-comparison-print', requireFullCoverage: false, editions: ['student'] },
+	{ id: 'phase5-photosynthesis-print', requireFullCoverage: false, editions: ['student', 'teacher'] }
 ];
+
+const selectedFixtureIds = process.env.PDF_FIXTURES
+	?.split(',')
+	.map((id) => id.trim())
+	.filter(Boolean);
 
 async function main(): Promise<void> {
 	// Fail fast before the expensive build if Chromium is missing.
@@ -243,7 +274,14 @@ async function main(): Promise<void> {
 		const page = await browser.newPage();
 		const report: Record<string, unknown> = {};
 
-		for (const fixture of FIXTURES) {
+		const fixtures = selectedFixtureIds
+			? FIXTURES.filter((fixture) => selectedFixtureIds.includes(fixture.id))
+			: FIXTURES;
+		if (fixtures.length === 0) {
+			fail(`No configured fixtures match PDF_FIXTURES=${process.env.PDF_FIXTURES}`);
+		}
+
+		for (const fixture of fixtures) {
 			for (const edition of fixture.editions) {
 				const result = await writeEditionPdfs(page, fixture.id, edition, fixture.requireFullCoverage);
 				report[`${fixture.id}_${edition}_pages`] = result.pages;

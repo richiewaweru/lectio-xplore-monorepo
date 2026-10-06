@@ -1,0 +1,101 @@
+
+> frontend@1.0.0-beta.1 test C:\Users\richi\.codex\worktrees\e983\lectio\apps\textbook-agent\frontend
+> vitest run "--maxWorkers=2"
+
+
+ RUN  v3.2.7 C:/Users/richi/.codex/worktrees/e983/lectio/apps/textbook-agent/frontend
+
+ ✓ src/lib/no-vendor-lectio-imports.test.ts (1 test) 283ms
+ ✓ src/routes/units/page.test.ts (8 tests) 1436ms
+   ✓ /units > loads only v2 units and does not call legacy wrappers  710ms
+ ✓ src/routes/units/[id]/page.test.ts (19 tests) 3083ms
+   ✓ /units/[id] > selecting a lesson does not fetch shape and refreshes durable preparation status  338ms
+   ✓ /units/[id] > shows Open Lesson and Prepare Lesson without requiring mount-time shape fetch  420ms
+ ✓ src/routes/units/[id]/lessons/[lessonId]/plan/page.test.ts (8 tests) 1345ms
+   ✓ Units Teaching Plan review > renders visible content and submits the exact pending hash before showing verified approval  913ms
+ ✓ src/routes/units/[id]/lessons/[lessonId]/learn/page.test.ts (6 tests) 794ms
+   ✓ Unit Learn workspace canonical actions > does not offer Create while preparation is not approved despite a ready worker stage  567ms
+ ✓ src/routes/units/[id]/lessons/[lessonId]/print/page.test.ts (3 tests) 615ms
+   ✓ Unit Print workspace document and realization errors > keeps a ready realization ready when its document preview fetch fails  511ms
+ ✓ src/routes/page.test.ts (1 test) 834ms
+   ✓ root route session resume > redirects a resumed authenticated session away from the root route  827ms
+ ✓ src/lib/curriculum/units/components/ResourceComposerPanel.test.ts (2 tests) 874ms
+   ✓ ResourceComposerPanel > offers all projections and creates from approved selections  796ms
+ ✓ src/lib/curriculum/lessons/LessonProgressPanel.test.ts (2 tests) 639ms
+   ✓ LessonProgressPanel > shows steps, the active label with counts, and the reassurance note  623ms
+ ✓ src/lib/curriculum/units/components/LessonShapePanel.test.ts (2 tests) 831ms
+   ✓ LessonShapePanel > shows canonical and declared variants with exact explanations and blocking issues  615ms
+ ✓ src/lib/curriculum/units/components/TeachingSchedulePanel.test.ts (2 tests) 1552ms
+   ✓ TeachingSchedulePanel > moves only a period boundary through an accessible control and preserves path order  1344ms
+ ✓ src/lib/curriculum/units/components/LessonResultsPanel.test.ts (1 test) 661ms
+   ✓ LessonResultsPanel > records only aggregate option counts and labels summaries advisory  656ms
+ ✓ src/routes/onboarding/page.test.ts (1 test) 595ms
+   ✓ onboarding recovery mode > switches into recovery mode when a profile exists for a stale has_profile user  593ms
+ ✓ src/routes/settings/page.test.ts (2 tests) 884ms
+   ✓ /settings > renders the existing profile summary and edit entry point  662ms
+ ✓ src/lib/curriculum/lessons/TeachingPlanFlags.test.ts (2 tests) 521ms
+   ✓ TeachingPlanFlags > lists each flag with its location and suggestion as a warning panel  513ms
+ ✓ src/lib/components/ProfileSetup.test.ts (2 tests) 710ms
+   ✓ ProfileSetup > renders teacher-facing sections and submits the default teacher profile shape  588ms
+ ✓ src/routes/units/[id]/resources/[compositionId]/page.test.ts (2 tests) 449ms
+   ✓ /units/[id]/resources/[compositionId] > loads a LectioDocument v2 projection into the page engine  417ms
+ ✓ src/lib/curriculum/lessons/LessonIssuesPanel.test.ts (2 tests) 600ms
+   ✓ LessonIssuesPanel > shows advisory and blocking issues, including non-repairable ones  418ms
+ ✓ src/lib/curriculum/lessons/TeachingPlanReview.test.ts (3 tests) 589ms
+   ✓ TeachingPlanReview > shows pedagogical content apart from review metadata  457ms
+ ✓ src/routes/builder/[id]/page.test.ts (3 tests) 408ms
+ ✓ src/routes/login/page.test.ts (1 test) 139ms
+ ✓ src/lib/components/workspace/NewLessonSplitButton.test.ts (1 test) 378ms
+   ✓ NewLessonSplitButton native destination > exposes one native lesson destination without legacy menu actions  375ms
+ ✓ src/lib/curriculum/lessons/QualityNotesPanel.test.ts (3 tests) 185ms
+ ✓ src/routes/lessons/page.test.ts (1 test) 50ms
+ ✓ src/routes/dashboard/page.test.ts (1 test) 45ms
+ ✓ src/lib/api/units.test.ts (9 tests) 71ms
+ ✓ src/lib/shared/stores/auth.test.ts (3 tests) 16ms
+ ✓ src/lib/learn/authoring/builder/api/pack-items.test.ts (3 tests) 21ms
+ ✓ src/lib/print/generation/live-stream.test.ts (10 tests) 25ms
+ ✓ src/lib/curriculum/lessons/serialized-poll.test.ts (9 tests) 46ms
+ ✓ src/lib/print/studio/v3-booklet.test.ts (8 tests) 15ms
+ ✓ src/lib/print/generation/viewer-state.test.ts (9 tests) 30ms
+ ✓ src/lib/learn/document/document-state.test.ts (6 tests) 66ms
+ ✓ src/lib/shared/auth/google.test.ts (3 tests) 27ms
+ ✓ src/lib/api/shared-documents.test.ts (3 tests) 19ms
+ ✓ src/lib/api/errors.test.ts (2 tests) 15ms
+ ✓ src/lib/curriculum/lessons/lesson-context.test.ts (20 tests) 43ms
+ ✓ src/lib/learn/student/api/learner-fetch.test.ts (3 tests) 20ms
+ ✓ src/lib/api/capabilities.test.ts (1 test) 21ms
+ ✓ src/lib/learn/student/student-shell.test.ts (1 test) 6ms
+ ✓ src/lib/learn/document/inline.test.ts (8 tests) 10ms
+ ✓ src/lib/shared/auth/routing.test.ts (8 tests) 17ms
+ ✓ src/lib/print/studio/v3-document.test.ts (2 tests) 9ms
+ ✓ src/routes/workspace-shell-styles.test.ts (4 tests) 14ms
+ ✓ src/lib/api/lesson-planning.test.ts (1 test) 15ms
+ ✓ src/lib/print/studio/v3-pack-to-lectio-document.test.ts (8 tests) 25ms
+ ✓ src/lib/curriculum/lessons/lesson-progress.test.ts (3 tests) 16ms
+ ✓ src/lib/api/config.test.ts (10 tests) 21ms
+ ✓ src/lib/print/studio/v3-print-canvas.test.ts (5 tests) 15ms
+ ✓ src/routes/studio/print/[id]/page.test.ts (2 tests) 7ms
+ ✓ src/lib/print/studio/v3-canvas.test.ts (6 tests) 17ms
+ ✓ src/lib/print/generation/generation-poller.test.ts (2 tests) 17ms
+ ✓ src/lib/print/stores/v3-studio.svelte.test.ts (1 test) 44ms
+ ✓ src/lib/curriculum/lessons/review-draft.test.ts (10 tests) 29ms
+ ✓ src/lib/curriculum/lessons/plan-status.test.ts (9 tests) 15ms
+ ✓ src/lib/curriculum/units/path-generation.test.ts (3 tests) 13ms
+ ✓ src/lib/print/studio/v3-stream-state.test.ts (5 tests) 16ms
+ ✓ src/lib/curriculum/lessons/teaching-plan-review.test.ts (3 tests) 16ms
+ ✓ src/lib/print/components/studio/LectioPageDocumentView.test.ts (1 test) 8ms
+ ✓ src/lib/parse-section.test.ts (2 tests) 20ms
+ ✓ src/lib/api/client.test.ts (2 tests) 15ms
+ ✓ src/lib/api/profile.test.ts (1 test) 20ms
+ ✓ src/lib/curriculum/units/unit-workspace.reliability.test.ts (6 tests) 21ms
+ ✓ src/lib/print/generation/error-messages.test.ts (6 tests) 14ms
+ ✓ src/lib/shared/settings/flags.test.ts (1 test) 10ms
+ ✓ src/lib/print/studio/document-version.test.ts (3 tests) 11ms
+
+ Test Files  66 passed (66)
+      Tests  281 passed (281)
+   Start at  13:45:18
+   Duration  191.30s (transform 12.24s, setup 0ms, collect 57.55s, tests 19.37s, environment 258.13s, prepare 20.36s)
+
+
+EXIT_CODE=0

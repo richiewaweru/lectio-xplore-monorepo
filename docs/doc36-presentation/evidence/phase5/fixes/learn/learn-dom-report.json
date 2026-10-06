@@ -1,0 +1,820 @@
+{
+ "phase5-photosynthesis@1280": {
+  "scrollW": 1280,
+  "innerW": 1280,
+  "hscroll": false,
+  "bad": [],
+  "attrBad": [],
+  "literal": {
+   "bold": false,
+   "tilde": false,
+   "caret": false
+  },
+  "counts": {
+   "canvasNodes": 18,
+   "taskHeaders": 5,
+   "ol": 1,
+   "strong": 15,
+   "sub": 0,
+   "sup": 0,
+   "paragraphsBlocksSplit": [
+    [
+     "Two bean plants kept the same way except for light grew very differently in two weeks. These two plants came from the same batch and stood in identical pots of the same soil. Both were watered the same amount on the same days. One stood on a sunny windowsill; its twin stood in a dark cupboard.",
+     "After two weeks, the windowsill plant was taller, greener and carrying new leaves. The cupboard plant was pale, short and had added no new leaves. Both plants received the same water and the same soil. What did the windowsill plant use to build its new stem and leaves?"
+    ],
+    [
+     "Photosynthesis is the process in which light energy captured in the leaves combines water with carbon dioxide to make sugar, the plant's food, and to release oxygen. The water is taken in by the roots and carried up the stem; carbon dioxide enters the leaves from the air. This sugar is the plant's food, used for growth and as an energy source.",
+     "A complete explanation of a plant's growth must meet a clear standard. It must name light, water and carbon dioxide as the three inputs, place the combining in the leaves, name the product as food, a sugar, used for growth, and name the process photosynthesis.",
+     "An explanation that credits the soil with supplying food, or with supplying the material of new growth, does not meet the standard. The soil supplies water and dissolved minerals; the sugar the plant uses for growth is made inside the leaf, from water and carbon dioxide, using light energy.",
+     "The bean-plant case from the opening is still waiting to be explained."
+    ],
+    [
+     "The windowsill plant's leaves captured light energy. Inside those leaves, water drawn from the roots was combined with carbon dioxide from the air, and the result was sugar. That sugar was then used to build the taller stem, the greener leaves and the new growth that appeared.",
+     "The cupboard plant had the same soil and the same water, and carbon dioxide was present in the air around it. Without light, its leaves could not combine water and carbon dioxide, so no sugar was made and no new growth was built.",
+     "Carbon dioxide is not a comfort condition: its atoms become part of the sugar. Light is not one either: it supplies the energy that drives the combining, and that energy is stored in the sugar. If light and carbon dioxide were only comfort conditions, the cupboard plant, which had soil, water and air, would have grown as well."
+    ],
+    [
+     "You have already worked out how the inputs become sugar and growth; now use that reasoning in two new situations. The first situation gives you prompts to guide your thinking. The second asks you to produce the explanation without prompts."
+    ],
+    [
+     "Use the same reasoning you built earlier. Trace each input from where it enters the plant to where it is used in the leaves. Consider what else the leaves need in order to use the carbon dioxide and water. Then connect that leaf action to the growth you observe."
+    ],
+    [
+     "Now apply the same reasoning without prompts. The next case changes only the light reaching the leaves. Your explanation should trace that change through the chain of inputs, leaf action, and growth."
+    ],
+    [
+     "One question follows. Read it carefully and choose the single explanation you think is best. Answer on your own, without looking back at earlier sections, and give the reason you actually believe rather than the one you think is wanted."
+    ]
+   ]
+  },
+  "sectionHeaders": [
+   "PART 1 OF 5 Two bean plants, one difference",
+   "PART 2 OF 5 What photosynthesis is, and what a full answer must contain",
+   "PART 3 OF 5 Explaining the two plants — and the accounts that fail",
+   "PART 4 OF 5 Using the idea somewhere new",
+   "PART 5 OF 5 Check: what explains a plant's growth"
+  ],
+  "tabs": [
+   "All sections",
+   "1 Two bean plants, one difference",
+   "2 What photosynthesis is, and what a full answer must contain",
+   "3 Explaining the two plants — and the accounts that fail",
+   "4 Using the idea somewhere new",
+   "5 Check: what explains a plant's growth"
+  ],
+  "fontPx": "18px",
+  "blocks": [
+   {
+    "kind": "paragraph",
+    "text": "Two bean plants kept the same way except for light grew very differently in two weeks. These two plants came from the same batch and stood in identical pots of the same soil. Both were watered the same amount on the same days. One stood on a sunny windowsill; its twin stood in a dark cupboard.\n\nAfter two weeks, the windowsill plant was taller, greener and carrying new leaves. The cupboard plant was pale, short and had added no new leaves. Both plants received the same water and the same soil. What did the windowsill plant use to build its new stem and leaves?"
+   },
+   {
+    "kind": "list",
+    "text": "Water is taken in by the roots from the soil and carried up the stem to the leaves.\nCarbon dioxide is taken in from the air through the leaves.\nLight is captured by the leaves.\nSoil supplies only water and minerals; it never supplies food."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 1\nPRACTICE\n\nMatch each thing the plant relies on with how it reaches or is captured by the plant.\n\nwater\ncarbon dioxide\nlight\ntaken in by the roots from the soil and carried up the stem to the leaves\ntaken in from the air through the leaves\ncaptured by the leaves\nCheck my answer"
+   },
+   {
+    "kind": "callout",
+    "text": "KEY IDEA\n\nPhotosynthesis is the process in which leaves use light energy to combine water and carbon dioxide into sugar, the plant's food, releasing oxygen."
+   },
+   {
+    "kind": "paragraph",
+    "text": "Photosynthesis is the process in which light energy captured in the leaves combines water with carbon dioxide to make sugar, the plant's food, and to release oxygen. The water is taken in by the roots and carried up the stem; carbon dioxide enters the leaves from the air. This sugar is the plant's food, used for growth and as an energy source.\n\nA complete explanation of a plant's growth must meet a clear standard. It must name light, water and carbon dioxide as the three inputs, place the combining in the leaves, name the product as food, a sugar, used for growth, and name the process photosynthesis.\n\nAn explanation that credits the soil with supplying food, or with supplying the material of new growth, does not meet the standard. The soil supplies water and dissolved minerals; the sugar the plant uses for growth is made inside the leaf, from water and carbon dioxide, using light energy.\n\nThe bean-plant case from the opening is still waiting to be explained."
+   },
+   {
+    "kind": "figure",
+    "text": ""
+   },
+   {
+    "kind": "callout",
+    "text": "KEY IDEA\n\nSoil supplies water and minerals only; the plant builds new growth from sugar made in its leaves, using carbon dioxide, water and light energy."
+   },
+   {
+    "kind": "callout",
+    "text": "THE SOIL ACCOUNT\nTHE BELIEF\n\n“The new stem and leaves were built from material the soil supplied; water and light only helped the plant along.”\n\nTHE EVIDENCE\n\nBoth plants stood in the same soil and were watered exactly alike, yet only the windowsill plant produced new growth. If soil material built the new growth, the cupboard plant would have grown too.\n\nSO\n\nSoil supplies water and minerals and nothing else. It does not supply food, and it does not supply the material of new growth."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 2\nPRACTICE\n\nWhy can identical soil and identical watering not account for the difference between the two plants?\n\nAnswer\nCheck my answer"
+   },
+   {
+    "kind": "paragraph",
+    "text": "The windowsill plant's leaves captured light energy. Inside those leaves, water drawn from the roots was combined with carbon dioxide from the air, and the result was sugar. That sugar was then used to build the taller stem, the greener leaves and the new growth that appeared.\n\nThe cupboard plant had the same soil and the same water, and carbon dioxide was present in the air around it. Without light, its leaves could not combine water and carbon dioxide, so no sugar was made and no new growth was built.\n\nCarbon dioxide is not a comfort condition: its atoms become part of the sugar. Light is not one either: it supplies the energy that drives the combining, and that energy is stored in the sugar. If light and carbon dioxide were only comfort conditions, the cupboard plant, which had soil, water and air, would have grown as well."
+   },
+   {
+    "kind": "callout",
+    "text": "THE OXYGEN-INTAKE ACCOUNT\nTHE BELIEF\n\n“The plant breathes in oxygen through its leaves and uses that oxygen to make its food.”\n\nTHE EVIDENCE\n\nIn bright light, the leaves of a leafy plant give out oxygen. The air around such a plant therefore gains oxygen rather than losing it, which is the opposite of what the account predicts.\n\nSO\n\nWhen water and carbon dioxide are combined into sugar in the leaves, oxygen is produced and released into the air. Making food gives oxygen out, not in."
+   },
+   {
+    "kind": "paragraph",
+    "text": "You have already worked out how the inputs become sugar and growth; now use that reasoning in two new situations. The first situation gives you prompts to guide your thinking. The second asks you to produce the explanation without prompts."
+   },
+   {
+    "kind": "paragraph",
+    "text": "Use the same reasoning you built earlier. Trace each input from where it enters the plant to where it is used in the leaves. Consider what else the leaves need in order to use the carbon dioxide and water. Then connect that leaf action to the growth you observe."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 3\nPRACTICE\n\nWhy does added carbon dioxide speed growth on a bright morning but not on a dull day?\n\nAnswer\nCheck my answer"
+   },
+   {
+    "kind": "paragraph",
+    "text": "Now apply the same reasoning without prompts. The next case changes only the light reaching the leaves. Your explanation should trace that change through the chain of inputs, leaf action, and growth."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 4\nPRACTICE\n\nWhy has the dust-covered houseplant's growth slowed?\n\nAnswer\nCheck my answer"
+   },
+   {
+    "kind": "paragraph",
+    "text": "One question follows. Read it carefully and choose the single explanation you think is best. Answer on your own, without looking back at earlier sections, and give the reason you actually believe rather than the one you think is wanted."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 5\nCHECK — CHOOSE ONE\n\nWhich statement best explains the plant's growth?\n\nA\nThe leaves use light to combine water and carbon dioxide into food, and that food supplies the material for new growth.\nB\nThe water provides the material for new growth, while light merely helps the plant use that water.\nC\nThe plant takes in oxygen to build new tissue, so oxygen is the source of the added mass.\nD\nThe plant needs light only so it can feel comfortable, and water alone provides all the material for growth.\nCheck my answer"
+   }
+  ]
+ },
+ "phase5-photosynthesis@390": {
+  "scrollW": 390,
+  "innerW": 390,
+  "hscroll": false,
+  "bad": [],
+  "attrBad": [],
+  "literal": {
+   "bold": false,
+   "tilde": false,
+   "caret": false
+  },
+  "counts": {
+   "canvasNodes": 18,
+   "taskHeaders": 5,
+   "ol": 1,
+   "strong": 15,
+   "sub": 0,
+   "sup": 0,
+   "paragraphsBlocksSplit": [
+    [
+     "Two bean plants kept the same way except for light grew very differently in two weeks. These two plants came from the same batch and stood in identical pots of the same soil. Both were watered the same amount on the same days. One stood on a sunny windowsill; its twin stood in a dark cupboard.",
+     "After two weeks, the windowsill plant was taller, greener and carrying new leaves. The cupboard plant was pale, short and had added no new leaves. Both plants received the same water and the same soil. What did the windowsill plant use to build its new stem and leaves?"
+    ],
+    [
+     "Photosynthesis is the process in which light energy captured in the leaves combines water with carbon dioxide to make sugar, the plant's food, and to release oxygen. The water is taken in by the roots and carried up the stem; carbon dioxide enters the leaves from the air. This sugar is the plant's food, used for growth and as an energy source.",
+     "A complete explanation of a plant's growth must meet a clear standard. It must name light, water and carbon dioxide as the three inputs, place the combining in the leaves, name the product as food, a sugar, used for growth, and name the process photosynthesis.",
+     "An explanation that credits the soil with supplying food, or with supplying the material of new growth, does not meet the standard. The soil supplies water and dissolved minerals; the sugar the plant uses for growth is made inside the leaf, from water and carbon dioxide, using light energy.",
+     "The bean-plant case from the opening is still waiting to be explained."
+    ],
+    [
+     "The windowsill plant's leaves captured light energy. Inside those leaves, water drawn from the roots was combined with carbon dioxide from the air, and the result was sugar. That sugar was then used to build the taller stem, the greener leaves and the new growth that appeared.",
+     "The cupboard plant had the same soil and the same water, and carbon dioxide was present in the air around it. Without light, its leaves could not combine water and carbon dioxide, so no sugar was made and no new growth was built.",
+     "Carbon dioxide is not a comfort condition: its atoms become part of the sugar. Light is not one either: it supplies the energy that drives the combining, and that energy is stored in the sugar. If light and carbon dioxide were only comfort conditions, the cupboard plant, which had soil, water and air, would have grown as well."
+    ],
+    [
+     "You have already worked out how the inputs become sugar and growth; now use that reasoning in two new situations. The first situation gives you prompts to guide your thinking. The second asks you to produce the explanation without prompts."
+    ],
+    [
+     "Use the same reasoning you built earlier. Trace each input from where it enters the plant to where it is used in the leaves. Consider what else the leaves need in order to use the carbon dioxide and water. Then connect that leaf action to the growth you observe."
+    ],
+    [
+     "Now apply the same reasoning without prompts. The next case changes only the light reaching the leaves. Your explanation should trace that change through the chain of inputs, leaf action, and growth."
+    ],
+    [
+     "One question follows. Read it carefully and choose the single explanation you think is best. Answer on your own, without looking back at earlier sections, and give the reason you actually believe rather than the one you think is wanted."
+    ]
+   ]
+  },
+  "sectionHeaders": [
+   "PART 1 OF 5 Two bean plants, one difference",
+   "PART 2 OF 5 What photosynthesis is, and what a full answer must contain",
+   "PART 3 OF 5 Explaining the two plants — and the accounts that fail",
+   "PART 4 OF 5 Using the idea somewhere new",
+   "PART 5 OF 5 Check: what explains a plant's growth"
+  ],
+  "tabs": [
+   "All sections",
+   "1 Two bean plants, one difference",
+   "2 What photosynthesis is, and what a full answer must contain",
+   "3 Explaining the two plants — and the accounts that fail",
+   "4 Using the idea somewhere new",
+   "5 Check: what explains a plant's growth"
+  ],
+  "fontPx": "18px",
+  "blocks": [
+   {
+    "kind": "paragraph",
+    "text": "Two bean plants kept the same way except for light grew very differently in two weeks. These two plants came from the same batch and stood in identical pots of the same soil. Both were watered the same amount on the same days. One stood on a sunny windowsill; its twin stood in a dark cupboard.\n\nAfter two weeks, the windowsill plant was taller, greener and carrying new leaves. The cupboard plant was pale, short and had added no new leaves. Both plants received the same water and the same soil. What did the windowsill plant use to build its new stem and leaves?"
+   },
+   {
+    "kind": "list",
+    "text": "Water is taken in by the roots from the soil and carried up the stem to the leaves.\nCarbon dioxide is taken in from the air through the leaves.\nLight is captured by the leaves.\nSoil supplies only water and minerals; it never supplies food."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 1\nPRACTICE\n\nMatch each thing the plant relies on with how it reaches or is captured by the plant.\n\nwater\ncarbon dioxide\nlight\ntaken in by the roots from the soil and carried up the stem to the leaves\ntaken in from the air through the leaves\ncaptured by the leaves\nCheck my answer"
+   },
+   {
+    "kind": "callout",
+    "text": "KEY IDEA\n\nPhotosynthesis is the process in which leaves use light energy to combine water and carbon dioxide into sugar, the plant's food, releasing oxygen."
+   },
+   {
+    "kind": "paragraph",
+    "text": "Photosynthesis is the process in which light energy captured in the leaves combines water with carbon dioxide to make sugar, the plant's food, and to release oxygen. The water is taken in by the roots and carried up the stem; carbon dioxide enters the leaves from the air. This sugar is the plant's food, used for growth and as an energy source.\n\nA complete explanation of a plant's growth must meet a clear standard. It must name light, water and carbon dioxide as the three inputs, place the combining in the leaves, name the product as food, a sugar, used for growth, and name the process photosynthesis.\n\nAn explanation that credits the soil with supplying food, or with supplying the material of new growth, does not meet the standard. The soil supplies water and dissolved minerals; the sugar the plant uses for growth is made inside the leaf, from water and carbon dioxide, using light energy.\n\nThe bean-plant case from the opening is still waiting to be explained."
+   },
+   {
+    "kind": "figure",
+    "text": ""
+   },
+   {
+    "kind": "callout",
+    "text": "KEY IDEA\n\nSoil supplies water and minerals only; the plant builds new growth from sugar made in its leaves, using carbon dioxide, water and light energy."
+   },
+   {
+    "kind": "callout",
+    "text": "THE SOIL ACCOUNT\nTHE BELIEF\n\n“The new stem and leaves were built from material the soil supplied; water and light only helped the plant along.”\n\nTHE EVIDENCE\n\nBoth plants stood in the same soil and were watered exactly alike, yet only the windowsill plant produced new growth. If soil material built the new growth, the cupboard plant would have grown too.\n\nSO\n\nSoil supplies water and minerals and nothing else. It does not supply food, and it does not supply the material of new growth."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 2\nPRACTICE\n\nWhy can identical soil and identical watering not account for the difference between the two plants?\n\nAnswer\nCheck my answer"
+   },
+   {
+    "kind": "paragraph",
+    "text": "The windowsill plant's leaves captured light energy. Inside those leaves, water drawn from the roots was combined with carbon dioxide from the air, and the result was sugar. That sugar was then used to build the taller stem, the greener leaves and the new growth that appeared.\n\nThe cupboard plant had the same soil and the same water, and carbon dioxide was present in the air around it. Without light, its leaves could not combine water and carbon dioxide, so no sugar was made and no new growth was built.\n\nCarbon dioxide is not a comfort condition: its atoms become part of the sugar. Light is not one either: it supplies the energy that drives the combining, and that energy is stored in the sugar. If light and carbon dioxide were only comfort conditions, the cupboard plant, which had soil, water and air, would have grown as well."
+   },
+   {
+    "kind": "callout",
+    "text": "THE OXYGEN-INTAKE ACCOUNT\nTHE BELIEF\n\n“The plant breathes in oxygen through its leaves and uses that oxygen to make its food.”\n\nTHE EVIDENCE\n\nIn bright light, the leaves of a leafy plant give out oxygen. The air around such a plant therefore gains oxygen rather than losing it, which is the opposite of what the account predicts.\n\nSO\n\nWhen water and carbon dioxide are combined into sugar in the leaves, oxygen is produced and released into the air. Making food gives oxygen out, not in."
+   },
+   {
+    "kind": "paragraph",
+    "text": "You have already worked out how the inputs become sugar and growth; now use that reasoning in two new situations. The first situation gives you prompts to guide your thinking. The second asks you to produce the explanation without prompts."
+   },
+   {
+    "kind": "paragraph",
+    "text": "Use the same reasoning you built earlier. Trace each input from where it enters the plant to where it is used in the leaves. Consider what else the leaves need in order to use the carbon dioxide and water. Then connect that leaf action to the growth you observe."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 3\nPRACTICE\n\nWhy does added carbon dioxide speed growth on a bright morning but not on a dull day?\n\nAnswer\nCheck my answer"
+   },
+   {
+    "kind": "paragraph",
+    "text": "Now apply the same reasoning without prompts. The next case changes only the light reaching the leaves. Your explanation should trace that change through the chain of inputs, leaf action, and growth."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 4\nPRACTICE\n\nWhy has the dust-covered houseplant's growth slowed?\n\nAnswer\nCheck my answer"
+   },
+   {
+    "kind": "paragraph",
+    "text": "One question follows. Read it carefully and choose the single explanation you think is best. Answer on your own, without looking back at earlier sections, and give the reason you actually believe rather than the one you think is wanted."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 5\nCHECK — CHOOSE ONE\n\nWhich statement best explains the plant's growth?\n\nA\nThe leaves use light to combine water and carbon dioxide into food, and that food supplies the material for new growth.\nB\nThe water provides the material for new growth, while light merely helps the plant use that water.\nC\nThe plant takes in oxygen to build new tissue, so oxygen is the source of the added mass.\nD\nThe plant needs light only so it can feel comfortable, and water alone provides all the material for growth.\nCheck my answer"
+   }
+  ]
+ },
+ "legacy@1280": {
+  "scrollW": 1280,
+  "innerW": 1280,
+  "hscroll": false,
+  "bad": [],
+  "attrBad": [],
+  "literal": {
+   "bold": false,
+   "tilde": false,
+   "caret": false
+  },
+  "counts": {
+   "canvasNodes": 10,
+   "taskHeaders": 2,
+   "ol": 2,
+   "strong": 2,
+   "sub": 0,
+   "sup": 0,
+   "paragraphsBlocksSplit": [
+    [
+     "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits.",
+     "One pot stands on a sunny windowsill. Its seedling is green, and its stem leans toward the window. The other pot is shut inside a dark cupboard. Its seedling has lost its green colour and has stopped growing.",
+     "Same soil, same water, same room, same temperature — so the two seedlings are not being treated differently by anything except where they stand. And a plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question: where does the energy a plant uses to grow actually come from?"
+    ],
+    [
+     "You already know two things that matter here. Plants are living things that need light and water to grow, and every living thing needs energy to stay alive. A seedling that pushes up a stem and unfolds new leaves is doing something that takes energy.",
+     "Where that growing energy comes from is exactly what people disagree about, and there are two main answers in play. One answer: the energy a plant grows on is taken in from the soil, together with the water the roots draw up. The other answer: the energy a plant grows on is captured from the light, by the plant's leaves.",
+     "Neither answer is settled yet. Take whichever one you think is more likely and hold it as a prediction rather than a fact — choosing an answer does not make it correct, and evidence, not preference, is what settles a question like this. Keep your prediction in mind, because the explanation ahead is what will decide between the two."
+    ],
+    [
+     "The energy a plant grows on is captured from light, not taken in from the soil. The green parts of a plant — mostly its leaves — absorb light energy, and the leaf uses that energy to make the plant's own food: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air. That sugar is the plant's food, and the energy stored inside it is the energy the plant spends on building new leaves, stem and roots. So the growing energy arrives as light and is stored in food the plant makes for itself, and nothing the soil supplies can stand in for it. This is why the plant kept in the dark cupboard could not keep growing, even though it had exactly the same soil and the same water as the plant on the windowsill: the soil could go on supplying water, but it could not supply the light that was missing."
+    ],
+    [
+     "Soil does a real job for the plant. It holds the plant firmly in place and it holds water and dissolved minerals, which the roots take in through their surfaces and which then travel up to the leaves. Minerals are raw materials that a plant uses to build parts of its own body; they are not food, and they carry no usable energy. So a plant standing in rich soil with plenty of water but kept in the dark cannot make its own food and cannot grow, however well watered it is."
+    ],
+    [
+     "A second belief sits alongside the first: that light only keeps a plant warm or makes it look healthy, and that the energy for growth comes from the water and the minerals instead. The two pots defeat this as well. They stood in the same room at the same temperature — the cupboard was not cold — so the cupboard plant lacked no warmth. If coolness had been the only thing missing, a warm dark cupboard would have let it grow normally, and it did not grow. Light, then, is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food. This is a separate error from the soil belief: it is about what light is doing, not about what the soil supplies."
+    ],
+    [
+     "A student says: “Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.” That claim is wrong. The soil supplies water and dissolved minerals and nothing more; the food a plant lives on is made in its own leaves. So the strong move here is not to repeat that account but to point to evidence the claim cannot explain. Read the observations and choose the one that best challenges the soil idea."
+    ]
+   ]
+  },
+  "sectionHeaders": [
+   "PART 1 OF 4 Two Pots, One Difference",
+   "PART 2 OF 4 Where the Growing Energy Comes From",
+   "PART 3 OF 4 Two Beliefs That Fail the Evidence",
+   "PART 4 OF 4 Which Observation Challenges the Soil Idea?"
+  ],
+  "tabs": [
+   "All sections",
+   "1 Two Pots, One Difference",
+   "2 Where the Growing Energy Comes From",
+   "3 Two Beliefs That Fail the Evidence",
+   "4 Which Observation Challenges the Soil Idea?"
+  ],
+  "fontPx": "18px",
+  "blocks": [
+   {
+    "kind": "paragraph",
+    "text": "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits.\n\nOne pot stands on a sunny windowsill. Its seedling is green, and its stem leans toward the window. The other pot is shut inside a dark cupboard. Its seedling has lost its green colour and has stopped growing.\n\nSame soil, same water, same room, same temperature — so the two seedlings are not being treated differently by anything except where they stand. And a plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question: where does the energy a plant uses to grow actually come from?"
+   },
+   {
+    "kind": "paragraph",
+    "text": "You already know two things that matter here. Plants are living things that need light and water to grow, and every living thing needs energy to stay alive. A seedling that pushes up a stem and unfolds new leaves is doing something that takes energy.\n\nWhere that growing energy comes from is exactly what people disagree about, and there are two main answers in play. One answer: the energy a plant grows on is taken in from the soil, together with the water the roots draw up. The other answer: the energy a plant grows on is captured from the light, by the plant's leaves.\n\nNeither answer is settled yet. Take whichever one you think is more likely and hold it as a prediction rather than a fact — choosing an answer does not make it correct, and evidence, not preference, is what settles a question like this. Keep your prediction in mind, because the explanation ahead is what will decide between the two."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 1\nPRACTICE\n\nTwo pots hold identical soil, are watered the same amount, and stand in the same room at the same temperature. One sits on a sunny windowsill: its seedling is green and leans toward the window. The other is shut in a dark cupboard: its seedling has turned pale and stopped growing. Before we explain anything, commit to your prediction. Where does the energy a plant uses to grow come from?\n\nA\nThe plant takes in its growing energy from the soil, together with the water.\nB\nThe plant captures its growing energy from the light, using its leaves.\nCheck my answer"
+   },
+   {
+    "kind": "paragraph",
+    "text": "The energy a plant grows on is captured from light, not taken in from the soil. The green parts of a plant — mostly its leaves — absorb light energy, and the leaf uses that energy to make the plant's own food: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air. That sugar is the plant's food, and the energy stored inside it is the energy the plant spends on building new leaves, stem and roots. So the growing energy arrives as light and is stored in food the plant makes for itself, and nothing the soil supplies can stand in for it. This is why the plant kept in the dark cupboard could not keep growing, even though it had exactly the same soil and the same water as the plant on the windowsill: the soil could go on supplying water, but it could not supply the light that was missing."
+   },
+   {
+    "kind": "list",
+    "text": "Sunlight reaches the leaf.\nThe leaf's green parts capture that light energy.\nThe captured energy is used to build sugar from water and carbon dioxide, so the energy is now stored inside food the plant has made for itself.\nThe plant breaks some of that sugar down again and uses the released energy to build new leaves, stem and roots — that is growth.\nThis is the path to follow in the two pots from the start of the lesson, and two things are worth noticing along it: the energy enters the plant through the leaf and never through the soil, and the only things arriving from the soil are water and dissolved minerals."
+   },
+   {
+    "kind": "paragraph",
+    "text": "Soil does a real job for the plant. It holds the plant firmly in place and it holds water and dissolved minerals, which the roots take in through their surfaces and which then travel up to the leaves. Minerals are raw materials that a plant uses to build parts of its own body; they are not food, and they carry no usable energy. So a plant standing in rich soil with plenty of water but kept in the dark cannot make its own food and cannot grow, however well watered it is."
+   },
+   {
+    "kind": "callout",
+    "text": "BELIEF: THE SOIL FEEDS THE PLANT\n\nA common belief is that a plant takes both its food and its growing energy from the soil, so a plant kept in the dark will keep growing as long as it is watered. That belief fails as soon as the two pots are set side by side. Both pots held the same soil, and both plants were given the same water, yet the plant in the cupboard stopped growing and turned pale. If the soil were supplying food and energy, the cupboard plant should have grown just as well as the plant on the windowsill — and it did not. Soil supplies only water and dissolved minerals. The plant's food is made in its own leaves, using light energy. The cupboard plant did keep going for a while, but only on food it had already made and stored; once that store ran down, it stopped growing and lost its green colour."
+   },
+   {
+    "kind": "paragraph",
+    "text": "A second belief sits alongside the first: that light only keeps a plant warm or makes it look healthy, and that the energy for growth comes from the water and the minerals instead. The two pots defeat this as well. They stood in the same room at the same temperature — the cupboard was not cold — so the cupboard plant lacked no warmth. If coolness had been the only thing missing, a warm dark cupboard would have let it grow normally, and it did not grow. Light, then, is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food. This is a separate error from the soil belief: it is about what light is doing, not about what the soil supplies."
+   },
+   {
+    "kind": "paragraph",
+    "text": "A student says: “Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.” That claim is wrong. The soil supplies water and dissolved minerals and nothing more; the food a plant lives on is made in its own leaves. So the strong move here is not to repeat that account but to point to evidence the claim cannot explain. Read the observations and choose the one that best challenges the soil idea."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 2\nCHECK — CHOOSE ONE\n\nA student says, \"Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.\" Which observation would best challenge this idea?\n\nA\nA watered plant kept in darkness becomes pale and stops growing larger.\nB\nA watered plant in darkness grows taller because it stretches toward the light.\nC\nA watered plant in darkness stays cool, which proves it lacks growth energy.\nD\nA watered plant in darkness grows well when it is given plant food.\nCheck my answer"
+   }
+  ]
+ },
+ "legacy@390": {
+  "scrollW": 390,
+  "innerW": 390,
+  "hscroll": false,
+  "bad": [],
+  "attrBad": [],
+  "literal": {
+   "bold": false,
+   "tilde": false,
+   "caret": false
+  },
+  "counts": {
+   "canvasNodes": 10,
+   "taskHeaders": 2,
+   "ol": 2,
+   "strong": 2,
+   "sub": 0,
+   "sup": 0,
+   "paragraphsBlocksSplit": [
+    [
+     "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits.",
+     "One pot stands on a sunny windowsill. Its seedling is green, and its stem leans toward the window. The other pot is shut inside a dark cupboard. Its seedling has lost its green colour and has stopped growing.",
+     "Same soil, same water, same room, same temperature — so the two seedlings are not being treated differently by anything except where they stand. And a plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question: where does the energy a plant uses to grow actually come from?"
+    ],
+    [
+     "You already know two things that matter here. Plants are living things that need light and water to grow, and every living thing needs energy to stay alive. A seedling that pushes up a stem and unfolds new leaves is doing something that takes energy.",
+     "Where that growing energy comes from is exactly what people disagree about, and there are two main answers in play. One answer: the energy a plant grows on is taken in from the soil, together with the water the roots draw up. The other answer: the energy a plant grows on is captured from the light, by the plant's leaves.",
+     "Neither answer is settled yet. Take whichever one you think is more likely and hold it as a prediction rather than a fact — choosing an answer does not make it correct, and evidence, not preference, is what settles a question like this. Keep your prediction in mind, because the explanation ahead is what will decide between the two."
+    ],
+    [
+     "The energy a plant grows on is captured from light, not taken in from the soil. The green parts of a plant — mostly its leaves — absorb light energy, and the leaf uses that energy to make the plant's own food: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air. That sugar is the plant's food, and the energy stored inside it is the energy the plant spends on building new leaves, stem and roots. So the growing energy arrives as light and is stored in food the plant makes for itself, and nothing the soil supplies can stand in for it. This is why the plant kept in the dark cupboard could not keep growing, even though it had exactly the same soil and the same water as the plant on the windowsill: the soil could go on supplying water, but it could not supply the light that was missing."
+    ],
+    [
+     "Soil does a real job for the plant. It holds the plant firmly in place and it holds water and dissolved minerals, which the roots take in through their surfaces and which then travel up to the leaves. Minerals are raw materials that a plant uses to build parts of its own body; they are not food, and they carry no usable energy. So a plant standing in rich soil with plenty of water but kept in the dark cannot make its own food and cannot grow, however well watered it is."
+    ],
+    [
+     "A second belief sits alongside the first: that light only keeps a plant warm or makes it look healthy, and that the energy for growth comes from the water and the minerals instead. The two pots defeat this as well. They stood in the same room at the same temperature — the cupboard was not cold — so the cupboard plant lacked no warmth. If coolness had been the only thing missing, a warm dark cupboard would have let it grow normally, and it did not grow. Light, then, is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food. This is a separate error from the soil belief: it is about what light is doing, not about what the soil supplies."
+    ],
+    [
+     "A student says: “Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.” That claim is wrong. The soil supplies water and dissolved minerals and nothing more; the food a plant lives on is made in its own leaves. So the strong move here is not to repeat that account but to point to evidence the claim cannot explain. Read the observations and choose the one that best challenges the soil idea."
+    ]
+   ]
+  },
+  "sectionHeaders": [
+   "PART 1 OF 4 Two Pots, One Difference",
+   "PART 2 OF 4 Where the Growing Energy Comes From",
+   "PART 3 OF 4 Two Beliefs That Fail the Evidence",
+   "PART 4 OF 4 Which Observation Challenges the Soil Idea?"
+  ],
+  "tabs": [
+   "All sections",
+   "1 Two Pots, One Difference",
+   "2 Where the Growing Energy Comes From",
+   "3 Two Beliefs That Fail the Evidence",
+   "4 Which Observation Challenges the Soil Idea?"
+  ],
+  "fontPx": "18px",
+  "blocks": [
+   {
+    "kind": "paragraph",
+    "text": "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits.\n\nOne pot stands on a sunny windowsill. Its seedling is green, and its stem leans toward the window. The other pot is shut inside a dark cupboard. Its seedling has lost its green colour and has stopped growing.\n\nSame soil, same water, same room, same temperature — so the two seedlings are not being treated differently by anything except where they stand. And a plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question: where does the energy a plant uses to grow actually come from?"
+   },
+   {
+    "kind": "paragraph",
+    "text": "You already know two things that matter here. Plants are living things that need light and water to grow, and every living thing needs energy to stay alive. A seedling that pushes up a stem and unfolds new leaves is doing something that takes energy.\n\nWhere that growing energy comes from is exactly what people disagree about, and there are two main answers in play. One answer: the energy a plant grows on is taken in from the soil, together with the water the roots draw up. The other answer: the energy a plant grows on is captured from the light, by the plant's leaves.\n\nNeither answer is settled yet. Take whichever one you think is more likely and hold it as a prediction rather than a fact — choosing an answer does not make it correct, and evidence, not preference, is what settles a question like this. Keep your prediction in mind, because the explanation ahead is what will decide between the two."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 1\nPRACTICE\n\nTwo pots hold identical soil, are watered the same amount, and stand in the same room at the same temperature. One sits on a sunny windowsill: its seedling is green and leans toward the window. The other is shut in a dark cupboard: its seedling has turned pale and stopped growing. Before we explain anything, commit to your prediction. Where does the energy a plant uses to grow come from?\n\nA\nThe plant takes in its growing energy from the soil, together with the water.\nB\nThe plant captures its growing energy from the light, using its leaves.\nCheck my answer"
+   },
+   {
+    "kind": "paragraph",
+    "text": "The energy a plant grows on is captured from light, not taken in from the soil. The green parts of a plant — mostly its leaves — absorb light energy, and the leaf uses that energy to make the plant's own food: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air. That sugar is the plant's food, and the energy stored inside it is the energy the plant spends on building new leaves, stem and roots. So the growing energy arrives as light and is stored in food the plant makes for itself, and nothing the soil supplies can stand in for it. This is why the plant kept in the dark cupboard could not keep growing, even though it had exactly the same soil and the same water as the plant on the windowsill: the soil could go on supplying water, but it could not supply the light that was missing."
+   },
+   {
+    "kind": "list",
+    "text": "Sunlight reaches the leaf.\nThe leaf's green parts capture that light energy.\nThe captured energy is used to build sugar from water and carbon dioxide, so the energy is now stored inside food the plant has made for itself.\nThe plant breaks some of that sugar down again and uses the released energy to build new leaves, stem and roots — that is growth.\nThis is the path to follow in the two pots from the start of the lesson, and two things are worth noticing along it: the energy enters the plant through the leaf and never through the soil, and the only things arriving from the soil are water and dissolved minerals."
+   },
+   {
+    "kind": "paragraph",
+    "text": "Soil does a real job for the plant. It holds the plant firmly in place and it holds water and dissolved minerals, which the roots take in through their surfaces and which then travel up to the leaves. Minerals are raw materials that a plant uses to build parts of its own body; they are not food, and they carry no usable energy. So a plant standing in rich soil with plenty of water but kept in the dark cannot make its own food and cannot grow, however well watered it is."
+   },
+   {
+    "kind": "callout",
+    "text": "BELIEF: THE SOIL FEEDS THE PLANT\n\nA common belief is that a plant takes both its food and its growing energy from the soil, so a plant kept in the dark will keep growing as long as it is watered. That belief fails as soon as the two pots are set side by side. Both pots held the same soil, and both plants were given the same water, yet the plant in the cupboard stopped growing and turned pale. If the soil were supplying food and energy, the cupboard plant should have grown just as well as the plant on the windowsill — and it did not. Soil supplies only water and dissolved minerals. The plant's food is made in its own leaves, using light energy. The cupboard plant did keep going for a while, but only on food it had already made and stored; once that store ran down, it stopped growing and lost its green colour."
+   },
+   {
+    "kind": "paragraph",
+    "text": "A second belief sits alongside the first: that light only keeps a plant warm or makes it look healthy, and that the energy for growth comes from the water and the minerals instead. The two pots defeat this as well. They stood in the same room at the same temperature — the cupboard was not cold — so the cupboard plant lacked no warmth. If coolness had been the only thing missing, a warm dark cupboard would have let it grow normally, and it did not grow. Light, then, is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food. This is a separate error from the soil belief: it is about what light is doing, not about what the soil supplies."
+   },
+   {
+    "kind": "paragraph",
+    "text": "A student says: “Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.” That claim is wrong. The soil supplies water and dissolved minerals and nothing more; the food a plant lives on is made in its own leaves. So the strong move here is not to repeat that account but to point to evidence the claim cannot explain. Read the observations and choose the one that best challenges the soil idea."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 2\nCHECK — CHOOSE ONE\n\nA student says, \"Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.\" Which observation would best challenge this idea?\n\nA\nA watered plant kept in darkness becomes pale and stops growing larger.\nB\nA watered plant in darkness grows taller because it stretches toward the light.\nC\nA watered plant in darkness stays cool, which proves it lacks growth energy.\nD\nA watered plant in darkness grows well when it is given plant food.\nCheck my answer"
+   }
+  ]
+ },
+ "golden@1280": {
+  "scrollW": 1280,
+  "innerW": 1280,
+  "hscroll": false,
+  "bad": [],
+  "attrBad": [],
+  "literal": {
+   "bold": false,
+   "tilde": false,
+   "caret": false
+  },
+  "counts": {
+   "canvasNodes": 26,
+   "taskHeaders": 2,
+   "ol": 2,
+   "strong": 14,
+   "sub": 1,
+   "sup": 1,
+   "paragraphsBlocksSplit": [
+    [
+     "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits."
+    ],
+    [
+     "A plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question:",
+     "Where does the energy a plant uses to grow actually come from?"
+    ],
+    [
+     "Where the growing energy comes from is exactly what people disagree about."
+    ],
+    [
+     "Neither answer is settled yet. Take the one you think is more likely and hold it as a prediction, not a fact. Evidence, not preference, is what settles a question like this."
+    ],
+    [
+     "The green parts of a plant — mostly its leaves — absorb light energy. The leaf uses that energy to make the plant's own food: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air."
+    ],
+    [
+     "The energy stored inside that sugar is what the plant spends on building new leaves, stem and roots."
+    ],
+    [
+     "Soil does a real job. It holds the plant firmly in place, and it holds water and dissolved minerals, which the roots take in and which then travel up to the leaves. Minerals are raw materials. They are not food, and they carry no usable energy."
+    ],
+    [
+     "So a plant standing in rich soil with plenty of water, but kept in the dark, cannot make its own food and cannot grow, however well watered it is."
+    ],
+    [
+     "That claim is wrong. The strong move is not to repeat the explanation, but to point to evidence the claim cannot explain."
+    ]
+   ]
+  },
+  "sectionHeaders": [
+   "PART 1 OF 4 Two Pots, One Difference",
+   "PART 2 OF 4 Where the Growing Energy Comes From",
+   "PART 3 OF 4 Two Beliefs That Fail the Evidence",
+   "PART 4 OF 4 Which Observation Challenges the Soil Idea?"
+  ],
+  "tabs": [
+   "All sections",
+   "1 Two Pots, One Difference",
+   "2 Where the Growing Energy Comes From",
+   "3 Two Beliefs That Fail the Evidence",
+   "4 Which Observation Challenges the Soil Idea?"
+  ],
+  "fontPx": "18px",
+  "blocks": [
+   {
+    "kind": "paragraph",
+    "text": "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits."
+   },
+   {
+    "kind": "figure",
+    "text": "Figure 1.The two seedlings are treated the same in every way except where they stand."
+   },
+   {
+    "kind": "paragraph",
+    "text": "A plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question:\n\nWhere does the energy a plant uses to grow actually come from?"
+   },
+   {
+    "kind": "heading",
+    "text": "What you already know"
+   },
+   {
+    "kind": "list",
+    "text": "Plants are living things that need light and water to grow.\nEvery living thing needs energy to stay alive."
+   },
+   {
+    "kind": "heading",
+    "text": "Two possible answers"
+   },
+   {
+    "kind": "paragraph",
+    "text": "Where the growing energy comes from is exactly what people disagree about."
+   },
+   {
+    "kind": "compare",
+    "text": "ANSWER A\n\nFrom the soil\n\nThe energy is taken in together with the water the roots draw up.\n\nANSWER B\n\nFrom the light\n\nThe energy is captured from the light by the plant's leaves."
+   },
+   {
+    "kind": "paragraph",
+    "text": "Neither answer is settled yet. Take the one you think is more likely and hold it as a prediction, not a fact. Evidence, not preference, is what settles a question like this."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 1\nPREDICTION — NOT MARKED\n\nWhere does the energy a plant uses to grow come from?\n\nA\nThe plant takes in its growing energy from the soil, together with the water.\nB\nThe plant captures its growing energy from the light, using its leaves.\nLock in my prediction"
+   },
+   {
+    "kind": "callout",
+    "text": "KEY IDEA\n\nThe energy a plant grows on is captured from light, not taken in from the soil."
+   },
+   {
+    "kind": "paragraph",
+    "text": "The green parts of a plant — mostly its leaves — absorb light energy. The leaf uses that energy to make the plant's own food: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air."
+   },
+   {
+    "kind": "equation",
+    "text": "IN ONE LINE\nwater\ncarbon dioxide (CO2)\nlight energy\n→\nsugar (the plant's food)"
+   },
+   {
+    "kind": "paragraph",
+    "text": "The energy stored inside that sugar is what the plant spends on building new leaves, stem and roots."
+   },
+   {
+    "kind": "heading",
+    "text": "Follow the energy, step by step"
+   },
+   {
+    "kind": "list",
+    "text": "Sunlight reaches the leaf.\nThe leaf's green parts capture that light energy.\nThe captured energy is used to build sugar from water and carbon dioxide. The energy is now stored inside food the plant has made for itself.\nThe plant breaks some of that sugar down again and uses the released energy to build new leaves, stem and roots. That is growth."
+   },
+   {
+    "kind": "callout",
+    "text": "NOTICE TWO THINGS\n\nThe energy enters the plant through the leaf, never through the soil. The only things arriving from the soil are water and dissolved minerals. Leaf area can be measured in m2."
+   },
+   {
+    "kind": "heading",
+    "text": "So what is the soil for?"
+   },
+   {
+    "kind": "paragraph",
+    "text": "Soil does a real job. It holds the plant firmly in place, and it holds water and dissolved minerals, which the roots take in and which then travel up to the leaves. Minerals are raw materials. They are not food, and they carry no usable energy."
+   },
+   {
+    "kind": "table",
+    "text": "What the plant takes in\tWhere from\tIs it energy?\nWater\tSoil, through the roots\tNo. A raw material for making sugar.\nDissolved minerals\tSoil, through the roots\tNo. Raw materials for building the plant's body.\nLight\tCaptured by the leaves\tYes. It ends up stored in sugar."
+   },
+   {
+    "kind": "paragraph",
+    "text": "So a plant standing in rich soil with plenty of water, but kept in the dark, cannot make its own food and cannot grow, however well watered it is."
+   },
+   {
+    "kind": "callout",
+    "text": "COMMON BELIEF 1\nTHE BELIEF\n\n“The soil feeds the plant. A plant kept in the dark will keep growing as long as it is watered.”\n\nTHE EVIDENCE\n\nBoth pots held the same soil and got the same water. If the soil were supplying food and energy, the cupboard plant should have grown just as well. It stopped growing and turned pale.\n\nSO\n\nSoil supplies only water and dissolved minerals. The plant's food is made in its own leaves, using light energy.\n\nWhy did the cupboard plant keep going for a while? It was living on food it had already made and stored. Once that store ran down, it stopped growing and lost its green colour."
+   },
+   {
+    "kind": "callout",
+    "text": "COMMON BELIEF 2\nTHE BELIEF\n\n“Light only keeps a plant warm or makes it look healthy. The energy for growth comes from the water and the minerals.”\n\nTHE EVIDENCE\n\nBoth pots stood in the same room at the same temperature. The cupboard was not cold, so the cupboard plant lacked no warmth. It still did not grow.\n\nSO\n\nLight is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food."
+   },
+   {
+    "kind": "quote",
+    "text": "Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.\n\nA student says"
+   },
+   {
+    "kind": "paragraph",
+    "text": "That claim is wrong. The strong move is not to repeat the explanation, but to point to evidence the claim cannot explain."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 2\nCHECK — CHOOSE ONE\n\nWhich observation would best challenge the student's idea?\n\nA\nA watered plant kept in darkness becomes pale and stops growing larger.\nB\nA watered plant in darkness grows taller because it stretches toward the light.\nC\nA watered plant in darkness stays cool, which proves it lacks growth energy.\nD\nA watered plant in darkness grows well when it is given plant food.\nCheck my answer"
+   }
+  ]
+ },
+ "golden@390": {
+  "scrollW": 390,
+  "innerW": 390,
+  "hscroll": false,
+  "bad": [],
+  "attrBad": [],
+  "literal": {
+   "bold": false,
+   "tilde": false,
+   "caret": false
+  },
+  "counts": {
+   "canvasNodes": 26,
+   "taskHeaders": 2,
+   "ol": 2,
+   "strong": 14,
+   "sub": 1,
+   "sup": 1,
+   "paragraphsBlocksSplit": [
+    [
+     "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits."
+    ],
+    [
+     "A plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question:",
+     "Where does the energy a plant uses to grow actually come from?"
+    ],
+    [
+     "Where the growing energy comes from is exactly what people disagree about."
+    ],
+    [
+     "Neither answer is settled yet. Take the one you think is more likely and hold it as a prediction, not a fact. Evidence, not preference, is what settles a question like this."
+    ],
+    [
+     "The green parts of a plant — mostly its leaves — absorb light energy. The leaf uses that energy to make the plant's own food: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air."
+    ],
+    [
+     "The energy stored inside that sugar is what the plant spends on building new leaves, stem and roots."
+    ],
+    [
+     "Soil does a real job. It holds the plant firmly in place, and it holds water and dissolved minerals, which the roots take in and which then travel up to the leaves. Minerals are raw materials. They are not food, and they carry no usable energy."
+    ],
+    [
+     "So a plant standing in rich soil with plenty of water, but kept in the dark, cannot make its own food and cannot grow, however well watered it is."
+    ],
+    [
+     "That claim is wrong. The strong move is not to repeat the explanation, but to point to evidence the claim cannot explain."
+    ]
+   ]
+  },
+  "sectionHeaders": [
+   "PART 1 OF 4 Two Pots, One Difference",
+   "PART 2 OF 4 Where the Growing Energy Comes From",
+   "PART 3 OF 4 Two Beliefs That Fail the Evidence",
+   "PART 4 OF 4 Which Observation Challenges the Soil Idea?"
+  ],
+  "tabs": [
+   "All sections",
+   "1 Two Pots, One Difference",
+   "2 Where the Growing Energy Comes From",
+   "3 Two Beliefs That Fail the Evidence",
+   "4 Which Observation Challenges the Soil Idea?"
+  ],
+  "fontPx": "18px",
+  "blocks": [
+   {
+    "kind": "paragraph",
+    "text": "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits."
+   },
+   {
+    "kind": "figure",
+    "text": "Figure 1.The two seedlings are treated the same in every way except where they stand."
+   },
+   {
+    "kind": "paragraph",
+    "text": "A plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question:\n\nWhere does the energy a plant uses to grow actually come from?"
+   },
+   {
+    "kind": "heading",
+    "text": "What you already know"
+   },
+   {
+    "kind": "list",
+    "text": "Plants are living things that need light and water to grow.\nEvery living thing needs energy to stay alive."
+   },
+   {
+    "kind": "heading",
+    "text": "Two possible answers"
+   },
+   {
+    "kind": "paragraph",
+    "text": "Where the growing energy comes from is exactly what people disagree about."
+   },
+   {
+    "kind": "compare",
+    "text": "ANSWER A\n\nFrom the soil\n\nThe energy is taken in together with the water the roots draw up.\n\nANSWER B\n\nFrom the light\n\nThe energy is captured from the light by the plant's leaves."
+   },
+   {
+    "kind": "paragraph",
+    "text": "Neither answer is settled yet. Take the one you think is more likely and hold it as a prediction, not a fact. Evidence, not preference, is what settles a question like this."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 1\nPREDICTION — NOT MARKED\n\nWhere does the energy a plant uses to grow come from?\n\nA\nThe plant takes in its growing energy from the soil, together with the water.\nB\nThe plant captures its growing energy from the light, using its leaves.\nLock in my prediction"
+   },
+   {
+    "kind": "callout",
+    "text": "KEY IDEA\n\nThe energy a plant grows on is captured from light, not taken in from the soil."
+   },
+   {
+    "kind": "paragraph",
+    "text": "The green parts of a plant — mostly its leaves — absorb light energy. The leaf uses that energy to make the plant's own food: a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air."
+   },
+   {
+    "kind": "equation",
+    "text": "IN ONE LINE\nwater\ncarbon dioxide (CO2)\nlight energy\n→\nsugar (the plant's food)"
+   },
+   {
+    "kind": "paragraph",
+    "text": "The energy stored inside that sugar is what the plant spends on building new leaves, stem and roots."
+   },
+   {
+    "kind": "heading",
+    "text": "Follow the energy, step by step"
+   },
+   {
+    "kind": "list",
+    "text": "Sunlight reaches the leaf.\nThe leaf's green parts capture that light energy.\nThe captured energy is used to build sugar from water and carbon dioxide. The energy is now stored inside food the plant has made for itself.\nThe plant breaks some of that sugar down again and uses the released energy to build new leaves, stem and roots. That is growth."
+   },
+   {
+    "kind": "callout",
+    "text": "NOTICE TWO THINGS\n\nThe energy enters the plant through the leaf, never through the soil. The only things arriving from the soil are water and dissolved minerals. Leaf area can be measured in m2."
+   },
+   {
+    "kind": "heading",
+    "text": "So what is the soil for?"
+   },
+   {
+    "kind": "paragraph",
+    "text": "Soil does a real job. It holds the plant firmly in place, and it holds water and dissolved minerals, which the roots take in and which then travel up to the leaves. Minerals are raw materials. They are not food, and they carry no usable energy."
+   },
+   {
+    "kind": "table",
+    "text": "What the plant takes in\tWhere from\tIs it energy?\nWater\tSoil, through the roots\tNo. A raw material for making sugar.\nDissolved minerals\tSoil, through the roots\tNo. Raw materials for building the plant's body.\nLight\tCaptured by the leaves\tYes. It ends up stored in sugar."
+   },
+   {
+    "kind": "paragraph",
+    "text": "So a plant standing in rich soil with plenty of water, but kept in the dark, cannot make its own food and cannot grow, however well watered it is."
+   },
+   {
+    "kind": "callout",
+    "text": "COMMON BELIEF 1\nTHE BELIEF\n\n“The soil feeds the plant. A plant kept in the dark will keep growing as long as it is watered.”\n\nTHE EVIDENCE\n\nBoth pots held the same soil and got the same water. If the soil were supplying food and energy, the cupboard plant should have grown just as well. It stopped growing and turned pale.\n\nSO\n\nSoil supplies only water and dissolved minerals. The plant's food is made in its own leaves, using light energy.\n\nWhy did the cupboard plant keep going for a while? It was living on food it had already made and stored. Once that store ran down, it stopped growing and lost its green colour."
+   },
+   {
+    "kind": "callout",
+    "text": "COMMON BELIEF 2\nTHE BELIEF\n\n“Light only keeps a plant warm or makes it look healthy. The energy for growth comes from the water and the minerals.”\n\nTHE EVIDENCE\n\nBoth pots stood in the same room at the same temperature. The cupboard was not cold, so the cupboard plant lacked no warmth. It still did not grow.\n\nSO\n\nLight is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food."
+   },
+   {
+    "kind": "quote",
+    "text": "Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.\n\nA student says"
+   },
+   {
+    "kind": "paragraph",
+    "text": "That claim is wrong. The strong move is not to repeat the explanation, but to point to evidence the claim cannot explain."
+   },
+   {
+    "kind": "interaction",
+    "text": "YOUR TURN · QUESTION 2\nCHECK — CHOOSE ONE\n\nWhich observation would best challenge the student's idea?\n\nA\nA watered plant kept in darkness becomes pale and stops growing larger.\nB\nA watered plant in darkness grows taller because it stretches toward the light.\nC\nA watered plant in darkness stays cool, which proves it lacks growth energy.\nD\nA watered plant in darkness grows well when it is given plant food.\nCheck my answer"
+   }
+  ]
+ }
+}

@@ -1,0 +1,8 @@
+
+1791231815221 START "c:\\Users\\richi\\.codex\\worktrees\\doc36-integration\\lectio\\apps\\textbook-agent\\frontend"
+1791231815225 WARNING "src\\lib\\learn\\document\\editors\\InteractionEditor.svelte" 16:22 "This reference only captures the initial value of `node`. Did you mean to reference it inside a derived instead?\nhttps://svelte.dev/e/state_referenced_locally"
+1791231815225 WARNING "src\\lib\\learn\\document\\DocumentCanvas.svelte" 119:3 "noninteractive element cannot have nonnegative tabIndex value\nhttps://svelte.dev/e/a11y_no_noninteractive_tabindex"
+1791231815225 WARNING "src\\lib\\learn\\document\\DocumentEditor.svelte" 47:21 "This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a closure instead?\nhttps://svelte.dev/e/state_referenced_locally"
+1791231815227 WARNING "src\\lib\\print\\components\\studio\\PrintDocumentEditor.svelte" 26:51 "This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a derived instead?\nhttps://svelte.dev/e/state_referenced_locally"
+1791231815227 WARNING "src\\lib\\print\\components\\studio\\PrintDocumentEditor.svelte" 27:24 "This reference only captures the initial value of `documentRevision`. Did you mean to reference it inside a closure instead?\nhttps://svelte.dev/e/state_referenced_locally"
+1791231815228 COMPLETED 709 FILES 0 ERRORS 5 WARNINGS 4 FILES_WITH_PROBLEMS

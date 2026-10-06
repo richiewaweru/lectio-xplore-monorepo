@@ -302,6 +302,40 @@
               "Next lesson: how glucose is used in respiration and growth."
             ]
           }
+        },
+        {
+          "id": "b17",
+          "object": "equation",
+          "intent": "explain-cause",
+          "position": 5,
+          "content": {
+            "label": "In one line",
+            "inputs": ["carbon dioxide", "water"],
+            "condition": "with light energy",
+            "outputs": ["glucose", "oxygen"]
+          }
+        },
+        {
+          "id": "b18",
+          "object": "quote",
+          "intent": "explain",
+          "position": 6,
+          "content": {
+            "text": "A green leaf can make food from light, air, and water.",
+            "attribution": "A student says"
+          }
+        },
+        {
+          "id": "b19",
+          "object": "compare",
+          "intent": "compare",
+          "position": 7,
+          "content": {
+            "items": [
+              {"label": "Input", "title": "Carbon dioxide", "body": "Enters from the air."},
+              {"label": "Input", "title": "Water", "body": "Enters through the roots."}
+            ]
+          }
         }
       ]
     }

@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "doc36:doc36-track-c-formula-6908e512395d:revision:1",
+  "revision": 1,
+  "content_hash": "e6083f2f99564bbfd4c64d5b153afe759a64c86884b4071c90e8b65c31f82ced",
+  "teaching_plan_id": "doc36-plan-formula",
+  "teaching_plan_revision": 1,
+  "teaching_plan_hash": "24b5e758e15f01e452a79c49d6fd9a7e8331120ba677ed3d3ce62f0e8694e2a3",
+  "title": "Area of a rectangle",
+  "sections": [
+    {
+      "id": "formula-section",
+      "title": "Area of a rectangle",
+      "position": 0,
+      "nodes": [
+        {
+          "id": "shared-node-240485b6ce392347255e",
+          "teaching_block_id": "b0",
+          "kind": "equation",
+          "display": {
+            "label": "Area of a rectangle",
+            "inputs": [
+              "length",
+              "width"
+            ],
+            "outputs": [
+              "area"
+            ]
+          },
+          "accessibility": {
+            "description": "The area of a rectangle equals its length multiplied by its width."
+          }
+        },
+        {
+          "id": "shared-node-3147ef18c10edb684e89",
+          "teaching_block_id": "b1",
+          "kind": "paragraph",
+          "display": {
+            "text": "An 8 m by 3 m rectangle has an **area** of 8 × 3 = 24 square metres. Multiplying the length by the width gives the result in square metres."
+          },
+          "accessibility": {
+            "description": "A worked example showing that an 8 metre by 3 metre rectangle has an area of 24 square metres."
+          }
+        }
+      ],
+      "provenance": {
+        "source_ids": [
+          "src-formula"
+        ],
+        "source_hashes": {
+          "src-formula": "d419b604abc992de1be9cbe9baf86709825c77cdc686239532a61607492f6475"
+        }
+      }
+    }
+  ],
+  "tasks": [],
+  "provenance": {
+    "source_ids": [
+      "src-formula"
+    ],
+    "source_hashes": {
+      "src-formula": "d419b604abc992de1be9cbe9baf86709825c77cdc686239532a61607492f6475"
+    }
+  },
+  "created_at": "2026-10-05T00:00:00Z",
+  "diagnostics": [
+    "advisory:shape_missing:section/key_idea"
+  ]
+}

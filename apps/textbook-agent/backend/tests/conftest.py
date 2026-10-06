@@ -29,8 +29,8 @@ os.environ.setdefault("V3_VISUAL_QC_ENABLED", "false")
 os.environ.setdefault("V3_IMAGE_CACHE_ENABLED", "false")
 os.environ.setdefault("V2_SKELETON_SHADOW_ENABLED", "false")
 
-from core.database.models import Base
-from core.database.session import engine as runtime_engine
+from core.database.models import Base  # noqa: E402 - env defaults must be set first
+from core.database.session import engine as runtime_engine  # noqa: E402 - env defaults must be set first
 
 
 async def _create_runtime_schema() -> None:

@@ -1,0 +1,9 @@
+[21:38:51] unit 81ad36fb-fc06-44f6-8315-d8f4fe378ff9
+[21:38:59] path lessons=['Rectangle dimensions and the square-unit grid', 'Applying area = length x width', 'Finding a missing side from area', 'Decomposing compound shapes into rectangles', 'Area of compound shapes', 'Choosing and justifying a method']
+[21:39:00] picked lesson score=8 title=Area of compound shapes
+[21:39:04] generation 77754f15-82b2-4934-b00a-22781415beb1
+[21:39:05] stage stage2_running/planning
+[21:47:38] stage awaiting_review/planning
+[21:52:32] stage awaiting_teaching_approval/awaiting_review
+[21:52:33] teaching approve 409 {"detail":{"code":"TEACHING_CONTENT_HASH_REQUIRED","message":"Reload the Teaching Plan review and approve the displayed version.","recovery_action":"reload_review"}}
+[21:52:33] generate-learn 409 after 0s

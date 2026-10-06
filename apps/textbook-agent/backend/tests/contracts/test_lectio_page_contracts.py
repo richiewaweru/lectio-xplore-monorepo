@@ -27,7 +27,9 @@ def test_catalogue_version_and_objects() -> None:
     assert CATALOGUE_VERSION == "1.2.0"
     assert "prose" in PAGE_OBJECT_IDS
     assert "heading" in PAGE_OBJECT_IDS
-    assert len(PAGE_OBJECT_IDS) == 10
+    # Doc 36 adds equation, quote and compare to the original ten objects.
+    assert {"equation", "quote", "compare"} <= set(PAGE_OBJECT_IDS)
+    assert len(PAGE_OBJECT_IDS) == 13
 
 
 def test_synced_hashes_match_generated_manifest() -> None:

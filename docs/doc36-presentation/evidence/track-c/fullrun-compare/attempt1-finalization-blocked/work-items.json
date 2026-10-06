@@ -1,0 +1,2450 @@
+[
+  {
+    "id": "952180a3-b23d-4fe1-b31a-c73c90c599b0",
+    "run_id": "36a90fdc-74ea-457e-9b12-1971580eff2c",
+    "replaces_work_item_id": "None",
+    "item_key": "teaching_plan",
+    "stage": "planning_teaching",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "bea275c6c8d542acb38ad27fbe69b45cbd478eed1ed3e9b3dfdb421e55bf40aa",
+    "definition_hash": "ecf98472bbfb43f5ba074c4ad6ff70347810f6d6cf03e0dc9b78c9d24205334b",
+    "composition_identity": "None",
+    "lease_owner": "preparation-40af1371-fa10-4f8d-bdf2-403e23bbac91",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 18:59:12.959813",
+    "checkpoint_json": null,
+    "output_json": {
+      "revision": 1,
+      "content_hash": "aac250158a302dff3bca575f77f9a55f7f721e4c6ecb6fed7aae173c00dd2cc4",
+      "teaching_plan_id": "af070978-797b-4c21-b744-29f404128830"
+    },
+    "output_hash": "1f2c744f5c938cf85402392c639f26d09ee3d5ed28bd11b4489ba1a06b8d9cf6",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:44:22.145971",
+    "started_at": "2026-10-05 18:52:30.704509",
+    "updated_at": "2026-10-05 18:52:30.704509",
+    "completed_at": "2026-10-05 18:52:30.704509"
+  },
+  {
+    "id": "397cd36e-1eca-4872-bf85-70cadc439b65",
+    "run_id": "36a90fdc-74ea-457e-9b12-1971580eff2c",
+    "replaces_work_item_id": "None",
+    "item_key": "items:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8",
+    "stage": "item_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "43c4f7b736ed2c47ca6a33865db09dba940d5c4d26651ec83d2dd4353209b1f1",
+    "definition_hash": "8c65c0150c6770565b63e94bcfefb1766c0eda79e6073ef68493cf4212409e02",
+    "composition_identity": "None",
+    "lease_owner": "preparation-40af1371-fa10-4f8d-bdf2-403e23bbac91",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 18:49:21.818784",
+    "checkpoint_json": null,
+    "output_json": {
+      "card_id": "f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8",
+      "pack_id": "f8099d04-fd37-4fa1-9616-40fc689e2957",
+      "skipped": false,
+      "needs_review": true,
+      "unmapped_options": 4,
+      "generated_item_count": 5,
+      "missing_misconceptions": []
+    },
+    "output_hash": "45d831e3b703d5d40fdb794b68a81dbb3842c606129ddda2a96b499c976ddd91",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:39:59.513203",
+    "started_at": "2026-10-05 18:44:13.552731",
+    "updated_at": "2026-10-05 18:44:13.552731",
+    "completed_at": "2026-10-05 18:44:13.552731"
+  },
+  {
+    "id": "5bfd2ad3-631a-4b3e-ae8b-edbe8caa7a70",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "write:confront",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "c9bf8aa8194d5a75e5283e8411aa9b1c7bbadeaec4c1057f450eacdf94486283",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:46.194111",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-c6b5d1f1b4ccefa3da57",
+              "kind": "callout",
+              "task_spec_id": null,
+              "semantic_role": "misconception",
+              "teaching_block_id": "confront-b1"
+            },
+            {
+              "id": "shared-node-2184881ac796004269cb",
+              "kind": "callout",
+              "task_spec_id": null,
+              "semantic_role": "misconception",
+              "teaching_block_id": "confront-b2"
+            }
+          ],
+          "warnings": [
+            [
+              "section_exceeds_callout_limit",
+              "choices[1].kind"
+            ]
+          ],
+          "section_slot_id": "confront"
+        },
+        "composition_identity": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3"
+      },
+      "payload_hash": "20c92cb0960886959d849b915af2541ae9380c99e36ffbb09248c317474b4f17",
+      "compatibility": {
+        "input_hash": "c9bf8aa8194d5a75e5283e8411aa9b1c7bbadeaec4c1057f450eacdf94486283",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-c6b5d1f1b4ccefa3da57",
+          "kind": "callout",
+          "display": {
+            "tone": "warning",
+            "aside": "In a dark chamber the plant releases carbon dioxide and takes in oxygen, and in bright light those net changes reverse. That is why the take-turns idea feels convincing.",
+            "title": "Do photosynthesis and respiration take turns?",
+            "belief": "Photosynthesis happens in sunlight and respiration happens in darkness, so the plant switches from one to the other and only respires at night.",
+            "variant": "misconception",
+            "evidence": "In a plant cell in bright light, the mitochondria are still taking in oxygen and releasing carbon dioxide while the chloroplasts photosynthesise. Respiration has not switched off; light does not stop it.",
+            "conclusion": "Respiration is continuous, day and night. Photosynthesis runs whenever light is available, so in the light both processes run at the same time in the same cell."
+          },
+          "accessibility": {
+            "description": "Misconception callout: the belief that a plant respires only in darkness and photosynthesises only in light is tested against a plant cell in bright light, where mitochondria keep respiring, and corrected by stating that respiration is continuous while photosynthesis runs whenever light is available."
+          },
+          "teaching_block_id": "confront-b1"
+        },
+        {
+          "id": "shared-node-2184881ac796004269cb",
+          "kind": "callout",
+          "display": {
+            "tone": "warning",
+            "aside": "Textbooks often describe plants releasing oxygen for animals, so the plant's own need for that oxygen is easy to overlook.",
+            "title": "Is the plant's oxygen only for other organisms?",
+            "belief": "The oxygen made by photosynthesis is for other organisms. The plant releases it into the air, not for itself.",
+            "variant": "misconception",
+            "evidence": "Inside the same plant cell, oxygen made by chloroplasts diffuses to that cell's mitochondria and is used there in respiration. No delivery system sends oxygen only to other organisms; the gas is available to the cell that made it.",
+            "conclusion": "The oxygen from photosynthesis is available to the plant's own respiration as well as to other organisms, and the plant also uses oxygen from the surrounding air."
+          },
+          "accessibility": {
+            "description": "Misconception callout: the belief that photosynthesised oxygen is only for other organisms is tested by following oxygen from a cell's chloroplasts to its own mitochondria, and corrected by stating that the plant uses its own oxygen in respiration as well as releasing it to other organisms."
+          },
+          "teaching_block_id": "confront-b2"
+        }
+      ],
+      "title": "Why the 'take turns' and 'only for animals' ideas fail",
+      "section_slot_id": "confront"
+    },
+    "output_hash": "75acc44a58594b70e54cbb4bbaf1d57b7535aa80e02c047f40700016b6053783",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:25.975190",
+    "started_at": "2026-10-05 18:55:46.194111",
+    "updated_at": "2026-10-05 18:55:55.532798",
+    "completed_at": "2026-10-05 18:55:55.532798"
+  },
+  {
+    "id": "25052d49-46f5-4dcf-94b3-c032326eb533",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "write:orient",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "1009155c3ceda24709be92b478eda72714a20d4b65f8582639bbd7caef9bee14",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:46.176088",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-8db81c2aad956244b743",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "bridge",
+              "teaching_block_id": "orient-b1"
+            },
+            {
+              "id": "shared-figure-node-c636a419002a7fcd3257",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "orient-b1"
+            }
+          ],
+          "section_slot_id": "orient"
+        },
+        "composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+      },
+      "payload_hash": "c30b4bc645e32c74d62827b1e3f08743aa1c16bd51fdb1ff75f62c34c1104d00",
+      "compatibility": {
+        "input_hash": "1009155c3ceda24709be92b478eda72714a20d4b65f8582639bbd7caef9bee14",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-8db81c2aad956244b743",
+          "kind": "paragraph",
+          "display": {
+            "text": "**In a sealed tank, a plant and an animal must get everything they need from inside it.** A small green plant and a small animal sit together in a sealed glass tank, watched for a full day and night \u2014 through both light and dark. No gases, water, or food can enter or leave. So each organism must live on the materials already there and on what the other one gives off. How can both manage for 24 hours?"
+          },
+          "accessibility": {
+            "description": "Introduces a sealed glass tank holding a small green plant and a small animal, watched over a full day and night with both light and dark phases, and asks how both organisms can meet their needs inside the closed system."
+          },
+          "teaching_block_id": "orient-b1"
+        },
+        {
+          "id": "shared-figure-node-c636a419002a7fcd3257",
+          "kind": "figure",
+          "display": {
+            "caption": "A sealed glass tank containing a small green plant and a small animal, with the tank observed over 24 hours, including a light phase and a dark phase. Labels name the sealed glass tank, the small green plant, the small animal, and 24 hours.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "orient-b1"
+        }
+      ],
+      "title": "A sealed tank and a 24-hour puzzle",
+      "warnings": [
+        [
+          "length_over_target",
+          "nodes[0].text/79/60"
+        ]
+      ],
+      "section_slot_id": "orient"
+    },
+    "output_hash": "0219ca96e6891a46bb02c2a9ed18bddbd173a5c90c23f8dff36fae506f332211",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:25.862519",
+    "started_at": "2026-10-05 18:55:46.176088",
+    "updated_at": "2026-10-05 18:56:01.133038",
+    "completed_at": "2026-10-05 18:56:01.133038"
+  },
+  {
+    "id": "e25cbe28-bf1e-49ab-acd3-6bc6e0882056",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "write:explain",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "765f0d2d322e2132e4034313eccd8892f7b835a777a8d4639aed9fe200fabd64",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:46.186267",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-7462b6b3696539942ba6",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "explanation",
+              "teaching_block_id": "explain-b1"
+            },
+            {
+              "id": "shared-figure-node-cd0d85c7876b5990ede5",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "explain-b1"
+            },
+            {
+              "id": "shared-node-688658c0f9201a7f2493",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "misconception",
+              "teaching_block_id": "explain-b2"
+            },
+            {
+              "id": "shared-figure-node-da97809d175b54895719",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "explain-b2"
+            }
+          ],
+          "section_slot_id": "explain"
+        },
+        "composition_identity": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1"
+      },
+      "payload_hash": "6105e649a865c5b2f2fcc41fa848b7143473be778d3ada82b045028d242bb5ff",
+      "compatibility": {
+        "input_hash": "765f0d2d322e2132e4034313eccd8892f7b835a777a8d4639aed9fe200fabd64",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-7462b6b3696539942ba6",
+          "kind": "paragraph",
+          "display": {
+            "text": "**Photosynthesis in chloroplasts and respiration in mitochondria pass materials back and forth in a continuous cycle.**\n\nCarbon dioxide and water enter the plant's chloroplasts, where light energy drives photosynthesis to produce glucose and oxygen. The glucose and oxygen travel to mitochondria in the plant's own cells and in the animal's cells, where respiration uses them and releases carbon dioxide and water.\n\nThose products return to the chloroplasts as the inputs for photosynthesis. The oxygen made in photosynthesis is not only available to the animal; it is also available to the plant's own mitochondria for respiration. In the light, both processes run at the same time."
+          },
+          "accessibility": {
+            "description": "Explains the cyclic exchange of materials between photosynthesis and respiration, including the plant's own use of its glucose and oxygen."
+          },
+          "teaching_block_id": "explain-b1"
+        },
+        {
+          "id": "shared-figure-node-cd0d85c7876b5990ede5",
+          "kind": "figure",
+          "display": {
+            "caption": "Diagram of the sealed tank: carbon dioxide and water entering chloroplasts in the plant's cells; light energy driving photosynthesis in chloroplasts; glucose and oxygen produced by photosynthesis; glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells; carbon dioxide and water produced by respiration; those products returning to the chloroplasts; and oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "explain-b1"
+        },
+        {
+          "id": "shared-node-688658c0f9201a7f2493",
+          "kind": "paragraph",
+          "display": {
+            "text": "Respiration does not stop when light is available. Cells need a continuous supply of energy, so mitochondria keep using glucose and oxygen day and night. Photosynthesis, by contrast, can supply glucose and oxygen only when light is available. In bright light both processes run at the same time; in darkness only respiration runs. Inside the sealed tank, the plant and animal continue respiring during the dark phase, adding carbon dioxide and water that the plant will use when light returns."
+          },
+          "accessibility": {
+            "description": "Explains that respiration runs continuously day and night, while photosynthesis runs only when light is available."
+          },
+          "teaching_block_id": "explain-b2"
+        },
+        {
+          "id": "shared-figure-node-da97809d175b54895719",
+          "kind": "figure",
+          "display": {
+            "caption": "Diagram of a timeline covering a full day with a light phase and a dark phase: respiration active during both the light phase and the dark phase, and photosynthesis active only during the light phase.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "explain-b2"
+        }
+      ],
+      "title": "The product-to-input cycle",
+      "warnings": [
+        [
+          "length_over_target",
+          "nodes[0].text/105/60"
+        ],
+        [
+          "length_over_target",
+          "nodes[2].text/80/60"
+        ],
+        [
+          "shape_missing",
+          "section/key_idea"
+        ],
+        [
+          "shape_missing",
+          "section/subheading"
+        ]
+      ],
+      "section_slot_id": "explain"
+    },
+    "output_hash": "e428819212882bb4b834006fc5a020dd9f5e262420be2dca03ef316f6bb76df7",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:25.890532",
+    "started_at": "2026-10-05 18:55:46.186267",
+    "updated_at": "2026-10-05 18:56:34.158632",
+    "completed_at": "2026-10-05 18:56:34.158632"
+  },
+  {
+    "id": "b3bbba08-1fc5-426f-ba36-b7876001c2ef",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "write:check",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "2",
+    "max_attempts": "3",
+    "input_hash": "34507f1b17b7f1b249c1bdab644dddc7c7a3a826094eaff2083778895c463f95",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "3",
+    "lease_expires_at": "2026-10-05 19:03:30.269791",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-76f42783041b846992dc",
+              "kind": "paragraph",
+              "task_spec_id": null,
+              "semantic_role": "misconception",
+              "teaching_block_id": "check-b1"
+            },
+            {
+              "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+              "kind": "task_anchor",
+              "task_spec_id": "task-check-b1",
+              "semantic_role": null,
+              "teaching_block_id": "check-b1"
+            }
+          ],
+          "section_slot_id": "check"
+        },
+        "composition_identity": "21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262"
+      },
+      "payload_hash": "f1e6c0521ce058f57ab7172dbce9502d038e954104185845bcb0a900df90f2ff",
+      "compatibility": {
+        "input_hash": "34507f1b17b7f1b249c1bdab644dddc7c7a3a826094eaff2083778895c463f95",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-76f42783041b846992dc",
+          "kind": "paragraph",
+          "display": {
+            "text": "Read the written explanation in the item below, then decide which single correction would make the whole explanation accurate. Each option changes one claim, so compare every option with the model of plant gas exchange you have already built and tested."
+          },
+          "accessibility": {
+            "description": "Introductory paragraph for a single-choice check. Learners read a student's written explanation of photosynthesis and respiration, then choose the one correction that makes the explanation accurate."
+          },
+          "teaching_block_id": "check-b1"
+        },
+        {
+          "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+          "kind": "task_anchor",
+          "role": null,
+          "task_spec_id": "task-check-b1",
+          "teaching_block_id": "check-b1"
+        }
+      ],
+      "title": "Check: correcting an explanation of gas exchange",
+      "section_slot_id": "check"
+    },
+    "output_hash": "a8e38c04cc8aa51a75dc846b86c8c46b9f353722ef1e912399e1a355c764ab2b",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:26.024840",
+    "started_at": "2026-10-05 18:55:27.464034",
+    "updated_at": "2026-10-05 18:57:38.727286",
+    "completed_at": "2026-10-05 18:57:38.727286"
+  },
+  {
+    "id": "70ed4f7b-d143-4a57-8de3-3ff372abd1e7",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "boundary:explain->contrast",
+    "stage": "continuity_validation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "defda23cf12b52c715cd1ffbb309c2b9433441fb2cdac747bf3c0ce673825c31",
+    "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+    "composition_identity": "{\"next\":\"d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38\",\"previous\":\"18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1\"}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:boundary",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:02:56.849407",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_lesson_boundary",
+        "work": {
+          "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+          "next_section_id": "contrast",
+          "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "previous_section_id": "explain",
+          "source_plan_revision": 1,
+          "next_section_output_hash": "59f7b109c314a8a6feb6f754b5873e128a1ccdc532a7bb1ec8988d53b9ec6046",
+          "next_composition_identity": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38",
+          "previous_section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+          "previous_composition_identity": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1"
+        }
+      },
+      "payload_hash": "a00dcc7f322ea619ad6b41dd7fca7cdc0ca36b5bd69c337397e63c76050dc37f",
+      "compatibility": {
+        "input_hash": "defda23cf12b52c715cd1ffbb309c2b9433441fb2cdac747bf3c0ce673825c31",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+        "source_revision": 1,
+        "composition_identity": "{\"next\":\"d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38\",\"previous\":\"18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1\"}"
+      }
+    },
+    "output_json": {
+      "kind": "shared_lesson_boundary_result",
+      "work": {
+        "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+        "next_section_id": "contrast",
+        "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "previous_section_id": "explain",
+        "source_plan_revision": 1,
+        "next_section_output_hash": "59f7b109c314a8a6feb6f754b5873e128a1ccdc532a7bb1ec8988d53b9ec6046",
+        "next_composition_identity": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38",
+        "previous_section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+        "previous_composition_identity": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1"
+      },
+      "status": "pass",
+      "next_section": {
+        "id": "contrast",
+        "nodes": [
+          {
+            "id": "shared-node-f0d44dd2415d61bbdfd4",
+            "kind": "compare",
+            "display": {
+              "items": [
+                {
+                  "body": "**In a plant cell in light, photosynthesis and respiration run at the same time.** Chloroplasts trap light energy, build glucose and release oxygen. Mitochondria in the same cell use that glucose and oxygen, then release carbon dioxide and water. Those products are available to the chloroplasts, so each organelle supplies what the other needs.",
+                  "title": "Plant cell in light"
+                },
+                {
+                  "body": "Without light, chloroplasts cannot carry out photosynthesis, so no new glucose or oxygen is made. Mitochondria are not switched off: they keep using glucose and oxygen already present in the cell, and keep releasing carbon dioxide and water. Darkness removes the photosynthesis contribution only, so respiration carries on as before.",
+                  "title": "Plant cell in darkness"
+                }
+              ]
+            },
+            "accessibility": {
+              "description": "A comparison of a plant cell in light with a plant cell in darkness. In light, chloroplasts and mitochondria are both active and exchange glucose, oxygen, carbon dioxide and water. In darkness, chloroplasts are inactive while mitochondria keep respiring."
+            },
+            "teaching_block_id": "contrast-b1"
+          },
+          {
+            "id": "shared-figure-node-dc0d5a021ecf27ece901",
+            "kind": "figure",
+            "display": {
+              "caption": "Plant cell in light with active chloroplasts and active mitochondria, showing glucose and oxygen from photosynthesis available to mitochondria and carbon dioxide and water from respiration available to chloroplasts. Plant cell in darkness with inactive chloroplasts and active mitochondria continuing to use glucose and oxygen and release carbon dioxide and water.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "contrast-b1"
+          }
+        ],
+        "title": "Light and dark in the plant cell",
+        "position": 2,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      },
+      "semantic_calls": 1,
+      "previous_section": {
+        "id": "explain",
+        "nodes": [
+          {
+            "id": "shared-node-7462b6b3696539942ba6",
+            "kind": "paragraph",
+            "display": {
+              "text": "**Photosynthesis in chloroplasts and respiration in mitochondria pass materials back and forth in a continuous cycle.**\n\nCarbon dioxide and water enter the plant's chloroplasts, where light energy drives photosynthesis to produce glucose and oxygen. The glucose and oxygen travel to mitochondria in the plant's own cells and in the animal's cells, where respiration uses them and releases carbon dioxide and water.\n\nThose products return to the chloroplasts as the inputs for photosynthesis. The oxygen made in photosynthesis is not only available to the animal; it is also available to the plant's own mitochondria for respiration. In the light, both processes run at the same time."
+            },
+            "accessibility": {
+              "description": "Explains the cyclic exchange of materials between photosynthesis and respiration, including the plant's own use of its glucose and oxygen."
+            },
+            "teaching_block_id": "explain-b1"
+          },
+          {
+            "id": "shared-figure-node-cd0d85c7876b5990ede5",
+            "kind": "figure",
+            "display": {
+              "caption": "Diagram of the sealed tank: carbon dioxide and water entering chloroplasts in the plant's cells; light energy driving photosynthesis in chloroplasts; glucose and oxygen produced by photosynthesis; glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells; carbon dioxide and water produced by respiration; those products returning to the chloroplasts; and oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "explain-b1"
+          },
+          {
+            "id": "shared-node-688658c0f9201a7f2493",
+            "kind": "paragraph",
+            "display": {
+              "text": "Respiration does not stop when light is available. Cells need a continuous supply of energy, so mitochondria keep using glucose and oxygen day and night. Photosynthesis, by contrast, can supply glucose and oxygen only when light is available. In bright light both processes run at the same time; in darkness only respiration runs. Inside the sealed tank, the plant and animal continue respiring during the dark phase, adding carbon dioxide and water that the plant will use when light returns."
+            },
+            "accessibility": {
+              "description": "Explains that respiration runs continuously day and night, while photosynthesis runs only when light is available."
+            },
+            "teaching_block_id": "explain-b2"
+          },
+          {
+            "id": "shared-figure-node-da97809d175b54895719",
+            "kind": "figure",
+            "display": {
+              "caption": "Diagram of a timeline covering a full day with a light phase and a dark phase: respiration active during both the light phase and the dark phase, and photosynthesis active only during the light phase.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "explain-b2"
+          }
+        ],
+        "title": "The product-to-input cycle",
+        "position": 1,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      }
+    },
+    "output_hash": "af3b2df1416787425eb9108bc7d3efcaa4a44f9e0a608597e287f41b347fdc29",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:57:40.448222",
+    "started_at": "2026-10-05 18:57:56.849407",
+    "updated_at": "2026-10-05 18:57:57.993221",
+    "completed_at": "2026-10-05 18:57:57.993221"
+  },
+  {
+    "id": "9375ee26-06e9-4a77-9349-f41ed4c3b1e2",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "boundary:orient->explain",
+    "stage": "continuity_validation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "1686411c8f38348a0c85f7afbd235394a5be716b689eee386332d8f481cd3d96",
+    "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+    "composition_identity": "{\"next\":\"18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1\",\"previous\":\"61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d\"}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:boundary",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:02:56.838943",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_lesson_boundary",
+        "work": {
+          "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+          "next_section_id": "explain",
+          "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "previous_section_id": "orient",
+          "source_plan_revision": 1,
+          "next_section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+          "next_composition_identity": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1",
+          "previous_section_output_hash": "2e1be092d63e12de36f4061d224eb9df00c26cf809467339a7e47953c92246b7",
+          "previous_composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+        }
+      },
+      "payload_hash": "354c8297b3d5e7d84e32bd8c87eff2f7f0c472328dcf7e07a901d9a425b74d08",
+      "compatibility": {
+        "input_hash": "1686411c8f38348a0c85f7afbd235394a5be716b689eee386332d8f481cd3d96",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+        "source_revision": 1,
+        "composition_identity": "{\"next\":\"18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1\",\"previous\":\"61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d\"}"
+      }
+    },
+    "output_json": {
+      "kind": "shared_lesson_boundary_result",
+      "work": {
+        "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+        "next_section_id": "explain",
+        "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "previous_section_id": "orient",
+        "source_plan_revision": 1,
+        "next_section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+        "next_composition_identity": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1",
+        "previous_section_output_hash": "2e1be092d63e12de36f4061d224eb9df00c26cf809467339a7e47953c92246b7",
+        "previous_composition_identity": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d"
+      },
+      "status": "pass",
+      "next_section": {
+        "id": "explain",
+        "nodes": [
+          {
+            "id": "shared-node-7462b6b3696539942ba6",
+            "kind": "paragraph",
+            "display": {
+              "text": "**Photosynthesis in chloroplasts and respiration in mitochondria pass materials back and forth in a continuous cycle.**\n\nCarbon dioxide and water enter the plant's chloroplasts, where light energy drives photosynthesis to produce glucose and oxygen. The glucose and oxygen travel to mitochondria in the plant's own cells and in the animal's cells, where respiration uses them and releases carbon dioxide and water.\n\nThose products return to the chloroplasts as the inputs for photosynthesis. The oxygen made in photosynthesis is not only available to the animal; it is also available to the plant's own mitochondria for respiration. In the light, both processes run at the same time."
+            },
+            "accessibility": {
+              "description": "Explains the cyclic exchange of materials between photosynthesis and respiration, including the plant's own use of its glucose and oxygen."
+            },
+            "teaching_block_id": "explain-b1"
+          },
+          {
+            "id": "shared-figure-node-cd0d85c7876b5990ede5",
+            "kind": "figure",
+            "display": {
+              "caption": "Diagram of the sealed tank: carbon dioxide and water entering chloroplasts in the plant's cells; light energy driving photosynthesis in chloroplasts; glucose and oxygen produced by photosynthesis; glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells; carbon dioxide and water produced by respiration; those products returning to the chloroplasts; and oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "explain-b1"
+          },
+          {
+            "id": "shared-node-688658c0f9201a7f2493",
+            "kind": "paragraph",
+            "display": {
+              "text": "Respiration does not stop when light is available. Cells need a continuous supply of energy, so mitochondria keep using glucose and oxygen day and night. Photosynthesis, by contrast, can supply glucose and oxygen only when light is available. In bright light both processes run at the same time; in darkness only respiration runs. Inside the sealed tank, the plant and animal continue respiring during the dark phase, adding carbon dioxide and water that the plant will use when light returns."
+            },
+            "accessibility": {
+              "description": "Explains that respiration runs continuously day and night, while photosynthesis runs only when light is available."
+            },
+            "teaching_block_id": "explain-b2"
+          },
+          {
+            "id": "shared-figure-node-da97809d175b54895719",
+            "kind": "figure",
+            "display": {
+              "caption": "Diagram of a timeline covering a full day with a light phase and a dark phase: respiration active during both the light phase and the dark phase, and photosynthesis active only during the light phase.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "explain-b2"
+          }
+        ],
+        "title": "The product-to-input cycle",
+        "position": 1,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      },
+      "semantic_calls": 1,
+      "previous_section": {
+        "id": "orient",
+        "nodes": [
+          {
+            "id": "shared-node-8db81c2aad956244b743",
+            "kind": "paragraph",
+            "display": {
+              "text": "**In a sealed tank, a plant and an animal must get everything they need from inside it.** A small green plant and a small animal sit together in a sealed glass tank, watched for a full day and night \u2014 through both light and dark. No gases, water, or food can enter or leave. So each organism must live on the materials already there and on what the other one gives off. How can both manage for 24 hours?"
+            },
+            "accessibility": {
+              "description": "Introduces a sealed glass tank holding a small green plant and a small animal, watched over a full day and night with both light and dark phases, and asks how both organisms can meet their needs inside the closed system."
+            },
+            "teaching_block_id": "orient-b1"
+          },
+          {
+            "id": "shared-figure-node-c636a419002a7fcd3257",
+            "kind": "figure",
+            "display": {
+              "caption": "A sealed glass tank containing a small green plant and a small animal, with the tank observed over 24 hours, including a light phase and a dark phase. Labels name the sealed glass tank, the small green plant, the small animal, and 24 hours.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "orient-b1"
+          }
+        ],
+        "title": "A sealed tank and a 24-hour puzzle",
+        "position": 0,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      }
+    },
+    "output_hash": "4be5a3d7b6eb49af940da1cb7b7d1580ae24bb249d43b22f538e8d3358e66d85",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:57:40.414078",
+    "started_at": "2026-10-05 18:57:56.838943",
+    "updated_at": "2026-10-05 18:57:58.154975",
+    "completed_at": "2026-10-05 18:57:58.154975"
+  },
+  {
+    "id": "3a1d041f-871a-4a0b-9296-d644dc5a26c2",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "bb8c6653c2ec292bf97b4e566c609bd560d7a1b68aa4f266f7a6288cd2fb2a35",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-c636a419002a7fcd3257\",\"figure_semantic_hash\":\"0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc\",\"required\":true,\"section_id\":\"orient\",\"section_output_hash\":\"2e1be092d63e12de36f4061d224eb9df00c26cf809467339a7e47953c92246b7\",\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"A sealed glass tank containing a small green plant and a small animal, with the tank observed over 24 hours, including a light phase and a dark phase. Labels name the sealed glass tank, the small green plant, the small animal, and 24 hours.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"**In a sealed tank, a plant and an animal must get everything they need from inside it.** A small green plant and a small animal sit together in a sealed glass tank, watched for a full day and night \u2014 through both light and dark.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"How can both manage for 24 hours?\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-c636a419002a7fcd3257\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-0baad38d0dcb558278ea4d48\",\"labels_required\":[\"sealed glass tank\",\"small green plant\",\"small animal\",\"24 hours\"],\"mode\":\"diagram\",\"must_not_show\":[\"arrows or labels for gases, glucose, or water\",\"any statement about photosynthesis or respiration\"],\"must_show\":[\"a sealed glass tank containing a small green plant and a small animal\",\"the tank observed over 24 hours, including a light phase and a dark phase\"],\"print_requirements\":[],\"purpose\":\"Show the sealed tank as a closed system containing a plant and an animal over a full day and night.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:24.619180",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [],
+          "section_id": "orient",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-0baad38d0dcb558278ea4d48",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Show the sealed tank as a closed system containing a plant and an animal over a full day and night.",
+              "must_show": [
+                "a sealed glass tank containing a small green plant and a small animal",
+                "the tank observed over 24 hours, including a light phase and a dark phase"
+              ],
+              "attaches_to": "shared-figure-node-c636a419002a7fcd3257",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "arrows or labels for gases, glucose, or water",
+                "any statement about photosynthesis or respiration"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "sealed glass tank",
+                "small green plant",
+                "small animal",
+                "24 hours"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "A sealed glass tank containing a small green plant and a small animal, with the tank observed over 24 hours, including a light phase and a dark phase. Labels name the sealed glass tank, the small green plant, the small animal, and 24 hours.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-1",
+                "text": "**In a sealed tank, a plant and an animal must get everything they need from inside it.** A small green plant and a small animal sit together in a sealed glass tank, watched for a full day and night \u2014 through both light and dark.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-2",
+                "text": "How can both manage for 24 hours?",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-c636a419002a7fcd3257",
+          "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+          "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "section_output_hash": "2e1be092d63e12de36f4061d224eb9df00c26cf809467339a7e47953c92246b7",
+          "figure_semantic_hash": "0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+        "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "section_output_hash": "2e1be092d63e12de36f4061d224eb9df00c26cf809467339a7e47953c92246b7",
+        "figure_semantic_hash": "0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "934ffba1aec3b5f54d55518e00b1d6a8ddaaf45bc1f595d9d349e8112e2c1803",
+      "compatibility": {
+        "input_hash": "bb8c6653c2ec292bf97b4e566c609bd560d7a1b68aa4f266f7a6288cd2fb2a35",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-c636a419002a7fcd3257\",\"figure_semantic_hash\":\"0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc\",\"required\":true,\"section_id\":\"orient\",\"section_output_hash\":\"2e1be092d63e12de36f4061d224eb9df00c26cf809467339a7e47953c92246b7\",\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"A sealed glass tank containing a small green plant and a small animal, with the tank observed over 24 hours, including a light phase and a dark phase. Labels name the sealed glass tank, the small green plant, the small animal, and 24 hours.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"**In a sealed tank, a plant and an animal must get everything they need from inside it.** A small green plant and a small animal sit together in a sealed glass tank, watched for a full day and night \u2014 through both light and dark.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"How can both manage for 24 hours?\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-c636a419002a7fcd3257\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-0baad38d0dcb558278ea4d48\",\"labels_required\":[\"sealed glass tank\",\"small green plant\",\"small animal\",\"24 hours\"],\"mode\":\"diagram\",\"must_not_show\":[\"arrows or labels for gases, glucose, or water\",\"any statement about photosynthesis or respiration\"],\"must_show\":[\"a sealed glass tank containing a small green plant and a small animal\",\"the tank observed over 24 hours, including a light phase and a dark phase\"],\"print_requirements\":[],\"purpose\":\"Show the sealed tank as a closed system containing a plant and an animal over a full day and night.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-0baad38d0dcb558278ea4d48",
+      "section_id": "orient",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "A sealed glass tank containing a small green plant and a small animal, with the tank observed over 24 hours, including a light phase and a dark phase. Labels name the sealed glass tank, the small green plant, the small animal, and 24 hours.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-1",
+          "text": "**In a sealed tank, a plant and an animal must get everything they need from inside it.** A small green plant and a small animal sit together in a sealed glass tank, watched for a full day and night \u2014 through both light and dark.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-2",
+          "text": "How can both manage for 24 hours?",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc",
+      "figure_node_id": "shared-figure-node-c636a419002a7fcd3257",
+      "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+      "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+      "section_output_hash": "2e1be092d63e12de36f4061d224eb9df00c26cf809467339a7e47953c92246b7",
+      "figure_semantic_hash": "0baad38d0dcb558278ea4d48a0309783ee50c6e40435a5901048092eab2920bc",
+      "source_plan_revision": 1
+    },
+    "output_hash": "a93d4a7946ae1b62c6a1f61de51e49baeafe3413d762acd6b220962f6667b102",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:10.956233",
+    "started_at": "2026-10-05 18:58:24.619180",
+    "updated_at": "2026-10-05 18:58:25.925231",
+    "completed_at": "2026-10-05 18:58:25.925231"
+  },
+  {
+    "id": "b164701a-231d-4f01-a6e5-4b1d2c5e03d6",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "boundary:confront->check",
+    "stage": "continuity_validation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "5518c5c0bddfb09cd608e0bd478f6a2961bf2b8ac5ba7027a293310c3d9bb963",
+    "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+    "composition_identity": "{\"next\":\"21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262\",\"previous\":\"aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3\"}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:boundary",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:02:56.869504",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_lesson_boundary",
+        "work": {
+          "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+          "next_section_id": "check",
+          "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "previous_section_id": "confront",
+          "source_plan_revision": 1,
+          "next_section_output_hash": "f9de2e2c03dd7eb6912a659f31b2e1beec60b9ca1a62d437b9e1550bf5bcafa8",
+          "next_composition_identity": "21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262",
+          "previous_section_output_hash": "b343d37a6c46d127083c1d9d34282face52b27cf3abc433513f194c429e9db85",
+          "previous_composition_identity": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3"
+        }
+      },
+      "payload_hash": "b5185dc88708552a8849858aca658b426c5c82bf2d263b009fb6e40ab8604f2a",
+      "compatibility": {
+        "input_hash": "5518c5c0bddfb09cd608e0bd478f6a2961bf2b8ac5ba7027a293310c3d9bb963",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+        "source_revision": 1,
+        "composition_identity": "{\"next\":\"21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262\",\"previous\":\"aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3\"}"
+      }
+    },
+    "output_json": {
+      "kind": "shared_lesson_boundary_result",
+      "work": {
+        "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+        "next_section_id": "check",
+        "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "previous_section_id": "confront",
+        "source_plan_revision": 1,
+        "next_section_output_hash": "f9de2e2c03dd7eb6912a659f31b2e1beec60b9ca1a62d437b9e1550bf5bcafa8",
+        "next_composition_identity": "21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262",
+        "previous_section_output_hash": "b343d37a6c46d127083c1d9d34282face52b27cf3abc433513f194c429e9db85",
+        "previous_composition_identity": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3"
+      },
+      "status": "pass",
+      "next_section": {
+        "id": "check",
+        "nodes": [
+          {
+            "id": "shared-node-76f42783041b846992dc",
+            "kind": "paragraph",
+            "display": {
+              "text": "Read the written explanation in the item below, then decide which single correction would make the whole explanation accurate. Each option changes one claim, so compare every option with the model of plant gas exchange you have already built and tested."
+            },
+            "accessibility": {
+              "description": "Introductory paragraph for a single-choice check. Learners read a student's written explanation of photosynthesis and respiration, then choose the one correction that makes the explanation accurate."
+            },
+            "teaching_block_id": "check-b1"
+          },
+          {
+            "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+            "kind": "task_anchor",
+            "role": null,
+            "task_spec_id": "task-check-b1",
+            "teaching_block_id": "check-b1"
+          }
+        ],
+        "title": "Check: correcting an explanation of gas exchange",
+        "position": 4,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      },
+      "semantic_calls": 1,
+      "previous_section": {
+        "id": "confront",
+        "nodes": [
+          {
+            "id": "shared-node-c6b5d1f1b4ccefa3da57",
+            "kind": "callout",
+            "display": {
+              "tone": "warning",
+              "aside": "In a dark chamber the plant releases carbon dioxide and takes in oxygen, and in bright light those net changes reverse. That is why the take-turns idea feels convincing.",
+              "title": "Do photosynthesis and respiration take turns?",
+              "belief": "Photosynthesis happens in sunlight and respiration happens in darkness, so the plant switches from one to the other and only respires at night.",
+              "variant": "misconception",
+              "evidence": "In a plant cell in bright light, the mitochondria are still taking in oxygen and releasing carbon dioxide while the chloroplasts photosynthesise. Respiration has not switched off; light does not stop it.",
+              "conclusion": "Respiration is continuous, day and night. Photosynthesis runs whenever light is available, so in the light both processes run at the same time in the same cell."
+            },
+            "accessibility": {
+              "description": "Misconception callout: the belief that a plant respires only in darkness and photosynthesises only in light is tested against a plant cell in bright light, where mitochondria keep respiring, and corrected by stating that respiration is continuous while photosynthesis runs whenever light is available."
+            },
+            "teaching_block_id": "confront-b1"
+          },
+          {
+            "id": "shared-node-2184881ac796004269cb",
+            "kind": "callout",
+            "display": {
+              "tone": "warning",
+              "aside": "Textbooks often describe plants releasing oxygen for animals, so the plant's own need for that oxygen is easy to overlook.",
+              "title": "Is the plant's oxygen only for other organisms?",
+              "belief": "The oxygen made by photosynthesis is for other organisms. The plant releases it into the air, not for itself.",
+              "variant": "misconception",
+              "evidence": "Inside the same plant cell, oxygen made by chloroplasts diffuses to that cell's mitochondria and is used there in respiration. No delivery system sends oxygen only to other organisms; the gas is available to the cell that made it.",
+              "conclusion": "The oxygen from photosynthesis is available to the plant's own respiration as well as to other organisms, and the plant also uses oxygen from the surrounding air."
+            },
+            "accessibility": {
+              "description": "Misconception callout: the belief that photosynthesised oxygen is only for other organisms is tested by following oxygen from a cell's chloroplasts to its own mitochondria, and corrected by stating that the plant uses its own oxygen in respiration as well as releasing it to other organisms."
+            },
+            "teaching_block_id": "confront-b2"
+          }
+        ],
+        "title": "Why the 'take turns' and 'only for animals' ideas fail",
+        "position": 3,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      }
+    },
+    "output_hash": "ce165377352da96775ee41e481c00ca3373ae33a9e70c01278e247dae27c833b",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:57:40.509642",
+    "started_at": "2026-10-05 18:57:56.869504",
+    "updated_at": "2026-10-05 18:57:58.353417",
+    "completed_at": "2026-10-05 18:57:58.353417"
+  },
+  {
+    "id": "5d3b6589-10ec-465a-97b1-c15f71b64006",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "a223cb2e2f8ca818d50492c8afd760feb2d7a36442fabb9752f682bbb96ccf8a",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-da97809d175b54895719\",\"figure_semantic_hash\":\"8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05\",\"required\":true,\"section_id\":\"explain\",\"section_output_hash\":\"d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8\",\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"Diagram of a timeline covering a full day with a light phase and a dark phase: respiration active during both the light phase and the dark phase, and photosynthesis active only during the light phase.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"Respiration does not stop when light is available.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"Photosynthesis, by contrast, can supply glucose and oxygen only when light is available.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-da97809d175b54895719\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-8207057f3bf30926d9d9f711\",\"labels_required\":[\"24 hours\",\"light\",\"dark\",\"respiration\",\"photosynthesis\"],\"mode\":\"diagram\",\"must_not_show\":[\"alternation of the two processes\",\"cessation of respiration in light\"],\"must_show\":[\"a timeline covering 24 hours with a light phase and a dark phase\",\"respiration active during both the light phase and the dark phase\",\"photosynthesis active only during the light phase\"],\"print_requirements\":[],\"purpose\":\"Show that respiration runs continuously while photosynthesis requires light.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:24.635498",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [
+            "label_missing:24 hours"
+          ],
+          "section_id": "explain",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-8207057f3bf30926d9d9f711",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Show that respiration runs continuously while photosynthesis requires light.",
+              "must_show": [
+                "a timeline covering 24 hours with a light phase and a dark phase",
+                "respiration active during both the light phase and the dark phase",
+                "photosynthesis active only during the light phase"
+              ],
+              "attaches_to": "shared-figure-node-da97809d175b54895719",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "alternation of the two processes",
+                "cessation of respiration in light"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "24 hours",
+                "light",
+                "dark",
+                "respiration",
+                "photosynthesis"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "Diagram of a timeline covering a full day with a light phase and a dark phase: respiration active during both the light phase and the dark phase, and photosynthesis active only during the light phase.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-1",
+                "text": "Respiration does not stop when light is available.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-2",
+                "text": "Photosynthesis, by contrast, can supply glucose and oxygen only when light is available.",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-da97809d175b54895719",
+          "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+          "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+          "figure_semantic_hash": "8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+        "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+        "figure_semantic_hash": "8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "a62c883e9f15e1777490cd7773bcd15a8717f0eb28e77a55d7bb644ef5a9a772",
+      "compatibility": {
+        "input_hash": "a223cb2e2f8ca818d50492c8afd760feb2d7a36442fabb9752f682bbb96ccf8a",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-da97809d175b54895719\",\"figure_semantic_hash\":\"8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05\",\"required\":true,\"section_id\":\"explain\",\"section_output_hash\":\"d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8\",\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"Diagram of a timeline covering a full day with a light phase and a dark phase: respiration active during both the light phase and the dark phase, and photosynthesis active only during the light phase.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"Respiration does not stop when light is available.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"Photosynthesis, by contrast, can supply glucose and oxygen only when light is available.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-da97809d175b54895719\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-8207057f3bf30926d9d9f711\",\"labels_required\":[\"24 hours\",\"light\",\"dark\",\"respiration\",\"photosynthesis\"],\"mode\":\"diagram\",\"must_not_show\":[\"alternation of the two processes\",\"cessation of respiration in light\"],\"must_show\":[\"a timeline covering 24 hours with a light phase and a dark phase\",\"respiration active during both the light phase and the dark phase\",\"photosynthesis active only during the light phase\"],\"print_requirements\":[],\"purpose\":\"Show that respiration runs continuously while photosynthesis requires light.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-8207057f3bf30926d9d9f711",
+      "section_id": "explain",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "Diagram of a timeline covering a full day with a light phase and a dark phase: respiration active during both the light phase and the dark phase, and photosynthesis active only during the light phase.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-1",
+          "text": "Respiration does not stop when light is available.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-2",
+          "text": "Photosynthesis, by contrast, can supply glucose and oxygen only when light is available.",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05",
+      "figure_node_id": "shared-figure-node-da97809d175b54895719",
+      "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+      "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+      "section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+      "figure_semantic_hash": "8207057f3bf30926d9d9f7114194173a2c6ac35645df30e4fba3f989f066ec05",
+      "source_plan_revision": 1
+    },
+    "output_hash": "7659df3222e065ff2575aeae08863ece33e94f217eddd844f4374ddc8f530d62",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:11.060045",
+    "started_at": "2026-10-05 18:58:24.635498",
+    "updated_at": "2026-10-05 18:58:26.040667",
+    "completed_at": "2026-10-05 18:58:26.040667"
+  },
+  {
+    "id": "fab27bbd-221d-4145-881d-3aaeac2f020a",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "1ae21c5573ced38a511326b5fc4231c28a3644a43a52a5140fa5db7178ec1953",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-cd0d85c7876b5990ede5\",\"figure_semantic_hash\":\"9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9\",\"required\":true,\"section_id\":\"explain\",\"section_output_hash\":\"d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8\",\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"Diagram of the sealed tank: carbon dioxide and water entering chloroplasts in the plant's cells; light energy driving photosynthesis in chloroplasts; glucose and oxygen produced by photosynthesis; glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells; carbon dioxide and water produced by respiration; those products returning to the chloroplasts; and oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"**Photosynthesis in chloroplasts and respiration in mitochondria pass materials back and forth in a continuous cycle.**\\n\\nCarbon dioxide and water enter the plant's chloroplasts, where light energy drives photosynthesis to produce glucose and oxygen.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"The glucose and oxygen travel to mitochondria in the plant's own cells and in the animal's cells, where respiration uses them and releases carbon dioxide and water.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-cd0d85c7876b5990ede5\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-9187010476be4f6d4a3e1894\",\"labels_required\":[\"chloroplasts\",\"light energy\",\"carbon dioxide\",\"water\",\"glucose\",\"oxygen\",\"mitochondria\",\"respiration\",\"photosynthesis\"],\"mode\":\"diagram\",\"must_not_show\":[\"the idea that photosynthesis and respiration alternate\",\"the claim that oxygen is only for the animal\"],\"must_show\":[\"carbon dioxide and water entering chloroplasts in the plant's cells\",\"light energy driving photosynthesis in chloroplasts\",\"glucose and oxygen produced by photosynthesis\",\"glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells\",\"carbon dioxide and water produced by respiration\",\"those products returning to the chloroplasts\",\"oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal\"],\"print_requirements\":[],\"purpose\":\"Show the cyclic exchange of materials between photosynthesis and respiration within the sealed tank.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:03:24.629066",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [],
+          "section_id": "explain",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-9187010476be4f6d4a3e1894",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Show the cyclic exchange of materials between photosynthesis and respiration within the sealed tank.",
+              "must_show": [
+                "carbon dioxide and water entering chloroplasts in the plant's cells",
+                "light energy driving photosynthesis in chloroplasts",
+                "glucose and oxygen produced by photosynthesis",
+                "glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells",
+                "carbon dioxide and water produced by respiration",
+                "those products returning to the chloroplasts",
+                "oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal"
+              ],
+              "attaches_to": "shared-figure-node-cd0d85c7876b5990ede5",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "the idea that photosynthesis and respiration alternate",
+                "the claim that oxygen is only for the animal"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "chloroplasts",
+                "light energy",
+                "carbon dioxide",
+                "water",
+                "glucose",
+                "oxygen",
+                "mitochondria",
+                "respiration",
+                "photosynthesis"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "Diagram of the sealed tank: carbon dioxide and water entering chloroplasts in the plant's cells; light energy driving photosynthesis in chloroplasts; glucose and oxygen produced by photosynthesis; glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells; carbon dioxide and water produced by respiration; those products returning to the chloroplasts; and oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-1",
+                "text": "**Photosynthesis in chloroplasts and respiration in mitochondria pass materials back and forth in a continuous cycle.**\n\nCarbon dioxide and water enter the plant's chloroplasts, where light energy drives photosynthesis to produce glucose and oxygen.",
+                "unit_tokens": []
+              },
+              {
+                "key": "context:section-text-2",
+                "text": "The glucose and oxygen travel to mitochondria in the plant's own cells and in the animal's cells, where respiration uses them and releases carbon dioxide and water.",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-cd0d85c7876b5990ede5",
+          "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+          "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+          "figure_semantic_hash": "9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+        "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+        "figure_semantic_hash": "9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "d8fc6e04f2850922472f52831610a1d80b0cfee2211a48d7c7cc351408792a95",
+      "compatibility": {
+        "input_hash": "1ae21c5573ced38a511326b5fc4231c28a3644a43a52a5140fa5db7178ec1953",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-cd0d85c7876b5990ede5\",\"figure_semantic_hash\":\"9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9\",\"required\":true,\"section_id\":\"explain\",\"section_output_hash\":\"d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8\",\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"Diagram of the sealed tank: carbon dioxide and water entering chloroplasts in the plant's cells; light energy driving photosynthesis in chloroplasts; glucose and oxygen produced by photosynthesis; glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells; carbon dioxide and water produced by respiration; those products returning to the chloroplasts; and oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-1\",\"text\":\"**Photosynthesis in chloroplasts and respiration in mitochondria pass materials back and forth in a continuous cycle.**\\n\\nCarbon dioxide and water enter the plant's chloroplasts, where light energy drives photosynthesis to produce glucose and oxygen.\",\"unit_tokens\":[]},{\"key\":\"context:section-text-2\",\"text\":\"The glucose and oxygen travel to mitochondria in the plant's own cells and in the animal's cells, where respiration uses them and releases carbon dioxide and water.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-cd0d85c7876b5990ede5\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-9187010476be4f6d4a3e1894\",\"labels_required\":[\"chloroplasts\",\"light energy\",\"carbon dioxide\",\"water\",\"glucose\",\"oxygen\",\"mitochondria\",\"respiration\",\"photosynthesis\"],\"mode\":\"diagram\",\"must_not_show\":[\"the idea that photosynthesis and respiration alternate\",\"the claim that oxygen is only for the animal\"],\"must_show\":[\"carbon dioxide and water entering chloroplasts in the plant's cells\",\"light energy driving photosynthesis in chloroplasts\",\"glucose and oxygen produced by photosynthesis\",\"glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells\",\"carbon dioxide and water produced by respiration\",\"those products returning to the chloroplasts\",\"oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal\"],\"print_requirements\":[],\"purpose\":\"Show the cyclic exchange of materials between photosynthesis and respiration within the sealed tank.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-9187010476be4f6d4a3e1894",
+      "section_id": "explain",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "Diagram of the sealed tank: carbon dioxide and water entering chloroplasts in the plant's cells; light energy driving photosynthesis in chloroplasts; glucose and oxygen produced by photosynthesis; glucose and oxygen used in mitochondria in the plant's cells and in the animal's cells; carbon dioxide and water produced by respiration; those products returning to the chloroplasts; and oxygen from photosynthesis available to the plant's own mitochondria as well as to the animal.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-1",
+          "text": "**Photosynthesis in chloroplasts and respiration in mitochondria pass materials back and forth in a continuous cycle.**\n\nCarbon dioxide and water enter the plant's chloroplasts, where light energy drives photosynthesis to produce glucose and oxygen.",
+          "unit_tokens": []
+        },
+        {
+          "key": "context:section-text-2",
+          "text": "The glucose and oxygen travel to mitochondria in the plant's own cells and in the animal's cells, where respiration uses them and releases carbon dioxide and water.",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9",
+      "figure_node_id": "shared-figure-node-cd0d85c7876b5990ede5",
+      "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+      "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+      "section_output_hash": "d391da2a51472dc80af1a582f21273c53c2f13f65d3f20e257a97d4a768291b8",
+      "figure_semantic_hash": "9187010476be4f6d4a3e1894d52814a56bf6655e05c68d1faef9a5e14a1d6af9",
+      "source_plan_revision": 1
+    },
+    "output_hash": "94e843f7c815d1baaaa73110d7da40d1f51c62d3d4b5509131023ba6e00a1090",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:10.990840",
+    "started_at": "2026-10-05 18:58:24.629066",
+    "updated_at": "2026-10-05 18:58:26.358751",
+    "completed_at": "2026-10-05 18:58:26.358751"
+  },
+  {
+    "id": "b9264e4f-e3a1-487b-bbc2-ec88853c0871",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "boundary:contrast->confront",
+    "stage": "continuity_validation",
+    "status": "ready",
+    "attempt": "2",
+    "max_attempts": "3",
+    "input_hash": "27124605463da7e0dfc7669473e8e987124317948184672f28efe5a769571398",
+    "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+    "composition_identity": "{\"next\":\"aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3\",\"previous\":\"d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38\"}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:boundary",
+    "lease_token": "3",
+    "lease_expires_at": "2026-10-05 19:03:09.024474",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_lesson_boundary",
+        "work": {
+          "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+          "next_section_id": "confront",
+          "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "previous_section_id": "contrast",
+          "source_plan_revision": 1,
+          "next_section_output_hash": "b343d37a6c46d127083c1d9d34282face52b27cf3abc433513f194c429e9db85",
+          "next_composition_identity": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3",
+          "previous_section_output_hash": "59f7b109c314a8a6feb6f754b5873e128a1ccdc532a7bb1ec8988d53b9ec6046",
+          "previous_composition_identity": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38"
+        }
+      },
+      "payload_hash": "12010e68b28e2679e40b8c16583c4fd5b3ddfe316188402673ba6c234d36be9f",
+      "compatibility": {
+        "input_hash": "27124605463da7e0dfc7669473e8e987124317948184672f28efe5a769571398",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "d47393230ec771998e5622aae1dfe5e8ae5a292fd336d040b677af69fec0719f",
+        "source_revision": 1,
+        "composition_identity": "{\"next\":\"aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3\",\"previous\":\"d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38\"}"
+      }
+    },
+    "output_json": {
+      "kind": "shared_lesson_boundary_result",
+      "work": {
+        "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+        "next_section_id": "confront",
+        "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "previous_section_id": "contrast",
+        "source_plan_revision": 1,
+        "next_section_output_hash": "b343d37a6c46d127083c1d9d34282face52b27cf3abc433513f194c429e9db85",
+        "next_composition_identity": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3",
+        "previous_section_output_hash": "59f7b109c314a8a6feb6f754b5873e128a1ccdc532a7bb1ec8988d53b9ec6046",
+        "previous_composition_identity": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38"
+      },
+      "status": "pass",
+      "next_section": {
+        "id": "confront",
+        "nodes": [
+          {
+            "id": "shared-node-c6b5d1f1b4ccefa3da57",
+            "kind": "callout",
+            "display": {
+              "tone": "warning",
+              "aside": "In a dark chamber the plant releases carbon dioxide and takes in oxygen, and in bright light those net changes reverse. That is why the take-turns idea feels convincing.",
+              "title": "Do photosynthesis and respiration take turns?",
+              "belief": "Photosynthesis happens in sunlight and respiration happens in darkness, so the plant switches from one to the other and only respires at night.",
+              "variant": "misconception",
+              "evidence": "In a plant cell in bright light, the mitochondria are still taking in oxygen and releasing carbon dioxide while the chloroplasts photosynthesise. Respiration has not switched off; light does not stop it.",
+              "conclusion": "Respiration is continuous, day and night. Photosynthesis runs whenever light is available, so in the light both processes run at the same time in the same cell."
+            },
+            "accessibility": {
+              "description": "Misconception callout: the belief that a plant respires only in darkness and photosynthesises only in light is tested against a plant cell in bright light, where mitochondria keep respiring, and corrected by stating that respiration is continuous while photosynthesis runs whenever light is available."
+            },
+            "teaching_block_id": "confront-b1"
+          },
+          {
+            "id": "shared-node-2184881ac796004269cb",
+            "kind": "callout",
+            "display": {
+              "tone": "warning",
+              "aside": "Textbooks often describe plants releasing oxygen for animals, so the plant's own need for that oxygen is easy to overlook.",
+              "title": "Is the plant's oxygen only for other organisms?",
+              "belief": "The oxygen made by photosynthesis is for other organisms. The plant releases it into the air, not for itself.",
+              "variant": "misconception",
+              "evidence": "Inside the same plant cell, oxygen made by chloroplasts diffuses to that cell's mitochondria and is used there in respiration. No delivery system sends oxygen only to other organisms; the gas is available to the cell that made it.",
+              "conclusion": "The oxygen from photosynthesis is available to the plant's own respiration as well as to other organisms, and the plant also uses oxygen from the surrounding air."
+            },
+            "accessibility": {
+              "description": "Misconception callout: the belief that photosynthesised oxygen is only for other organisms is tested by following oxygen from a cell's chloroplasts to its own mitochondria, and corrected by stating that the plant uses its own oxygen in respiration as well as releasing it to other organisms."
+            },
+            "teaching_block_id": "confront-b2"
+          }
+        ],
+        "title": "Why the 'take turns' and 'only for animals' ideas fail",
+        "position": 3,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      },
+      "semantic_calls": 1,
+      "previous_section": {
+        "id": "contrast",
+        "nodes": [
+          {
+            "id": "shared-node-f0d44dd2415d61bbdfd4",
+            "kind": "compare",
+            "display": {
+              "items": [
+                {
+                  "body": "**In a plant cell in light, photosynthesis and respiration run at the same time.** Chloroplasts trap light energy, build glucose and release oxygen. Mitochondria in the same cell use that glucose and oxygen, then release carbon dioxide and water. Those products are available to the chloroplasts, so each organelle supplies what the other needs.",
+                  "title": "Plant cell in light"
+                },
+                {
+                  "body": "Without light, chloroplasts cannot carry out photosynthesis, so no new glucose or oxygen is made. Mitochondria are not switched off: they keep using glucose and oxygen already present in the cell, and keep releasing carbon dioxide and water. Darkness removes the photosynthesis contribution only, so respiration carries on as before.",
+                  "title": "Plant cell in darkness"
+                }
+              ]
+            },
+            "accessibility": {
+              "description": "A comparison of a plant cell in light with a plant cell in darkness. In light, chloroplasts and mitochondria are both active and exchange glucose, oxygen, carbon dioxide and water. In darkness, chloroplasts are inactive while mitochondria keep respiring."
+            },
+            "teaching_block_id": "contrast-b1"
+          },
+          {
+            "id": "shared-figure-node-dc0d5a021ecf27ece901",
+            "kind": "figure",
+            "display": {
+              "caption": "Plant cell in light with active chloroplasts and active mitochondria, showing glucose and oxygen from photosynthesis available to mitochondria and carbon dioxide and water from respiration available to chloroplasts. Plant cell in darkness with inactive chloroplasts and active mitochondria continuing to use glucose and oxygen and release carbon dioxide and water.",
+              "asset_id": null
+            },
+            "accessibility": {
+              "alt_text": ""
+            },
+            "teaching_block_id": "contrast-b1"
+          }
+        ],
+        "title": "Light and dark in the plant cell",
+        "position": 2,
+        "provenance": {
+          "source_ids": [],
+          "source_hashes": {}
+        }
+      }
+    },
+    "output_hash": "bdc7921c76ab31f9990a8f0e3b30c7c604f4a523d06c72e5c02b3eda92083094",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:57:40.478582",
+    "started_at": "2026-10-05 18:57:42.919823",
+    "updated_at": "2026-10-05 18:58:10.473850",
+    "completed_at": "2026-10-05 18:58:10.473850"
+  },
+  {
+    "id": "e305f170-eb0c-4b17-8588-2c7c1ac3bcd4",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "sourcebook",
+    "stage": "sourcebook_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "9246e0a48884d1f6f6e9a882aa69d24a1594a8ecdfd0da6c6f77b64dc0d6530c",
+    "definition_hash": "9f8a2473665575044f56408fbf48d24a11e1c934e51d1ed4acdeb8d4ccb57202",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:00:12.647986",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_sourcebook",
+        "input_hash": "9246e0a48884d1f6f6e9a882aa69d24a1594a8ecdfd0da6c6f77b64dc0d6530c",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "definition_hash": "9f8a2473665575044f56408fbf48d24a11e1c934e51d1ed4acdeb8d4ccb57202",
+        "source_revision": 1,
+        "source_artifact_id": "af070978-797b-4c21-b744-29f404128830",
+        "source_artifact_type": "teaching_plan"
+      },
+      "payload_hash": "d1fa721b9e5d1d2e6114813856f088d882e3dfb134202f0497df5dd65c420cf1",
+      "compatibility": {
+        "input_hash": "9246e0a48884d1f6f6e9a882aa69d24a1594a8ecdfd0da6c6f77b64dc0d6530c",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "9f8a2473665575044f56408fbf48d24a11e1c934e51d1ed4acdeb8d4ccb57202",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "entries": [],
+      "teaching_plan_id": "af070978-797b-4c21-b744-29f404128830",
+      "teaching_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+      "teaching_plan_revision": 1
+    },
+    "output_hash": "43733d32986877d324f937d44786a8f8180851516eff4527bc9745869bb1ec90",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:12.440144",
+    "started_at": "2026-10-05 18:55:12.647986",
+    "updated_at": "2026-10-05 18:55:12.647986",
+    "completed_at": "2026-10-05 18:55:12.647986"
+  },
+  {
+    "id": "a0f9a371-4e66-47bb-8bca-71f03adabafe",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:contrast",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "e1d454eaa901bf57d9845e7c36620dabc85af68c2a601240a1e3acb9d11104f1",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:00:21.382506",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-f0d44dd2415d61bbdfd4",
+            "kind": "compare",
+            "task_spec_id": null,
+            "semantic_role": "comparison",
+            "teaching_block_id": "contrast-b1"
+          },
+          {
+            "id": "shared-figure-node-dc0d5a021ecf27ece901",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "contrast-b1"
+          }
+        ],
+        "section_slot_id": "contrast"
+      },
+      "payload_hash": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38",
+      "compatibility": {
+        "input_hash": "e1d454eaa901bf57d9845e7c36620dabc85af68c2a601240a1e3acb9d11104f1",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-f0d44dd2415d61bbdfd4",
+          "kind": "compare",
+          "task_spec_id": null,
+          "semantic_role": "comparison",
+          "teaching_block_id": "contrast-b1"
+        },
+        {
+          "id": "shared-figure-node-dc0d5a021ecf27ece901",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "contrast-b1"
+        }
+      ],
+      "section_slot_id": "contrast"
+    },
+    "output_hash": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:18.271230",
+    "started_at": "2026-10-05 18:55:21.382506",
+    "updated_at": "2026-10-05 18:55:22.763272",
+    "completed_at": "2026-10-05 18:55:22.763272"
+  },
+  {
+    "id": "5fe6854e-77ab-4cc8-b604-541df8e0c46d",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "shared_tasks",
+    "stage": "shared_task_generation",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "4a08394d25ad3f4b3850bd64fd8bb97c1de0e23e7e13bdd51578747c7bb39562",
+    "definition_hash": "21ef551089510dbb3d2830456c7c3039f0e624b9bab52b911d9bea187455009b",
+    "composition_identity": "43733d32986877d324f937d44786a8f8180851516eff4527bc9745869bb1ec90",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:00:13.788417",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_tasks",
+        "input_hash": "4a08394d25ad3f4b3850bd64fd8bb97c1de0e23e7e13bdd51578747c7bb39562",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "definition_hash": "21ef551089510dbb3d2830456c7c3039f0e624b9bab52b911d9bea187455009b",
+        "source_revision": 1,
+        "source_artifact_id": "af070978-797b-4c21-b744-29f404128830",
+        "composition_identity": "43733d32986877d324f937d44786a8f8180851516eff4527bc9745869bb1ec90",
+        "source_artifact_type": "teaching_plan",
+        "sourcebook_output_hash": "43733d32986877d324f937d44786a8f8180851516eff4527bc9745869bb1ec90",
+        "approved_item_snapshot_hash": "f7390b21776e13b767c99341e198a14c236e7fbf877180da5f91f9abf1958ac5"
+      },
+      "payload_hash": "218c23eee27473dbf85e44e526359bf6be49697211cb84538901f8f2f43b640a",
+      "compatibility": {
+        "input_hash": "4a08394d25ad3f4b3850bd64fd8bb97c1de0e23e7e13bdd51578747c7bb39562",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "21ef551089510dbb3d2830456c7c3039f0e624b9bab52b911d9bea187455009b",
+        "source_revision": 1,
+        "composition_identity": "43733d32986877d324f937d44786a8f8180851516eff4527bc9745869bb1ec90"
+      }
+    },
+    "output_json": [
+      {
+        "id": "task-check-b1",
+        "mode": "assessment",
+        "role": "check",
+        "action": "select-one",
+        "prompt": "A student writes: \"A plant's cells make glucose and oxygen during photosynthesis. The oxygen is released for animals, and the glucose is stored as starch. At night, the plant respires and uses the glucose and oxygen it stored during the day.\" Which correction should be made to this explanation?",
+        "purpose": "check whether learners can correct an explanation that contains the alternating-process and oxygen-only-for-animals errors",
+        "feedback": {
+          "correct": "Respiration is continuous, and oxygen made by the plant's own photosynthesis is available to its own mitochondria as well as to other organisms.",
+          "incorrect": "Recheck the two errors in the student's explanation: respiration does not happen only at night, and the plant's photosynthesised oxygen is also used by the plant itself."
+        },
+        "response": {
+          "type": "single_choice",
+          "options": [
+            {
+              "id": "a",
+              "text": "Photosynthesis also supplies oxygen for the plant's own respiration, and respiration occurs continuously, not only at night."
+            },
+            {
+              "id": "b",
+              "text": "The correction is that photosynthesis produces carbon dioxide and water, while respiration produces glucose and oxygen."
+            },
+            {
+              "id": "c",
+              "text": "The correction is that the plant respires only during the day, because respiration requires the light energy captured by photosynthesis."
+            },
+            {
+              "id": "d",
+              "text": "The correction is that oxygen made in photosynthesis is only for the plant itself, and no oxygen is available to other organisms."
+            }
+          ]
+        },
+        "difficulty": "independent",
+        "evaluation": {
+          "type": "exact_match",
+          "correct_option_id": "a"
+        },
+        "option_notes": {
+          "a": "Corrects both target errors: respiration is continuous and the plant uses its own photosynthesised oxygen.",
+          "b": "Reverses the inputs and outputs of photosynthesis and respiration.",
+          "c": "Claims respiration occurs only in the day, which retains the alternating-process error.",
+          "d": "States oxygen is only for the plant, the opposite imbalance to the student's oxygen-only-for-animals error."
+        },
+        "sourcebook_refs": [],
+        "teaching_plan_id": "af070978-797b-4c21-b744-29f404128830",
+        "expected_evidence": "the learner selects the correction that states respiration uses glucose and oxygen continuously, including oxygen made by the plant's own photosynthesis, rather than only at night or only for animals",
+        "teaching_block_id": "check-b1",
+        "teaching_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "approved_source_ids": [
+          "f8099d04-fd37-4fa1-9616-40fc689e2957:f8099d04-fd37-4fa1-9616-40fc689e2957:040347f8-5631-4076-9471-b0b8579e7dc8.i5"
+        ],
+        "teaching_plan_revision": 1
+      }
+    ],
+    "output_hash": "9a8c126edfe8528c4ceb775153d73405f2d53474c5e3fa1a775bbd44c291287b",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:13.512042",
+    "started_at": "2026-10-05 18:55:13.788417",
+    "updated_at": "2026-10-05 18:55:13.788417",
+    "completed_at": "2026-10-05 18:55:13.788417"
+  },
+  {
+    "id": "e634747c-bc37-4792-b3fb-a4b0630e3101",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:orient",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "4f4b43ae08b10dd5771fea6bfb221912b96dac23d991d7107437c17eb1e91896",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:00:18.392161",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-8db81c2aad956244b743",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "bridge",
+            "teaching_block_id": "orient-b1"
+          },
+          {
+            "id": "shared-figure-node-c636a419002a7fcd3257",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "orient-b1"
+          }
+        ],
+        "section_slot_id": "orient"
+      },
+      "payload_hash": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d",
+      "compatibility": {
+        "input_hash": "4f4b43ae08b10dd5771fea6bfb221912b96dac23d991d7107437c17eb1e91896",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-8db81c2aad956244b743",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "bridge",
+          "teaching_block_id": "orient-b1"
+        },
+        {
+          "id": "shared-figure-node-c636a419002a7fcd3257",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "orient-b1"
+        }
+      ],
+      "section_slot_id": "orient"
+    },
+    "output_hash": "61a6d7877d41d88ef546025afa5ead33e302c00853378896bc59a4daab8e492d",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:18.218223",
+    "started_at": "2026-10-05 18:55:18.392161",
+    "updated_at": "2026-10-05 18:55:19.564590",
+    "completed_at": "2026-10-05 18:55:19.564590"
+  },
+  {
+    "id": "e8f12bbb-4dd8-43aa-8e55-e903d0a03461",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:explain",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "e3a1362d3eaa8f7fce0dd4d7591fbddefffdeeae4bd1c19fefbfca535632a0fd",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:00:19.791515",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-7462b6b3696539942ba6",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "explanation",
+            "teaching_block_id": "explain-b1"
+          },
+          {
+            "id": "shared-figure-node-cd0d85c7876b5990ede5",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "explain-b1"
+          },
+          {
+            "id": "shared-node-688658c0f9201a7f2493",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "misconception",
+            "teaching_block_id": "explain-b2"
+          },
+          {
+            "id": "shared-figure-node-da97809d175b54895719",
+            "kind": "figure",
+            "task_spec_id": null,
+            "semantic_role": "visual_model",
+            "teaching_block_id": "explain-b2"
+          }
+        ],
+        "section_slot_id": "explain"
+      },
+      "payload_hash": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1",
+      "compatibility": {
+        "input_hash": "e3a1362d3eaa8f7fce0dd4d7591fbddefffdeeae4bd1c19fefbfca535632a0fd",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-7462b6b3696539942ba6",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "explanation",
+          "teaching_block_id": "explain-b1"
+        },
+        {
+          "id": "shared-figure-node-cd0d85c7876b5990ede5",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "explain-b1"
+        },
+        {
+          "id": "shared-node-688658c0f9201a7f2493",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "misconception",
+          "teaching_block_id": "explain-b2"
+        },
+        {
+          "id": "shared-figure-node-da97809d175b54895719",
+          "kind": "figure",
+          "task_spec_id": null,
+          "semantic_role": "visual_model",
+          "teaching_block_id": "explain-b2"
+        }
+      ],
+      "section_slot_id": "explain"
+    },
+    "output_hash": "18be00e0b61953fba464257449daf51787ced1f24c4b3a5e89f31227db7090d1",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:18.243886",
+    "started_at": "2026-10-05 18:55:19.791515",
+    "updated_at": "2026-10-05 18:55:21.175779",
+    "completed_at": "2026-10-05 18:55:21.175779"
+  },
+  {
+    "id": "18275c9a-e45d-4e54-8510-92380d2fc0f1",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:confront",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "3fdbafc1fd4c26ff7f04666a6aa72245681522ad0f6035508246bcb7637f23ce",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:00:22.943320",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-c6b5d1f1b4ccefa3da57",
+            "kind": "callout",
+            "task_spec_id": null,
+            "semantic_role": "misconception",
+            "teaching_block_id": "confront-b1"
+          },
+          {
+            "id": "shared-node-2184881ac796004269cb",
+            "kind": "callout",
+            "task_spec_id": null,
+            "semantic_role": "misconception",
+            "teaching_block_id": "confront-b2"
+          }
+        ],
+        "warnings": [
+          [
+            "section_exceeds_callout_limit",
+            "choices[1].kind"
+          ]
+        ],
+        "section_slot_id": "confront"
+      },
+      "payload_hash": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3",
+      "compatibility": {
+        "input_hash": "3fdbafc1fd4c26ff7f04666a6aa72245681522ad0f6035508246bcb7637f23ce",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-c6b5d1f1b4ccefa3da57",
+          "kind": "callout",
+          "task_spec_id": null,
+          "semantic_role": "misconception",
+          "teaching_block_id": "confront-b1"
+        },
+        {
+          "id": "shared-node-2184881ac796004269cb",
+          "kind": "callout",
+          "task_spec_id": null,
+          "semantic_role": "misconception",
+          "teaching_block_id": "confront-b2"
+        }
+      ],
+      "warnings": [
+        [
+          "section_exceeds_callout_limit",
+          "choices[1].kind"
+        ]
+      ],
+      "section_slot_id": "confront"
+    },
+    "output_hash": "aa9b4a4d83ad4fe4dd14671fba095211f4f73f76acbcd52e7177a3bdb3018fe3",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:18.296466",
+    "started_at": "2026-10-05 18:55:22.943320",
+    "updated_at": "2026-10-05 18:55:24.171604",
+    "completed_at": "2026-10-05 18:55:24.171604"
+  },
+  {
+    "id": "59230137-77c3-4d50-9480-53b5238b82c7",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "write:contrast",
+    "stage": "section_writing",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "d1c11098f03a1459ab4464fd9b38357ad258026a62811450f010b942c8c01212",
+    "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+    "composition_identity": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:01:26.229928",
+    "checkpoint_json": {
+      "payload": {
+        "plan": {
+          "items": [
+            {
+              "id": "shared-node-f0d44dd2415d61bbdfd4",
+              "kind": "compare",
+              "task_spec_id": null,
+              "semantic_role": "comparison",
+              "teaching_block_id": "contrast-b1"
+            },
+            {
+              "id": "shared-figure-node-dc0d5a021ecf27ece901",
+              "kind": "figure",
+              "task_spec_id": null,
+              "semantic_role": "visual_model",
+              "teaching_block_id": "contrast-b1"
+            }
+          ],
+          "section_slot_id": "contrast"
+        },
+        "composition_identity": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38"
+      },
+      "payload_hash": "be381e8bc060e6bf36c6058c3df669006cc4081caa78fc371e5859302eb775a2",
+      "compatibility": {
+        "input_hash": "d1c11098f03a1459ab4464fd9b38357ad258026a62811450f010b942c8c01212",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "33bbffccfae967fb83903d108ff85cbee4b20384b226d9a84382684d0f240990",
+        "source_revision": 1,
+        "composition_identity": "d1cc1e028bd052b8075ff4b977580a21bc9a1736a181c95c6805cd3d2d366f38"
+      }
+    },
+    "output_json": {
+      "nodes": [
+        {
+          "id": "shared-node-f0d44dd2415d61bbdfd4",
+          "kind": "compare",
+          "display": {
+            "items": [
+              {
+                "body": "**In a plant cell in light, photosynthesis and respiration run at the same time.** Chloroplasts trap light energy, build glucose and release oxygen. Mitochondria in the same cell use that glucose and oxygen, then release carbon dioxide and water. Those products are available to the chloroplasts, so each organelle supplies what the other needs.",
+                "title": "Plant cell in light"
+              },
+              {
+                "body": "Without light, chloroplasts cannot carry out photosynthesis, so no new glucose or oxygen is made. Mitochondria are not switched off: they keep using glucose and oxygen already present in the cell, and keep releasing carbon dioxide and water. Darkness removes the photosynthesis contribution only, so respiration carries on as before.",
+                "title": "Plant cell in darkness"
+              }
+            ]
+          },
+          "accessibility": {
+            "description": "A comparison of a plant cell in light with a plant cell in darkness. In light, chloroplasts and mitochondria are both active and exchange glucose, oxygen, carbon dioxide and water. In darkness, chloroplasts are inactive while mitochondria keep respiring."
+          },
+          "teaching_block_id": "contrast-b1"
+        },
+        {
+          "id": "shared-figure-node-dc0d5a021ecf27ece901",
+          "kind": "figure",
+          "display": {
+            "caption": "Plant cell in light with active chloroplasts and active mitochondria, showing glucose and oxygen from photosynthesis available to mitochondria and carbon dioxide and water from respiration available to chloroplasts. Plant cell in darkness with inactive chloroplasts and active mitochondria continuing to use glucose and oxygen and release carbon dioxide and water.",
+            "asset_id": null
+          },
+          "accessibility": {
+            "alt_text": ""
+          },
+          "teaching_block_id": "contrast-b1"
+        }
+      ],
+      "title": "Light and dark in the plant cell",
+      "section_slot_id": "contrast"
+    },
+    "output_hash": "5c8a1bd3d7aac23b5f6bb91eacd294ad95bc979c61c26e5bd33f60a4e177f944",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:25.929503",
+    "started_at": "2026-10-05 18:55:26.229928",
+    "updated_at": "2026-10-05 18:55:45.029933",
+    "completed_at": "2026-10-05 18:55:45.029933"
+  },
+  {
+    "id": "16e42b6e-31b0-4a03-be23-916832f2f413",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "compose:check",
+    "stage": "section_composition",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "e1b39c33e2bf0b26686f21bb8c322ba4617e09de52963f3547f14115f0a48f8c",
+    "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+    "composition_identity": "None",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:00:24.307431",
+    "checkpoint_json": {
+      "payload": {
+        "items": [
+          {
+            "id": "shared-node-76f42783041b846992dc",
+            "kind": "paragraph",
+            "task_spec_id": null,
+            "semantic_role": "misconception",
+            "teaching_block_id": "check-b1"
+          },
+          {
+            "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+            "kind": "task_anchor",
+            "task_spec_id": "task-check-b1",
+            "semantic_role": null,
+            "teaching_block_id": "check-b1"
+          }
+        ],
+        "section_slot_id": "check"
+      },
+      "payload_hash": "21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262",
+      "compatibility": {
+        "input_hash": "e1b39c33e2bf0b26686f21bb8c322ba4617e09de52963f3547f14115f0a48f8c",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "7c977c13c36af2d5dcb7d0f24294c99bc752853e7fe09893ff5855348b607561",
+        "source_revision": 1,
+        "composition_identity": null
+      }
+    },
+    "output_json": {
+      "items": [
+        {
+          "id": "shared-node-76f42783041b846992dc",
+          "kind": "paragraph",
+          "task_spec_id": null,
+          "semantic_role": "misconception",
+          "teaching_block_id": "check-b1"
+        },
+        {
+          "id": "shared-task-anchor-6e75dcdbcc26c575163c",
+          "kind": "task_anchor",
+          "task_spec_id": "task-check-b1",
+          "semantic_role": null,
+          "teaching_block_id": "check-b1"
+        }
+      ],
+      "section_slot_id": "check"
+    },
+    "output_hash": "21462fd6240f8ec60d60ca92611fb33bc2d203d0782ceaa9ccf045c5cee15262",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:55:18.324027",
+    "started_at": "2026-10-05 18:55:24.307431",
+    "updated_at": "2026-10-05 18:55:25.586054",
+    "completed_at": "2026-10-05 18:55:25.586054"
+  },
+  {
+    "id": "9ff6e4d9-bd88-4d27-b1f8-366d6248ac0f",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "document-qa",
+    "stage": "document_qa",
+    "status": "ready",
+    "attempt": "1",
+    "max_attempts": "3",
+    "input_hash": "f62bb20f3390c03522cdbe77e5a071d9dcdfbc382e3de60a528d04ff51740a85",
+    "definition_hash": "819f2903e02e603e4b9365c78859b90c4e0c307e69fe56404ca143cc006f6b78",
+    "composition_identity": "{\"document_hash\":\"0b299079ae2eacfd57c6d7d097f44f6c43ad3ffab93f75664c754b232b14a012\",\"document_id\":\"shared-document:a6fa83c4-9b20-4b45-97e6-246cba127d32:revision:1\",\"document_revision\":1,\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:qa",
+    "lease_token": "1",
+    "lease_expires_at": "2026-10-05 19:08:27.290702",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "document-qa",
+        "source": {
+          "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "source_revision": 1,
+          "source_artifact_id": "af070978-797b-4c21-b744-29f404128830",
+          "source_artifact_type": "teaching_plan"
+        },
+        "document_id": "shared-document:a6fa83c4-9b20-4b45-97e6-246cba127d32:revision:1",
+        "document_hash": "0b299079ae2eacfd57c6d7d097f44f6c43ad3ffab93f75664c754b232b14a012",
+        "deterministic_qa": {
+          "issues": [],
+          "document_id": "shared-document:a6fa83c4-9b20-4b45-97e6-246cba127d32:revision:1",
+          "advisory_issues": [],
+          "document_revision": 1
+        },
+        "document_revision": 1
+      },
+      "payload_hash": "4ad7dfead386e381e3dff3d621d7d7ce0004a4317cf4a493182e00461f08e742",
+      "compatibility": {
+        "input_hash": "f62bb20f3390c03522cdbe77e5a071d9dcdfbc382e3de60a528d04ff51740a85",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "819f2903e02e603e4b9365c78859b90c4e0c307e69fe56404ca143cc006f6b78",
+        "source_revision": 1,
+        "composition_identity": "{\"document_hash\":\"0b299079ae2eacfd57c6d7d097f44f6c43ad3ffab93f75664c754b232b14a012\",\"document_id\":\"shared-document:a6fa83c4-9b20-4b45-97e6-246cba127d32:revision:1\",\"document_revision\":1,\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1}"
+      }
+    },
+    "output_json": {
+      "stage": "document_qa",
+      "document_id": "shared-document:a6fa83c4-9b20-4b45-97e6-246cba127d32:revision:1",
+      "semantic_qa": {
+        "issues": [],
+        "status": "pass",
+        "document_id": "shared-document:a6fa83c4-9b20-4b45-97e6-246cba127d32:revision:1",
+        "document_hash": "0b299079ae2eacfd57c6d7d097f44f6c43ad3ffab93f75664c754b232b14a012",
+        "semantic_calls": 1,
+        "document_revision": 1,
+        "deterministic_skipped_semantic": false
+      },
+      "document_hash": "0b299079ae2eacfd57c6d7d097f44f6c43ad3ffab93f75664c754b232b14a012",
+      "quality_flags": [
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[0].text/79/60; all written content was preserved.",
+          "node_ids": [
+            "shared-node-8db81c2aad956244b743"
+          ],
+          "severity": "warning",
+          "section_id": "orient",
+          "required_correction": "Review advisory shape check length_over_target at nodes[0].text/79/60 if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[0].text/105/60; all written content was preserved.",
+          "node_ids": [
+            "shared-node-7462b6b3696539942ba6"
+          ],
+          "severity": "warning",
+          "section_id": "explain",
+          "required_correction": "Review advisory shape check length_over_target at nodes[0].text/105/60 if a future revision is needed."
+        },
+        {
+          "code": "length_over_target",
+          "source": "writer_warning",
+          "message": "Advisory shape check length_over_target at nodes[2].text/80/60; all written content was preserved.",
+          "node_ids": [
+            "shared-node-688658c0f9201a7f2493"
+          ],
+          "severity": "warning",
+          "section_id": "explain",
+          "required_correction": "Review advisory shape check length_over_target at nodes[2].text/80/60 if a future revision is needed."
+        },
+        {
+          "code": "shape_missing",
+          "source": "writer_warning",
+          "message": "Advisory shape check shape_missing at section/key_idea; all written content was preserved.",
+          "node_ids": [],
+          "severity": "warning",
+          "section_id": "explain",
+          "required_correction": "Review advisory shape check shape_missing at section/key_idea if a future revision is needed."
+        },
+        {
+          "code": "shape_missing",
+          "source": "writer_warning",
+          "message": "Advisory shape check shape_missing at section/subheading; all written content was preserved.",
+          "node_ids": [],
+          "severity": "warning",
+          "section_id": "explain",
+          "required_correction": "Review advisory shape check shape_missing at section/subheading if a future revision is needed."
+        },
+        {
+          "code": "section_exceeds_callout_limit",
+          "source": "writer_warning",
+          "message": "Advisory shape check section_exceeds_callout_limit at choices[1].kind; all written content was preserved.",
+          "node_ids": [],
+          "severity": "warning",
+          "section_id": "confront",
+          "required_correction": "Review advisory shape check section_exceeds_callout_limit at choices[1].kind if a future revision is needed."
+        }
+      ],
+      "schema_version": 1,
+      "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+      "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+      "document_revision": 1,
+      "source_plan_revision": 1
+    },
+    "output_hash": "871c2a48183e024eaab0820d4a712d65a36da73899865e352171927e83504466",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 19:03:27.185642",
+    "started_at": "2026-10-05 19:03:27.290702",
+    "updated_at": "2026-10-05 19:04:43.405296",
+    "completed_at": "2026-10-05 19:04:43.405296"
+  },
+  {
+    "id": "4264eb22-dcc6-4799-baf0-e781bdd50ef3",
+    "run_id": "a6fa83c4-9b20-4b45-97e6-246cba127d32",
+    "replaces_work_item_id": "None",
+    "item_key": "media:shared-media-64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4",
+    "stage": "media_generation",
+    "status": "ready",
+    "attempt": "2",
+    "max_attempts": "3",
+    "input_hash": "ac02d4db8c1aab1a4ad4eed1808cd40d706b11717a4fcfab652f50ef9fa637dd",
+    "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+    "composition_identity": "{\"figure_node_id\":\"shared-figure-node-dc0d5a021ecf27ece901\",\"figure_semantic_hash\":\"64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4\",\"required\":true,\"section_id\":\"contrast\",\"section_output_hash\":\"59f7b109c314a8a6feb6f754b5873e128a1ccdc532a7bb1ec8988d53b9ec6046\",\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"Plant cell in light with active chloroplasts and active mitochondria, showing glucose and oxygen from photosynthesis available to mitochondria and carbon dioxide and water from respiration available to chloroplasts. Plant cell in darkness with inactive chloroplasts and active mitochondria continuing to use glucose and oxygen and release carbon dioxide and water.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-dc0d5a021ecf27ece901\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-64ef1be56d41e2f240576393\",\"labels_required\":[\"plant cell in light\",\"plant cell in darkness\",\"chloroplasts\",\"mitochondria\",\"glucose\",\"oxygen\",\"carbon dioxide\",\"water\"],\"mode\":\"diagram\",\"must_not_show\":[\"respiration stopping in the light cell\",\"photosynthesis occurring in the dark cell\"],\"must_show\":[\"a plant cell in light with active chloroplasts and active mitochondria\",\"glucose and oxygen from photosynthesis available to mitochondria in the light cell\",\"carbon dioxide and water from respiration available to chloroplasts in the light cell\",\"a plant cell in darkness with inactive chloroplasts and active mitochondria\",\"mitochondria in the dark cell continuing to use glucose and oxygen and release carbon dioxide and water\"],\"print_requirements\":[],\"purpose\":\"Contrast a plant cell in light with a plant cell in darkness to show that respiration continues in both while photosynthesis only occurs in the light cell.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4\"}}",
+    "lease_owner": "shared-document-0d7d4a75-3efe-4147-ab49-0aa4c622600c:media",
+    "lease_token": "3",
+    "lease_expires_at": "2026-10-05 19:08:25.346920",
+    "checkpoint_json": {
+      "payload": {
+        "kind": "shared_figure_media",
+        "work_order": {
+          "required": true,
+          "warnings": [],
+          "section_id": "contrast",
+          "work_order": {
+            "visual": {
+              "id": "shared-figure-64ef1be56d41e2f240576393",
+              "mode": "diagram",
+              "frames": [],
+              "purpose": "Contrast a plant cell in light with a plant cell in darkness to show that respiration continues in both while photosynthesis only occurs in the light cell.",
+              "must_show": [
+                "a plant cell in light with active chloroplasts and active mitochondria",
+                "glucose and oxygen from photosynthesis available to mitochondria in the light cell",
+                "carbon dioxide and water from respiration available to chloroplasts in the light cell",
+                "a plant cell in darkness with inactive chloroplasts and active mitochondria",
+                "mitochondria in the dark cell continuing to use glucose and oxygen and release carbon dioxide and water"
+              ],
+              "attaches_to": "shared-figure-node-dc0d5a021ecf27ece901",
+              "component_id": null,
+              "visual_style": null,
+              "must_not_show": [
+                "respiration stopping in the light cell",
+                "photosynthesis occurring in the dark cell"
+              ],
+              "uses_anchor_id": null,
+              "labels_required": [
+                "plant cell in light",
+                "plant cell in darkness",
+                "chloroplasts",
+                "mitochondria",
+                "glucose",
+                "oxygen",
+                "carbon dioxide",
+                "water"
+              ],
+              "consistency_locks": [],
+              "print_requirements": []
+            },
+            "dependency": "section_text",
+            "resource_type": "shared_lesson_figure",
+            "work_order_id": "shared-media-64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4",
+            "source_of_truth": [
+              {
+                "key": "context:caption",
+                "text": "Plant cell in light with active chloroplasts and active mitochondria, showing glucose and oxygen from photosynthesis available to mitochondria and carbon dioxide and water from respiration available to chloroplasts. Plant cell in darkness with inactive chloroplasts and active mitochondria continuing to use glucose and oxygen and release carbon dioxide and water.",
+                "unit_tokens": []
+              }
+            ],
+            "qc_correction_hint": null,
+            "prior_validation_errors": []
+          },
+          "figure_node_id": "shared-figure-node-dc0d5a021ecf27ece901",
+          "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+          "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+          "section_output_hash": "59f7b109c314a8a6feb6f754b5873e128a1ccdc532a7bb1ec8988d53b9ec6046",
+          "figure_semantic_hash": "64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4",
+          "source_plan_revision": 1
+        },
+        "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+        "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "section_output_hash": "59f7b109c314a8a6feb6f754b5873e128a1ccdc532a7bb1ec8988d53b9ec6046",
+        "figure_semantic_hash": "64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4",
+        "source_plan_revision": 1
+      },
+      "payload_hash": "b0bd035183db87b3ff91df09eb2fcd58a80430bc2581475eb60e98e88afc4868",
+      "compatibility": {
+        "input_hash": "ac02d4db8c1aab1a4ad4eed1808cd40d706b11717a4fcfab652f50ef9fa637dd",
+        "source_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+        "schema_version": 1,
+        "definition_hash": "40291a17907935d6d3137753c7435d05e5f33af5335dab05e71b163ec1aa3049",
+        "source_revision": 1,
+        "composition_identity": "{\"figure_node_id\":\"shared-figure-node-dc0d5a021ecf27ece901\",\"figure_semantic_hash\":\"64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4\",\"required\":true,\"section_id\":\"contrast\",\"section_output_hash\":\"59f7b109c314a8a6feb6f754b5873e128a1ccdc532a7bb1ec8988d53b9ec6046\",\"source_plan_hash\":\"8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f\",\"source_plan_id\":\"af070978-797b-4c21-b744-29f404128830\",\"source_plan_revision\":1,\"work_order\":{\"dependency\":\"section_text\",\"prior_validation_errors\":[],\"qc_correction_hint\":null,\"resource_type\":\"shared_lesson_figure\",\"source_of_truth\":[{\"key\":\"context:caption\",\"text\":\"Plant cell in light with active chloroplasts and active mitochondria, showing glucose and oxygen from photosynthesis available to mitochondria and carbon dioxide and water from respiration available to chloroplasts. Plant cell in darkness with inactive chloroplasts and active mitochondria continuing to use glucose and oxygen and release carbon dioxide and water.\",\"unit_tokens\":[]}],\"visual\":{\"attaches_to\":\"shared-figure-node-dc0d5a021ecf27ece901\",\"component_id\":null,\"consistency_locks\":[],\"frames\":[],\"id\":\"shared-figure-64ef1be56d41e2f240576393\",\"labels_required\":[\"plant cell in light\",\"plant cell in darkness\",\"chloroplasts\",\"mitochondria\",\"glucose\",\"oxygen\",\"carbon dioxide\",\"water\"],\"mode\":\"diagram\",\"must_not_show\":[\"respiration stopping in the light cell\",\"photosynthesis occurring in the dark cell\"],\"must_show\":[\"a plant cell in light with active chloroplasts and active mitochondria\",\"glucose and oxygen from photosynthesis available to mitochondria in the light cell\",\"carbon dioxide and water from respiration available to chloroplasts in the light cell\",\"a plant cell in darkness with inactive chloroplasts and active mitochondria\",\"mitochondria in the dark cell continuing to use glucose and oxygen and release carbon dioxide and water\"],\"print_requirements\":[],\"purpose\":\"Contrast a plant cell in light with a plant cell in darkness to show that respiration continues in both while photosynthesis only occurs in the light cell.\",\"uses_anchor_id\":null,\"visual_style\":null},\"work_order_id\":\"shared-media-64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4\"}}"
+      }
+    },
+    "output_json": {
+      "mode": "diagram",
+      "status": "deferred",
+      "required": true,
+      "visual_id": "shared-figure-64ef1be56d41e2f240576393",
+      "section_id": "contrast",
+      "reason_code": "media_provider_failed",
+      "source_facts": [
+        {
+          "key": "context:caption",
+          "text": "Plant cell in light with active chloroplasts and active mitochondria, showing glucose and oxygen from photosynthesis available to mitochondria and carbon dioxide and water from respiration available to chloroplasts. Plant cell in darkness with inactive chloroplasts and active mitochondria continuing to use glucose and oxygen and release carbon dioxide and water.",
+          "unit_tokens": []
+        }
+      ],
+      "work_order_id": "shared-media-64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4",
+      "figure_node_id": "shared-figure-node-dc0d5a021ecf27ece901",
+      "source_plan_id": "af070978-797b-4c21-b744-29f404128830",
+      "source_plan_hash": "8cdad1d7dde6ae5e1c7f159752d025ee0430d589cc2c4e88cf5db44e87a43c7f",
+      "section_output_hash": "59f7b109c314a8a6feb6f754b5873e128a1ccdc532a7bb1ec8988d53b9ec6046",
+      "figure_semantic_hash": "64ef1be56d41e2f240576393a96fbcf2525898dc53d9163d56716448d9f9f6c4",
+      "source_plan_revision": 1
+    },
+    "output_hash": "3dea34494226fc4b2f05b1480e8ca423598c3b232eb02feb92db81860a820f50",
+    "error_code": "None",
+    "error_class": "None",
+    "error_summary": "None",
+    "recovery_action": "None",
+    "created_at": "2026-10-05 18:58:11.110173",
+    "started_at": "2026-10-05 18:58:14.614197",
+    "updated_at": "2026-10-05 19:03:26.574521",
+    "completed_at": "2026-10-05 19:03:26.574521"
+  }
+]

@@ -16,9 +16,11 @@
 	const showCover = $derived(front.cover !== false);
 	const showContents = $derived(front.contents !== false);
 	const fields = $derived(front.fields ?? ['Student Name', 'Date']);
+	const runningHead = $derived(front.running_head ?? doc.title);
 </script>
 
 <article class="lectio-document" lang={doc.language} data-edition={edition}>
+	<div class="lectio-running-head">{runningHead}</div>
 	{#if showCover}
 		<header class="lectio-cover">
 			<h1 class="lectio-cover-title">{doc.title}</h1>
@@ -27,6 +29,16 @@
 					{[doc.subject, doc.metadata?.school, doc.metadata?.teacher].filter(Boolean).join(' · ')}
 				</p>
 			{/if}
+			<div class="lectio-cover-fields">
+				{#each fields as field}
+					<div class="lectio-cover-field">{field}</div>
+				{/each}
+			</div>
+		</header>
+	{/if}
+	{#if !showCover}
+		<header class="lectio-inline-frontmatter">
+			<h1 class="lectio-cover-title">{doc.title}</h1>
 			<div class="lectio-cover-fields">
 				{#each fields as field}
 					<div class="lectio-cover-field">{field}</div>
@@ -49,8 +61,8 @@
 
 	<div class="lectio-page-flow">
 		<div class="lectio-main">
-			{#each doc.sections as section}
-				<SectionView {section} />
+			{#each doc.sections as section, index}
+				<SectionView {section} {index} />
 			{/each}
 		</div>
 	</div>
@@ -58,4 +70,5 @@
 	{#if edition === 'teacher' && doc.answer_key}
 		<BlockView block={doc.answer_key} />
 	{/if}
+	<div class="lectio-page-footer" aria-hidden="true"></div>
 </article>

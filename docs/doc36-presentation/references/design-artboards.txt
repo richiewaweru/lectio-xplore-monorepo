@@ -1,0 +1,209 @@
+BOARD 1
+Learn lesson screen
+Science · Lesson 1
+How Plants Get the Energy to Grow
+1 Two pots
+2 Where the energy comes from
+3 Two beliefs that fail
+4 Check
+Part 1 of 4
+Two Pots, One Difference
+Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits .
+On a sunny windowsill
+The seedling is green. Its stem leans toward the window.
+Shut in a dark cupboard
+The seedling has lost its green colour and stopped growing.
+Same in both pots:
+soil
+water
+room
+temperature
+Figure 1. The two seedlings are treated the same in every way except where they stand.
+A plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question:
+Where does the energy a plant uses to grow actually come from?
+What you already know
+Plants are living things that need light and water to grow.
+Every living thing needs energy to stay alive.
+Two possible answers
+Where the growing energy comes from is exactly what people disagree about.
+Answer A
+From the soil
+The energy is taken in together with the water the roots draw up.
+Answer B
+From the light
+The energy is captured from the light by the plant's leaves.
+Neither answer is settled yet. Take the one you think is more likely and hold it as a prediction , not a fact. Evidence, not preference, is what settles a question like this.
+Your turn · Question 1
+Prediction — not marked
+Where does the energy a plant uses to grow come from?
+{{ o.letter }} {{ o.text }}
+{{ o.letter }} {{ o.text }}
+Lock in my prediction
+Prediction saved. Keep it in mind — Part 2 will test it.
+Part 2 of 4
+Where the Growing Energy Comes From
+Key idea
+The energy a plant grows on is captured from light, not taken in from the soil.
+The green parts of a plant — mostly its leaves — absorb light energy . The leaf uses that energy to make the plant's own food : a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air.
+In one line
+water
++
+carbon dioxide (CO 2 )
+light energy
+sugar (the plant's food)
+The energy stored inside that sugar is what the plant spends on building new leaves, stem and roots.
+Follow the energy, step by step
+1 Sunlight reaches the leaf.
+2 The leaf's green parts capture that light energy.
+3 The captured energy is used to build sugar from water and carbon dioxide. The energy is now stored inside food the plant has made for itself.
+4 The plant breaks some of that sugar down again and uses the released energy to build new leaves, stem and roots. That is growth.
+Notice two things
+The energy enters the plant through the leaf , never through the soil.
+The only things arriving from the soil are water and dissolved minerals .
+So what is the soil for?
+Soil does a real job. It holds the plant firmly in place, and it holds water and dissolved minerals, which the roots take in and which then travel up to the leaves. Minerals are raw materials. They are not food, and they carry no usable energy.
+What the plant takes in Where from Is it energy?
+Water Soil, through the roots No. A raw material for making sugar.
+Dissolved minerals Soil, through the roots No. Raw materials for building the plant's body.
+Light Captured by the leaves Yes. It ends up stored in sugar.
+So a plant standing in rich soil with plenty of water, but kept in the dark, cannot make its own food and cannot grow, however well watered it is.
+Part 3 of 4
+Two Beliefs That Fail the Evidence
+Common belief 1
+The belief
+“The soil feeds the plant. A plant kept in the dark will keep growing as long as it is watered.”
+The evidence
+Both pots held the same soil and got the same water. If the soil were supplying food and energy, the cupboard plant should have grown just as well. It stopped growing and turned pale.
+So
+Soil supplies only water and dissolved minerals. The plant's food is made in its own leaves, using light energy .
+Why did the cupboard plant keep going for a while? It was living on food it had already made and stored. Once that store ran down, it stopped growing and lost its green colour.
+Common belief 2
+The belief
+“Light only keeps a plant warm or makes it look healthy. The energy for growth comes from the water and the minerals.”
+The evidence
+Both pots stood in the same room at the same temperature. The cupboard was not cold, so the cupboard plant lacked no warmth. It still did not grow.
+So
+Light is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food.
+Part 4 of 4
+Which Observation Challenges the Soil Idea?
+A student says:
+“Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.”
+That claim is wrong. The strong move is not to repeat the explanation, but to point to evidence the claim cannot explain .
+Your turn · Question 2
+Check — choose one
+Which observation would best challenge the student's idea?
+{{ o.letter }} {{ o.text }}
+{{ o.letter }} {{ o.text }}
+Check my answer
+That's the one. The soil idea says this plant should keep growing, because it still has soil and water. It does not, so the soil idea cannot be right.
+Not yet. Look for the observation the soil idea cannot explain: a plant that has soil and water and still does not grow. Choose again.
+
+BOARD 2
+Print worksheet page 1
+Science · Lesson 1
+Name Date
+How Plants Get the Energy to Grow
+1
+Two Pots, One Difference
+Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is where each pot sits .
+Sunny windowsill
+Green. Stem leans toward the window.
+Dark cupboard
+Lost its green colour. Stopped growing.
+Same in both pots: soil · water · room · temperature
+Figure 1. The seedlings are treated the same in every way except where they stand.
+A plant that adds height and unfolds new leaves is doing something that costs energy. Where does the energy a plant uses to grow actually come from?
+What you already know
+Plants are living things that need light and water to grow.
+Every living thing needs energy to stay alive.
+Two possible answers
+A. From the soil. The energy is taken in with the water the roots draw up.
+B. From the light. The energy is captured from the light by the leaves.
+Question 1 · Predict Not marked
+Where does the energy a plant uses to grow come from? Tick one. This is a prediction, not a fact. The evidence on the next page will settle it.
+A From the soil, together with the water.
+B From the light, using its leaves.
+I think this because
+How Plants Get the Energy to Grow Page 1 of 3
+
+BOARD 3
+Print worksheet page 2
+2
+Where the Growing Energy Comes From
+Key idea
+The energy a plant grows on is captured from light, not taken in from the soil.
+The green parts of a plant — mostly its leaves — absorb light energy . The leaf uses that energy to make the plant's own food : a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air.
+water
++
+carbon dioxide (CO 2 )
+light energy
+sugar (food)
+The energy stored inside that sugar is what the plant spends on building new leaves, stem and roots.
+Follow the energy, step by step
+1 Sunlight reaches the leaf.
+2 The leaf's green parts capture that light energy.
+3 The energy is used to build sugar from water and carbon dioxide. It is now stored inside food the plant has made for itself.
+4 The plant breaks some of that sugar down again and uses the released energy to build new leaves, stem and roots. That is growth.
+Notice two things
+The energy enters the plant through the leaf , never through the soil.
+The only things arriving from the soil are water and dissolved minerals .
+So what is the soil for?
+Soil holds the plant firmly in place, and it holds water and dissolved minerals, which the roots take in and which travel up to the leaves. Minerals are raw materials. They are not food, and they carry no usable energy.
+The plant takes in Where from Is it energy?
+Water Soil, through roots No. Raw material for sugar.
+Dissolved minerals Soil, through roots No. Raw materials for its body.
+Light Captured by leaves Yes. Stored in sugar.
+So a plant in rich soil with plenty of water, but kept in the dark, cannot make its own food and cannot grow.
+How Plants Get the Energy to Grow Page 2 of 3
+
+BOARD 4
+Print worksheet page 3
+3
+Two Beliefs That Fail the Evidence
+Common belief 1
+✗ The belief
+“The soil feeds the plant. A plant kept in the dark will keep growing as long as it is watered.”
+The evidence
+Both pots held the same soil and got the same water. If soil supplied food and energy, the cupboard plant should have grown just as well. It stopped growing and turned pale.
+✓ So
+Soil supplies only water and dissolved minerals. The plant's food is made in its own leaves, using light energy .
+Why did the cupboard plant keep going for a while? It lived on food it had already made and stored. Once that ran down, it stopped growing and lost its green colour.
+Common belief 2
+✗ The belief
+“Light only keeps a plant warm or makes it look healthy. The energy for growth comes from the water and the minerals.”
+The evidence
+Both pots stood in the same room at the same temperature. The cupboard was not cold, so the plant lacked no warmth. It still did not grow.
+✓ So
+Light is not merely warmth. The leaves capture light energy and use it to make the plant's own food.
+4
+Which Observation Challenges the Soil Idea?
+A student says:
+“Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it.”
+That claim is wrong. Point to evidence the claim cannot explain .
+Question 2 · Check Tick one
+Which observation would best challenge the student's idea?
+A A watered plant kept in darkness becomes pale and stops growing larger.
+B A watered plant in darkness grows taller because it stretches toward the light.
+C A watered plant in darkness stays cool, which proves it lacks growth energy.
+D A watered plant in darkness grows well when it is given plant food.
+Explain your choice:
+How Plants Get the Energy to Grow Page 3 of 3
+
+BOARD 5
+Print teacher answers
+Science · Lesson 1
+Teacher copy
+Answers
+How Plants Get the Energy to Grow
+Question 1 · Predict (page 1, not marked)
+Accept either choice. The point is a committed prediction to revisit. The idea the lesson establishes is B: from the light, using its leaves .
+After page 2, ask learners to look back at their tick and say whether the evidence supported it.
+Question 2 · Check (page 3)
+Answer: A. A watered plant kept in darkness becomes pale and stops growing larger.
+The soil idea says this plant should keep growing, because it still has soil and water. It does not, so the soil idea cannot explain the observation.
+Option Why it does not challenge the soil idea
+B A plant growing taller in the dark would fit the soil idea, not challenge it.
+C Temperature is not the issue. In the two-pot comparison both plants were equally warm.
+D Growing well on plant food in the dark would support the soil idea, not challenge it.
+A good explanation mentions: the plant had soil and water, it still stopped growing, so soil and water alone do not supply the energy.
+How Plants Get the Energy to Grow Teacher copy

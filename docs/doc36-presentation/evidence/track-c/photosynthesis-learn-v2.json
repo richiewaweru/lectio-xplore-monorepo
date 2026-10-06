@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "id": "learn-doc36-track-c-photosynthesis-d656b71a6931",
+  "title": "How plants make food",
+  "subject": "science",
+  "source": "shared_document",
+  "source_generation_id": "doc36-track-c-photosynthesis-d656b71a6931",
+  "nodes": [
+    {
+      "id": "shared-node-014f83d5587a2a572750",
+      "teaching_block_id": "b0",
+      "kind": "equation",
+      "label": "Word equation for photosynthesis",
+      "inputs": [
+        "light energy",
+        "water",
+        "carbon dioxide"
+      ],
+      "condition": "in the presence of chlorophyll",
+      "outputs": [
+        "glucose",
+        "oxygen"
+      ]
+    },
+    {
+      "id": "shared-node-662591cfeeed5c8aadd7",
+      "teaching_block_id": "b1",
+      "kind": "callout",
+      "tone": "note",
+      "title": "Chlorophyll captures the light",
+      "body": "**Chlorophyll absorbs light energy in plant cells, and photosynthesis stores that energy as chemical energy in glucose.**",
+      "variant": "key_idea",
+      "aside": "Water and carbon dioxide supply the atoms for that glucose, and oxygen leaves the plant as a gas.\n\nThe light is not kept as light. It is transferred into the sugar the plant builds, so the plant holds that energy in a chemical form it can use later."
+    }
+  ],
+  "sections": [
+    {
+      "id": "photosynthesis-section",
+      "title": "How plants make food",
+      "position": 0,
+      "transition": null,
+      "node_ids": [
+        "shared-node-014f83d5587a2a572750",
+        "shared-node-662591cfeeed5c8aadd7"
+      ]
+    }
+  ],
+  "created_at": "2026-10-05T00:00:00+00:00",
+  "updated_at": "2026-10-05T00:00:00+00:00",
+  "teaching_plan_id": "doc36-plan-photosynthesis",
+  "teaching_plan_revision": 1
+}

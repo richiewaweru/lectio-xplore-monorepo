@@ -1,0 +1,24 @@
+{
+  "generation_id": "f8099d04-fd37-4fa1-9616-40fc689e2957",
+  "path_lesson_id": "de9bfb9f-f1a9-4cc5-b28d-bce71f8c4a86",
+  "objective": "Explain how the products of photosynthesis are used in respiration and how the products of respiration are used in photosynthesis.",
+  "objective_hash": "e4b1fb088b53d462d75af98d9fbdb0e6fa5e4d13e78cd059e4e4e388f126032b",
+  "skeleton_id": "conceptual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "explain",
+    "contrast",
+    "confront",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "explain",
+    "contrast",
+    "confront",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

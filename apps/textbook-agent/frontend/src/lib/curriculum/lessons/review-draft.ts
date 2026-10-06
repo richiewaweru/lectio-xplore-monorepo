@@ -7,6 +7,9 @@ export type SharedNodeKind =
 	| 'figure'
 	| 'table'
 	| 'callout'
+	| 'equation'
+	| 'quote'
+	| 'compare'
 	| 'task_anchor';
 
 export interface SharedNodeAccessibility {
@@ -42,7 +45,34 @@ export interface SharedTableDisplay {
 export interface SharedCalloutDisplay {
 	tone?: 'note' | 'warning' | 'tip' | 'important';
 	title?: string;
+	body?: string | null;
+	variant?: 'key_idea' | 'note' | 'misconception' | null;
+	belief?: string | null;
+	evidence?: string | null;
+	conclusion?: string | null;
+	aside?: string | null;
+}
+
+export interface SharedEquationDisplay {
+	label?: string | null;
+	inputs: string[];
+	condition?: string | null;
+	outputs: string[];
+}
+
+export interface SharedQuoteDisplay {
+	text: string;
+	attribution?: string | null;
+}
+
+export interface SharedCompareItem {
+	label?: string | null;
+	title: string;
 	body: string;
+}
+
+export interface SharedCompareDisplay {
+	items: SharedCompareItem[];
 }
 
 export interface SharedNode {
@@ -57,7 +87,10 @@ export interface SharedNode {
 		| SharedListDisplay
 		| SharedFigureDisplay
 		| SharedTableDisplay
-		| SharedCalloutDisplay;
+		| SharedCalloutDisplay
+		| SharedEquationDisplay
+		| SharedQuoteDisplay
+		| SharedCompareDisplay;
 	accessibility?: SharedNodeAccessibility;
 }
 
@@ -79,8 +112,11 @@ export interface SharedTask {
 	id: string;
 	action: string;
 	prompt: string;
+	role?: 'predict' | 'practice' | 'check' | null;
+	display_prompt?: string | null;
 	response: { type?: string; options?: SharedTaskOption[]; [key: string]: unknown };
 	feedback?: Record<string, unknown> | null;
+	option_notes?: Record<string, string> | null;
 	[key: string]: unknown;
 }
 

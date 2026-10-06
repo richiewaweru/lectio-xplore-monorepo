@@ -1,0 +1,3200 @@
+{
+  "document_version": 2,
+  "contract_version": "1.0.0",
+  "id": "shared-lesson-oversized-stress",
+  "title": "Shared lesson oversized stress fixture",
+  "language": "en",
+  "front_matter": {
+    "cover": false,
+    "contents": false,
+    "running_head": "How Plants Get the Energy to Grow",
+    "fields": [
+      "Name",
+      "Date"
+    ]
+  },
+  "metadata": {
+    "catalogue_version": "1.2.0",
+    "resource_type": "lesson",
+    "source_document": {
+      "id": "golden-shared-lesson",
+      "revision": 1,
+      "content_hash": "cc98428d4dbd527bd2cff2325ccf1d2666e1a052de99a54abcb1cda473da5bc4"
+    },
+    "shared_tasks": [
+      {
+        "label": "Q1",
+        "anchor_id": "observe-task-anchor",
+        "task_spec_id": "task-predict"
+      },
+      {
+        "label": "Q2",
+        "anchor_id": "check-task-anchor",
+        "task_spec_id": "task-check"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "orient",
+      "title": "Two Pots, One Difference",
+      "blocks": [
+        {
+          "id": "observe-paragraph",
+          "object": "prose",
+          "intent": "explain",
+          "position": 0,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Two pots are set up to be compared. They hold identical soil, they are watered by the same amount, and they stand in the same room at the same temperature. The only difference between them is "
+                  },
+                  {
+                    "type": "strong",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "where each pot sits"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "observe-figure",
+          "object": "figure",
+          "intent": "explain",
+          "position": 1,
+          "content": {
+            "asset": {
+              "kind": "image",
+              "status": "ready",
+              "src": "/seedlings.svg"
+            },
+            "alt_text": "A sunny windowsill seedling is green and leaning toward the window; a dark cupboard seedling is pale and has stopped growing.",
+            "caption": [
+              {
+                "type": "text",
+                "value": "The two seedlings are treated the same in every way except where they stand."
+              }
+            ]
+          }
+        },
+        {
+          "id": "observe-question",
+          "object": "prose",
+          "intent": "explain",
+          "position": 2,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "A plant that adds height and unfolds new leaves is doing something that costs energy. That gives this lesson its question:"
+                  }
+                ]
+              },
+              {
+                "children": [
+                  {
+                    "type": "strong",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "Where does the energy a plant uses to grow actually come from?"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "observe-known-heading",
+          "object": "heading",
+          "position": 3,
+          "content": {
+            "text": [
+              {
+                "type": "text",
+                "value": "What you already know"
+              }
+            ],
+            "level": 3
+          }
+        },
+        {
+          "id": "observe-known-list",
+          "object": "list",
+          "intent": "show-structure",
+          "position": 4,
+          "content": {
+            "style": "unordered",
+            "items": [
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "Plants are living things that need light and water to grow."
+                  }
+                ]
+              },
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "Every living thing needs energy to stay alive."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "observe-answers-heading",
+          "object": "heading",
+          "position": 5,
+          "content": {
+            "text": [
+              {
+                "type": "text",
+                "value": "Two possible answers"
+              }
+            ],
+            "level": 3
+          }
+        },
+        {
+          "id": "observe-answers-paragraph",
+          "object": "prose",
+          "intent": "explain",
+          "position": 6,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Where the growing energy comes from is exactly what people disagree about."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "observe-answers-compare",
+          "object": "compare",
+          "intent": "explain",
+          "position": 7,
+          "content": {
+            "items": [
+              {
+                "label": [
+                  {
+                    "type": "text",
+                    "value": "Answer A"
+                  }
+                ],
+                "title": [
+                  {
+                    "type": "text",
+                    "value": "From the soil"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": "text",
+                    "value": "The energy is taken in together with the water the roots draw up."
+                  }
+                ]
+              },
+              {
+                "label": [
+                  {
+                    "type": "text",
+                    "value": "Answer B"
+                  }
+                ],
+                "title": [
+                  {
+                    "type": "text",
+                    "value": "From the light"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": "text",
+                    "value": "The energy is captured from the light by the plant's leaves."
+                  }
+                ]
+              }
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "observe-prediction-paragraph",
+          "object": "prose",
+          "intent": "explain",
+          "position": 8,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Neither answer is settled yet. Take the one you think is more likely and hold it as a "
+                  },
+                  {
+                    "type": "strong",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "prediction"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "value": ", not a fact. Evidence, not preference, is what settles a question like this."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "Q1",
+          "object": "choices",
+          "intent": "check-understanding",
+          "position": 9,
+          "content": {
+            "stem": [
+              {
+                "type": "text",
+                "value": "Where does the energy a plant uses to grow come from?"
+              }
+            ],
+            "options": [
+              {
+                "letter": "A",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "The plant takes in its growing energy from the soil, together with the water."
+                  }
+                ]
+              },
+              {
+                "letter": "B",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "The plant captures its growing energy from the light, using its leaves."
+                  }
+                ]
+              }
+            ]
+          },
+          "role": "predict"
+        },
+        {
+          "id": "stress-oversized-prose",
+          "object": "prose",
+          "intent": "explain",
+          "position": 10,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. This stress paragraph keeps every authored word while the print renderer continues at paragraph and row boundaries. "
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "stress-oversized-table",
+          "object": "table",
+          "intent": "explain",
+          "position": 11,
+          "content": {
+            "columns": [
+              {
+                "id": "term",
+                "label": [
+                  {
+                    "type": "text",
+                    "value": "Term"
+                  }
+                ]
+              },
+              {
+                "id": "meaning",
+                "label": [
+                  {
+                    "type": "text",
+                    "value": "Meaning"
+                  }
+                ]
+              }
+            ],
+            "rows": [
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 1"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 1 preserves the full table cell wording across page continuation. Row 1 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 2"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 2 preserves the full table cell wording across page continuation. Row 2 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 3"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 3 preserves the full table cell wording across page continuation. Row 3 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 4"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 4 preserves the full table cell wording across page continuation. Row 4 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 5"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 5 preserves the full table cell wording across page continuation. Row 5 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 6"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 6 preserves the full table cell wording across page continuation. Row 6 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 7"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 7 preserves the full table cell wording across page continuation. Row 7 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 8"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 8 preserves the full table cell wording across page continuation. Row 8 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 9"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 9 preserves the full table cell wording across page continuation. Row 9 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 10"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 10 preserves the full table cell wording across page continuation. Row 10 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 11"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 11 preserves the full table cell wording across page continuation. Row 11 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 12"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 12 preserves the full table cell wording across page continuation. Row 12 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 13"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 13 preserves the full table cell wording across page continuation. Row 13 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 14"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 14 preserves the full table cell wording across page continuation. Row 14 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 15"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 15 preserves the full table cell wording across page continuation. Row 15 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 16"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 16 preserves the full table cell wording across page continuation. Row 16 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 17"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 17 preserves the full table cell wording across page continuation. Row 17 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 18"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 18 preserves the full table cell wording across page continuation. Row 18 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 19"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 19 preserves the full table cell wording across page continuation. Row 19 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 20"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 20 preserves the full table cell wording across page continuation. Row 20 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 21"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 21 preserves the full table cell wording across page continuation. Row 21 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 22"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 22 preserves the full table cell wording across page continuation. Row 22 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 23"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 23 preserves the full table cell wording across page continuation. Row 23 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 24"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 24 preserves the full table cell wording across page continuation. Row 24 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 25"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 25 preserves the full table cell wording across page continuation. Row 25 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 26"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 26 preserves the full table cell wording across page continuation. Row 26 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 27"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 27 preserves the full table cell wording across page continuation. Row 27 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 28"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 28 preserves the full table cell wording across page continuation. Row 28 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 29"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 29 preserves the full table cell wording across page continuation. Row 29 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 30"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 30 preserves the full table cell wording across page continuation. Row 30 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 31"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 31 preserves the full table cell wording across page continuation. Row 31 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 32"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 32 preserves the full table cell wording across page continuation. Row 32 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 33"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 33 preserves the full table cell wording across page continuation. Row 33 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 34"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 34 preserves the full table cell wording across page continuation. Row 34 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 35"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 35 preserves the full table cell wording across page continuation. Row 35 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 36"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 36 preserves the full table cell wording across page continuation. Row 36 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 37"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 37 preserves the full table cell wording across page continuation. Row 37 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 38"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 38 preserves the full table cell wording across page continuation. Row 38 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 39"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 39 preserves the full table cell wording across page continuation. Row 39 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 40"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 40 preserves the full table cell wording across page continuation. Row 40 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 41"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 41 preserves the full table cell wording across page continuation. Row 41 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 42"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 42 preserves the full table cell wording across page continuation. Row 42 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 43"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 43 preserves the full table cell wording across page continuation. Row 43 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 44"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 44 preserves the full table cell wording across page continuation. Row 44 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 45"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 45 preserves the full table cell wording across page continuation. Row 45 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 46"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 46 preserves the full table cell wording across page continuation. Row 46 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 47"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 47 preserves the full table cell wording across page continuation. Row 47 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 48"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 48 preserves the full table cell wording across page continuation. Row 48 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 49"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 49 preserves the full table cell wording across page continuation. Row 49 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 50"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 50 preserves the full table cell wording across page continuation. Row 50 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 51"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 51 preserves the full table cell wording across page continuation. Row 51 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 52"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 52 preserves the full table cell wording across page continuation. Row 52 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 53"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 53 preserves the full table cell wording across page continuation. Row 53 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 54"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 54 preserves the full table cell wording across page continuation. Row 54 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 55"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 55 preserves the full table cell wording across page continuation. Row 55 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 56"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 56 preserves the full table cell wording across page continuation. Row 56 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 57"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 57 preserves the full table cell wording across page continuation. Row 57 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 58"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 58 preserves the full table cell wording across page continuation. Row 58 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 59"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 59 preserves the full table cell wording across page continuation. Row 59 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 60"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 60 preserves the full table cell wording across page continuation. Row 60 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 61"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 61 preserves the full table cell wording across page continuation. Row 61 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 62"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 62 preserves the full table cell wording across page continuation. Row 62 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 63"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 63 preserves the full table cell wording across page continuation. Row 63 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 64"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 64 preserves the full table cell wording across page continuation. Row 64 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 65"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 65 preserves the full table cell wording across page continuation. Row 65 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 66"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 66 preserves the full table cell wording across page continuation. Row 66 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 67"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 67 preserves the full table cell wording across page continuation. Row 67 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 68"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 68 preserves the full table cell wording across page continuation. Row 68 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 69"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 69 preserves the full table cell wording across page continuation. Row 69 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 70"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 70 preserves the full table cell wording across page continuation. Row 70 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 71"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 71 preserves the full table cell wording across page continuation. Row 71 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 72"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 72 preserves the full table cell wording across page continuation. Row 72 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 73"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 73 preserves the full table cell wording across page continuation. Row 73 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 74"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 74 preserves the full table cell wording across page continuation. Row 74 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 75"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 75 preserves the full table cell wording across page continuation. Row 75 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 76"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 76 preserves the full table cell wording across page continuation. Row 76 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 77"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 77 preserves the full table cell wording across page continuation. Row 77 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 78"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 78 preserves the full table cell wording across page continuation. Row 78 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 79"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 79 preserves the full table cell wording across page continuation. Row 79 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 80"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 80 preserves the full table cell wording across page continuation. Row 80 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 81"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 81 preserves the full table cell wording across page continuation. Row 81 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 82"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 82 preserves the full table cell wording across page continuation. Row 82 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 83"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 83 preserves the full table cell wording across page continuation. Row 83 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 84"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 84 preserves the full table cell wording across page continuation. Row 84 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 85"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 85 preserves the full table cell wording across page continuation. Row 85 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 86"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 86 preserves the full table cell wording across page continuation. Row 86 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 87"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 87 preserves the full table cell wording across page continuation. Row 87 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 88"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 88 preserves the full table cell wording across page continuation. Row 88 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 89"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 89 preserves the full table cell wording across page continuation. Row 89 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 90"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 90 preserves the full table cell wording across page continuation. Row 90 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 91"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 91 preserves the full table cell wording across page continuation. Row 91 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 92"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 92 preserves the full table cell wording across page continuation. Row 92 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 93"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 93 preserves the full table cell wording across page continuation. Row 93 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 94"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 94 preserves the full table cell wording across page continuation. Row 94 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 95"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 95 preserves the full table cell wording across page continuation. Row 95 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 96"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 96 preserves the full table cell wording across page continuation. Row 96 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 97"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 97 preserves the full table cell wording across page continuation. Row 97 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 98"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 98 preserves the full table cell wording across page continuation. Row 98 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 99"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 99 preserves the full table cell wording across page continuation. Row 99 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 100"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 100 preserves the full table cell wording across page continuation. Row 100 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 101"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 101 preserves the full table cell wording across page continuation. Row 101 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 102"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 102 preserves the full table cell wording across page continuation. Row 102 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 103"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 103 preserves the full table cell wording across page continuation. Row 103 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 104"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 104 preserves the full table cell wording across page continuation. Row 104 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 105"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 105 preserves the full table cell wording across page continuation. Row 105 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 106"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 106 preserves the full table cell wording across page continuation. Row 106 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 107"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 107 preserves the full table cell wording across page continuation. Row 107 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 108"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 108 preserves the full table cell wording across page continuation. Row 108 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 109"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 109 preserves the full table cell wording across page continuation. Row 109 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 110"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 110 preserves the full table cell wording across page continuation. Row 110 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 111"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 111 preserves the full table cell wording across page continuation. Row 111 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 112"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 112 preserves the full table cell wording across page continuation. Row 112 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 113"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 113 preserves the full table cell wording across page continuation. Row 113 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 114"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 114 preserves the full table cell wording across page continuation. Row 114 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 115"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 115 preserves the full table cell wording across page continuation. Row 115 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 116"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 116 preserves the full table cell wording across page continuation. Row 116 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 117"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 117 preserves the full table cell wording across page continuation. Row 117 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 118"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 118 preserves the full table cell wording across page continuation. Row 118 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 119"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 119 preserves the full table cell wording across page continuation. Row 119 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "term": [
+                    {
+                      "type": "text",
+                      "value": "Row 120"
+                    }
+                  ],
+                  "meaning": [
+                    {
+                      "type": "text",
+                      "value": "Row 120 preserves the full table cell wording across page continuation. Row 120 preserves the full table cell wording across page continuation. "
+                    }
+                  ]
+                }
+              }
+            ],
+            "caption": [
+              {
+                "type": "text",
+                "value": "Oversized table continuation stress"
+              }
+            ]
+          }
+        },
+        {
+          "id": "stress-compare-four",
+          "object": "compare",
+          "intent": "compare",
+          "position": 12,
+          "content": {
+            "items": [
+              {
+                "label": "Option 1",
+                "title": [
+                  {
+                    "type": "text",
+                    "value": "Comparison 1"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": "text",
+                    "value": "Comparison card 1 continues at safe paragraph boundaries with all words retained. Comparison card 1 continues at safe paragraph boundaries with all words retained. Comparison card 1 continues at safe paragraph boundaries with all words retained. Comparison card 1 continues at safe paragraph boundaries with all words retained. Comparison card 1 continues at safe paragraph boundaries with all words retained. Comparison card 1 continues at safe paragraph boundaries with all words retained. Comparison card 1 continues at safe paragraph boundaries with all words retained. Comparison card 1 continues at safe paragraph boundaries with all words retained. Comparison card 1 continues at safe paragraph boundaries with all words retained. Comparison card 1 continues at safe paragraph boundaries with all words retained. "
+                  }
+                ]
+              },
+              {
+                "label": "Option 2",
+                "title": [
+                  {
+                    "type": "text",
+                    "value": "Comparison 2"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": "text",
+                    "value": "Comparison card 2 continues at safe paragraph boundaries with all words retained. Comparison card 2 continues at safe paragraph boundaries with all words retained. Comparison card 2 continues at safe paragraph boundaries with all words retained. Comparison card 2 continues at safe paragraph boundaries with all words retained. Comparison card 2 continues at safe paragraph boundaries with all words retained. Comparison card 2 continues at safe paragraph boundaries with all words retained. Comparison card 2 continues at safe paragraph boundaries with all words retained. Comparison card 2 continues at safe paragraph boundaries with all words retained. Comparison card 2 continues at safe paragraph boundaries with all words retained. Comparison card 2 continues at safe paragraph boundaries with all words retained. "
+                  }
+                ]
+              },
+              {
+                "label": "Option 3",
+                "title": [
+                  {
+                    "type": "text",
+                    "value": "Comparison 3"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": "text",
+                    "value": "Comparison card 3 continues at safe paragraph boundaries with all words retained. Comparison card 3 continues at safe paragraph boundaries with all words retained. Comparison card 3 continues at safe paragraph boundaries with all words retained. Comparison card 3 continues at safe paragraph boundaries with all words retained. Comparison card 3 continues at safe paragraph boundaries with all words retained. Comparison card 3 continues at safe paragraph boundaries with all words retained. Comparison card 3 continues at safe paragraph boundaries with all words retained. Comparison card 3 continues at safe paragraph boundaries with all words retained. Comparison card 3 continues at safe paragraph boundaries with all words retained. Comparison card 3 continues at safe paragraph boundaries with all words retained. "
+                  }
+                ]
+              },
+              {
+                "label": "Option 4",
+                "title": [
+                  {
+                    "type": "text",
+                    "value": "Comparison 4"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": "text",
+                    "value": "Comparison card 4 continues at safe paragraph boundaries with all words retained. Comparison card 4 continues at safe paragraph boundaries with all words retained. Comparison card 4 continues at safe paragraph boundaries with all words retained. Comparison card 4 continues at safe paragraph boundaries with all words retained. Comparison card 4 continues at safe paragraph boundaries with all words retained. Comparison card 4 continues at safe paragraph boundaries with all words retained. Comparison card 4 continues at safe paragraph boundaries with all words retained. Comparison card 4 continues at safe paragraph boundaries with all words retained. Comparison card 4 continues at safe paragraph boundaries with all words retained. Comparison card 4 continues at safe paragraph boundaries with all words retained. "
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "stress-oversized-misconception",
+          "object": "aside",
+          "intent": "diagnose-misconception",
+          "position": 13,
+          "layout": {
+            "placement": "spanning"
+          },
+          "content": {
+            "label": "Misconception stress",
+            "body": [
+              {
+                "type": "text",
+                "value": ""
+              }
+            ],
+            "variant": "misconception",
+            "belief": [
+              {
+                "type": "text",
+                "value": "A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. A belief that must remain visible through continuation. "
+              }
+            ],
+            "evidence": [
+              {
+                "type": "text",
+                "value": "Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. Evidence is retained without clipping or shrinkage. "
+              }
+            ],
+            "conclusion": [
+              {
+                "type": "text",
+                "value": "Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. Conclusion stays readable at the page boundary. "
+              }
+            ]
+          }
+        },
+        {
+          "id": "stress-equation-five-inputs",
+          "object": "equation",
+          "intent": "explain",
+          "position": 14,
+          "layout": {
+            "placement": "spanning"
+          },
+          "content": {
+            "label": "Five input stress relation",
+            "inputs": [
+              [
+                {
+                  "type": "text",
+                  "value": "A"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "B"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "C"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "D"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "E"
+                }
+              ]
+            ],
+            "condition": [
+              {
+                "type": "text",
+                "value": "when all terms are present"
+              }
+            ],
+            "outputs": [
+              [
+                {
+                  "type": "text",
+                  "value": "F"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "G"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "H"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "I"
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "id": "stress-question",
+          "object": "questions",
+          "intent": "check-understanding",
+          "position": 15,
+          "content": {
+            "items": [
+              {
+                "id": "stress-question",
+                "prompt": [
+                  {
+                    "type": "text",
+                    "value": "Explain the continued relationship in your own words."
+                  }
+                ],
+                "answer_lines": 2
+              }
+            ]
+          }
+        },
+        {
+          "id": "stress-worked",
+          "object": "worked-example",
+          "intent": "demonstrate",
+          "position": 16,
+          "content": {
+            "title": "Stress worked example",
+            "problem": [
+              {
+                "type": "text",
+                "value": "Use the evidence to identify the result."
+              }
+            ],
+            "steps": [
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "Read the table row by row."
+                  }
+                ]
+              },
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "Preserve each term."
+                  }
+                ]
+              }
+            ],
+            "answer": [
+              {
+                "type": "text",
+                "value": "The result follows from every retained term."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "explain",
+      "title": "Where the Growing Energy Comes From",
+      "blocks": [
+        {
+          "id": "explain-key-idea",
+          "object": "aside",
+          "intent": "emphasise",
+          "position": 0,
+          "content": {
+            "body": [
+              {
+                "type": "text",
+                "value": "The energy a plant grows on is captured from light, not taken in from the soil."
+              }
+            ],
+            "label": [
+              {
+                "type": "text",
+                "value": "Key idea"
+              }
+            ],
+            "variant": "key_idea"
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "explain-paragraph-one",
+          "object": "prose",
+          "intent": "explain",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "The green parts of a plant — mostly its leaves — absorb "
+                  },
+                  {
+                    "type": "strong",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "light energy"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "value": ". The leaf uses that energy to make the plant's own "
+                  },
+                  {
+                    "type": "strong",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "food"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "value": ": a sugar built from water drawn up out of the soil and carbon dioxide taken in from the air."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "explain-equation",
+          "object": "equation",
+          "intent": "explain",
+          "position": 2,
+          "content": {
+            "label": [
+              {
+                "type": "text",
+                "value": "In one line"
+              }
+            ],
+            "inputs": [
+              [
+                {
+                  "type": "text",
+                  "value": "water"
+                }
+              ],
+              [
+                {
+                  "type": "text",
+                  "value": "carbon dioxide (CO"
+                },
+                {
+                  "type": "subscript",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "2"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "value": ")"
+                }
+              ]
+            ],
+            "condition": [
+              {
+                "type": "text",
+                "value": "light energy"
+              }
+            ],
+            "outputs": [
+              [
+                {
+                  "type": "text",
+                  "value": "sugar (the plant's food)"
+                }
+              ]
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "explain-paragraph-two",
+          "object": "prose",
+          "intent": "explain",
+          "position": 3,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "The energy stored inside that sugar is what the plant spends on building new leaves, stem and roots."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "explain-steps-heading",
+          "object": "heading",
+          "position": 4,
+          "content": {
+            "text": [
+              {
+                "type": "text",
+                "value": "Follow the energy, step by step"
+              }
+            ],
+            "level": 3
+          }
+        },
+        {
+          "id": "explain-steps",
+          "object": "list",
+          "intent": "show-structure",
+          "position": 5,
+          "content": {
+            "style": "ordered",
+            "items": [
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "Sunlight reaches the leaf."
+                  }
+                ]
+              },
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "The leaf's green parts capture that light energy."
+                  }
+                ]
+              },
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "The captured energy is used to build sugar from water and carbon dioxide. The energy is now stored inside food the plant has made for itself."
+                  }
+                ]
+              },
+              {
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "The plant breaks some of that sugar down again and uses the released energy to build new leaves, stem and roots. That is growth."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "explain-misconception",
+          "object": "aside",
+          "intent": "define",
+          "position": 6,
+          "content": {
+            "body": [
+              {
+                "type": "text",
+                "value": "The energy enters the plant through the leaf, never through the soil. The only things arriving from the soil are water and dissolved minerals. Leaf area can be measured in m"
+              },
+              {
+                "type": "superscript",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "2"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "value": "."
+              }
+            ],
+            "label": [
+              {
+                "type": "text",
+                "value": "Notice two things"
+              }
+            ],
+            "variant": "note"
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "explain-soil-heading",
+          "object": "heading",
+          "position": 7,
+          "content": {
+            "text": [
+              {
+                "type": "text",
+                "value": "So what is the soil for?"
+              }
+            ],
+            "level": 3
+          }
+        },
+        {
+          "id": "explain-paragraph",
+          "object": "prose",
+          "intent": "explain",
+          "position": 8,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Soil does a real job. It holds the plant firmly in place, and it holds water and dissolved minerals, which the roots take in and which then travel up to the leaves. Minerals are raw materials. They are not food, and they carry no usable energy."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "explain-table",
+          "object": "table",
+          "intent": "explain",
+          "position": 9,
+          "content": {
+            "columns": [
+              {
+                "id": "column-1",
+                "label": [
+                  {
+                    "type": "text",
+                    "value": "What the plant takes in"
+                  }
+                ]
+              },
+              {
+                "id": "column-2",
+                "label": [
+                  {
+                    "type": "text",
+                    "value": "Where from"
+                  }
+                ]
+              },
+              {
+                "id": "column-3",
+                "label": [
+                  {
+                    "type": "text",
+                    "value": "Is it energy?"
+                  }
+                ]
+              }
+            ],
+            "rows": [
+              {
+                "cells": {
+                  "column-1": [
+                    {
+                      "type": "text",
+                      "value": "Water"
+                    }
+                  ],
+                  "column-2": [
+                    {
+                      "type": "text",
+                      "value": "Soil, through the roots"
+                    }
+                  ],
+                  "column-3": [
+                    {
+                      "type": "text",
+                      "value": "No. A raw material for making sugar."
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "column-1": [
+                    {
+                      "type": "text",
+                      "value": "Dissolved minerals"
+                    }
+                  ],
+                  "column-2": [
+                    {
+                      "type": "text",
+                      "value": "Soil, through the roots"
+                    }
+                  ],
+                  "column-3": [
+                    {
+                      "type": "text",
+                      "value": "No. Raw materials for building the plant's body."
+                    }
+                  ]
+                }
+              },
+              {
+                "cells": {
+                  "column-1": [
+                    {
+                      "type": "text",
+                      "value": "Light"
+                    }
+                  ],
+                  "column-2": [
+                    {
+                      "type": "text",
+                      "value": "Captured by the leaves"
+                    }
+                  ],
+                  "column-3": [
+                    {
+                      "type": "text",
+                      "value": "Yes. It ends up stored in sugar."
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "explain-closing",
+          "object": "prose",
+          "intent": "explain",
+          "position": 10,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "So a plant standing in rich soil with plenty of water, but kept in the dark, cannot make its own food and cannot grow, however well watered it is."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "contrast",
+      "title": "Two Beliefs That Fail the Evidence",
+      "blocks": [
+        {
+          "id": "contrast-belief",
+          "object": "aside",
+          "intent": "diagnose-misconception",
+          "position": 0,
+          "content": {
+            "body": [],
+            "label": [
+              {
+                "type": "text",
+                "value": "Common belief 1"
+              }
+            ],
+            "variant": "misconception",
+            "belief": [
+              {
+                "type": "emphasis",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "The soil feeds the plant. A plant kept in the dark will keep growing as long as it is watered."
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "type": "text",
+                "value": "Both pots held the same soil and got the same water. If the soil were supplying food and energy, the cupboard plant should have grown just as well. It stopped growing and turned pale."
+              }
+            ],
+            "conclusion": [
+              {
+                "type": "text",
+                "value": "Soil supplies only water and dissolved minerals. The plant's food is made in its own leaves, using light energy."
+              }
+            ],
+            "aside": [
+              {
+                "type": "text",
+                "value": "Why did the cupboard plant keep going for a while? It was living on food it had already made and stored. Once that store ran down, it stopped growing and lost its green colour."
+              }
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "contrast-belief-two",
+          "object": "aside",
+          "intent": "diagnose-misconception",
+          "position": 1,
+          "content": {
+            "body": [],
+            "label": [
+              {
+                "type": "text",
+                "value": "Common belief 2"
+              }
+            ],
+            "variant": "misconception",
+            "belief": [
+              {
+                "type": "text",
+                "value": "Light only keeps a plant warm or makes it look healthy. The energy for growth comes from the water and the minerals."
+              }
+            ],
+            "evidence": [
+              {
+                "type": "text",
+                "value": "Both pots stood in the same room at the same temperature. The cupboard was not cold, so the cupboard plant lacked no warmth. It still did not grow."
+              }
+            ],
+            "conclusion": [
+              {
+                "type": "text",
+                "value": "Light is not merely warmth. The leaves capture light energy and use it to make the plant's own food, and growth runs on the energy stored in that food."
+              }
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "title": "Which Observation Challenges the Soil Idea?",
+      "blocks": [
+        {
+          "id": "check-quote",
+          "object": "quote",
+          "intent": "explain",
+          "position": 0,
+          "content": {
+            "text": [
+              {
+                "type": "text",
+                "value": "Plants get their food from the soil, so a plant in a dark room will keep growing as long as I water it."
+              }
+            ],
+            "attribution": [
+              {
+                "type": "text",
+                "value": "A student says"
+              }
+            ]
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        },
+        {
+          "id": "check-paragraph",
+          "object": "prose",
+          "intent": "explain",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              {
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "That claim is wrong. The strong move is not to repeat the explanation, but to point to "
+                  },
+                  {
+                    "type": "strong",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "evidence the claim cannot explain"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "Q2",
+          "object": "choices",
+          "intent": "check-understanding",
+          "position": 2,
+          "content": {
+            "stem": [
+              {
+                "type": "text",
+                "value": "Which observation would best challenge the student's idea?"
+              }
+            ],
+            "options": [
+              {
+                "letter": "A",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "A watered plant kept in darkness becomes pale and stops growing larger."
+                  }
+                ]
+              },
+              {
+                "letter": "B",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "A watered plant in darkness grows taller because it stretches toward the light."
+                  }
+                ]
+              },
+              {
+                "letter": "C",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "A watered plant in darkness stays cool, which proves it lacks growth energy."
+                  }
+                ]
+              },
+              {
+                "letter": "D",
+                "text": [
+                  {
+                    "type": "text",
+                    "value": "A watered plant in darkness grows well when it is given plant food."
+                  }
+                ]
+              }
+            ]
+          },
+          "role": "check"
+        }
+      ]
+    }
+  ],
+  "answer_key": {
+    "id": "answer-key-print-golden-shared-lesson-r1",
+    "object": "answer-key",
+    "intent": "answer-key",
+    "position": 0,
+    "content": {
+      "groups": [
+        {
+          "entries": [
+            {
+              "question_id": "Q1",
+              "answer": "Prediction (not marked)",
+              "option_notes": {
+                "A": [
+                  {
+                    "type": "text",
+                    "value": "The evidence will test this idea."
+                  }
+                ]
+              },
+              "not_marked": true
+            },
+            {
+              "question_id": "Q2",
+              "answer": [
+                {
+                  "type": "text",
+                  "value": "A — A watered plant kept in darkness becomes pale and stops growing larger."
+                }
+              ],
+              "feedback": [
+                {
+                  "type": "text",
+                  "value": "That's the one. The soil idea says this plant should keep growing, because it still has soil and water. It does not, so the soil idea cannot be right."
+                }
+              ],
+              "option_notes": {
+                "B": [
+                  {
+                    "type": "text",
+                    "value": "A plant growing taller in the dark would fit the soil idea, not challenge it."
+                  }
+                ],
+                "C": [
+                  {
+                    "type": "text",
+                    "value": "Temperature is not the issue. In the two-pot comparison both plants were equally warm."
+                  }
+                ],
+                "D": [
+                  {
+                    "type": "text",
+                    "value": "Growing well on plant food in the dark would support the soil idea, not challenge it."
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

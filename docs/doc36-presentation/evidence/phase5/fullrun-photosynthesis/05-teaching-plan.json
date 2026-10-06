@@ -1,0 +1,820 @@
+{
+  "generation_id": "910bef47-fcc3-4eca-a8a4-845c986d2d99",
+  "teaching_plan": {
+    "arc": "The lesson opens on two identical bean plants \u2014 one on a sunny windowsill, one in a dark cupboard \u2014 where only the windowsill plant grows, and leaves that difference unexplained. The definition of photosynthesis and the standard a complete explanation must meet are then set out and used to explain the pair, while the soil account, the comfort-condition account and the oxygen-intake account are each shown failing. Learners then run the mechanism on a bright-morning greenhouse and on dust-covered leaves, and the lesson closes with one unaided explanation of how a plant gains mass.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Open on the anchor pair: two bean plants from the same batch in identical pots of the same soil, watered the same amount on the same days. One stands on a sunny windowsill, its twin in a dark cupboard. After two weeks the windowsill plant is taller, greener and carrying new leaves; the cupboard plant is pale, short and has added no new leaves. Set out only what was held the same and what was observed, and leave the cause open: state that both plants received the same water and the same soil, and ask what the windowsill plant used to build its new stem and leaves. Do not say that light is the answer, do not explain what a leaf does with anything, and do not call either account of the difference correct or incorrect.",
+            "intent": "orient",
+            "evidence": "The slot asks for a concrete situation to hold, and the anchor pair is that situation; describing the two plants and their divergence without the cause gives the learner something the later mechanism has to resolve.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "slot.orient.purpose",
+              "prior-7"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "orient-b2",
+            "brief": "Recall the three things a plant relies on and how each reaches it: water is taken in by the roots from the soil and carried up the stem to the leaves; carbon dioxide is taken in from the air through the leaves; light is captured by the leaves. Also recall that the soil supplies only water and minerals, never food. Keep this to what learners already know, and stop before saying what the leaves do with the water and the carbon dioxide.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The combining step later in the lesson is impossible to follow unless the learner has the three inputs and their routes live in memory, and this recall is brief and diagnostic rather than new teaching.",
+            "position": 1,
+            "task_mode": "formative",
+            "evidence_refs": [
+              "prior-9",
+              "prior-10",
+              "prior-6",
+              "prior-4",
+              "slot.orient.purpose"
+            ],
+            "learner_action": {
+              "action": "match-pairs",
+              "target": "each thing the plant relies on \u2014 water, carbon dioxide, light \u2014 with how it reaches or is captured by the plant",
+              "purpose": "retrieve the route of each input before the inputs are combined in the leaves",
+              "difficulty": "guided",
+              "expected_evidence": "water paired with the roots and stem, carbon dioxide paired with the leaves and the air, light paired with the leaves"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "orient",
+        "exit_state": [
+          "Learners hold the bean-plant pair and its unexplained difference in growth.",
+          "Learners can say where water, carbon dioxide and light each enter or are captured by a plant."
+        ],
+        "transition": null,
+        "entry_state": [
+          "Learners know a plant has roots, stems and leaves and that a plant makes its own food rather than taking food from the soil.",
+          "Learners know soil supplies water and minerals, and that light is needed for a plant to thrive, but they have not combined these into an account of how food is made."
+        ],
+        "display_title": "Two bean plants, one difference",
+        "must_establish": [
+          "The anchor observation: two bean plants in identical pots of the same soil, watered the same amount on the same days, one on a sunny windowsill and one in a dark cupboard; after two weeks only the windowsill plant is taller, greener and carrying new leaves.",
+          "That water is taken in by the roots and carried up the stem to the leaves, carbon dioxide is taken in from the air through the leaves, and light is captured by the leaves."
+        ],
+        "avoid_repeating": [
+          "No statement of what the leaves do with the three inputs \u2014 the definition belongs to the next section.",
+          "No explanation of why the cupboard plant failed to grow."
+        ],
+        "specific_purpose": "Open on the anchor pair and get the three inputs into play as routes learners already know.",
+        "bridge_from_previous": null
+      },
+      {
+        "blocks": [
+          {
+            "id": "criteria-b1",
+            "brief": "Give the precise definition the lesson will use: photosynthesis is the process in which light energy captured in the leaves combines water \u2014 taken in by the roots and carried up the stem \u2014 with carbon dioxide taken in from the air through the leaves, to make sugar, the plant's food, and to release oxygen; that sugar is what the plant uses for growth and as an energy source. Then set the standard a complete explanation of a plant's growth must meet: light, water and carbon dioxide named as the three inputs; the combining placed in the leaves; the product named as food, a sugar, used for growth; the process named photosynthesis. State that an explanation which credits the soil with supplying food or with supplying the material of new growth does not meet the standard. Do not explain the bean-plant pair yet.",
+            "intent": "define",
+            "visual": {
+              "mode": "diagram",
+              "purpose": "Show how light, water and carbon dioxide come together inside a leaf to make the sugar the plant uses for growth, and that oxygen leaves the leaf as this happens.",
+              "required": true,
+              "must_show": [
+                "light reaching the leaf from the Sun",
+                "carbon dioxide in the air entering the leaf",
+                "water travelling from the roots up the stem into the leaf",
+                "water and carbon dioxide combining inside the leaf, driven by light energy, to make sugar, the plant's food",
+                "sugar leaving the leaf to be used for growth and stored elsewhere in the plant",
+                "oxygen being released from the leaf into the air as the sugar is made"
+              ],
+              "must_not_show": [
+                "soil supplying food or the material of new growth",
+                "the plant taking oxygen in for food-making",
+                "chemical formulas or equations"
+              ],
+              "labels_required": [
+                "light",
+                "carbon dioxide",
+                "water",
+                "roots",
+                "stem",
+                "leaf",
+                "sugar",
+                "food",
+                "oxygen"
+              ]
+            },
+            "evidence": "The objective requires the learner to explain the process and name it, so the lesson must fix the definition and the acceptance standard before any case is judged, which is exactly what this slot places before a case is seen.",
+            "position": 0,
+            "task_mode": "none",
+            "evidence_refs": [
+              "lesson.objective",
+              "prior-17",
+              "prior-4",
+              "prior-16",
+              "slot.criteria.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": "The criteria slot supplies no typical intents, so the slot's own job \u2014 establishing the definition and the standard \u2014 has to be carried by a permitted intent that fixes meaning precisely, and define is the only permitted intent written for that.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "criteria",
+        "exit_state": [
+          "Learners can state what photosynthesis is, name the three inputs and the leaf as the site, and name the product as food used for growth.",
+          "Learners can say what a complete explanation must include and what it must not credit."
+        ],
+        "transition": "With the definition and the standard fixed, the lesson returns to the bean-plant pair to explain it and to test the accounts that fail.",
+        "entry_state": [
+          "Learners hold the bean-plant difference as an open question.",
+          "Learners can name the route of water, carbon dioxide and light into the plant."
+        ],
+        "display_title": "What photosynthesis is, and what a full answer must contain",
+        "must_establish": [
+          "The definition of photosynthesis: light energy captured in the leaves combines water from the roots with carbon dioxide from the air to make sugar, the plant's food, and to release oxygen; the sugar is what the plant uses for growth and as an energy source.",
+          "The standard a complete explanation of a plant's growth must meet: light, water and carbon dioxide named as the three inputs; the combining placed in the leaves; the product named as food, a sugar, used for growth; the process named photosynthesis; and no credit given to the soil for supplying food or the material of new growth."
+        ],
+        "avoid_repeating": [
+          "No re-description of the bean-plant pair beyond naming it as the case still waiting to be explained.",
+          "No judgement yet about which accounts of growth fail."
+        ],
+        "specific_purpose": "Define photosynthesis precisely and fix the standard a complete explanation must meet, before the anchor pair is explained.",
+        "bridge_from_previous": "The opening left the pair's growth unexplained and confirmed where each input enters the plant, so the lesson can now state the process those inputs take part in and the standard the explanation must meet."
+      },
+      {
+        "blocks": [
+          {
+            "id": "contrast-b1",
+            "brief": "Name the account that the new stem and leaves were built from material supplied by the soil, with water and light only helping the plant along. State plainly what is correct instead: the soil supplies water and minerals and nothing else, so it does not supply food and does not supply the material of new growth; the plant builds that material from the sugar it makes in its leaves by combining carbon dioxide from the air with water from the roots. Show the account failing on the pair: the cupboard plant stood in the same soil and was watered exactly as the windowsill plant was, yet it built no new growth at all, so soil and water cannot be what made the difference.",
+            "intent": "diagnose-misconception",
+            "evidence": "The soil account is a held belief with a confident wrong answer, so it must be named and shown failing rather than merely flagged as a slip; the anchor pair's identical soil and water supply the falsifying evidence inside the case the lesson already uses.",
+            "position": 0,
+            "task_mode": "formative",
+            "evidence_refs": [
+              "m1",
+              "prior-4",
+              "anchor.anchor-1",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": {
+              "action": "enter-text",
+              "target": "why identical soil and identical watering cannot account for the difference between the two plants",
+              "purpose": "make the learner produce the refutation rather than recognise it",
+              "difficulty": "guided",
+              "expected_evidence": "an explanation that identical soil and identical water rule the soil account out, so the difference must lie in something the windowsill plant had and the cupboard plant did not"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": "The account is a held belief, not a predictable slip and not a legitimate alternative to compare, so warn and compare would both leave the wrong model in place; naming the wrong model and showing it fail on the pair is the only move that removes it.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "contrast-b2",
+            "brief": "Explain the pair's outcome by the mechanism: the windowsill plant's leaves captured light energy, and inside those leaves water from the roots was combined with carbon dioxide from the air to make sugar, and that sugar was used to build the taller stem, the greener leaves and the new growth. The cupboard plant had the same soil and the same water, and carbon dioxide was present in the air around it, but with no light its leaves could not combine them, so no sugar was made and no new growth was built. State plainly what is wrong with treating light and carbon dioxide as mere comfort conditions: carbon dioxide is a raw material, and its atoms become part of the sugar the plant makes; light supplies the energy that drives the combining, and that energy ends up stored in the sugar. Show the account failing: if light and carbon dioxide were only comfort conditions, the cupboard plant \u2014 which had water, soil and air \u2014 would have grown as well.",
+            "intent": "explain-cause",
+            "evidence": "The objective asks how the three inputs combine to make food, which is a mechanism linking cause to result; only a causal account of the pair can show why the same water and soil produced two different outcomes, and it is also what makes the comfort-condition account fail.",
+            "position": 1,
+            "task_mode": "none",
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "m2",
+              "prior-11",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": "The contrast section needs the mechanism itself stated, not a sorting of statements: classify and compare would separate accounts without ever giving the chain that produced the growth, and the objective explicitly asks how the inputs combine.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "contrast-b3",
+            "brief": "Name the account that the plant takes oxygen in to make its food. State plainly what is correct instead: when water and carbon dioxide are combined into sugar in the leaves, oxygen is produced and released from the leaves into the air, so making food gives oxygen out rather than taking it in. Show the account failing: in bright light the leaves of a leafy plant give out oxygen, so the air around such a plant gains oxygen rather than losing it \u2014 the opposite of what the account predicts.",
+            "intent": "diagnose-misconception",
+            "evidence": "The direction oxygen moves is a specific, confidently held error about the products of food-making, so it needs the wrong direction named and contradicted by the evidence, which a general statement that oxygen is released would not do.",
+            "position": 2,
+            "task_mode": "none",
+            "evidence_refs": [
+              "m3",
+              "prior-16",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "sourcebook_refs": [],
+            "departure_reason": "This is a held belief about which way oxygen moves, not a slip to flag before it happens and not a second legitimate option to set beside the correct one, so warn and compare would leave the wrong direction intact.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "contrast",
+        "exit_state": [
+          "Learners can explain the pair's growth by the mechanism and say what the cupboard plant was missing.",
+          "Learners can state why the soil account, the comfort-condition account and the oxygen-intake account fail."
+        ],
+        "transition": "With the mechanism explained and defended on the pair, learners use it on situations the lesson has not used.",
+        "entry_state": [
+          "Learners can state the definition of photosynthesis and the standard a complete explanation must meet.",
+          "Learners hold the pair's outcome and know that light was the one condition that differed."
+        ],
+        "display_title": "Explaining the two plants \u2014 and the accounts that fail",
+        "must_establish": [
+          "The causal account of the pair: the windowsill plant's leaves captured light energy and combined water with carbon dioxide to make sugar, and that sugar built the taller stem, the greener leaves and the new growth; the cupboard plant had the same soil and water and carbon dioxide in the air around it, but no light energy, so no sugar was made and no new growth was built.",
+          "The correct understanding behind each failing account: soil supplies only water and minerals, never food or growth material; carbon dioxide's atoms become part of the sugar and light supplies the energy that drives the combining and is stored in the sugar, so neither is a comfort condition; and oxygen is produced and released from the leaves as the sugar is made, not taken in for it."
+        ],
+        "avoid_repeating": [
+          "No restating of the definition of photosynthesis or of the standard.",
+          "No re-use of the bean-plant pair in later sections."
+        ],
+        "specific_purpose": "Explain the anchor pair by the mechanism and show the three wrong accounts failing against the standard.",
+        "bridge_from_previous": "The definition and the standard are now available, so the pair's outcome can be explained causally and each competing account can be checked against the standard."
+      },
+      {
+        "blocks": [
+          {
+            "id": "apply-b1",
+            "brief": "Present a greenhouse of tomato vines on a bright summer morning: the grower raises the amount of carbon dioxide in the greenhouse air and the vines put on growth faster than before; on a dull, heavily overcast day the same extra carbon dioxide makes almost no difference. Prompt the learner through the reasoning without finishing it: name where the extra carbon dioxide enters the plant, name what else has to be present, and say what the leaves do with the carbon dioxide and the water when light is available. Supply the prompts, not the completed explanation.",
+            "intent": "practise-guided",
+            "evidence": "The apply slot requires a context the lesson has not used, and this situation forces the learner to hold all three inputs together while varying only light, which the anchor pair did not ask them to state in words.",
+            "position": 0,
+            "task_mode": "formative",
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.apply.purpose"
+            ],
+            "learner_action": {
+              "action": "enter-text",
+              "target": "why added carbon dioxide speeds growth on a bright morning but not on a dull day",
+              "purpose": "first supported use of the mechanism on a situation the lesson has not used",
+              "difficulty": "guided",
+              "expected_evidence": "an explanation naming carbon dioxide entering the leaves, water from the roots, light energy captured in the leaves and sugar used for growth, and stating that with too little light the extra carbon dioxide cannot be combined"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": "The apply slot has no typical intents, and the learner needs a supported first attempt on an unseen situation before any unaided work, so practise-guided is the fitting permitted intent rather than a second explanation by the teacher.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          },
+          {
+            "id": "apply-b2",
+            "brief": "Present a second situation the lesson has not used: a broad-leaved houseplant in a bright room has its leaves coated with a thick layer of dust, and over the following weeks it puts on far less new growth than before, although it is watered exactly as before and the room stays just as bright. With nothing but the situation to work from, the learner explains the slowdown: less light reaches the leaves, so the leaves capture less light energy and combine less carbon dioxide and water into sugar, so less food is available for building new growth. Do not name the answer and do not restate the definition.",
+            "intent": "practise-independent",
+            "evidence": "The learner has just succeeded with prompts, so the same mechanism must now be produced without them on a situation whose only change is the light reaching the leaves, which is the cleanest unaided test short of the check itself.",
+            "position": 1,
+            "task_mode": "formative",
+            "evidence_refs": [
+              "slot.apply.purpose",
+              "prior-14",
+              "lesson.objective"
+            ],
+            "learner_action": {
+              "action": "enter-text",
+              "target": "why a dust-covered houseplant in a bright room slows its growth while its watering is unchanged",
+              "purpose": "unaided use of the mechanism on a second unseen situation",
+              "difficulty": "independent",
+              "expected_evidence": "an explanation that less light reaches the leaves, so less light energy is captured, less carbon dioxide and water are combined into sugar, and less food is available for new growth"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": "The apply slot has no typical intents, and after a supported attempt the learner must perform unaided; stopping at guided practice would leave the lesson without any independent use of the mechanism.",
+            "sourcebook_needs": [],
+            "source_question_ids": [],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "apply",
+        "exit_state": [
+          "Learners can explain a bright-light greenhouse and a dust-covered houseplant by the inputs, the leaf site, the sugar produced and the light energy that drives the combining.",
+          "Learners can produce the second explanation unaided."
+        ],
+        "transition": "The final step measures whether that explanation is in place with no support at all.",
+        "entry_state": [
+          "Learners can explain the pair's growth by the mechanism and reject the three failing accounts.",
+          "Learners can name the three inputs, the leaf as the site and sugar as the product."
+        ],
+        "display_title": "Using the idea somewhere new",
+        "must_establish": [
+          "That extra carbon dioxide speeds a greenhouse crop only when there is enough light for the leaves to combine it with water into sugar.",
+          "That anything reducing the light reaching the leaves reduces the sugar made and therefore the new growth, even when the water and the carbon dioxide are unchanged."
+        ],
+        "avoid_repeating": [
+          "No re-use of the bean-plant pair, the definition or the standard.",
+          "No prompts in the second situation."
+        ],
+        "specific_purpose": "Run the mechanism on two situations the lesson has not used, first with prompts and then unaided.",
+        "bridge_from_previous": "The mechanism has been explained and defended on the bean-plant pair, so learners can now run it on cases the lesson has not used."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Administer the approved item bound to this block, with no prompts, no reminder of the definition or the standard, and no reference to the bean-plant pair, so the selection shows the learner's own explanation of how the plant gains mass. Record the single selection as it stands, without correcting it while the learner is working.",
+            "intent": "check-understanding",
+            "evidence": "The check slot is the lesson's measurement point and this approved item asks for the explanation of growth the objective targets, so binding it here and nowhere else keeps its scenario out of the teaching sections and lets the selection stand as evidence of the learner's model.",
+            "position": 0,
+            "task_mode": "assessment",
+            "evidence_refs": [
+              "slot.check.purpose",
+              "lesson.objective",
+              "item.910bef47-fcc3-4eca-a8a4-845c986d2d99:910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1.i3"
+            ],
+            "learner_action": {
+              "action": "select-one",
+              "target": "the explanation of how the plant gains mass",
+              "purpose": "measure whether the learner explains growth by food made in the leaves rather than by material taken from outside the plant",
+              "difficulty": "independent",
+              "expected_evidence": "selects the explanation that places food-making in the leaves from water and carbon dioxide using light, rather than an explanation that credits soil or another outside source with supplying the growth material"
+            },
+            "sourcebook_refs": [],
+            "departure_reason": null,
+            "sourcebook_needs": [],
+            "source_question_ids": [
+              "910bef47-fcc3-4eca-a8a4-845c986d2d99:910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1.i3"
+            ],
+            "stimulus_dependencies": []
+          }
+        ],
+        "slot_id": "check",
+        "exit_state": [
+          "The teacher can identify which learners hold the mechanism and which still explain growth by material taken from outside the plant."
+        ],
+        "transition": "The lesson closes here, and the record of who still uses a soil or comfort-condition account shows what to reteach before the class moves on to how the sugar a plant makes is transported and used.",
+        "entry_state": [
+          "Learners have explained two situations the lesson did not use, the first with prompts and the second without.",
+          "Learners know the three inputs, the leaf as the site, the sugar as the product and the name of the process."
+        ],
+        "display_title": "Check: what explains a plant's growth",
+        "must_establish": [
+          "An unaided selection showing whether the learner explains the plant's growth by food made in the leaves from water and carbon dioxide using light, or by material taken from outside the plant."
+        ],
+        "avoid_repeating": [
+          "No reminder of the definition, the standard or the bean-plant pair before the check.",
+          "No hint, feedback or re-teaching inside the check."
+        ],
+        "specific_purpose": "Measure, with no help, whether learners explain growth by food made in the leaves rather than by material taken from outside the plant.",
+        "bridge_from_previous": "The apply section showed the mechanism working with support and then without it, so the check can now measure the same explanation with nothing supplied."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "The anchor is introduced here as an unexplained observation: two bean plants in identical pots and soil, watered the same, one on a sunny windowsill and one in a dark cupboard, with only the windowsill plant growing.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "The anchor is named only as the case still waiting to be explained; the definition and the standard are stated without it so the standard does not depend on the case.",
+        "slot_id": "criteria"
+      },
+      {
+        "usage": "The anchor pair is the case the mechanism explains, and its two plants are also the evidence that makes the soil account and the comfort-condition account fail.",
+        "slot_id": "contrast"
+      },
+      {
+        "usage": "The anchor is deliberately left behind so learners must run the mechanism on situations the lesson has not used.",
+        "slot_id": "apply"
+      },
+      {
+        "usage": "The anchor is not shown or mentioned, so the learner's selection reflects their own explanation rather than a remembered example.",
+        "slot_id": "check"
+      }
+    ],
+    "target_state": [
+      "Learners can explain that light energy captured in the leaves combines water from the roots with carbon dioxide from the air to make sugar \u2014 the plant's food \u2014 which is used for growth, with oxygen released.",
+      "Learners can name the process photosynthesis and say what a complete explanation must include and what it must not credit.",
+      "Learners can reject the accounts that growth material comes from the soil, that light and carbon dioxide are mere comfort conditions, and that the plant takes oxygen in to make food, and can apply the explanation to situations the lesson did not use."
+    ],
+    "learner_title": "How a plant makes its own food: light, water and air in the leaves",
+    "starting_state": [
+      "Learners know a plant has roots, stems and leaves, and that a plant makes its own food rather than taking food from the soil.",
+      "Learners know soil supplies water and minerals, that water enters at the roots and travels to the leaves, that carbon dioxide enters the leaves from the air, and that light is captured by the plant as an energy source.",
+      "Learners have met the name photosynthesis but cannot yet say how light, water and carbon dioxide combine in the leaves to make food."
+    ],
+    "approval_status": "pending",
+    "contract_version": 2,
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "0824f020-7bc8-4047-93a7-79ea31829f72",
+    "misconception_focus_ids": [
+      "m1",
+      "m2",
+      "m3"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [
+    {
+      "code": "TEACHING_PLAN_SEMANTIC_REVIEW_PASS",
+      "content_hash": "fe8cad10a4c223f73b3d1c56f130ac8fbca1ae472178c4adee932c75f8c2e6e3"
+    }
+  ],
+  "teaching_flags": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "teaching_plan_identity": {
+    "revision": 1,
+    "pending_content_hash": "fe8cad10a4c223f73b3d1c56f130ac8fbca1ae472178c4adee932c75f8c2e6e3",
+    "pending_hash_verified": true,
+    "approved_revision": null,
+    "approved_content_hash": null,
+    "approved_hash_verified": false,
+    "approval_hash_binding": null,
+    "recovery_action": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ]
+      },
+      {
+        "purpose": "Establish what a good answer is judged against, before any case is seen.",
+        "slot_id": "criteria",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": []
+      },
+      {
+        "purpose": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.\n",
+        "slot_id": "contrast",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "compare",
+          "classify",
+          "explain",
+          "warn",
+          "show-structure"
+        ]
+      },
+      {
+        "purpose": "Use the idea on a context not seen in this lesson.",
+        "slot_id": "apply",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": []
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ]
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A potted bean plant on a sunny windowsill that has grown noticeably taller over two weeks, paired with its twin kept in a dark cupboard that has stayed pale and short despite being watered the same amount."
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "Explain how light, water and carbon dioxide combine in the leaves to make the food a plant needs to grow, naming the process as photosynthesis.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "910bef47-fcc3-4eca-a8a4-845c986d2d99"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1.i1",
+        "stem": "A student leaves two identical bean plants in a windowless room for three weeks. Plant A is watered with plain water. Plant B is watered with a liquid containing dissolved sugar and minerals. Both plants stay the same size. What does this result best show about why plants grow?",
+        "card_id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1",
+        "options": [
+          {
+            "key": "a",
+            "text": "Plants need light to make the food that provides material for growth, so neither plant grew.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Plants need soil nutrients as the main building material for growth, and the liquid did not supply real soil.",
+            "correct": false,
+            "diagnoses": "m1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Plants need comfortable conditions such as light and warmth, and the dark room made both plants uncomfortable.",
+            "correct": false,
+            "diagnoses": "m2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Plants must take in oxygen to grow, and the room had no fresh oxygen for either plant.",
+            "correct": false,
+            "diagnoses": "m3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "m1",
+          "c": "m2",
+          "d": "m3"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1.i2",
+        "stem": "A sealed clear container holds a small plant, air, and a dish of water. The container is placed in bright light. After several hours, the amount of carbon dioxide inside has dropped. Which explanation best accounts for this change?",
+        "card_id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1",
+        "options": [
+          {
+            "key": "a",
+            "text": "Carbon dioxide is a raw ingredient that the leaves combine with water to make food, so it is used up.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Carbon dioxide is only a comfort condition for leaves, and the plant absorbs it to stay comfortable.",
+            "correct": false,
+            "diagnoses": "m2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Carbon dioxide provides the main material for new plant growth, and it is pulled in through the roots from the soil.",
+            "correct": false,
+            "diagnoses": "m1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Carbon dioxide is a product the plant releases when it makes food, and it collects inside the container.",
+            "correct": false,
+            "diagnoses": "m3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "m2",
+          "c": "m1",
+          "d": "m3"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1.i3",
+        "stem": "A potted plant is placed where its leaves can get light, but its roots sit in pure water with no soil at all. The plant still gains mass over several weeks. Which statement best explains the plant's growth?",
+        "card_id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1",
+        "options": [
+          {
+            "key": "a",
+            "text": "The leaves use light to combine water and carbon dioxide into food, and that food supplies the material for new growth.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The water provides the material for new growth, while light merely helps the plant use that water.",
+            "correct": false,
+            "diagnoses": "m1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The plant takes in oxygen to build new tissue, so oxygen is the source of the added mass.",
+            "correct": false,
+            "diagnoses": "m3",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The plant needs light only so it can feel comfortable, and water alone provides all the material for growth.",
+            "correct": false,
+            "diagnoses": "m2",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "m1",
+          "c": "m3",
+          "d": "m2"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1.i4",
+        "stem": "A student claims that during a sunny day a leafy pond plant releases oxygen into the water. Which observation would best support that claim?",
+        "card_id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1",
+        "options": [
+          {
+            "key": "a",
+            "text": "Oxygen bubbles appear only when the plant is given light and carbon dioxide, because oxygen is made during food production.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Oxygen bubbles appear only when the plant is given extra soil, because soil is the source of oxygen for the plant.",
+            "correct": false,
+            "diagnoses": "m1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Oxygen bubbles appear only in bright light, because oxygen is a comfortable condition the plant relaxes into.",
+            "correct": false,
+            "diagnoses": "m2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Oxygen bubbles appear only when the plant is in darkness, because oxygen is taken in by the plant at night.",
+            "correct": false,
+            "diagnoses": "m3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "m1",
+          "c": "m2",
+          "d": "m3"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1.i5",
+        "stem": "A gardener wants a leafy crop to gain as much mass as possible. Based on how a plant makes food, which plan best supports the plant's growth?",
+        "card_id": "910bef47-fcc3-4eca-a8a4-845c986d2d99:9704c8b6-3b96-49d1-ade2-ad4c55329be1",
+        "options": [
+          {
+            "key": "a",
+            "text": "Provide plenty of light and carbon dioxide while keeping the leaves supplied with water so they can make food.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Provide rich soil and regular watering, since the soil supplies the food material that becomes new leaves.",
+            "correct": false,
+            "diagnoses": "m1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Provide comfortable warmth and gentle light, since light and carbon dioxide only help the plant feel at ease.",
+            "correct": false,
+            "diagnoses": "m2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Provide extra oxygen around the leaves, since oxygen is the main gas the plant uses to build new food.",
+            "correct": false,
+            "diagnoses": "m3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "m1",
+          "c": "m2",
+          "d": "m3"
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "m1",
+        "statement": "{'id': 'm1', 'description': 'The plant grows because soil provides the material for new growth, with water and light simply helping it along.', 'source': 'drafted'}"
+      },
+      {
+        "id": "m2",
+        "statement": "{'id': 'm2', 'description': 'Light and carbon dioxide are only needed as comfort conditions, not as ingredients that end up inside the food the plant makes.', 'source': 'drafted'}"
+      },
+      {
+        "id": "m3",
+        "statement": "{'id': 'm3', 'description': 'Oxygen is something the plant takes in rather than something it gives out as a product of making food.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "plants have roots, stems and leaves"
+      },
+      {
+        "id": "prior-2",
+        "statement": "living things need food to grow"
+      },
+      {
+        "id": "prior-3",
+        "statement": "plants produce their own food rather than absorbing it from soil"
+      },
+      {
+        "id": "prior-4",
+        "statement": "soil supplies water and minerals, not food"
+      },
+      {
+        "id": "prior-5",
+        "statement": "the food a plant makes is used for growth"
+      },
+      {
+        "id": "prior-6",
+        "statement": "light is taken in by the plant and used as the energy source"
+      },
+      {
+        "id": "prior-7",
+        "statement": "a plant kept in the dark cannot make food and will not thrive"
+      },
+      {
+        "id": "prior-8",
+        "statement": "light energy is captured, not eaten"
+      },
+      {
+        "id": "prior-9",
+        "statement": "water is taken in by the roots and carried to the leaves"
+      },
+      {
+        "id": "prior-10",
+        "statement": "carbon dioxide is taken in from the air through the leaves"
+      },
+      {
+        "id": "prior-11",
+        "statement": "these materials are changed, not simply stored"
+      },
+      {
+        "id": "prior-12",
+        "statement": "leaves receive light and take in carbon dioxide"
+      },
+      {
+        "id": "prior-13",
+        "statement": "water reaches the leaves from the roots"
+      },
+      {
+        "id": "prior-14",
+        "statement": "food is made in the leaves and used or stored elsewhere"
+      },
+      {
+        "id": "prior-15",
+        "statement": "the food made is a sugar used for growth and energy"
+      },
+      {
+        "id": "prior-16",
+        "statement": "oxygen is produced and released"
+      },
+      {
+        "id": "prior-17",
+        "statement": "the process is named photosynthesis"
+      }
+    ],
+    "required_assessment_slots": [
+      "check"
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

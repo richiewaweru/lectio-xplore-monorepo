@@ -13,12 +13,15 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from document.models import (
     DOCUMENT_PRIMITIVE_KINDS,
     CalloutNode,
+    CompareNode,
     DocumentNode,
+    EquationNode,
     FigureNode,
     HeadingNode,
     ListNode,
     ParagraphNode,
     TableNode,
+    QuoteNode,
     document_node_adapter,
 )
 
@@ -119,6 +122,9 @@ class InteractionNode(BaseModel):
     assessment_mode: str | None = None
     attempt_policy: dict[str, Any] | None = None
     completion: dict[str, Any] | str | None = None
+    role: Literal["predict", "practice", "check"] | None = None
+    display_prompt: str | None = None
+    option_notes: dict[str, str] | None = None
     # Full authored contract retained for evaluate/reload (attempt state stays outside).
     contract: dict[str, Any] | None = None
 
@@ -130,6 +136,9 @@ LearnNode = Annotated[
     | FigureNode
     | TableNode
     | CalloutNode
+    | EquationNode
+    | QuoteNode
+    | CompareNode
     | InteractionNode,
     Field(discriminator="kind"),
 ]

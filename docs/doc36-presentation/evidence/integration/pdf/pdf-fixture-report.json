@@ -1,0 +1,11 @@
+{
+  "shared-lesson-golden_student_pages": 4,
+  "shared-lesson-golden_student_files": [
+    "shared-lesson-golden-student.pdf"
+  ],
+  "shared-lesson-golden_teacher_pages": 5,
+  "shared-lesson-golden_teacher_files": [
+    "shared-lesson-golden-bg-on.pdf",
+    "shared-lesson-golden-bg-off.pdf"
+  ]
+}

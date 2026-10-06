@@ -1,0 +1,24 @@
+{
+  "generation_id": "77754f15-82b2-4934-b00a-22781415beb1",
+  "path_lesson_id": "ba3c800c-f367-4056-8eaf-d1b9b1c4f495",
+  "objective": "Calculate the area of a compound shape made from rectangles by summing the areas of its rectangular parts.",
+  "objective_hash": "0ccff40770672ada73a383e729bfd7f3674268059a78f962c385198c3492cc6a",
+  "skeleton_id": "procedural.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "recall",
+    "model",
+    "guided",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "recall",
+    "model",
+    "guided",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

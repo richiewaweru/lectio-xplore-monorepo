@@ -1,0 +1,7 @@
+learner forbidden: none | section-id lines: none
+teacher forbidden: none | section-id lines: none
+legacy-learner forbidden: none | section-id lines: none
+answer/feedback/option-note strings found on learner pages: none
+learner contains 'Teacher copy'/'answer key'/'Feedback:': none
+teacher pdf pages: 8 ; first page containing 'Teacher copy': 7
+teacher internal ids in answers:  ['(m1)', '(m3)', '(m2)']

@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 DOCUMENT_PRIMITIVE_KINDS = frozenset(
-    {"paragraph", "heading", "list", "figure", "table", "callout"}
+    {"paragraph", "heading", "list", "figure", "table", "callout", "equation", "quote", "compare"}
 )
 
 
@@ -53,11 +53,53 @@ class CalloutNode(_NodeBase):
     kind: Literal["callout"] = "callout"
     tone: Literal["note", "warning", "tip", "important"] = "note"
     title: str = ""
+    body: str | None = Field(default=None, min_length=1, exclude_if=lambda value: value is None)
+    variant: Literal["key_idea", "note", "misconception"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    belief: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    evidence: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    conclusion: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    aside: str | None = Field(default=None, exclude_if=lambda value: value is None)
+
+
+class EquationNode(_NodeBase):
+    kind: Literal["equation"] = "equation"
+    label: str | None = None
+    inputs: list[str] = Field(min_length=1)
+    condition: str | None = None
+    outputs: list[str] = Field(min_length=1)
+
+
+class QuoteNode(_NodeBase):
+    kind: Literal["quote"] = "quote"
+    text: str = Field(min_length=1)
+    attribution: str | None = None
+
+
+class CompareItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str | None = None
+    title: str = Field(min_length=1)
     body: str = Field(min_length=1)
 
 
+class CompareNode(_NodeBase):
+    kind: Literal["compare"] = "compare"
+    items: list[CompareItem] = Field(min_length=2)
+
+
 DocumentNode = Annotated[
-    ParagraphNode | HeadingNode | ListNode | FigureNode | TableNode | CalloutNode,
+    ParagraphNode
+    | HeadingNode
+    | ListNode
+    | FigureNode
+    | TableNode
+    | CalloutNode
+    | EquationNode
+    | QuoteNode
+    | CompareNode,
     Field(discriminator="kind"),
 ]
 

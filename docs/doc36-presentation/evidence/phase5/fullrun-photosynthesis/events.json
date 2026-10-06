@@ -1,0 +1,478 @@
+[
+  {
+    "id": "19344011-0135-49f9-b913-c3b18589241b",
+    "run_id": "23027472-ab92-4f2c-ad4e-5dc61c8e9593",
+    "work_item_id": "ff690209-bacd-490c-a976-c5623c4bbdbc",
+    "seq": "1",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "item_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "51780b7a4815e3e59e55ccdbcfc0a733b1446f78131ab9b49a9b20ed840b215d"
+    },
+    "created_at": "2026-10-05 20:25:42.047208"
+  },
+  {
+    "id": "07dc909b-4844-4414-81af-c235afc25195",
+    "run_id": "23027472-ab92-4f2c-ad4e-5dc61c8e9593",
+    "work_item_id": "e9af448b-bc16-47f0-bd95-cec9bf98dc2d",
+    "seq": "2",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "planning_teaching",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "9606be76203f05f992bb076f525bed2500edd00e12be594fd5d3ee722c1a4b00"
+    },
+    "created_at": "2026-10-05 20:29:28.429075"
+  },
+  {
+    "id": "7b7c92a7-c2b4-49e1-9e69-15b9b070350b",
+    "run_id": "23027472-ab92-4f2c-ad4e-5dc61c8e9593",
+    "work_item_id": "None",
+    "seq": "3",
+    "event_type": "run_ready",
+    "status": "ready",
+    "stage": "preparation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "02df67ae1fc20bb13f3c218e1e850eed5b77bb952954f56f617503c43aad9a25",
+      "output_revision": 1,
+      "output_artifact_id": "0824f020-7bc8-4047-93a7-79ea31829f72",
+      "output_artifact_type": "teaching_plan_revision"
+    },
+    "created_at": "2026-10-05 20:29:28.798346"
+  },
+  {
+    "id": "7addbf26-5b83-495a-be6d-899d1adfa972",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "4a4c263c-131f-4e02-a55a-7040e9244944",
+    "seq": "1",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "sourcebook_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "c642dfac7865893e478d5c2b1fb015df4f32209b369ecbe3578d1b9a1630f6ef"
+    },
+    "created_at": "2026-10-05 20:29:33.865634"
+  },
+  {
+    "id": "00447fca-7d3a-4ce9-b092-d1201cb31420",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "a1900381-25d7-49fb-9a30-cb1ee20c257c",
+    "seq": "2",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "shared_task_generation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "bb2941383ec16fb1b4fd06061d663e39a3fcbb97f797220dc818b6c0747a0ad9"
+    },
+    "created_at": "2026-10-05 20:29:43.775275"
+  },
+  {
+    "id": "2e33fab9-b41f-494e-a818-aa3fcb4f5e68",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "587f7e83-8fbb-41c3-ba45-d7f315786cff",
+    "seq": "3",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "91dce5c058ceb3100be1b2e0fcc40cd750f7b467746f394577be94ea5f630c60"
+    },
+    "created_at": "2026-10-05 20:29:45.255555"
+  },
+  {
+    "id": "5e006504-69a2-4159-a4a9-1ec4fdad0625",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "0d8e3bb3-90a3-4393-a248-64fa17a48037",
+    "seq": "4",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "22ab4ee56c6825e74169d65451cdbf7ad35d921c779aaf34ba4268ecfdd20645"
+    },
+    "created_at": "2026-10-05 20:29:46.793547"
+  },
+  {
+    "id": "71c2ca27-ecd4-4436-b45f-afc775acd3fa",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "aaca94fb-01b0-4d69-80fa-fdfa81add587",
+    "seq": "5",
+    "event_type": "composition_style_warning",
+    "status": "running",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "section_exceeds_callout_limit"
+      ],
+      "warning_paths": [
+        "choices[2].kind"
+      ]
+    },
+    "created_at": "2026-10-05 20:29:48.323899"
+  },
+  {
+    "id": "a981d7e8-f260-4eb2-b555-373a6b0dfdb2",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "aaca94fb-01b0-4d69-80fa-fdfa81add587",
+    "seq": "6",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "b720b0990dcf25e282cc7a5c6b581ea752ccec96d33049a7b763e32114b4a4a0"
+    },
+    "created_at": "2026-10-05 20:29:48.386258"
+  },
+  {
+    "id": "9731fb68-3150-4cc6-9d30-68c5b901262a",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "7a0b196e-88bc-4bf7-8499-f9c3a343c203",
+    "seq": "7",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "5c78c95908f8491a7497f75e78bf8cd7015860f46bd3ed655d7335a89cfc8cdc"
+    },
+    "created_at": "2026-10-05 20:29:50.083300"
+  },
+  {
+    "id": "63794881-da0b-49aa-a5c7-34689e7c81c7",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "6e424c24-eefe-4d09-86aa-fe942cd861d1",
+    "seq": "8",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_composition",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "32a8ae2329fbfd0f51b19d25ddf80e497cfdc03075c23ebff7606981ef9d0958"
+    },
+    "created_at": "2026-10-05 20:29:51.296337"
+  },
+  {
+    "id": "e7cb5588-0e59-42e5-8c5f-f6b1f07c62ce",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "502369a1-c38a-4912-96d8-af6d5ebcd715",
+    "seq": "9",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "9ac28d342daa83c14ea7848e05df79a8356dcba5f31b42515c35cc1e61b6869b"
+    },
+    "created_at": "2026-10-05 20:30:10.198307"
+  },
+  {
+    "id": "3fdeaa4e-b65e-4e0c-bfda-958e689bfffa",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "502369a1-c38a-4912-96d8-af6d5ebcd715",
+    "seq": "10",
+    "event_type": "section_write_warning",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "length_over_target",
+        "shape_missing"
+      ],
+      "warning_paths": [
+        "nodes[1].text/168/60",
+        "section/subheading"
+      ]
+    },
+    "created_at": "2026-10-05 20:30:10.227238"
+  },
+  {
+    "id": "f7298d00-c54a-44c2-ae37-46b13753005b",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "5171fc99-599c-4b6e-9ac9-e899303195dd",
+    "seq": "11",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "2af8aa34d4cd6dbe0cc99fad76d9aacb2fefb156f44b42b30182cc5ae6169a81"
+    },
+    "created_at": "2026-10-05 20:30:15.006445"
+  },
+  {
+    "id": "fe972f4f-6da7-410e-be61-000e8fc765f9",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "5171fc99-599c-4b6e-9ac9-e899303195dd",
+    "seq": "12",
+    "event_type": "section_write_warning",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "length_over_target",
+        "shape_missing"
+      ],
+      "warning_paths": [
+        "nodes[2].text/148/60",
+        "section/subheading"
+      ]
+    },
+    "created_at": "2026-10-05 20:30:15.044623"
+  },
+  {
+    "id": "e3b25b37-457c-4d4c-9e07-02b2b3f1dc62",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "d254ec01-250f-4a39-bee1-0ab3afb54987",
+    "seq": "13",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "033b5f7975a37e48eec1d6172a4d78ed2cc62286edc45e02090745c54ac6fb84"
+    },
+    "created_at": "2026-10-05 20:30:15.828874"
+  },
+  {
+    "id": "31134c82-c6c7-4ebd-8749-421670637f5b",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "f8607e3d-046c-4c83-b09d-0048d157bdbc",
+    "seq": "14",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "ca079e76ea2b5b751344c39d99de167edfe8b858539e7acf77bda482d94830b2"
+    },
+    "created_at": "2026-10-05 20:30:21.413633"
+  },
+  {
+    "id": "56fe8c31-6e61-4df2-bd23-7ddc1c3f4f96",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "f8607e3d-046c-4c83-b09d-0048d157bdbc",
+    "seq": "15",
+    "event_type": "section_write_warning",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "length_over_target"
+      ],
+      "warning_paths": [
+        "nodes[0].text/104/60"
+      ]
+    },
+    "created_at": "2026-10-05 20:30:21.439080"
+  },
+  {
+    "id": "876837a7-53aa-44b5-92a1-5acef3cc4cdb",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "93b5a58c-e86d-4685-9d5e-93a124e1615e",
+    "seq": "16",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "5373daf025f77340582ce96bc3473b78abd215ee0e269f05fe2717ce13eb0bd4"
+    },
+    "created_at": "2026-10-05 20:30:45.451188"
+  },
+  {
+    "id": "87cb402d-4460-406d-b583-5ba397e17106",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "93b5a58c-e86d-4685-9d5e-93a124e1615e",
+    "seq": "17",
+    "event_type": "section_write_warning",
+    "status": "ready",
+    "stage": "section_writing",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "warning_codes": [
+        "shape_missing"
+      ],
+      "warning_paths": [
+        "section/key_idea",
+        "section/subheading"
+      ]
+    },
+    "created_at": "2026-10-05 20:30:45.567094"
+  },
+  {
+    "id": "1475bae3-c718-4430-935c-8d936aad9f39",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "b190ab2a-5cdc-4704-ae0a-6c4784a103a0",
+    "seq": "18",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "7c2f5b94b3decd76c42490eb8344d3e76d23585046549e90214c8e67461b36c7"
+    },
+    "created_at": "2026-10-05 20:30:48.274496"
+  },
+  {
+    "id": "75e86fdf-6280-45dd-a16e-2341ea76a666",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "33e0df2d-edbe-4753-96f6-d54510a84a40",
+    "seq": "19",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "b67ffdd55a6c55972c1ecf059482c30d832207ced9cb7a31e8f9a3455ea36f2d"
+    },
+    "created_at": "2026-10-05 20:30:48.470174"
+  },
+  {
+    "id": "9900085b-e911-4def-93a5-2bdd7f34de3e",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "57faa809-0b96-4fd5-b8bc-859fe1de8e14",
+    "seq": "20",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "18b6a1cc9636fb4280a2fa09d0e285354b78bc9c49353fb2d66be64a561f360a"
+    },
+    "created_at": "2026-10-05 20:30:48.729756"
+  },
+  {
+    "id": "5e04e7b8-841b-44db-b3fe-f82bfaffa1b2",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "a6154527-d6a4-4249-a165-634162643d68",
+    "seq": "21",
+    "event_type": "work_item_ready",
+    "status": "ready",
+    "stage": "continuity_validation",
+    "attempt": "1",
+    "error_code": "None",
+    "safe_payload_json": {
+      "output_hash": "fd9f840ec72609e25631603b2de6175546b9d87f963a928d5ca9b98ba86a6b55"
+    },
+    "created_at": "2026-10-05 20:30:48.785630"
+  },
+  {
+    "id": "8f2ab466-381d-40a8-b2cd-cbd5cca479c9",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "bd51774e-3cd6-4fe3-a9ec-ad843c792758",
+    "seq": "22",
+    "event_type": "work_item_failed",
+    "status": "failed_recoverable",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "provider_http_401",
+    "safe_payload_json": {
+      "retryable": true,
+      "error_class": "provider_transport",
+      "safe_summary": "Figure generation failed: the image provider rejected the request (HTTP 401).",
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 20:30:51.749389"
+  },
+  {
+    "id": "500a3ef7-daef-417d-84d4-ec3b41518ede",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "bd51774e-3cd6-4fe3-a9ec-ad843c792758",
+    "seq": "23",
+    "event_type": "media_provider_failure_diagnostic",
+    "status": "failed_recoverable",
+    "stage": "media_generation",
+    "attempt": "1",
+    "error_code": "provider_http_401",
+    "safe_payload_json": {
+      "media_block_status": "failed"
+    },
+    "created_at": "2026-10-05 20:30:51.766656"
+  },
+  {
+    "id": "1c5429df-d18f-4ca3-8d5d-65f40feae0b6",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "bd51774e-3cd6-4fe3-a9ec-ad843c792758",
+    "seq": "24",
+    "event_type": "work_item_retry_queued",
+    "status": "queued",
+    "stage": "media_generation",
+    "attempt": "2",
+    "error_code": "None",
+    "safe_payload_json": {
+      "attempt": 2,
+      "from_attempt": 1,
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 20:41:06.409484"
+  },
+  {
+    "id": "29a6c3d2-5f3b-4704-9007-a55cb8b0484e",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "bd51774e-3cd6-4fe3-a9ec-ad843c792758",
+    "seq": "25",
+    "event_type": "work_item_failed",
+    "status": "failed_recoverable",
+    "stage": "media_generation",
+    "attempt": "2",
+    "error_code": "provider_http_401",
+    "safe_payload_json": {
+      "retryable": true,
+      "error_class": "provider_transport",
+      "safe_summary": "Figure generation failed: the image provider rejected the request (HTTP 401).",
+      "recovery_action": "retry"
+    },
+    "created_at": "2026-10-05 20:41:08.238564"
+  },
+  {
+    "id": "e7d38034-ec25-4f28-a7ac-9e50358d5efd",
+    "run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+    "work_item_id": "bd51774e-3cd6-4fe3-a9ec-ad843c792758",
+    "seq": "26",
+    "event_type": "media_provider_failure_diagnostic",
+    "status": "failed_recoverable",
+    "stage": "media_generation",
+    "attempt": "2",
+    "error_code": "provider_http_401",
+    "safe_payload_json": {
+      "media_block_status": "failed"
+    },
+    "created_at": "2026-10-05 20:41:08.331091"
+  }
+]

@@ -7,10 +7,10 @@ import { listIntents, listObjects, isCompatible } from '$lib/catalogue';
 const root = join(process.cwd());
 
 describe('v2 contracts', () => {
-	it('exposes ten objects and thirty-two intents', () => {
-		expect(PAGE_OBJECTS).toHaveLength(10);
+	it('exposes thirteen objects and thirty-two intents', () => {
+		expect(PAGE_OBJECTS).toHaveLength(13);
 		expect(INTENT_IDS).toHaveLength(32);
-		expect(listObjects()).toHaveLength(10);
+		expect(listObjects()).toHaveLength(13);
 		expect(listIntents()).toHaveLength(32);
 	});
 
@@ -23,6 +23,18 @@ describe('v2 contracts', () => {
 		const doc = JSON.parse(readFileSync(join(root, 'fixtures/photosynthesis-ref.json'), 'utf8'));
 		const issues = validateDocument(doc);
 		expect(issues).toEqual([]);
+	});
+
+	it('accepts advisory-shape stress blocks beyond catalogue maxima', () => {
+		const doc = JSON.parse(readFileSync(join(root, 'fixtures/oversized-stress.json'), 'utf8'));
+		const issues = validateDocument(doc);
+		expect(issues.filter((issue) => issue.severity === 'error')).toEqual([]);
+		const blocks = doc.sections[0].blocks;
+		const equation = blocks.find((block: { id: string }) => block.id === 'stress-equation-five-inputs');
+		expect(equation?.content.inputs).toHaveLength(5);
+		expect(equation?.content.outputs).toHaveLength(4);
+		const compare = blocks.find((block: { id: string }) => block.id === 'stress-compare-four');
+		expect(compare?.content.items).toHaveLength(4);
 	});
 
 	it('treats heading as structural (no intent compatibility)', () => {

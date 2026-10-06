@@ -1,0 +1,116 @@
+[
+ {
+  "t": 1791232884.135367,
+  "learn": {
+   "state": "failed_recoverable",
+   "realization_id": "3a3dcf7f-0f39-434f-9b3f-40a8445712c3",
+   "output_id": "learn-out-33e625699db94306",
+   "open_href": "/builder/from-native-learn/learn-out-33e625699db94306",
+   "stale": false,
+   "legacy_ambiguous": false,
+   "error": {
+    "code": "provider_http_401",
+    "error_type": null,
+    "failure_class": "provider_transport",
+    "message": "Figure generation failed: the image provider rejected the request (HTTP 401).",
+    "retryable": true,
+    "stage": "media_generation",
+    "work_item_id": "bd51774e-3cd6-4fe3-a9ec-ad843c792758",
+    "attempt": 2,
+    "max_attempts": 3,
+    "recovery_action": "retry",
+    "auto_retrying": false
+   },
+   "shared_document_state": "recoverable",
+   "shared_document_run_id": "f4a02de5-f74c-40df-827a-59e2fe87beb2",
+   "shared_document_id": null,
+   "shared_document_revision": null,
+   "shared_document_hash": null,
+   "run_id": null,
+   "recovery_action": "retry",
+   "progress": {
+    "steps": [
+     {
+      "key": "sourcebook",
+      "label": "Gathering source notes",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "shared_tasks",
+      "label": "Writing practice questions",
+      "status": "done",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "compose",
+      "label": "Planning sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "write",
+      "label": "Writing sections",
+      "status": "done",
+      "done": 5,
+      "total": 5
+     },
+     {
+      "key": "boundary",
+      "label": "Checking how sections connect",
+      "status": "done",
+      "done": 4,
+      "total": 4
+     },
+     {
+      "key": "media",
+      "label": "Figures: 0 ready / 1 failed / 1 planned",
+      "status": "failed",
+      "done": 0,
+      "total": 1
+     },
+     {
+      "key": "document_qa",
+      "label": "Final quality check",
+      "status": "pending",
+      "done": null,
+      "total": null
+     },
+     {
+      "key": "realize",
+      "label": "Building the Learn lesson",
+      "status": "pending",
+      "done": null,
+      "total": null
+     }
+    ],
+    "current_label": "Figures: 0 ready / 1 failed / 1 planned",
+    "started_at": "2026-10-05T20:29:33.354149+00:00",
+    "figures": [
+     {
+      "figure_id": "shared-figure-node-7fe844430e59f5140b20",
+      "section_id": "criteria",
+      "section_title": "What photosynthesis is, and what a full answer must contain",
+      "block_id": "criteria-b1",
+      "status": "failed",
+      "required": true,
+      "error_code": "provider_http_401",
+      "error_summary": "Figure generation failed: the image provider rejected the request (HTTP 401).",
+      "retryable": true,
+      "recovery_action": "retry",
+      "attempt": 2,
+      "max_attempts": 3,
+      "auto_retrying": false,
+      "warnings": []
+     }
+    ],
+    "figures_planned": 1,
+    "figures_ready": 0,
+    "figures_failed": 1
+   }
+  }
+ }
+]

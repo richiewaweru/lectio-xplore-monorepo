@@ -367,11 +367,18 @@ async def test_answer_key_matches_shared_document_task_evaluations() -> None:
     assert len(answer_entries) == len(document.tasks)
 
     # task-choice: select-one, correct option "b" -> paper letter "B".
-    choice_entry = next(e for e in answer_entries if e["answer"] == "B")
+    # Written answers are lowered to inline runs (doc 36); compare their plain text.
+    def _plain(value: object) -> object:
+        if isinstance(value, list):
+            return "".join(str(run.get("value", "")) for run in value if isinstance(run, dict))
+        return value
+
+    # Teacher copy shows the letter and the option text ("B - ...").
+    choice_entry = next(e for e in answer_entries if str(_plain(e["answer"])).startswith("B — "))
     assert choice_entry is not None
 
     # task-fill-blank: accepted answer "Paris" must appear verbatim.
-    fill_entry = next(e for e in answer_entries if e.get("answer") == "Paris")
+    fill_entry = next(e for e in answer_entries if _plain(e.get("answer")) == "Paris")
     assert fill_entry is not None
 
     # No raw internal task id ever leaks into the learner-facing answer key.
