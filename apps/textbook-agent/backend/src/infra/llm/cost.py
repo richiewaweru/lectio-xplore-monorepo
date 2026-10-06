@@ -40,6 +40,8 @@ def _price_per_1m(effective_spec: ModelSpec) -> tuple[float, float] | None:
 
 def extract_usage(result: Any) -> UsageStats:
     usage = getattr(result, "usage", None)
+    if callable(usage):  # older pydantic-ai: method; newer: property
+        usage = usage()
     if usage is None:
         return UsageStats()
 
