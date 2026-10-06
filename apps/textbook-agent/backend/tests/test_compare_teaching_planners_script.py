@@ -280,3 +280,59 @@ def test_section_diff_and_report_pure() -> None:
 def test_default_out_is_gitignored_location() -> None:
     assert CMP.DEFAULT_OUT.parts[-2:] == ("outputs", "planner-compare")
     assert CMP.DEFAULT_OUT.parent.parent == Path(CMP.__file__).resolve().parents[1]
+
+
+@pytest.mark.asyncio
+async def test_nolessonreview_mode_skips_review_and_restores_setting(monkeypatch, tmp_path) -> None:
+    calls: list[str] = []
+
+    async def review(**kwargs):
+        calls.append(kwargs["caller"])
+        return TeachingPlanSemanticReviewDraft(reviewed=True, findings=[])
+
+    _install_fakes(monkeypatch)
+    monkeypatch.setattr(semantic_review, "_run_structured", review)
+    monkeypatch.setattr(settings, "staged_lesson_review", True)
+    monkeypatch.setattr(settings, "staged_section_review", False)
+
+    entries = await CMP.run_compare(
+        ["gen-nlr"], tmp_path, modes=("staged", "staged-nolessonreview"), loader=_fake_loader
+    )
+    # Setting restored; the plain staged run reviewed once, the no-review run never.
+    assert settings.staged_lesson_review is True
+    assert calls == ["teaching_lesson_reviewer"]
+    gen_dir = tmp_path / "gen-nlr"
+    assert (gen_dir / "staged-nolessonreview.json").is_file()
+    nolr = json.loads((gen_dir / "staged-nolessonreview.json").read_text())
+    assert nolr["ok"] is True and nolr["mode"] == "staged-nolessonreview"
+    assert nolr["stage_timings"]["lesson_review"]["state"] == "skipped"
+    assert entries[0]["staged-nolessonreview"][0]["ok"]
+
+    report = (gen_dir / "report.md").read_text()
+    assert "staged (no lesson review)" in report
+    assert "## Staged (no lesson review)" in report
+    summary = (tmp_path / "summary.md").read_text()
+    assert "staged (no lesson review)" in summary
+
+
+@pytest.mark.asyncio
+async def test_nolessonreview_restores_setting_on_failure(monkeypatch, tmp_path) -> None:
+    _install_fakes(monkeypatch)
+
+    async def boom(**kwargs):
+        raise RuntimeError("model down")
+
+    monkeypatch.setattr(stp, "_call_spine_model", boom)
+    monkeypatch.setattr(settings, "staged_lesson_review", True)
+    await CMP.run_compare(["g"], tmp_path, modes=("staged-nolessonreview",), loader=_fake_loader)
+    assert settings.staged_lesson_review is True
+
+
+def test_parse_args_accepts_nolessonreview_mode() -> None:
+    args = CMP.parse_args(
+        ["--generation-id", "x", "--modes", "single,staged,staged-nolessonreview"]
+    )
+    assert args.modes == ("single", "staged", "staged-nolessonreview")
+    with pytest.raises(SystemExit):
+        CMP.parse_args(["--generation-id", "x", "--modes", "bogus"])
+    assert CMP.parse_args(["--generation-id", "x"]).modes == ("single", "staged")

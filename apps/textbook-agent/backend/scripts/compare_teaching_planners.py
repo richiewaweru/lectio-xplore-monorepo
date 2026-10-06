@@ -18,6 +18,9 @@ Run locally::
     uv run python scripts/compare_teaching_planners.py --generation-id <id>
     uv run python scripts/compare_teaching_planners.py \
         --generation-id <id1> --generation-id <id2> --modes single,staged --repeat 2
+    # staged-nolessonreview = staged with staged_lesson_review=False for that run only:
+    uv run python scripts/compare_teaching_planners.py \
+        --generation-id <id> --modes staged,staged-nolessonreview
 
 Output lands in ``backend/outputs/planner-compare/<id>/`` (``single.json``,
 ``staged.json``, ``report.md``) plus ``summary.md`` one level up. That folder is
@@ -42,7 +45,14 @@ if str(BACKEND_DIR / "src") not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR / "src"))
 
 DEFAULT_OUT = BACKEND_DIR / "outputs" / "planner-compare"
-MODES = ("single", "staged")
+NOLESSONREVIEW = "staged-nolessonreview"
+MODES = ("single", "staged", NOLESSONREVIEW)
+DEFAULT_MODES = ("single", "staged")
+MODE_LABELS = {
+    "single": "single",
+    "staged": "staged",
+    NOLESSONREVIEW: "staged (no lesson review)",
+}
 
 # Modules that bind ``run_llm`` by name; patched while a planner runs.
 _RUN_LLM_MODULES = (
@@ -70,7 +80,9 @@ class LlmRecorder:
             "total_tokens": None,
         }
         try:
-            usage = result.usage() if callable(getattr(result, "usage", None)) else None
+            usage = getattr(result, "usage", None)
+            if callable(usage):
+                usage = usage()
         except Exception:  # noqa: BLE001 - usage is best effort
             usage = None
         if usage is None:
@@ -185,7 +197,7 @@ async def run_mode(mode: str, packet: Any, legality: Any, generation_id: str) ->
     """Run one planner and return a JSON-able result dict (errors are captured)."""
     if mode == "single":
         from application.unit_lesson.teaching_planner import run_lesson_approach_planner as run
-    elif mode == "staged":
+    elif mode in ("staged", NOLESSONREVIEW):
         from application.unit_lesson.staged_teaching_planner import run_staged_teaching_planner as run
     else:
         raise ValueError(f"unknown mode {mode!r}")
@@ -206,6 +218,12 @@ async def run_mode(mode: str, packet: Any, legality: Any, generation_id: str) ->
     }
     recorder = LlmRecorder()
     started = time.perf_counter()
+    # staged-nolessonreview flips the setting for this run only and restores it.
+    from core.config import settings
+
+    saved_lesson_review = settings.staged_lesson_review
+    if mode == NOLESSONREVIEW:
+        settings.staged_lesson_review = False
     with recorder:
         try:
             result = await run(
@@ -229,6 +247,8 @@ async def run_mode(mode: str, packet: Any, legality: Any, generation_id: str) ->
             out["flags"] = result.flags
             out["stage_timings"] = result.stage_timings
             out["attempts"] = _summarize_attempts(result.attempts)
+        finally:
+            settings.staged_lesson_review = saved_lesson_review
     out["wall_s"] = round(time.perf_counter() - started, 4)
     out["llm_calls"] = recorder.records
     return out
@@ -422,12 +442,26 @@ def _mode_section(result: dict[str, Any] | None, label: str) -> list[str]:
     return lines
 
 
-def build_report(single: dict[str, Any] | None, staged: dict[str, Any] | None) -> str:
-    """Markdown comparison report for one generation (pure; no I/O)."""
-    gen = (single or staged or {}).get("generation_id", "?")
+def build_report(
+    single: dict[str, Any] | None,
+    staged: dict[str, Any] | None,
+    nolessonreview: dict[str, Any] | None = None,
+) -> str:
+    """Markdown comparison report for one generation (pure; no I/O).
+
+    ``nolessonreview`` is the optional ``staged-nolessonreview`` run (staged with the
+    whole-lesson review skipped); it gets its own wall-clock row and section.
+    """
+    gen = (single or staged or nolessonreview or {}).get("generation_id", "?")
     lines = [f"# Planner comparison: {gen}", ""]
     lines += ["## Wall-clock", "", "| mode | status | wall_s | llm calls |", "|---|---|---|---|"]
-    for label, r in (("single", single), ("staged", staged)):
+    for label, r in (
+        (MODE_LABELS["single"], single),
+        (MODE_LABELS["staged"], staged),
+        (MODE_LABELS[NOLESSONREVIEW], nolessonreview),
+    ):
+        if r is None and label == MODE_LABELS[NOLESSONREVIEW]:
+            continue
         if r is None:
             lines.append(f"| {label} | not run | - | - |")
         else:
@@ -438,8 +472,10 @@ def build_report(single: dict[str, Any] | None, staged: dict[str, Any] | None) -
     lines.append("")
     lines += _mode_section(single, "Single")
     lines += _mode_section(staged, "Staged")
+    if nolessonreview is not None:
+        lines += _mode_section(nolessonreview, MODE_LABELS[NOLESSONREVIEW].capitalize())
 
-    rows = section_diff(single, staged)
+    rows = section_diff(single, staged or nolessonreview)
     lines += ["## Section-by-section diff", ""]
     if not rows:
         lines += ["No plan to compare (neither mode produced a plan).", ""]
@@ -477,10 +513,11 @@ def build_summary(entries: list[dict[str, Any]]) -> str:
     for entry in entries:
         for mode in MODES:
             for index, r in enumerate(entry.get(mode) or [], start=1):
+                label = MODE_LABELS[mode]
                 issues = (r.get("validation") or {}).get("issues") or []
                 blocking = sum(1 for i in issues if i.get("blocking"))
                 lines.append(
-                    f"| {_escape(entry['generation_id'])} | {mode} | {index} "
+                    f"| {_escape(entry['generation_id'])} | {label} | {index} "
                     f"| {'ok' if r.get('ok') else 'FAILED'} | {_fmt(r.get('wall_s'))} "
                     f"| {len(r.get('llm_calls') or [])} | {len(r.get('flags') or [])} "
                     f"| {blocking} | {len(visual_blocks(r))} |"
@@ -513,16 +550,18 @@ async def compare_generation(
             runs[mode].append(result)
             suffix = "" if run_index == 1 else f"-r{run_index}"
             _write_json(gen_dir / f"{mode}{suffix}.json", result)
-    first_single = runs["single"][0] if runs["single"] else None
-    first_staged = runs["staged"][0] if runs["staged"] else None
-    (gen_dir / "report.md").write_text(build_report(first_single, first_staged), encoding="utf-8")
+    first = {m: (runs[m][0] if runs[m] else None) for m in MODES}
+    (gen_dir / "report.md").write_text(
+        build_report(first["single"], first["staged"], first[NOLESSONREVIEW]),
+        encoding="utf-8",
+    )
     return {"generation_id": generation_id, **runs}
 
 
 async def run_compare(
     generation_ids: list[str],
     out_dir: Path,
-    modes: tuple[str, ...] = MODES,
+    modes: tuple[str, ...] = DEFAULT_MODES,
     repeat: int = 1,
     loader: Callable[[str], Awaitable[tuple[Any, Any]]] | None = None,
 ) -> list[dict[str, Any]]:
@@ -533,7 +572,7 @@ async def run_compare(
             entries.append(await compare_generation(generation_id, out_dir, modes, repeat, loader))
         except Exception as exc:  # noqa: BLE001 - one bad id must not stop the rest
             print(f"{generation_id}: failed to load or run: {type(exc).__name__}: {exc}", file=sys.stderr)
-            entries.append({"generation_id": generation_id, "single": [], "staged": []})
+            entries.append({"generation_id": generation_id, **{m: [] for m in MODES}})
     (out_dir / "summary.md").write_text(build_summary(entries), encoding="utf-8")
     return entries
 
@@ -542,7 +581,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--generation-id", action="append", required=True, dest="generation_ids")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    parser.add_argument("--modes", default="single,staged", help="comma list of: single, staged")
+    parser.add_argument("--modes", default="single,staged",
+        help="comma list of: single, staged, staged-nolessonreview "
+        "(staged with the whole-lesson review skipped, for cost-vs-value runs)",
+    )
     parser.add_argument("--repeat", type=int, default=1)
     args = parser.parse_args(argv)
     modes = tuple(m.strip() for m in args.modes.split(",") if m.strip())
