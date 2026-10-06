@@ -151,6 +151,69 @@ class FigureMediaResult(BaseModel):
     qc_state: QcState = "unreviewed"
 
 
+class UnavailableFigureMediaResult(BaseModel):
+    """A figure whose media retries are exhausted; the lesson ships without it.
+
+    This is a settled, verifiable outcome (same identity as a ready result, no
+    asset). It is distinct from a figure with no media result at all, which
+    stays a hard failure because it means the pipeline lost work.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source_plan_id: str = Field(min_length=1)
+    source_plan_revision: int = Field(ge=1)
+    source_plan_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    section_id: str = Field(min_length=1)
+    section_output_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    figure_node_id: str = Field(min_length=1)
+    figure_semantic_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    work_order_id: str = Field(min_length=1)
+    visual_id: str = Field(min_length=1)
+    mode: str = Field(min_length=1)
+    alt_text: str = Field(min_length=1)
+    required: bool = True
+    source_facts: tuple[SourceOfTruthEntry, ...] = ()
+    status: Literal["unavailable"] = "unavailable"
+    #: Safe, specific failure code (e.g. ``provider_http_403``, ``render_spec_invalid``).
+    error_code: str = Field(min_length=1)
+    #: Teacher-safe sentence shown with the placeholder; never a raw provider message.
+    reason: str = Field(min_length=1, max_length=300)
+    attempts: int = Field(ge=1)
+
+
+class BoundUnavailableFigureMedia(BaseModel):
+    """An unavailable figure outcome bound to one immutable assembled document."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source_plan_id: str = Field(min_length=1)
+    source_plan_revision: int = Field(ge=1)
+    source_plan_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_document_id: str = Field(min_length=1)
+    source_document_revision: int = Field(ge=1)
+    source_document_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    section_id: str = Field(min_length=1)
+    section_output_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    figure_node_id: str = Field(min_length=1)
+    figure_semantic_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    work_order_id: str = Field(min_length=1)
+    visual_id: str = Field(min_length=1)
+    mode: str = Field(min_length=1)
+    alt_text: str = Field(min_length=1)
+    required: bool = True
+    source_facts: tuple[SourceOfTruthEntry, ...] = ()
+    status: Literal["unavailable"] = "unavailable"
+    error_code: str = Field(min_length=1)
+    reason: str = Field(min_length=1, max_length=300)
+    attempts: int = Field(ge=1)
+
+
+#: What a settled media WorkItem output can be, before and after document binding.
+SectionFigureMediaOutcome = ReadyFigureMediaResult | UnavailableFigureMediaResult
+BoundFigureMediaOutcome = FigureMediaResult | BoundUnavailableFigureMedia
+
+
 class FigureMediaFailure(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -616,11 +679,11 @@ def bind_generated_figure(
     )
 
 
-def bind_figure_media_to_document(
-    media: ReadyFigureMediaResult,
+def _verify_media_identity(
+    media: ReadyFigureMediaResult | UnavailableFigureMediaResult,
     document: SharedLessonDocument,
-) -> FigureMediaResult:
-    """Bind ready section media only after the assembled document is verified."""
+) -> None:
+    """Plan, section, figure, semantic and work-order identity shared by every outcome."""
     _verify_document(document)
     if (
         media.source_plan_id != document.teaching_plan_id
@@ -657,6 +720,14 @@ def bind_figure_media_to_document(
     expected_work_order_id = f"shared-media-{semantic_hash}"
     if media.visual_id != expected_visual_id or media.work_order_id != expected_work_order_id:
         raise SharedFigureMediaError("media work-order identity is stale or changed")
+
+
+def bind_figure_media_to_document(
+    media: ReadyFigureMediaResult,
+    document: SharedLessonDocument,
+) -> FigureMediaResult:
+    """Bind ready section media only after the assembled document is verified."""
+    _verify_media_identity(media, document)
     if media.asset_id != media.visual_id:
         raise SharedFigureMediaError("media asset identity does not match its visual")
     if not media.alt_text.strip():
@@ -756,6 +827,102 @@ def verify_bound_durable_media(
     return verify_bound_figure_media(result, document)
 
 
+def unavailable_figure_result(
+    work: SharedFigureWorkOrder,
+    *,
+    error_code: str,
+    reason: str,
+    attempts: int,
+) -> UnavailableFigureMediaResult:
+    """The settled outcome recorded when a figure's media retries are exhausted."""
+    return UnavailableFigureMediaResult(
+        source_plan_id=work.source_plan_id,
+        source_plan_revision=work.source_plan_revision,
+        source_plan_hash=work.source_plan_hash,
+        section_id=work.section_id,
+        section_output_hash=work.section_output_hash,
+        figure_node_id=work.figure_node_id,
+        figure_semantic_hash=work.figure_semantic_hash,
+        work_order_id=work.work_order.work_order_id,
+        visual_id=work.work_order.visual.id,
+        mode=work.work_order.visual.mode,
+        alt_text=fallback_alt_text(work.work_order.visual) or "Figure",
+        required=work.required,
+        source_facts=tuple(work.work_order.source_of_truth),
+        error_code=error_code,
+        reason=" ".join(reason.split())[:300] or "Figure generation failed.",
+        attempts=attempts,
+    )
+
+
+def bind_unavailable_figure_to_document(
+    media: UnavailableFigureMediaResult,
+    document: SharedLessonDocument,
+) -> BoundUnavailableFigureMedia:
+    """Bind an unavailable outcome with the same identity checks as ready media."""
+    _verify_media_identity(media, document)
+    return BoundUnavailableFigureMedia(
+        source_document_id=document.id,
+        source_document_revision=document.revision,
+        source_document_hash=document.content_hash,
+        **media.model_dump(),
+    )
+
+
+def verify_bound_unavailable_figure(
+    media: BoundUnavailableFigureMedia,
+    document: SharedLessonDocument,
+) -> BoundUnavailableFigureMedia:
+    """Recompute an already-bound unavailable outcome and require an exact match."""
+    if (
+        media.source_document_id != document.id
+        or media.source_document_revision != document.revision
+        or media.source_document_hash != document.content_hash
+    ):
+        raise SharedFigureMediaError("bound media document identity is stale or changed")
+    candidate = UnavailableFigureMediaResult.model_validate(
+        media.model_dump(
+            exclude={"source_document_id", "source_document_revision", "source_document_hash"}
+        )
+    )
+    if bind_unavailable_figure_to_document(candidate, document) != media:
+        raise SharedFigureMediaError(
+            "bound unavailable media does not match its recomputed document binding"
+        )
+    return media
+
+
+def parse_media_outcome(payload: Any) -> SectionFigureMediaOutcome:
+    """Parse one durable media WorkItem output (ready or unavailable)."""
+    if isinstance(payload, Mapping) and payload.get("status") == "unavailable":
+        return UnavailableFigureMediaResult.model_validate(payload)
+    return ReadyFigureMediaResult.model_validate(payload)
+
+
+def bind_durable_media_outcome(
+    payload: Any,
+    document: SharedLessonDocument,
+) -> BoundFigureMediaOutcome:
+    """Like ``bind_durable_media_output`` but also accepts unavailable outcomes."""
+    outcome = parse_media_outcome(payload)
+    if isinstance(outcome, UnavailableFigureMediaResult):
+        return bind_unavailable_figure_to_document(outcome, document)
+    return bind_figure_media_to_document(outcome, document)
+
+
+def verify_bound_media_outcome(
+    result: BoundFigureMediaOutcome,
+    document: SharedLessonDocument,
+) -> BoundFigureMediaOutcome:
+    if isinstance(result, BoundUnavailableFigureMedia):
+        return verify_bound_unavailable_figure(result, document)
+    return verify_bound_figure_media(result, document)
+
+
+def is_unavailable_media(result: object) -> bool:
+    return isinstance(result, (UnavailableFigureMediaResult, BoundUnavailableFigureMedia))
+
+
 async def execute_figure_work_order(
     work: SharedFigureWorkOrder,
     *,
@@ -833,6 +1000,17 @@ __all__ = [
     "FigureExecutor",
     "FigureMediaBatchResult",
     "FigureMediaFailure",
+    "BoundFigureMediaOutcome",
+    "BoundUnavailableFigureMedia",
+    "SectionFigureMediaOutcome",
+    "UnavailableFigureMediaResult",
+    "bind_durable_media_outcome",
+    "bind_unavailable_figure_to_document",
+    "is_unavailable_media",
+    "parse_media_outcome",
+    "unavailable_figure_result",
+    "verify_bound_media_outcome",
+    "verify_bound_unavailable_figure",
     "FigureMediaResult",
     "ReadyFigureMediaResult",
     "SharedFigureMediaError",
