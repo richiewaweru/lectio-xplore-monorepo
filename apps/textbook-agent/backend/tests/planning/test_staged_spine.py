@@ -152,14 +152,19 @@ def test_section_count_check_via_spine_object() -> None:
     assert "SPINE_SECTION_COUNT" in _codes(stp.spine_check_errors(short, packet))
 
 
-def test_state_chain_between_sections() -> None:
+def test_state_chain_between_sections_is_repaired_not_an_error() -> None:
     def bad(d):
         d["sections"][1]["entry_state"] = ["quantum chromodynamics"]
 
     spine, packet = _spine(_mutated(bad))
-    errors = stp.spine_check_errors(spine, packet)
-    assert _codes(errors) == {"SPINE_STATE_CHAIN"}
-    assert "section 2" in errors[0]
+    assert stp.spine_check_errors(spine, packet) == []
+    changes = stp.repair_spine_state_chain(spine, packet)
+    assert [c["repair"] for c in changes] == ["spine_state_chain"]
+    assert changes[0]["slot_id"] == spine.sections[1].slot_id
+    assert changes[0]["from_slot_id"] == spine.sections[0].slot_id
+    assert "quantum chromodynamics" in spine.sections[0].exit_state
+    # Idempotent once repaired.
+    assert stp.repair_spine_state_chain(spine, packet) == []
 
 
 def test_state_chain_section_zero_uses_starting_state_and_prior() -> None:
@@ -168,14 +173,17 @@ def test_state_chain_section_zero_uses_starting_state_and_prior() -> None:
         d["sections"][0]["entry_state"] = ["Multiplication facts"]  # in prior_established
 
     spine, packet = _spine(_mutated(from_prior))
-    assert stp.spine_check_errors(spine, packet) == []
+    assert stp.repair_spine_state_chain(spine, packet) == []
 
     def bad(d):
         d["starting_state"] = ["Learners are ready"]
         d["sections"][0]["entry_state"] = ["Volume of cylinders"]
 
     spine, packet = _spine(_mutated(bad))
-    assert _codes(stp.spine_check_errors(spine, packet)) == {"SPINE_STATE_CHAIN"}
+    changes = stp.repair_spine_state_chain(spine, packet)
+    assert changes[0]["appended_to"] == "starting_state"
+    assert "Volume of cylinders" in spine.starting_state
+    assert stp.spine_check_errors(spine, packet) == []
 
 
 def test_item_checks() -> None:
@@ -321,14 +329,23 @@ def _run(packet: ImmutableLessonPacket, monkeypatch, drafts: list) -> tuple[Any,
     )
 
 
-def test_retry_repairs_then_succeeds(monkeypatch) -> None:
+def test_uncovered_entry_state_is_repaired_on_first_attempt(monkeypatch) -> None:
     bad = _mutated(lambda d: d["sections"][1].update(entry_state=["quantum chromodynamics"]))
+    run, payloads = _run(_packet(), monkeypatch, [bad])
+    result = run()
+    assert len(result.attempts) == 1 and len(payloads) == 1
+    assert any(r["repair"] == "spine_state_chain" for r in result.repairs)
+    assert "quantum chromodynamics" in result.spine.sections[0].exit_state
+
+
+def test_retry_repairs_then_succeeds(monkeypatch) -> None:
+    bad = _mutated(lambda d: d["sections"][2].update(approved_item_ids=[]))
     run, payloads = _run(_packet(), monkeypatch, [bad, _draft_dict()])
     result = run()
     assert len(result.attempts) == 2
     assert "repair" not in payloads[0]
     errs = payloads[1]["repair"]["validation_errors"]
-    assert errs and errs[0].startswith("SPINE_STATE_CHAIN")
+    assert errs and errs[0].startswith("SPINE_ASSESSMENT_SLOT_EMPTY")
     assert payloads[1]["repair"]["previous_output"]["learner_title"] == "Area of rectangles"
     assert payloads[0]["approved_item_stems"][0] == {"id": "q1", "stem": "Area of the bed?"}
     assert result.attempts[0].errors == errs and result.attempts[1].errors == []

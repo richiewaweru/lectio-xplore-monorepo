@@ -272,24 +272,6 @@ def spine_check_errors(spine: TeachingSpine, packet: ImmutableLessonPacket) -> l
             "section per slot, in slot order."
         )
 
-    # State chain.
-    for index, section in enumerate(sections):
-        if index == 0:
-            available = " ".join(
-                [*spine.starting_state, *(p.statement for p in packet.prior_established)]
-            )
-            source = "starting_state or prior_established"
-        else:
-            available = " ".join(sections[index - 1].exit_state)
-            source = f"exit_state of section {index} ({sections[index - 1].slot_id})"
-        for statement in section.entry_state:
-            if not statement_covered(statement, available):
-                errors.append(
-                    f"SPINE_STATE_CHAIN: section {index + 1} ({section.slot_id}) entry_state "
-                    f"'{statement}' is not covered by the {source}; either add it to that "
-                    "state or remove it from entry_state."
-                )
-
     # Items.
     known_items = {item.id for item in packet.approved_items}
     required_slots = list(packet.required_assessment_slots)
@@ -400,6 +382,44 @@ def spine_check_errors(spine: TeachingSpine, packet: ImmutableLessonPacket) -> l
             f"limit of {limits.max_total_blocks}; reduce planned_block_count in some sections."
         )
     return errors
+
+
+def repair_spine_state_chain(
+    spine: TeachingSpine, packet: ImmutableLessonPacket
+) -> list[dict[str, Any]]:
+    """Make the state chain hold by construction; it is never a spine error.
+
+    Section n's ``entry_state`` must be covered by section n-1's ``exit_state`` (the
+    first section by ``starting_state`` plus ``prior_established``). Word-coverage is a
+    heuristic, so a miss is repaired deterministically instead of failing the spine: each
+    uncovered entry statement is appended to the previous section's ``exit_state`` (to the
+    spine's ``starting_state`` for the first section). The repair is recorded.
+    """
+    changes: list[dict[str, Any]] = []
+    sections = list(spine.sections)
+    for index, section in enumerate(sections):
+        if index == 0:
+            target = spine.starting_state
+            target_name = "starting_state"
+            prior = [p.statement for p in packet.prior_established]
+        else:
+            target = sections[index - 1].exit_state
+            target_name = "exit_state"
+            prior = []
+        for statement in section.entry_state:
+            if statement_covered(statement, " ".join([*target, *prior])):
+                continue
+            target.append(statement)
+            changes.append(
+                {
+                    "repair": "spine_state_chain",
+                    "slot_id": section.slot_id,
+                    "from_slot_id": sections[index - 1].slot_id if index else None,
+                    "appended_to": target_name,
+                    "statement": statement,
+                }
+            )
+    return changes
 
 
 def repair_spine_figure_plan(
@@ -531,7 +551,10 @@ async def plan_teaching_spine(
             except ValueError as exc:
                 errors = [f"SPINE_SECTION_COUNT: {exc}"]
             else:
-                repairs = repair_spine_figure_plan(spine, packet)
+                repairs = [
+                    *repair_spine_state_chain(spine, packet),
+                    *repair_spine_figure_plan(spine, packet),
+                ]
                 errors = spine_check_errors(spine, packet)
                 if not errors:
                     record.latency_s = time.perf_counter() - started
@@ -1964,4 +1987,5 @@ __all__ = [
     "section_check_errors",
     "section_payload",
     "spine_check_errors",
+    "repair_spine_state_chain",
 ]
