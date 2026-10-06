@@ -122,7 +122,11 @@ async def verify_shared_document_lineage_for_publish(
         raise SharedDocumentOrdinaryEditBlockedError(
             "Lesson document has no ordered nodes to verify against its shared source."
         )
-    if ordinary_nodes_by_id(realized_nodes) != ordinary_nodes_by_id(published_nodes):
+    # Figure image URL/alt come from the Run's media results, not the shared
+    # document, so they are not part of the shared-authored fork check.
+    if _without_figure_media(ordinary_nodes_by_id(realized_nodes)) != _without_figure_media(
+        ordinary_nodes_by_id(published_nodes)
+    ):
         raise SharedDocumentOrdinaryEditBlockedError(
             "Ordinary content on this lesson has diverged from its shared source and "
             "cannot be published."
@@ -134,6 +138,17 @@ async def verify_shared_document_lineage_for_publish(
         revision=stored.document.revision,
         hash=stored.document.content_hash,
     )
+
+
+def _without_figure_media(nodes: Mapping[Any, Any]) -> dict[Any, Any]:
+    return {
+        node_id: (
+            {k: v for k, v in node.items() if k not in ("asset_id", "alt")}
+            if isinstance(node, Mapping) and node.get("kind") == "figure"
+            else node
+        )
+        for node_id, node in nodes.items()
+    }
 
 
 __all__ = [

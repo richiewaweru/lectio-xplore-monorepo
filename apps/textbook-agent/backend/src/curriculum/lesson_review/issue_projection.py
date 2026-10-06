@@ -208,13 +208,42 @@ def _is_figure_node(node: Mapping[str, Any]) -> bool:
     return kind in {"figure", "visual"} or "figure" in kind.lower()
 
 
-def _plan_visual_blocks(states: Sequence[Mapping[str, Any]]) -> list[tuple[str, bool]]:
-    """(block id, required) for every teaching-plan block that declares a ``visual``."""
+_READY_REALIZATION_STATUSES = frozenset({"ready", "completed", "published"})
+
+
+def _figure_node_id(slot_id: str, block: Mapping[str, Any]) -> str | None:
+    """Deterministic shared figure node id for a planned block (Print blocks
+    keep this id but carry no ``teaching_block_id``)."""
+    if not slot_id:
+        return None
+    try:
+        from curriculum.teaching_plan.models import TeachingPlanBlock
+        from document.shared_lesson.composer import figure_item_for_block
+
+        return figure_item_for_block(slot_id, TeachingPlanBlock.model_validate(block)).id
+    except Exception:  # noqa: BLE001 - id derivation is best-effort matching only
+        return None
+
+
+def _has_image(node: Mapping[str, Any]) -> bool:
+    """Whether a Learn figure node or Print figure block has an image attached."""
+    content = node.get("content")
+    asset = content.get("asset") if isinstance(content, Mapping) else node.get("asset")
+    if isinstance(asset, Mapping):
+        status = _text(asset.get("status")).lower()
+        return bool(_text(asset.get("src"))) and status in {"", "ready"}
+    return bool(_text(node.get("asset_id")) or _text(node.get("src")) or _text(node.get("image_url")))
+
+
+def _plan_visual_blocks(
+    states: Sequence[Mapping[str, Any]],
+) -> list[tuple[str, bool, str | None]]:
+    """(block id, required, figure node id) for every plan block that declares a ``visual``."""
     for state in states:
         plan = state.get("teaching_plan")
         if not isinstance(plan, Mapping):
             continue
-        found: list[tuple[str, bool]] = []
+        found: list[tuple[str, bool, str | None]] = []
         for section in plan.get("sections") or []:
             if not isinstance(section, Mapping):
                 continue
@@ -224,7 +253,13 @@ def _plan_visual_blocks(states: Sequence[Mapping[str, Any]]) -> list[tuple[str, 
                 visual = block.get("visual")
                 block_id = _text(block.get("id"))
                 if isinstance(visual, Mapping) and block_id:
-                    found.append((block_id, visual.get("required") is not False))
+                    found.append(
+                        (
+                            block_id,
+                            visual.get("required") is not False,
+                            _figure_node_id(_text(section.get("slot_id")), block),
+                        )
+                    )
         return found
     return []
 
@@ -232,18 +267,29 @@ def _plan_visual_blocks(states: Sequence[Mapping[str, Any]]) -> list[tuple[str, 
 def _plan_visual_issues(
     path: ArtifactPath,
     documents: Sequence[Mapping[str, Any]],
-    plan_visual_blocks: Sequence[tuple[str, bool]],
+    plan_visual_blocks: Sequence[tuple[str, bool, str | None]],
+    *,
+    realization_ready: bool = False,
 ) -> Iterable[LessonIssue]:
     """The teaching plan is the sole authority for figures: every planned visual
     needs a figure node bound to its block, and that figure must not have failed."""
     figures_by_block: dict[str, list[Mapping[str, Any]]] = {}
+    figures_by_id: dict[str, Mapping[str, Any]] = {}
     for document in documents:
         for node in _walk(document):
+            if not _is_figure_node(node):
+                continue
             block_id = _text(node.get("teaching_block_id"))
-            if block_id and _is_figure_node(node):
+            if block_id:
                 figures_by_block.setdefault(block_id, []).append(node)
-    for block_id, required in plan_visual_blocks:
-        figures = figures_by_block.get(block_id, [])
+            node_id = _text(node.get("id"))
+            if node_id and (_text(node.get("object")) or _text(node.get("kind"))) == "figure":
+                figures_by_id[node_id] = node
+    for block_id, required, figure_node_id in plan_visual_blocks:
+        figures = list(figures_by_block.get(block_id, []))
+        by_id = figures_by_id.get(figure_node_id) if figure_node_id else None
+        if by_id is not None and not any(by_id is f for f in figures):
+            figures.append(by_id)
         if not figures:
             message = "A teaching block planned a visual but the document has no figure for it."
         elif all(
@@ -252,6 +298,8 @@ def _plan_visual_issues(
             for node in figures
         ):
             message = "The figure planned for this teaching block failed to generate."
+        elif realization_ready and not any(_has_image(node) for node in figures):
+            message = "The planned figure has no image yet."
         else:
             continue
         issue = _as_issue(
@@ -389,7 +437,10 @@ def collect_lesson_issues(
     for issue in _media_issues(path, documents):
         add(issue)
     if realization and documents:
-        for issue in _plan_visual_issues(path, documents, _plan_visual_blocks(states)):
+        ready = _text(realization.get("status")).lower() in _READY_REALIZATION_STATUSES
+        for issue in _plan_visual_issues(
+            path, documents, _plan_visual_blocks(states), realization_ready=ready
+        ):
             add(issue)
     for issue in _document_contract_issues(path, documents):
         add(issue)

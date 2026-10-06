@@ -106,10 +106,86 @@ def test_plan_visual_without_bound_figure_is_an_issue() -> None:
 
 def test_plan_visual_with_bound_figure_is_clean() -> None:
     issues = _figure_issues(
-        [{"nodes": [{"kind": "figure", "id": "f1", "teaching_block_id": "explain-b1", "status": "ready"}]}]
+        [
+            {
+                "nodes": [
+                    {
+                        "kind": "figure",
+                        "id": "f1",
+                        "teaching_block_id": "explain-b1",
+                        "status": "ready",
+                        "asset_id": "https://storage.example.test/f1.png",
+                    }
+                ]
+            }
+        ]
     )
 
     assert issues == []
+
+
+def test_learn_figure_without_image_is_an_issue_only_when_ready() -> None:
+    document = {"nodes": [{"kind": "figure", "id": "f1", "teaching_block_id": "explain-b1", "asset_id": None}]}
+    issues = _figure_issues([document])
+    assert [issue.target_id for issue in issues] == ["explain-b1"]
+    assert issues[0].message == "The planned figure has no image yet."
+    assert issues[0].severity == "error"
+
+    pending = collect_lesson_issues(
+        path="learn",
+        realization={"realization_id": "r-1", "status": "queued"},
+        states=[_PLAN_STATE],
+        documents=[document],
+    )
+    assert [i for i in pending.issues if i.code == "REQUIRED_FIGURE_MISSING"] == []
+
+
+def test_print_shaped_figure_block_matches_by_node_id_and_needs_image() -> None:
+    from curriculum.teaching_plan.models import TeachingPlanBlock
+    from document.shared_lesson.composer import figure_item_for_block
+
+    block = {
+        "id": "explain-b1",
+        "position": 0,
+        "intent": "explain",
+        "brief": "Explain the cycle.",
+        "evidence": "Source text",
+        "visual": {"purpose": "See the cycle.", "must_show": ["evaporation"]},
+    }
+    TeachingPlanBlock.model_validate(block)
+    state = {"teaching_plan": {"sections": [{"slot_id": "explain", "blocks": [block]}]}}
+    node_id = figure_item_for_block("explain", TeachingPlanBlock.model_validate(block)).id
+
+    with_image = {
+        "sections": [
+            {
+                "blocks": [
+                    {
+                        "id": node_id,
+                        "object": "figure",
+                        "content": {"asset": {"kind": "image", "status": "ready", "src": "https://x.test/a.png"}},
+                    }
+                ]
+            }
+        ]
+    }
+    assert _figure_issues([with_image], states=[state]) == []
+
+    without_image = {
+        "sections": [
+            {
+                "blocks": [
+                    {
+                        "id": node_id,
+                        "object": "figure",
+                        "content": {"asset": {"kind": "image", "status": "pending"}},
+                    }
+                ]
+            }
+        ]
+    }
+    issues = _figure_issues([without_image], states=[state])
+    assert [i.message for i in issues] == ["The planned figure has no image yet."]
 
 
 def test_plan_visual_with_failed_figure_is_an_issue() -> None:
