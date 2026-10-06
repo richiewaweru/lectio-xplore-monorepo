@@ -287,6 +287,8 @@ async def test_teacher_edited_misconceptions_survive_plan_regeneration() -> None
             "id": "M99",
             "description": "Teacher-observed belief.",
             "source": "teacher",
+            # Legacy rows without a stored rating read back as high-risk.
+            "risk": "high",
         }
     ]
     async with async_session_factory() as session:

@@ -88,7 +88,13 @@ def build_lesson_packet(
     misc = [
         MisconceptionRecord(
             id=str(item.get("id") or f"misconception-{index+1}"),
-            statement=str(item.get("statement") or item.get("text") or item),
+            statement=str(
+                item.get("statement")
+                or item.get("description")
+                or item.get("text")
+                or item
+            ),
+            risk="low" if str(item.get("risk") or "").strip().lower() == "low" else "high",
         )
         for index, item in enumerate(misconceptions or [])
         if isinstance(item, Mapping)

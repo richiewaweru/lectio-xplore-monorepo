@@ -186,6 +186,7 @@ class V3CardMisconceptionDTO(BaseModel):
     id: str = Field(min_length=1, max_length=80)
     description: str = Field(min_length=1, max_length=500)
     source: Literal["drafted", "teacher"]
+    risk: Literal["high", "low"] = "high"
 
 
 class V3ConceptCardDTO(BaseModel):

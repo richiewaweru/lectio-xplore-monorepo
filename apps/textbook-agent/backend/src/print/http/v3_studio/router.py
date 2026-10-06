@@ -736,6 +736,16 @@ async def patch_pack_concept_card(
                         if unchanged
                         else "teacher"
                     ),
+                    # An edit that omits risk must not erase the stored rating.
+                    "risk": (
+                        item.risk
+                        if "risk" in item.model_fields_set
+                        else (
+                            old.get("risk")
+                            if isinstance(old, dict) and old.get("risk") in ("high", "low")
+                            else "high"
+                        )
+                    ),
                 }
             )
 

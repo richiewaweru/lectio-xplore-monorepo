@@ -45,6 +45,7 @@ class MisconceptionRecord(BaseModel):
 
     id: str
     statement: str
+    risk: str = "high"
 
 
 class PriorEstablishedEntry(BaseModel):

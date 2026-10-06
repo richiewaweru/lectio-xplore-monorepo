@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Mapping, Sequence
 
 from curriculum.models import FlowChoice
+
+
+MAX_CONFRONT_SLOTS = 2
 
 
 class FlowValidationError(ValueError):
@@ -28,7 +32,15 @@ def validate_flow_choice(
         errors.append("selected_slots must not be empty")
     if len(selected) > max_slots:
         errors.append(f"selected_slots exceeds max_slots={max_slots}")
-    if len(selected) != len(set(selected)):
+    # A role may repeat only as often as the code-owned recommendation repeats
+    # it; ``confront`` may also repeat up to MAX_CONFRONT_SLOTS (one per
+    # high-risk misconception), since that count depends on the planner's own
+    # misconception risk ratings.
+    recommended_counts = Counter(recommended_slots)
+    if any(
+        count > max(recommended_counts.get(role, 1), MAX_CONFRONT_SLOTS if role == "confront" else 1)
+        for role, count in Counter(selected).items()
+    ):
         errors.append("selected_slots must not contain duplicate roles")
     unknown = sorted(set(selected) - legal)
     if unknown:
