@@ -175,7 +175,7 @@ def test_print_adapter_projects_doc36_blocks_and_shared_inline_markup(
         asset_url="https://cdn.example.test/seedlings.svg",
         alt_text="Two seedlings",
     )
-    monkeypatch.setattr(adapter, "verify_bound_figure_media", lambda m, _doc: m)
+    monkeypatch.setattr(adapter, "verify_bound_media_outcome", lambda m, _doc: m)
 
     result = realize_shared_document_for_print(
         stored,
@@ -281,7 +281,7 @@ def test_print_adapter_accepts_quality_warning_media_but_not_failed(
         status=media_status,
         asset_url="https://cdn.example.test/figure.png",
     )
-    monkeypatch.setattr(adapter, "verify_bound_figure_media", lambda m, _doc: m)
+    monkeypatch.setattr(adapter, "verify_bound_media_outcome", lambda m, _doc: m)
 
     if accepted:
         result = realize_shared_document_for_print(
@@ -299,3 +299,33 @@ def test_print_adapter_accepts_quality_warning_media_but_not_failed(
             realize_shared_document_for_print(
                 stored, expected_identity=_identity(stored), figure_media=[media]
             )
+
+
+def test_print_adapter_ships_unavailable_figure_as_failed_asset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import print.generation.shared_document_adapter as adapter
+    from document.shared_lesson.media import bind_durable_media_outcome, unavailable_figure_result
+    from tests.document.test_shared_lesson_media import _document, _work
+
+    outcome = bind_durable_media_outcome(
+        unavailable_figure_result(
+            _work(), error_code="provider_http_403", reason="Service unavailable.", attempts=3
+        ).model_dump(mode="json"),
+        _document(),
+    ).model_copy(update={"figure_node_id": "figure-1"})
+    monkeypatch.setattr(adapter, "verify_bound_media_outcome", lambda m, _doc: m)
+    stored = _stored(include_figure=True)
+    result = realize_shared_document_for_print(
+        stored, expected_identity=_identity(stored), figure_media=[outcome]
+    )
+    figures = [
+        block
+        for section in result.document["sections"]
+        for block in section["blocks"]
+        if block.get("object") == "figure"
+    ]
+    assert figures
+    content = figures[0]["content"]
+    assert content["asset"] == {"kind": "image", "status": "failed"}
+    assert content["alt_text"].strip()

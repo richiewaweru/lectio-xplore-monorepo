@@ -20,6 +20,11 @@ COMPOSITOR_VERSION = "diagram-compositor/4"
 FONT_VERSION = "dejavu-sans/2.37-1"
 FONT_SHA256 = "7da195a74c55be f988d0d48f9508bd5d849425c1770dba5d7bfc6ce9ed848954".replace(" ", "")
 LAYOUT_VERSION = "ordered-key-band/4"
+NUMBERED_COMPOSITOR_VERSION = "diagram-compositor/5-numbered"
+NUMBERED_LAYOUT_VERSION = "numbered-key-band/1"
+_BADGE_FILL = (20, 28, 38, 255)
+_BADGE_TEXT = (255, 255, 255, 255)
+_BADGE_GAP = 12
 TARGET_FONT_SIZE = 32
 MIN_FONT_SIZE = 24
 _FONT_PATH = Path(__file__).with_name("assets") / "DejaVuSans.ttf"
@@ -160,6 +165,11 @@ def _font(size: int) -> ImageFont.FreeTypeFont:
         raise RuntimeError(f"bundled diagram font missing: {_FONT_PATH}") from exc
 
 
+def _badge_diameter(font: ImageFont.FreeTypeFont) -> int:
+    # Fixed per font size so every number sits in an identical circle.
+    return font.size + 10
+
+
 def _text_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> tuple[int, int]:
     left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
     return max(1, right - left), max(1, bottom - top)
@@ -171,6 +181,7 @@ def _layout(
     base_height: int,
     labels: tuple[str, ...],
     font_size: int,
+    numbered: bool = False,
 ) -> tuple[list[list[tuple[str, int, int]]], int, ImageFont.FreeTypeFont]:
     """Return wrapped rows and band height; entries are label, pill width, text height."""
 
@@ -182,6 +193,9 @@ def _layout(
     for label in labels:
         text_width, text_height = _text_size(draw, label, font)
         pill_width = text_width + 2 * _PILL_PADDING_X
+        if numbered:
+            pill_width += _badge_diameter(font) + _BADGE_GAP - _PILL_PADDING_X
+            text_height = max(text_height, _badge_diameter(font))
         if pill_width > max_pill_width:
             raise DiagramCompositionPreflightError(
                 f"label {label!r} cannot fit at minimum print font",
@@ -220,11 +234,11 @@ def _layout(
     return rows, band_height, font
 
 
-def _fit_layout(*, width: int, base_height: int, labels: tuple[str, ...], min_size: int = MIN_FONT_SIZE) -> tuple[list[list[tuple[str, int, int]]], int, ImageFont.FreeTypeFont, int]:
+def _fit_layout(*, width: int, base_height: int, labels: tuple[str, ...], min_size: int = MIN_FONT_SIZE, numbered: bool = False) -> tuple[list[list[tuple[str, int, int]]], int, ImageFont.FreeTypeFont, int]:
     last_error: DiagramCompositionPreflightError | None = None
     for size in range(TARGET_FONT_SIZE, min_size - 1, -1):
         try:
-            rows, band_height, font = _layout(width=width, base_height=base_height, labels=labels, font_size=size)
+            rows, band_height, font = _layout(width=width, base_height=base_height, labels=labels, font_size=size, numbered=numbered)
             return rows, band_height, font, size
         except DiagramCompositionPreflightError as exc:
             last_error = exc
@@ -237,6 +251,7 @@ def preflight_diagram_labels(
     labels: Iterable[str] | None,
     *,
     min_font_size: int = MIN_FONT_SIZE,
+    numbered: bool = False,
 ) -> tuple[str, ...]:
     """Validate labels can be printed and return their canonical ordered set."""
 
@@ -253,7 +268,7 @@ def preflight_diagram_labels(
     else:
         image = _open_image(image_bytes_or_size)
         width, height = image.size
-    _fit_layout(width=width, base_height=height, labels=canonical, min_size=min_font_size)
+    _fit_layout(width=width, base_height=height, labels=canonical, min_size=min_font_size, numbered=numbered)
     return canonical
 
 
@@ -262,31 +277,62 @@ def compose_diagram_precision(
     labels: Iterable[str] | None,
     *,
     min_font_size: int = MIN_FONT_SIZE,
+    numbered: bool = False,
 ) -> ComposedRaster:
-    """Append an opaque ordered key band and return canonical PNG bytes + metadata."""
+    """Append an opaque ordered key band and return canonical PNG bytes + metadata.
+
+    With ``numbered=True`` each pill carries a circled 1-based index in label
+    order, matching the digits the image model draws on the artwork.
+    """
 
     base = _open_image(image_bytes)
     if isinstance(image_bytes, Image.Image):
         base_sha = hashlib.sha256(_canonical_png(base)).hexdigest()
     else:
         base_sha = hashlib.sha256(bytes(image_bytes)).hexdigest()
-    canonical = preflight_diagram_labels(base, labels, min_font_size=min_font_size)
-    rows, band_height, font, selected_font_size = _fit_layout(width=base.width, base_height=base.height, labels=canonical)
+    canonical = preflight_diagram_labels(
+        base, labels, min_font_size=min_font_size, numbered=numbered
+    )
+    rows, band_height, font, selected_font_size = _fit_layout(
+        width=base.width, base_height=base.height, labels=canonical, numbered=numbered
+    )
     mode = "RGBA" if base.mode == "RGBA" else "RGB"
     canvas = Image.new(mode, (base.width, base.height + band_height), (255, 255, 255, 255) if mode == "RGBA" else (255, 255, 255))
     canvas.paste(base, (0, 0))
     draw = ImageDraw.Draw(canvas)
     y = base.height + _VERTICAL_PADDING
+    index = 0
     for row in rows:
         row_height = max((entry[2] for entry in row), default=min_font_size)
         x = _HORIZONTAL_PADDING
         # Labels are an ordered key, not a topology: neutral pill spacing only.
         for label, pill_width, _text_height in row:
+            index += 1
             pill_top = y
             pill_bottom = y + row_height + 2 * _PILL_PADDING_Y
             draw.rounded_rectangle((x, pill_top, x + pill_width, pill_bottom), radius=8, fill=_PILL_FILL, outline=_PILL_OUTLINE, width=1)
-            text_width, _ = _text_size(draw, label, font)
-            draw.text((x + (pill_width - text_width) // 2, pill_top + _PILL_PADDING_Y), label, font=font, fill=_TEXT_FILL)
+            if numbered:
+                diameter = _badge_diameter(font)
+                bx = x + _PILL_PADDING_X // 2
+                by = pill_top + (pill_bottom - pill_top - diameter) // 2
+                draw.ellipse((bx, by, bx + diameter, by + diameter), fill=_BADGE_FILL)
+                draw.text(
+                    (bx + diameter / 2, by + diameter / 2),
+                    str(index),
+                    font=font,
+                    fill=_BADGE_TEXT,
+                    anchor="mm",
+                )
+                draw.text(
+                    (bx + diameter + _BADGE_GAP, pill_top + (pill_bottom - pill_top) / 2),
+                    label,
+                    font=font,
+                    fill=_TEXT_FILL,
+                    anchor="lm",
+                )
+            else:
+                text_width, _ = _text_size(draw, label, font)
+                draw.text((x + (pill_width - text_width) // 2, pill_top + _PILL_PADDING_Y), label, font=font, fill=_TEXT_FILL)
             x += pill_width + _PILL_GAP
         y += row_height + 2 * _PILL_PADDING_Y + _ROW_GAP
 
@@ -296,9 +342,9 @@ def compose_diagram_precision(
     metadata = CompositionMetadata(
         base_sha256=base_sha,
         composed_sha256=hashlib.sha256(png_bytes).hexdigest(),
-        compositor_version=COMPOSITOR_VERSION,
+        compositor_version=NUMBERED_COMPOSITOR_VERSION if numbered else COMPOSITOR_VERSION,
         font_version=FONT_VERSION,
-        layout_version=LAYOUT_VERSION,
+        layout_version=NUMBERED_LAYOUT_VERSION if numbered else LAYOUT_VERSION,
         labels_digest=labels_digest(canonical),
         labels=canonical,
         band_height=band_height,
@@ -307,6 +353,19 @@ def compose_diagram_precision(
         selected_font_size=selected_font_size,
     )
     return ComposedRaster(png_bytes=png_bytes, metadata=metadata)
+
+
+def compose_diagram_numbered(
+    image_bytes: bytes | bytearray | Image.Image,
+    labels: Iterable[str] | None,
+    *,
+    min_font_size: int = MIN_FONT_SIZE,
+) -> ComposedRaster:
+    """Append a numbered key band ("1 Petal", "2 Stamen", ...) in label order."""
+
+    return compose_diagram_precision(
+        image_bytes, labels, min_font_size=min_font_size, numbered=True
+    )
 
 
 def _canonical_png(image: Image.Image) -> bytes:
@@ -320,12 +379,15 @@ __all__ = [
     "FONT_SHA256",
     "FONT_VERSION",
     "LAYOUT_VERSION",
+    "NUMBERED_COMPOSITOR_VERSION",
+    "NUMBERED_LAYOUT_VERSION",
     "MAX_BAND_HEIGHT_PX",
     "MAX_BAND_HEIGHT_RATIO",
     "MIN_FONT_SIZE",
     "ComposedRaster",
     "CompositionMetadata",
     "DiagramCompositionPreflightError",
+    "compose_diagram_numbered",
     "compose_diagram_precision",
     "labels_digest",
     "normalize_labels",

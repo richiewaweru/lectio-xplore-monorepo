@@ -211,3 +211,41 @@ def test_section_level_visual_required_flag_is_ignored() -> None:
     )
 
     assert not any(issue.code == "REQUIRED_FIGURE_MISSING" for issue in response.issues)
+
+
+def test_unavailable_learn_figure_is_an_advisory_warning_with_its_reason() -> None:
+    document = {
+        "nodes": [
+            {
+                "kind": "figure",
+                "id": "f1",
+                "teaching_block_id": "explain-b1",
+                "asset_id": None,
+                "status": "unavailable",
+                "unavailable_reason": "The figure service was unavailable for this figure.",
+            }
+        ]
+    }
+    issues = _figure_issues([document])
+    assert [i.target_id for i in issues] == ["explain-b1"]
+    assert issues[0].severity == "warning"
+    assert "The figure service was unavailable for this figure." in issues[0].message
+
+
+def test_unavailable_print_figure_is_an_advisory_warning() -> None:
+    document = {
+        "sections": [
+            {
+                "blocks": [
+                    {
+                        "id": "f1",
+                        "object": "figure",
+                        "teaching_block_id": "explain-b1",
+                        "content": {"asset": {"kind": "image", "status": "failed"}},
+                    }
+                ]
+            }
+        ]
+    }
+    issues = _figure_issues([document])
+    assert [i.severity for i in issues] == ["warning"]

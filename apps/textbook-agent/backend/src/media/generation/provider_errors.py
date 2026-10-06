@@ -88,6 +88,11 @@ def safe_summary_for_code(code: str | None) -> str:
         return "Figure generation failed: the image provider timed out."
     if code == PROVIDER_NO_IMAGE:
         return "Figure generation failed: the image provider returned no image."
+    # Code-rendered figures (media.render) fail without any image provider.
+    if code == "render_spec_invalid":
+        return "Figure drawing failed: the figure description could not be made consistent."
+    if code == "render_layout_failed":
+        return "Figure drawing failed: the labels could not be fitted legibly."
     return "Figure generation failed: the image provider reported an error."
 
 

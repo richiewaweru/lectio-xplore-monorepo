@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from media.diagram_compositor import normalize_labels
 from media.generation.contracts import VisualGeneratorWorkOrder
 from v3_execution.prompts.formatting import format_source_of_truth
 
@@ -49,6 +50,26 @@ def provider_label_block(labels: list[str]) -> str:
     )
 
 
+def numbered_label_block(labels: list[str]) -> str:
+    """Digits-only instruction: the model draws 1..N, code prints the words in a key."""
+    if not labels:
+        return (
+            "TEXT IN THE IMAGE: none. Render no words, letters, digits, or numbers "
+            "anywhere in the image; the document supplies all text."
+        )
+    last = len(labels)
+    key = "\n".join(f"{idx} = {label}" for idx, label in enumerate(labels, start=1))
+    return (
+        f"NUMBERED PARTS (draw only the digits 1 to {last}):\n"
+        f"- Draw only the digits 1..{last} as small, clear numerals placed on or next to "
+        "the parts listed below, each digit exactly once.\n"
+        "- Draw no words, letters, titles, or captions anywhere in the image.\n"
+        "- The part names below are semantic metadata for placement only; "
+        "never write the words. A key with the names is added separately by the document.\n"
+        f"{key}"
+    )
+
+
 def format_anchor_for_visual(order: VisualGeneratorWorkOrder) -> str:
     if order.visual.uses_anchor_id:
         return format_source_of_truth(order.source_of_truth)
@@ -65,6 +86,11 @@ def build_visual_prompt(
     # A provider that draws its own labels (Gemini) is not run through the
     # deterministic label compositor, so the no-text diagram contract is
     # replaced by the ordinary labelled-illustration prompt.
+    is_numbered = visual_style == "diagram_numbered"
+    # Gemini still returns a one-line ALT reply, but never draws the label words.
+    wants_alt_line = provider_renders_labels
+    if is_numbered:
+        provider_renders_labels = False
     is_precision = visual_style == "diagram_precision" and not provider_renders_labels
     anchor_block = ""
     if order.visual.uses_anchor_id:
@@ -90,7 +116,7 @@ Maintain consistent style and geometry; only depict new information.
 """
 
     qc_block = ""
-    if order.qc_correction_hint and not is_precision:
+    if order.qc_correction_hint and not is_precision and not is_numbered:
         qc_block = f"""
 PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never render this text):
 {order.qc_correction_hint}
@@ -117,7 +143,9 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
         if order.visual.consistency_locks
         else "- none"
     )
-    if is_precision:
+    if is_numbered:
+        prints = "- high contrast; grayscale-safe; digits only, no words"
+    elif is_precision:
         # Provider text must stay closed to the no-text contract; any labels
         # are added only by the deterministic compositor after generation.
         prints = "- high contrast; grayscale-safe; no visible text"
@@ -143,6 +171,16 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
                 "- plain, light background; high contrast; visually simple enough for print\n"
                 "- PURPOSE and MUST SHOW describe what to draw; they are never text to write in the image"
             )
+    elif is_numbered:
+        style_requirements = (
+            "- clean, flat educational diagram in a textbook style\n"
+            "- white or very light background, high contrast, minimal shading\n"
+            "- no decorative clutter, photorealism, or background scenery\n"
+            "- leave a little clear space beside each part so its digit stays legible\n"
+            "- PURPOSE, MUST SHOW, source truth, and QC corrections are semantic metadata "
+            "only; never render their words\n"
+            "- the only text allowed is the numerals described under NUMBERED PARTS"
+        )
     elif is_precision:
         style_requirements = (
             "- clean vector-style raster diagram, not SVG\n"
@@ -159,15 +197,15 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
             "- no decorative clutter or irrelevant background detail"
         )
 
-    alt_instruction = ALT_TEXT_INSTRUCTION if provider_renders_labels else ""
+    alt_instruction = ALT_TEXT_INSTRUCTION if wants_alt_line else ""
     if provider_renders_labels:
         kind = "diagram" if is_diagram else "illustration"
         text_constraint = ""
         labels_block = provider_label_block(list(order.visual.labels_required))
     else:
-        kind = "illustration"
-        text_constraint = "" if is_precision else NO_CAPTION_TEXT_CONSTRAINT
-        labels_block = (
+        kind = "diagram" if is_numbered and is_diagram else "illustration"
+        text_constraint = "" if is_precision or is_numbered else NO_CAPTION_TEXT_CONSTRAINT
+        labels_block = numbered_label_block(list(normalize_labels(order.visual.labels_required))) if is_numbered else (
             "LABELS REQUIRED (draw each label exactly as written, spelled identically, "
             "and no other text): " + ", ".join(order.visual.labels_required)
             if not is_precision and order.visual.labels_required

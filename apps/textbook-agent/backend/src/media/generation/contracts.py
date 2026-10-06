@@ -11,8 +11,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 VisualMode = Literal["diagram", "diagram_series", "diagram_compare", "image", "simulation"]
-VisualStyle = Literal["diagram_precision", "illustration"]
-_VISUAL_STYLES = {"diagram_precision", "illustration"}
+VisualStyle = Literal["diagram_precision", "diagram_numbered", "illustration"]
+_VISUAL_STYLES = {"diagram_precision", "diagram_numbered", "illustration"}
 VisualDependency = Literal["blueprint_only", "section_text", "question_text"]
 
 
@@ -96,7 +96,7 @@ class VisualPlanItem(BaseModel):
 
     @model_validator(mode="after")
     def normalize_closed_labels(self) -> VisualPlanItem:
-        if self.visual_style != "diagram_precision":
+        if self.visual_style not in {"diagram_precision", "diagram_numbered"}:
             return self
         labels: list[str] = []
         seen: set[str] = set()

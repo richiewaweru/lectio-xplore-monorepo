@@ -425,7 +425,8 @@ class FigureProgressDTO(StrictModel):
     section_title: str | None = None
     block_id: str | None = None
     # planned: no work item yet; pending: queued/running; ready; failed.
-    status: Literal["planned", "pending", "ready", "failed"]
+    # unavailable: retries exhausted; the lesson ships with a placeholder (advisory).
+    status: Literal["planned", "pending", "ready", "failed", "unavailable"]
     required: bool = True
     # Safe code such as provider_http_403 / provider_timeout; never raw text.
     error_code: str | None = None

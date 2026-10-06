@@ -124,7 +124,10 @@ async def test_one_section_pipeline_reaches_ready_without_a_second_qa_call(
     )
     assert outcome.state == "ready"
     assert outcome.document_id == assembled.document.id
-    assert isinstance(captured_executor["value"], pipeline.SharedFigureExecutorAdapter)
+    assert isinstance(captured_executor["value"], pipeline.RoutingFigureExecutor)
+    assert isinstance(
+        captured_executor["value"].delegate, pipeline.SharedFigureExecutorAdapter
+    )
     assert stage_calls == [
         "continuity_validation",
         "media_generation",

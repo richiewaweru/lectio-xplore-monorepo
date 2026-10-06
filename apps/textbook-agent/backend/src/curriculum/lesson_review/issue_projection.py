@@ -235,6 +235,24 @@ def _has_image(node: Mapping[str, Any]) -> bool:
     return bool(_text(node.get("asset_id")) or _text(node.get("src")) or _text(node.get("image_url")))
 
 
+_UNAVAILABLE_FIGURE_DEFAULT_REASON = "The figure could not be generated."
+
+
+def _unavailable_reason(node: Mapping[str, Any]) -> str | None:
+    """Teacher-safe reason when a figure shipped as an unavailable placeholder, else None.
+
+    Learn nodes carry ``status: "unavailable"`` plus ``unavailable_reason``; Print
+    blocks carry a ``failed`` asset (no reason is persisted there).
+    """
+    if _text(node.get("status")).lower() == "unavailable":
+        return _text(node.get("unavailable_reason")) or _UNAVAILABLE_FIGURE_DEFAULT_REASON
+    content = node.get("content")
+    asset = content.get("asset") if isinstance(content, Mapping) else node.get("asset")
+    if isinstance(asset, Mapping) and _text(asset.get("status")).lower() == "failed":
+        return _UNAVAILABLE_FIGURE_DEFAULT_REASON
+    return None
+
+
 def _plan_visual_blocks(
     states: Sequence[Mapping[str, Any]],
 ) -> list[tuple[str, bool, str | None]]:
@@ -290,8 +308,14 @@ def _plan_visual_issues(
         by_id = figures_by_id.get(figure_node_id) if figure_node_id else None
         if by_id is not None and not any(by_id is f for f in figures):
             figures.append(by_id)
+        unavailable = [_unavailable_reason(node) for node in figures]
+        severity = "error" if required else "warning"
         if not figures:
             message = "A teaching block planned a visual but the document has no figure for it."
+        elif all(reason is not None for reason in unavailable):
+            # Settled outcome: the lesson ships with a placeholder; advisory only.
+            message = f"The planned figure is unavailable: {unavailable[0]}"
+            severity = "warning"
         elif all(
             _text(node.get("status") or node.get("media_status")).lower()
             in _FAILED_FIGURE_STATUSES
@@ -307,7 +331,7 @@ def _plan_visual_issues(
             raw={
                 "code": "REQUIRED_FIGURE_MISSING",
                 "message": message,
-                "severity": "error" if required else "warning",
+                "severity": severity,
                 "target_id": block_id,
                 "repairable": True,
                 "repair_action": "retry",
@@ -337,6 +361,8 @@ def _media_issues(
                 or node.get("asset_id") in media_ids
                 or node.get("media_id") in media_ids
             )
+            if is_figure and _unavailable_reason(node) is not None:
+                continue  # shipped unavailable placeholder; reported by _plan_visual_issues
             if is_figure and required and (
                 not has_asset or status in {"pending", "failed", "omitted", "omitted_quality"}
             ):

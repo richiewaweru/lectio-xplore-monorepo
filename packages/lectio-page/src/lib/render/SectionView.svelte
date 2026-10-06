@@ -4,14 +4,18 @@
 	import BlockView from './BlockView.svelte';
 	import HeadingBinding from './HeadingBinding.svelte';
 
-	let { section, index = 0 }: { section: LectioSection; index?: number } = $props();
+	let {
+		section,
+		index = 0,
+		figureOffset = 0
+	}: { section: LectioSection; index?: number; figureOffset?: number } = $props();
 
 	/**
 	 * Array order is canonical after normalizeDocument.
 	 * section.title renders exactly once as the section h2; nested heading blocks remain structural h3+.
 	 */
 	function numberedUnits() {
-		let figureNumber = 0;
+		let figureNumber = figureOffset;
 		return buildRenderUnits(section.blocks).map((unit) => {
 			const lead = unit.kind === 'heading-binding' ? unit.lead : unit.block;
 			const number = lead.object === 'figure' ? ++figureNumber : undefined;

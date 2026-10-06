@@ -40,10 +40,12 @@ from document.shared_lesson.boundary_runtime import (
 from document.shared_lesson.continuity import ExpectedNodeShape
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import (
-    FigureMediaResult,
-    ReadyFigureMediaResult,
+    BoundFigureMediaOutcome,
+    SectionFigureMediaOutcome,
     SharedFigureMediaError,
-    verify_bound_durable_media,
+    UnavailableFigureMediaResult,
+    parse_media_outcome,
+    verify_bound_media_outcome,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
 from document.shared_lesson.qa_runtime import (
@@ -129,7 +131,7 @@ class SharedLessonFinalizationRequest(BaseModel):
     approved_source_ids: tuple[str, ...]
     source_facts_by_section: Mapping[str, tuple[str, ...]] | None
     required_media_by_section: Mapping[str, tuple[str, ...]] | None
-    media_results: tuple[FigureMediaResult, ...]
+    media_results: tuple[BoundFigureMediaOutcome, ...]
 
     @model_validator(mode="after")
     def identities_match(self) -> SharedLessonFinalizationRequest:
@@ -259,7 +261,7 @@ async def resolve_review_structural_document(
     *,
     path_lesson_id: str,
     document: SharedLessonDocument,
-    media_results: Sequence[FigureMediaResult] = (),
+    media_results: Sequence[BoundFigureMediaOutcome] = (),
 ) -> SharedLessonDocument:
     """Return the writer-composed structural document backing ``document``.
 
@@ -328,7 +330,7 @@ async def resolve_review_structural_document(
         for identity in touched_figures:
             result = media_by_identity[identity]
             try:
-                verify_bound_durable_media(result, document)
+                verify_bound_media_outcome(result, document)
             except SharedFigureMediaError as exc:
                 raise SharedLessonFinalizationError(
                     f"review revision figure media for {identity[1]!r} failed verification: {exc}"
@@ -681,6 +683,26 @@ def _verify_boundary_coverage(
             )
 
 
+_UNAVAILABLE_MEDIA_COMPARISON_FIELDS = (
+    "source_plan_id",
+    "source_plan_revision",
+    "source_plan_hash",
+    "section_id",
+    "section_output_hash",
+    "figure_node_id",
+    "figure_semantic_hash",
+    "work_order_id",
+    "visual_id",
+    "alt_text",
+    "mode",
+    "required",
+    "source_facts",
+    "status",
+    "error_code",
+    "reason",
+    "attempts",
+)
+
 _READY_MEDIA_COMPARISON_FIELDS = (
     "source_plan_id",
     "source_plan_revision",
@@ -700,10 +722,10 @@ _READY_MEDIA_COMPARISON_FIELDS = (
     "status",
 )
 
-def _parse_media_work_item_output(payload: Any, *, item_id: str) -> ReadyFigureMediaResult:
-    """Parse one durable media output."""
+def _parse_media_work_item_output(payload: Any, *, item_id: str) -> SectionFigureMediaOutcome:
+    """Parse one durable media output (ready or unavailable)."""
     try:
-        return ReadyFigureMediaResult.model_validate(payload)
+        return parse_media_outcome(payload)
     except (TypeError, ValueError) as exc:
         raise SharedLessonFinalizationError(
             f"durable media output for work item {item_id!r} is invalid"
@@ -713,7 +735,7 @@ def _parse_media_work_item_output(payload: Any, *, item_id: str) -> ReadyFigureM
 def _verify_media_matches_work_items(
     *,
     document: SharedLessonDocument,
-    media_results: Sequence[FigureMediaResult],
+    media_results: Sequence[BoundFigureMediaOutcome],
     active_items: Sequence[GenerationWorkItemModel],
     loaded_outputs: Sequence[VerifiedWorkItemOutput],
 ) -> None:
@@ -735,7 +757,7 @@ def _verify_media_matches_work_items(
         raise SharedLessonFinalizationError(
             "durable media work items do not cover exactly the document figure identities"
         )
-    outputs_by_figure: dict[tuple[str, str], ReadyFigureMediaResult] = {}
+    outputs_by_figure: dict[tuple[str, str], SectionFigureMediaOutcome] = {}
     for item in media_items:
         output = output_by_id.get(item.id)
         if output is None:
@@ -761,7 +783,16 @@ def _verify_media_matches_work_items(
             )
         parsed_payload = parsed.model_dump(mode="json")
         result_payload = result.model_dump(mode="json")
-        for field in _READY_MEDIA_COMPARISON_FIELDS:
+        if result_payload.get("status") != parsed_payload.get("status"):
+            raise SharedLessonFinalizationError(
+                "bound media field 'status' differs from its durable work-item output"
+            )
+        fields = (
+            _UNAVAILABLE_MEDIA_COMPARISON_FIELDS
+            if isinstance(parsed, UnavailableFigureMediaResult)
+            else _READY_MEDIA_COMPARISON_FIELDS
+        )
+        for field in fields:
             if result_payload[field] != parsed_payload[field]:
                 raise SharedLessonFinalizationError(
                     f"bound media field {field!r} differs from its durable work-item output"

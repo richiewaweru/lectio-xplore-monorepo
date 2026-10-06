@@ -222,6 +222,7 @@ async def handoff_accepted_sections_to_document(
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
     available_media_ids: Sequence[str] = (),
+    unavailable_media: Mapping[str, str] | None = None,
     expected_title: str | None = None,
     expected_content_hash: str | None = None,
     semantic_validator: DocumentSemanticValidator | None = None,
@@ -314,6 +315,7 @@ async def handoff_accepted_sections_to_document(
             source_facts_by_section=source_facts_by_section,
             required_media_by_section=required_media_by_section,
             available_media_ids=available_media_ids,
+            unavailable_media=unavailable_media,
             expected_content_hash=expected_content_hash,
         )
     except SharedLessonAssemblyError as exc:

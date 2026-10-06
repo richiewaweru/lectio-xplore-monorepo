@@ -306,3 +306,34 @@ def test_plan_visual_figures_lists_one_per_visual_block_with_composer_ids():
     assert figure.figure_id == expected.id
     assert plan_visual_figures(page_state, revision=9) == []
     assert plan_visual_figures(None, revision=2) == []
+
+
+def test_unavailable_figure_is_a_settled_advisory_state():
+    unavailable = _media("media:2", "ready", "fig-2")
+    unavailable = ProgressItem(
+        **{
+            **unavailable.__dict__,
+            "output_json": {
+                "status": "unavailable",
+                "error_code": "provider_http_403",
+                "reason": "The figure service was unavailable for this figure.",
+            },
+        }
+    )
+    items = [_media("media:1", "ready", "fig-1"), unavailable]
+    progress = project_artifact_progress(
+        path="learn",
+        shared_run_status="running",
+        shared_items=items,
+        shared_started_at=START,
+        planned_figures=PLANNED[:2],
+    )
+    by_id = {f.figure_id: f for f in progress.figures}
+    assert by_id["fig-2"].status == "unavailable"
+    assert by_id["fig-2"].error_code == "provider_http_403"
+    assert by_id["fig-2"].error_summary == "The figure service was unavailable for this figure."
+    assert by_id["fig-2"].retryable is False
+    assert progress.figures_failed == 0
+    step = _by_key(progress)["media"]
+    assert step.label == "Figures: 1 ready / 1 unavailable"
+    assert step.status == "done"

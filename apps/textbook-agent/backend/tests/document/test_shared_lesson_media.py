@@ -23,6 +23,7 @@ from document.shared_lesson.media import (
     build_figure_work_order,
     execute_figure_work_orders,
     fallback_alt_text,
+    rebuild_figure_work_order,
     validate_reusable_figure_asset,
     verify_bound_figure_media,
 )
@@ -725,13 +726,14 @@ def test_image_prompt_renders_spec_labels_and_writer_context_for_the_non_precisi
     from media.generation.prompt import build_visual_prompt
 
     work = _work()
-    assert work.work_order.visual.visual_style is None  # not diagram_precision
+    assert work.work_order.visual.visual_style == "diagram_numbered"
     prompt = build_visual_prompt(work.work_order)
+    assert "1 = Sunlight" in prompt and "2 = Leaf" in prompt
+    # context entries and the mode-agnostic spec text remain metadata
 
     assert "PURPOSE: Show how sunlight reaches a leaf" in prompt
     assert "- Sun" in prompt and "- Leaf" in prompt  # MUST SHOW
     assert "- A person" in prompt  # MUST NOT SHOW
-    assert "LABELS REQUIRED" in prompt and "Sunlight, Leaf" in prompt
     assert "[context:caption] A leaf in sunlight" in prompt
 
 
@@ -794,3 +796,28 @@ def test_bound_media_carries_qc_state_through_document_binding() -> None:
     assert ready.qc_state == "flagged"
     assert _block(work).qc_state == "unreviewed"
     assert bind_generated_figure(work, [_block(work)]).qc_state == "unreviewed"
+
+
+def test_shared_diagram_order_is_numbered_and_image_order_is_not() -> None:
+    from document.shared_lesson.media import figure_semantic_hash  # noqa: F401
+
+    diagram = _work()
+    assert diagram.work_order.visual.mode == "diagram"
+    assert diagram.work_order.visual.visual_style == "diagram_numbered"
+    rebuilt = rebuild_figure_work_order(diagram, _section("section-a", 0))
+    assert rebuilt.work_order.visual.visual_style == "diagram_numbered"
+    assert rebuilt == diagram
+
+
+def test_image_mode_order_has_no_visual_style() -> None:
+    work = _work()
+    spec = VisualSpec(
+        mode="image",
+        purpose="Show a leaf",
+        must_show=["Leaf"],
+        labels_required=[],
+        must_not_show=[],
+        required=work.required,
+    )
+    image = rebuild_figure_work_order(work, _section("section-a", 0), spec=spec)
+    assert image.work_order.visual.visual_style is None

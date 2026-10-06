@@ -16,9 +16,9 @@ from document.shared_lesson.document_semantic import DocumentSemanticQAResult
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.hashing import verify_shared_lesson_source as verify_document_source
 from document.shared_lesson.media import (
-    FigureMediaResult,
+    BoundFigureMediaOutcome,
     SharedFigureMediaError,
-    verify_bound_figure_media,
+    verify_bound_media_outcome,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument
 from document.shared_lesson.qa import DocumentQAError, qa_shared_lesson_document
@@ -229,11 +229,11 @@ def _validate_required_media(
     *,
     document: SharedLessonDocument,
     required_media_by_section: Mapping[str, Sequence[str]],
-    media_results: Sequence[FigureMediaResult],
+    media_results: Sequence[BoundFigureMediaOutcome],
 ) -> None:
     """Require every declared figure to be bound to this exact document.
 
-    ``FigureMediaResult`` is the closed, post-assembly media contract.  Calling
+    ``BoundFigureMediaOutcome`` (ready or unavailable) is the closed media contract.  Calling
     the binder again here is intentional: persistence is the last boundary
     before READY and must recompute the document, section, and semantic
     identities even when an upstream worker already validated them.
@@ -247,7 +247,7 @@ def _validate_required_media(
                 )
             expected[figure_id] = section_id
 
-    supplied: dict[str, FigureMediaResult] = {}
+    supplied: dict[str, BoundFigureMediaOutcome] = {}
     for result in media_results:
         if result.figure_node_id in supplied:
             raise SharedLessonDocumentReadinessError(
@@ -255,7 +255,7 @@ def _validate_required_media(
             )
         supplied[result.figure_node_id] = result
         try:
-            verify_bound_figure_media(result, document)
+            verify_bound_media_outcome(result, document)
         except SharedFigureMediaError as exc:
             raise SharedLessonDocumentReadinessError(
                 f"media binding for figure {result.figure_node_id!r} is invalid: {exc}"
@@ -307,7 +307,7 @@ async def promote_shared_lesson_document(
     approved_source_ids: Sequence[str] = (),
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult] = (),
+    media_results: Sequence[BoundFigureMediaOutcome] = (),
 ) -> StoredSharedLessonDocument:
     """Atomically promote one persisted draft after the complete READY gate.
 

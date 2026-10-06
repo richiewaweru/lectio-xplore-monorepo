@@ -169,7 +169,10 @@ async def _render_frame(
 
     # Gemini renders its own labels; the deterministic compositor (and its
     # preflight) only applies to the other providers.
-    is_diagram_precision = (
+    # diagram_numbered applies to every provider: the model draws digits only and
+    # code prints the words in the key band.
+    is_diagram_numbered = getattr(order.visual, "visual_style", None) == "diagram_numbered"
+    is_diagram_precision = is_diagram_numbered or (
         getattr(order.visual, "visual_style", None) == "diagram_precision"
         and provider_name != "gemini"
     )
@@ -178,7 +181,7 @@ async def _render_frame(
     if is_diagram_precision:
         try:
             canonical_labels = preflight_diagram_labels(
-                (1024, 1024), order.visual.labels_required
+                (1024, 1024), order.visual.labels_required, numbered=is_diagram_numbered
             )
         except Exception as exc:
             raise VisualStageError.from_exception(
@@ -397,6 +400,7 @@ async def _render_frame(
             composed = compose_diagram_precision(
                 base_bytes,
                 order.visual.labels_required,
+                numbered=is_diagram_numbered,
             )
         except Exception as exc:
             raise VisualStageError.from_exception(

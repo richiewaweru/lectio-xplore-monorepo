@@ -25,11 +25,13 @@ from document.shared_lesson.composer import (
 from document.shared_lesson.continuity import ContinuityIssue, ExpectedNodeShape
 from document.shared_lesson.document_semantic import DocumentSemanticValidator
 from document.shared_lesson.media import (
+    BoundFigureMediaOutcome,
+    BoundUnavailableFigureMedia,
     FigureMediaResult,
     SharedFigureMediaError,
     SharedFigureWorkOrder,
-    bind_durable_media_output,
-    verify_bound_durable_media,
+    bind_durable_media_outcome,
+    verify_bound_media_outcome,
 )
 from document.shared_lesson.media_runtime import (
     MAX_CONCURRENT_MEDIA,
@@ -42,7 +44,11 @@ from document.shared_lesson.media_runtime import (
     work_order_from_composition_identity,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument, SharedSection
-from document.shared_lesson.qa import DocumentQAResult, qa_shared_lesson_document
+from document.shared_lesson.qa import (
+    DocumentQAResult,
+    qa_shared_lesson_document,
+    split_media_outcomes,
+)
 from document.shared_lesson.qa_runtime import (
     DOCUMENT_QA_STAGE,
     DocumentQAOutcome,
@@ -259,7 +265,7 @@ def _verify_media_inputs(
     *,
     document: SharedLessonDocument,
     required_media_by_section: Mapping[str, Sequence[str]] | None,
-    media_results: Sequence[FigureMediaResult],
+    media_results: Sequence[BoundFigureMediaOutcome],
 ) -> tuple[str, ...]:
     expected = _required_media(document)
     declared = {
@@ -276,17 +282,17 @@ def _verify_media_inputs(
     expected_ids = {
         (section_id, figure_id) for section_id, values in expected.items() for figure_id in values
     }
-    supplied: dict[tuple[str, str], FigureMediaResult] = {}
+    supplied: dict[tuple[str, str], BoundFigureMediaOutcome] = {}
     for result in media_results:
-        if not isinstance(result, FigureMediaResult):
+        if not isinstance(result, (FigureMediaResult, BoundUnavailableFigureMedia)):
             raise SharedDocumentQADispatchError(
-                "required media must use verified document-bound FigureMediaResult values"
+                "required media must use verified document-bound media outcomes"
             )
         identity = (result.section_id, result.figure_node_id)
         if identity in supplied:
             raise SharedDocumentQADispatchError(f"required media figure {identity!r} is duplicated")
         try:
-            verify_bound_durable_media(result, document)
+            verify_bound_media_outcome(result, document)
         except SharedFigureMediaError as exc:
             raise SharedDocumentQADispatchError(
                 f"required media figure {result.figure_node_id!r} is not verified"
@@ -333,8 +339,8 @@ async def _load_durable_media_results(
     *,
     run_id: str,
     document: SharedLessonDocument,
-    supplied: Sequence[FigureMediaResult],
-) -> tuple[FigureMediaResult, ...]:
+    supplied: Sequence[BoundFigureMediaOutcome],
+) -> tuple[BoundFigureMediaOutcome, ...]:
     """Rebuild caller media evidence from active READY media WorkItems."""
     async with session_factory() as session:
         rows = tuple(
@@ -350,7 +356,7 @@ async def _load_durable_media_results(
             ).all()
         )
     leaves = active_work_items(rows)
-    durable: dict[tuple[str, str], FigureMediaResult] = {}
+    durable: dict[tuple[str, str], BoundFigureMediaOutcome] = {}
     for item in leaves:
         if item.status != "ready" or item.output_json is None or not item.output_hash:
             raise SharedDocumentQADispatchError(
@@ -359,7 +365,7 @@ async def _load_durable_media_results(
         if content_hash(item.output_json) != item.output_hash:
             raise SharedDocumentQADispatchError("durable media output hash is invalid")
         try:
-            bound = bind_durable_media_output(item.output_json, document)
+            bound = bind_durable_media_outcome(item.output_json, document)
             if item.item_key != f"media:{bound.work_order_id}":
                 raise ValueError("media WorkItem identity differs from its output")
         except (TypeError, ValueError, SharedFigureMediaError) as exc:
@@ -373,7 +379,7 @@ async def _load_durable_media_results(
             )
         durable[identity] = bound
 
-    caller: dict[tuple[str, str], FigureMediaResult] = {}
+    caller: dict[tuple[str, str], BoundFigureMediaOutcome] = {}
     for result in supplied:
         identity = (result.section_id, result.figure_node_id)
         if identity in caller:
@@ -408,7 +414,7 @@ async def dispatch_shared_document_qa(
     provenance: Mapping[str, Any] | None = None,
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult] = (),
+    media_results: Sequence[BoundFigureMediaOutcome] = (),
     writer_warnings: Mapping[str, Sequence[tuple[str, str]]] | None = None,
     semantic_validator: DocumentSemanticValidator | None = None,
     worker_id: str = "shared-document-qa-dispatcher",
@@ -515,7 +521,8 @@ async def dispatch_shared_document_qa(
             approved_source_ids=_approved_source_ids(source),
             source_facts_by_section=None,
             required_media_by_section=required_media_by_section,
-            available_media_ids=tuple(result.figure_node_id for result in durable_media),
+            available_media_ids=split_media_outcomes(durable_media)[0],
+            unavailable_media=split_media_outcomes(durable_media)[1],
         )
     except SharedLessonAssemblyError as exc:
         raise SharedDocumentQADispatchError(str(exc)) from exc
@@ -781,7 +788,7 @@ async def dispatch_reviewed_document_qa(
     leaf: GenerationWorkItemModel,
     compositions: Mapping[str, SectionCompositionPlan] | Sequence[SectionCompositionPlan],
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult] = (),
+    media_results: Sequence[BoundFigureMediaOutcome] = (),
     semantic_validator: DocumentSemanticValidator | None = None,
     worker_id: str = "shared-document-qa-dispatcher",
 ) -> SharedDocumentQADispatchResult:
@@ -814,7 +821,8 @@ async def dispatch_reviewed_document_qa(
         expected_title=source.plan.learner_title,
         approved_source_ids=_approved_source_ids(source),
         required_media_by_section=required_media_by_section,
-        available_media_ids=tuple(result.figure_node_id for result in media_results),
+        available_media_ids=split_media_outcomes(media_results)[0],
+        unavailable_media=split_media_outcomes(media_results)[1],
     )
     if not deterministic_qa.ready:
         raise SharedDocumentQADispatchError(

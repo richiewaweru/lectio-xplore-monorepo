@@ -40,6 +40,9 @@ class FigureNode(_NodeBase):
     asset_id: str | None = None
     caption: str = ""
     alt: str = ""
+    #: "unavailable" when media generation was exhausted; no asset_id then.
+    status: Literal["unavailable"] | None = None
+    unavailable_reason: str | None = None
 
 
 class TableNode(_NodeBase):

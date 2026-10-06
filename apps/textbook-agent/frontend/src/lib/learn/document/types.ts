@@ -60,6 +60,9 @@ export interface FigureNode extends NodeBase {
 	asset_id?: string | null;
 	caption?: string;
 	alt?: string;
+	/** Set when media generation was exhausted: render a placeholder instead of an image. */
+	status?: 'unavailable';
+	unavailable_reason?: string;
 }
 
 export interface TableNode extends NodeBase {

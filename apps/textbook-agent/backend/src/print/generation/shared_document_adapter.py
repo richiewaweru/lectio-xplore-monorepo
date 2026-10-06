@@ -11,7 +11,12 @@ from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.inline import parse_inline_markup
-from document.shared_lesson.media import FigureMediaResult, SharedFigureMediaError, verify_bound_figure_media
+from document.shared_lesson.media import (
+    BoundFigureMediaOutcome,
+    BoundUnavailableFigureMedia,
+    SharedFigureMediaError,
+    verify_bound_media_outcome,
+)
 from document.shared_lesson.models import (
     CalloutNode,
     CompareNode,
@@ -80,7 +85,7 @@ def _paragraphs(value: str) -> list[dict[str, Any]]:
 _USABLE_MEDIA_STATUSES = frozenset({"ready", "ready_with_quality_warning"})
 
 
-def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, FigureMediaResult]) -> dict[str, Any]:
+def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, BoundFigureMediaOutcome]) -> dict[str, Any]:
     if isinstance(node, ParagraphNode):
         return _object_block(
             node.id,
@@ -111,12 +116,19 @@ def _ordinary_block(node: Any, position: int, media_by_figure: Mapping[str, Figu
             raise SharedDocumentPrintMappingError(
                 f"required figure {node.id!r} has no document-bound Print media"
             )
+        # An unavailable outcome ships as a failed asset: the Print renderer
+        # shows "Figure unavailable" with the alt text instead of an image.
+        asset = (
+            {"kind": "image", "status": "failed"}
+            if isinstance(media, BoundUnavailableFigureMedia)
+            else {"kind": "image", "status": "ready", "src": media.asset_url}
+        )
         return _object_block(
             node.id,
             position,
             "figure",
             {
-                "asset": {"kind": "image", "status": "ready", "src": media.asset_url},
+                "asset": asset,
                 "alt_text": node.accessibility.alt_text or media.alt_text,
                 **({"caption": _inline(node.display.caption)} if node.display.caption else {}),
             },
@@ -460,7 +472,7 @@ def realize_shared_document_for_print(
     stored: StoredSharedLessonDocument,
     *,
     expected_identity: SharedDocumentIdentity,
-    figure_media: Sequence[FigureMediaResult] = (),
+    figure_media: Sequence[BoundFigureMediaOutcome] = (),
     document_id: str | None = None,
 ) -> SharedDocumentPrintRealization:
     """Copy exact shared content into LectioDocumentV2 and lower task anchors."""
@@ -482,14 +494,17 @@ def realize_shared_document_for_print(
     if content_hash(normalized.model_dump(mode="json")) != stored.storage_hash:
         raise SharedDocumentPrintMappingError("shared document storage hash is stale")
 
-    media_by_figure: dict[str, FigureMediaResult] = {}
+    media_by_figure: dict[str, BoundFigureMediaOutcome] = {}
     for media in figure_media:
         if media.figure_node_id in media_by_figure:
             raise SharedDocumentPrintMappingError(f"duplicate media for figure {media.figure_node_id!r}")
         try:
-            verified = verify_bound_figure_media(media, normalized)
+            verified = verify_bound_media_outcome(media, normalized)
         except SharedFigureMediaError as exc:
             raise SharedDocumentPrintMappingError(f"figure {media.figure_node_id!r} media binding failed") from exc
+        if isinstance(verified, BoundUnavailableFigureMedia):
+            media_by_figure[media.figure_node_id] = verified
+            continue
         # A produced image with a visual-QC quality warning is still a usable
         # asset (same rule as shared media binding); only its absence blocks.
         if verified.status not in _USABLE_MEDIA_STATUSES or not verified.asset_url.lower().startswith(

@@ -653,6 +653,17 @@ async def execute_document_qa_work_item(
                 + quality_flags_from_issues(job.synthetic_issues, source="writer_warning")
                 + advisory_writer_flags
             )
+        else:
+            # An exhausted figure ships as unavailable under both gate modes; the
+            # teacher must still see the flag even when the gate is blocking.
+            quality_flags += quality_flags_from_issues(
+                tuple(
+                    issue
+                    for issue in job.deterministic_qa.advisory_issues
+                    if issue.issue_code == "figure_media_unavailable"
+                ),
+                source="deterministic_qa",
+            )
         if semantic_shape_issues and not combined_actionable_issues:
             # Presentation-target findings from a semantic reviewer are
             # advisory under both gate modes; preserve them in flags above.
