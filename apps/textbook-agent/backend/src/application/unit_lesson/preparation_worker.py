@@ -50,12 +50,15 @@ from application.unit_lesson.preparation_runs import (
     PLAN_ARTIFACT_TYPE,
     TEACHING_ITEM_KEY,
     TEACHING_ITEM_STAGE,
+    TEACHING_SECTION_KEY_PREFIX,
+    TEACHING_SPINE_KEY,
     DEFINITION_VERSION,
     PreparationRunError,
     add_card_items,
     load_current_source,
     run_source,
 )
+from infra.config import settings
 from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
@@ -213,6 +216,16 @@ def _default_teaching_runner() -> Callable[..., Any]:
     return run_and_persist_teaching_plan
 
 
+def _default_staged_runners() -> dict[str, Callable[..., Any]]:
+    from application.unit_lesson import teaching_plan_service as service
+
+    return {
+        "spine": service.run_teaching_spine_item,
+        "section": service.run_teaching_section_item,
+        "finish": service.finish_and_persist_staged_teaching_plan,
+    }
+
+
 def _draft_revision(state: dict[str, Any]) -> dict[str, Any]:
     """The pending draft revision record currently named by ``teaching_review``."""
     page = state.get("page_document_v2")
@@ -243,6 +256,7 @@ class PreparationWorker:
         item_runner: Callable[..., Any] | None = None,
         teaching_runner: Callable[..., Any] | None = None,
         backbone_runner: Callable[..., Any] | None = None,
+        staged_runners: dict[str, Callable[..., Any]] | None = None,
     ) -> None:
         if lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
@@ -259,6 +273,8 @@ class PreparationWorker:
         self._item_runner = item_runner
         self._teaching_runner = teaching_runner
         self._backbone_runner = backbone_runner
+        # Staged teaching planner stages: "spine", "section", "finish".
+        self._staged_runners = staged_runners
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
 
@@ -446,6 +462,18 @@ class PreparationWorker:
         # Runs admitted before the backbone stage have no backbone item: keep the
         # exact identity and definition they were admitted under.
         version = DEFINITION_VERSION if backbone is not None else LEGACY_DEFINITION_VERSION
+        spine = next((i for i in active if i.item_key == TEACHING_SPINE_KEY), None)
+        # The mode is decided once: a Run with a spine stays staged whatever the
+        # setting says now (a single-mode teaching_plan already returned above).
+        if spine is not None or settings.teaching_planner_mode == "staged":
+            return await self._admit_staged_teaching(
+                session,
+                run=run,
+                active=active,
+                spine=spine,
+                identity=identity,
+                version=version,
+            )
         try:
             admission = await add_work_item(
                 session,
@@ -465,6 +493,85 @@ class PreparationWorker:
             return False
         return bool(admission.created)
 
+    async def _admit_staged_teaching(
+        self,
+        session: Any,
+        *,
+        run: Any,
+        active: Any,
+        spine: Any,
+        identity: dict[str, Any],
+        version: str,
+    ) -> bool:
+        """Staged planner: teaching_spine -> teaching_section:{slot} -> teaching_plan."""
+
+        async def admit(key: str, input_identity: dict[str, Any], definition: dict[str, Any]) -> bool:
+            admission = await add_work_item(
+                session,
+                WorkItemAdmission(
+                    run_id=run.id,
+                    item_key=key,
+                    stage=TEACHING_ITEM_STAGE,
+                    input_hash=content_hash(input_identity),
+                    definition_hash=content_hash(definition),
+                ),
+            )
+            return bool(admission.created)
+
+        try:
+            if spine is None:
+                created = await admit(
+                    TEACHING_SPINE_KEY,
+                    {**identity, "mode": "staged"},
+                    {"definition": "preparation-teaching-spine", "version": version},
+                )
+                await session.commit()
+                return created
+            if spine.status != "ready":
+                return False
+            spine_hash = spine.output_hash
+            slot_ids = [
+                str(section.get("slot_id"))
+                for section in ((spine.output_json or {}).get("spine") or {}).get("sections") or []
+                if isinstance(section, dict) and section.get("slot_id")
+            ]
+            if not slot_ids:
+                return False
+            created = False
+            for slot_id in slot_ids:
+                created = (
+                    await admit(
+                        f"{TEACHING_SECTION_KEY_PREFIX}{slot_id}",
+                        {"spine_hash": spine_hash, "slot_id": slot_id},
+                        {"definition": "preparation-teaching-section", "version": version},
+                    )
+                    or created
+                )
+            section_items = {
+                i.item_key: i for i in active if i.item_key.startswith(TEACHING_SECTION_KEY_PREFIX)
+            }
+            wanted = [f"{TEACHING_SECTION_KEY_PREFIX}{slot_id}" for slot_id in slot_ids]
+            if created or not all(
+                key in section_items and section_items[key].status == "ready" for key in wanted
+            ):
+                await session.commit()
+                return created
+            created = await admit(
+                TEACHING_ITEM_KEY,
+                {
+                    **identity,
+                    "mode": "staged",
+                    "spine_hash": spine_hash,
+                    "sections": sorted((k, section_items[k].output_hash) for k in wanted),
+                },
+                {"definition": "preparation-teaching-plan", "version": version, "mode": "staged"},
+            )
+            await session.commit()
+            return created
+        except (WorkItemConflict, InvalidRunTransition):
+            await session.rollback()
+            return False
+
     # ----------------------------------------------------------------- execute
 
     async def _execute_one(self, session: Any, now: datetime) -> bool:
@@ -480,6 +587,10 @@ class PreparationWorker:
                             GenerationWorkItemModel.item_key == BACKBONE_ITEM_KEY,
                             GenerationWorkItemModel.item_key.like(f"{ITEMS_KEY_PREFIX}%"),
                             GenerationWorkItemModel.item_key == TEACHING_ITEM_KEY,
+                            GenerationWorkItemModel.item_key == TEACHING_SPINE_KEY,
+                            GenerationWorkItemModel.item_key.like(
+                                f"{TEACHING_SECTION_KEY_PREFIX}%"
+                            ),
                         ),
                         or_(
                             GenerationWorkItemModel.status == "queued",
@@ -543,6 +654,19 @@ class PreparationWorker:
             if item_key == TEACHING_ITEM_KEY:
                 await self._run_teaching(
                     session, item_id=item_id, lease_token=lease_token, run_id=run_id, now=now
+                )
+            elif item_key == TEACHING_SPINE_KEY:
+                await self._run_teaching_spine(
+                    session, item_id=item_id, lease_token=lease_token, run_id=run_id, now=now
+                )
+            elif item_key.startswith(TEACHING_SECTION_KEY_PREFIX):
+                await self._run_teaching_section(
+                    session,
+                    item_id=item_id,
+                    slot_id=item_key[len(TEACHING_SECTION_KEY_PREFIX):],
+                    lease_token=lease_token,
+                    run_id=run_id,
+                    now=now,
                 )
             elif item_key == BACKBONE_ITEM_KEY:
                 await self._run_backbone(
@@ -775,6 +899,108 @@ class PreparationWorker:
         await session.commit()
         await self._admit_teaching_for(session, run_id)
 
+    # ----------------------------------------------------------- staged teaching
+
+    def _staged(self, name: str) -> Callable[..., Any]:
+        return (self._staged_runners or {}).get(name) or _default_staged_runners()[name]
+
+    async def _staged_outputs(
+        self, session: Any, run_id: str
+    ) -> tuple[dict[str, Any] | None, dict[str, dict[str, Any]]]:
+        """The ready spine output and ready section outputs (by slot) of a Run."""
+        run = await session.scalar(
+            select(GenerationRunModel)
+            .options(selectinload(GenerationRunModel.work_items))
+            .where(GenerationRunModel.id == run_id)
+            .execution_options(populate_existing=True)
+        )
+        if run is None:
+            raise _SourceChanged("the preparation Run is unavailable")
+        active = active_work_items(tuple(run.work_items))
+        spine = next(
+            (i for i in active if i.item_key == TEACHING_SPINE_KEY and i.status == "ready"), None
+        )
+        sections = {
+            i.item_key[len(TEACHING_SECTION_KEY_PREFIX):]: dict(i.output_json or {})
+            for i in active
+            if i.item_key.startswith(TEACHING_SECTION_KEY_PREFIX) and i.status == "ready"
+        }
+        spine_output = dict(spine.output_json or {}) if spine is not None else None
+        await session.rollback()  # end the read transaction before the long provider call
+        return spine_output, sections
+
+    async def _run_staged_item(
+        self,
+        session: Any,
+        *,
+        item_id: str,
+        lease_token: int,
+        run_id: str,
+        now: datetime,
+        call: Callable[[Any, str], Any],
+    ) -> None:
+        run = await session.get(GenerationRunModel, run_id, populate_existing=True)
+        if run is None:
+            raise _SourceChanged("the preparation Run is unavailable")
+        owner_id = str(run.owner_user_id)
+        generation_id = str(run.source_artifact_id)
+
+        async def work() -> dict[str, Any]:
+            async with self.session_factory() as work_session:
+                output = await call(work_session, generation_id)
+                await work_session.commit()
+                return output
+
+        async with self._prompt_scope(owner_id, generation_id=generation_id):
+            output = await self._heartbeated(item_id=item_id, lease_token=lease_token, coro=work())
+        await complete_work_item(
+            session,
+            work_item_id=item_id,
+            worker_id=self.worker_id,
+            lease_token=lease_token,
+            output_json=output,
+            output_hash=content_hash(output),
+            now=now,
+        )
+        await session.commit()
+        await self._admit_teaching_for(session, run_id)
+
+    async def _run_teaching_spine(
+        self, session: Any, *, item_id: str, lease_token: int, run_id: str, now: datetime
+    ) -> None:
+        runner = self._staged("spine")
+
+        async def call(work_session: Any, generation_id: str) -> dict[str, Any]:
+            return await runner(work_session, generation_id, require_items=True)
+
+        await self._run_staged_item(
+            session, item_id=item_id, lease_token=lease_token, run_id=run_id, now=now, call=call
+        )
+
+    async def _run_teaching_section(
+        self,
+        session: Any,
+        *,
+        item_id: str,
+        slot_id: str,
+        lease_token: int,
+        run_id: str,
+        now: datetime,
+    ) -> None:
+        runner = self._staged("section")
+        spine_json, _sections = await self._staged_outputs(session, run_id)
+        if spine_json is None:
+            raise _SourceChanged("the teaching spine is unavailable")
+
+        async def call(work_session: Any, generation_id: str) -> dict[str, Any]:
+            return await runner(
+                work_session, generation_id, spine_json=spine_json, slot_id=slot_id
+            )
+
+        await self._run_staged_item(
+            session, item_id=item_id, lease_token=lease_token, run_id=run_id, now=now, call=call
+        )
+
     # ---------------------------------------------------------------- teaching
 
     async def _run_teaching(
@@ -793,6 +1019,20 @@ class PreparationWorker:
         generation_id = str(run.source_artifact_id)
         source = run_source(run)
         runner = self._teaching_runner or _default_teaching_runner()
+        spine_json, section_jsons = await self._staged_outputs(session, run_id)
+        if spine_json is not None:
+            # Staged Run: assemble, review and gate from the stored stage outputs.
+            finish = self._staged("finish")
+
+            async def runner(  # noqa: F811 - staged replacement for the single runner
+                plan_session: Any, generation_id: str, *, require_items: bool = True
+            ) -> dict[str, Any]:
+                return await finish(
+                    plan_session,
+                    generation_id,
+                    spine_json=spine_json,
+                    section_jsons=section_jsons,
+                )
 
         async def plan() -> None:
             async with self.session_factory() as plan_session:

@@ -254,6 +254,10 @@ export interface PreparationProgress {
 	/** Lesson backbone stage (runs before items and the teaching plan). */
 	backbone: 'not_started' | 'queued' | 'running' | 'ready' | 'failed';
 	teaching_plan: 'not_started' | 'queued' | 'running' | 'ready' | 'failed';
+	/** Staged teaching planner only (absent or `not_started` / 0 in single mode). */
+	teaching_spine?: 'not_started' | 'queued' | 'running' | 'ready' | 'failed';
+	teaching_sections_total?: number;
+	teaching_sections_ready?: number;
 	failed_work_item_ids: string[];
 }
 

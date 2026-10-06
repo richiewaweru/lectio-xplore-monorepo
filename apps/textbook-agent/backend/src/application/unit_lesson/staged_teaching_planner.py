@@ -1301,6 +1301,110 @@ async def _review_lesson_bound(
     return result
 
 
+def _serialize_attempts(attempts: list[Any]) -> list[dict[str, Any]]:
+    return [
+        {
+            "attempt": a.attempt,
+            "raw_response": a.raw_response,
+            "errors": list(a.errors),
+            "latency_s": a.latency_s,
+            "error": a.error,
+            **({"review_findings": list(a.review_findings)} if hasattr(a, "review_findings") else {}),
+        }
+        for a in attempts
+    ]
+
+
+def spine_result_to_json(result: SpineResult) -> dict[str, Any]:
+    """JSON form of a spine stage result (stored as work-item ``output_json``)."""
+    return {
+        "spine": result.spine.model_dump(mode="json"),
+        "draft": result.draft.model_dump(mode="json"),
+        "attempts": _serialize_attempts(result.attempts),
+        "repairs": list(result.repairs),
+    }
+
+
+def spine_result_from_json(data: dict[str, Any]) -> SpineResult:
+    return SpineResult(
+        spine=TeachingSpine.model_validate(data["spine"]),
+        draft=TeachingSpineDraft.model_validate(data["draft"]),
+        attempts=[SpineAttempt(**a) for a in data.get("attempts", [])],
+        repairs=list(data.get("repairs", [])),
+    )
+
+
+def section_result_to_json(result: SectionResult) -> dict[str, Any]:
+    """JSON form of a section stage result (stored as work-item ``output_json``)."""
+    return {
+        "slot_id": result.slot_id,
+        "draft": result.draft.model_dump(mode="json") if result.draft is not None else None,
+        "blocks": [b.model_dump(mode="json") for b in result.blocks],
+        "attempts": _serialize_attempts(result.attempts),
+        "flags": list(result.flags),
+        "unresolved": result.unresolved,
+        "latency_s": result.latency_s,
+    }
+
+
+def section_result_from_json(data: dict[str, Any]) -> SectionResult:
+    draft = data.get("draft")
+    return SectionResult(
+        slot_id=data["slot_id"],
+        draft=TeachingSectionDraft.model_validate(draft) if draft is not None else None,
+        blocks=[TeachingPlanDraftBlock.model_validate(b) for b in data.get("blocks", [])],
+        attempts=[SectionAttempt(**a) for a in data.get("attempts", [])],
+        flags=list(data.get("flags", [])),
+        unresolved=bool(data.get("unresolved", False)),
+        latency_s=float(data.get("latency_s", 0.0)),
+    )
+
+
+async def run_spine_stage(
+    packet: ImmutableLessonPacket,
+    snapshot: LessonLegalitySnapshot,
+    *,
+    trace_id: str,
+    generation_id: str | None = None,
+) -> SpineResult:
+    """Spine stage on its own (one work item in the staged preparation run)."""
+    projections = build_planner_projections(packet, snapshot)
+    return await plan_teaching_spine(
+        packet,
+        snapshot=snapshot,
+        teaching_guidance=projections["teaching_guidance"],
+        slot_intent_policy=projections["slot_intent_policy"],
+        assessment_source_policy=projections["assessment_source_policy"],
+        trace_id=trace_id,
+        generation_id=generation_id,
+    )
+
+
+async def run_section_stage(
+    spine: TeachingSpine,
+    slot_id: str,
+    packet: ImmutableLessonPacket,
+    snapshot: LessonLegalitySnapshot,
+    *,
+    trace_id: str,
+    generation_id: str | None = None,
+) -> SectionResult:
+    """One section (with its own review and retries) as a standalone stage."""
+    projections = build_planner_projections(packet, snapshot)
+    return await plan_teaching_section(
+        spine,
+        slot_id,
+        packet,
+        projections=projections,
+        system_prompt=render_staged_prompt(
+            packet, projections.get("teaching_guidance"), kind="section"
+        ),
+        trace_id=trace_id,
+        generation_id=generation_id,
+        section_reviewer=make_section_reviewer(trace_id=trace_id, generation_id=generation_id),
+    )
+
+
 async def run_staged_teaching_planner(
     packet: ImmutableLessonPacket,
     *,
@@ -1323,34 +1427,26 @@ async def run_staged_teaching_planner(
     started_all = time.perf_counter()
     snapshot = legality or build_lesson_legality_snapshot(packet)
     projections = build_planner_projections(packet, snapshot)
-    teaching_guidance: TeachingGuidanceProjection = projections["teaching_guidance"]
-    permitted = projections["permitted_intents"]
-    excluded = projections["excluded_intents"]
-    typical_by_slot = projections["typical_by_slot"]
-    assessment_intents = set(projections["assessment_source_policy"]["eligible_intents"])
-    advisory_gate = settings.teaching_plan_quality_gate == "advisory"
     tid = trace_id or str(uuid.uuid4())
 
     # Spine.
-    spine_prompt = render_staged_prompt(packet, teaching_guidance, kind="spine")
     spine_started = time.perf_counter()
     spine_result = await plan_teaching_spine(
         packet,
         snapshot=snapshot,
-        teaching_guidance=teaching_guidance,
+        teaching_guidance=projections["teaching_guidance"],
         slot_intent_policy=projections["slot_intent_policy"],
         assessment_source_policy=projections["assessment_source_policy"],
         trace_id=tid,
         generation_id=generation_id,
     )
-    spine = spine_result.spine
     spine_s = time.perf_counter() - spine_started
 
     # Sections (parallel; each reviewed on its own, retried alone).
     reviewer = make_section_reviewer(trace_id=tid, generation_id=generation_id)
     sections_started = time.perf_counter()
     sections = await plan_teaching_sections(
-        spine,
+        spine_result.spine,
         packet,
         projections=projections,
         trace_id=tid,
@@ -1358,6 +1454,56 @@ async def run_staged_teaching_planner(
         section_reviewer=reviewer,
     )
     sections_s = time.perf_counter() - sections_started
+    return await finish_staged_plan(
+        packet,
+        snapshot,
+        spine_result,
+        sections,
+        trace_id=tid,
+        generation_id=generation_id,
+        started_all=started_all,
+        spine_s=spine_s,
+        sections_s=sections_s,
+    )
+
+
+async def finish_staged_plan(
+    packet: ImmutableLessonPacket,
+    snapshot: LessonLegalitySnapshot,
+    spine_result: SpineResult,
+    sections: dict[str, SectionResult],
+    *,
+    trace_id: str,
+    generation_id: str | None = None,
+    started_all: float | None = None,
+    spine_s: float | None = None,
+    sections_s: float | None = None,
+) -> TeachingPlanResult:
+    """Assemble, whole-lesson review (+ one fix round) and final gate.
+
+    Works from stage results, so it also runs from work-item outputs.
+    """
+    started_all = time.perf_counter() if started_all is None else started_all
+    spine_s = (
+        sum(a.latency_s for a in spine_result.attempts) if spine_s is None else spine_s
+    )
+    sections_s = (
+        max((r.latency_s for r in sections.values()), default=0.0)
+        if sections_s is None
+        else sections_s
+    )
+    sections = dict(sections)
+    spine = spine_result.spine
+    tid = trace_id
+    projections = build_planner_projections(packet, snapshot)
+    teaching_guidance: TeachingGuidanceProjection = projections["teaching_guidance"]
+    permitted = projections["permitted_intents"]
+    excluded = projections["excluded_intents"]
+    typical_by_slot = projections["typical_by_slot"]
+    assessment_intents = set(projections["assessment_source_policy"]["eligible_intents"])
+    advisory_gate = settings.teaching_plan_quality_gate == "advisory"
+    spine_prompt = render_staged_prompt(packet, teaching_guidance, kind="spine")
+    reviewer = make_section_reviewer(trace_id=tid, generation_id=generation_id)
     extra_attempts: list[tuple[str, SectionAttempt]] = []
 
     # Assembly + whole-lesson review.
@@ -1627,7 +1773,14 @@ __all__ = [
     "plan_teaching_spine",
     "make_section_reviewer",
     "render_staged_prompt",
+    "finish_staged_plan",
+    "run_section_stage",
+    "run_spine_stage",
     "run_staged_teaching_planner",
+    "section_result_from_json",
+    "section_result_to_json",
+    "spine_result_from_json",
+    "spine_result_to_json",
     "repair_spine_figure_plan",
     "section_check_errors",
     "section_payload",

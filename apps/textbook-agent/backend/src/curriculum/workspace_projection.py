@@ -201,6 +201,10 @@ class PreparationRunView:
     teaching_plan: str = "not_started"
     # not_started | queued | running | ready | failed (same vocabulary as teaching_plan)
     backbone: str = "not_started"
+    # Staged teaching planner (phase 8): spine stage and per-section progress.
+    teaching_spine: str = "not_started"
+    teaching_sections_total: int = 0
+    teaching_sections_ready: int = 0
     failed_work_item_ids: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -213,6 +217,9 @@ def _progress(run: PreparationRunView | None) -> PreparationProgressDTO | None:
         items_failed=run.items_failed,
         teaching_plan=run.teaching_plan,  # type: ignore[arg-type]
         backbone=run.backbone,  # type: ignore[arg-type]
+        teaching_spine=run.teaching_spine,  # type: ignore[arg-type]
+        teaching_sections_total=run.teaching_sections_total,
+        teaching_sections_ready=run.teaching_sections_ready,
         failed_work_item_ids=list(run.failed_work_item_ids),
     )
 

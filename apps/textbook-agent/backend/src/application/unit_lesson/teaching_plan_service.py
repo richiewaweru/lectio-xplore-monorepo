@@ -25,6 +25,7 @@ from curriculum.teaching_plan.service import (
 )
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.legality import (
+    LessonLegalitySnapshot,
     build_lesson_legality_snapshot,
     validate_legality_snapshot,
 )
@@ -34,7 +35,16 @@ from print.generation.whole_lesson.packet_builder import (
     build_lesson_packet,
 )
 from print.generation.whole_lesson.repository import PageDocumentRepository
-from application.unit_lesson.staged_teaching_planner import run_staged_teaching_planner
+from application.unit_lesson.staged_teaching_planner import (
+    finish_staged_plan,
+    run_section_stage,
+    run_spine_stage,
+    run_staged_teaching_planner,
+    section_result_from_json,
+    section_result_to_json,
+    spine_result_from_json,
+    spine_result_to_json,
+)
 from application.unit_lesson.teaching_planner import run_lesson_approach_planner
 from curriculum.planning.persistence import load_chunked_state
 
@@ -191,14 +201,15 @@ async def build_packet_for_generation(
     )
 
 
-async def run_and_persist_teaching_plan(
+async def prepare_teaching_inputs(
     session: AsyncSession,
     generation_id: str,
     *,
     require_items: bool = True,
     worker_id: str | None = None,
     lease_token: int | None = None,
-) -> dict[str, Any]:
+) -> tuple[ImmutableLessonPacket, LessonLegalitySnapshot]:
+    """Build and save the lesson packet and legality snapshot (start of a teaching plan)."""
     generation = await session.get(GenerationModel, generation_id)
     if generation is None:
         raise KeyError(generation_id)
@@ -225,13 +236,34 @@ async def run_and_persist_teaching_plan(
         worker_id=worker_id,
         lease_token=lease_token,
     )
+    return packet, legality
 
-    result = await plan_shared_teaching(
-        packet,
-        legality=legality,
-        generation_id=generation_id,
-        require_items=require_items,
-    )
+
+async def load_teaching_inputs(
+    session: AsyncSession, generation_id: str
+) -> tuple[ImmutableLessonPacket, LessonLegalitySnapshot]:
+    """Reload the packet and legality snapshot saved by ``prepare_teaching_inputs``."""
+    repo = PageDocumentRepository(session, generation_id)
+    state = await repo.load_page_generation_state()
+    raw_packet = state.get("lesson_packet")
+    if not isinstance(raw_packet, dict) or not raw_packet:
+        raise RuntimeError("lesson_packet is missing; the teaching spine has not run")
+    packet = ImmutableLessonPacket.model_validate(raw_packet)
+    legality = LessonLegalitySnapshot.model_validate(await repo.load_lesson_legality())
+    return packet, legality
+
+
+async def persist_teaching_result(
+    session: AsyncSession,
+    generation_id: str,
+    packet: ImmutableLessonPacket,
+    result: Any,
+    *,
+    worker_id: str | None = None,
+    lease_token: int | None = None,
+) -> dict[str, Any]:
+    """Save a finished planner result as the draft revision and append its events."""
+    repo = PageDocumentRepository(session, generation_id)
     await repo.save_catalogue_meta(
         version=result.teaching_guidance.catalogue_version,
         teaching_projection_hash=result.teaching_guidance.projection_hash,
@@ -276,6 +308,146 @@ async def run_and_persist_teaching_plan(
         "review": state.get("teaching_review"),
         "packet": packet.model_dump(mode="json"),
     }
+
+
+async def run_and_persist_teaching_plan(
+    session: AsyncSession,
+    generation_id: str,
+    *,
+    require_items: bool = True,
+    worker_id: str | None = None,
+    lease_token: int | None = None,
+) -> dict[str, Any]:
+    packet, legality = await prepare_teaching_inputs(
+        session,
+        generation_id,
+        require_items=require_items,
+        worker_id=worker_id,
+        lease_token=lease_token,
+    )
+    result = await plan_shared_teaching(
+        packet,
+        legality=legality,
+        generation_id=generation_id,
+        require_items=require_items,
+    )
+    return await persist_teaching_result(
+        session,
+        generation_id,
+        packet,
+        result,
+        worker_id=worker_id,
+        lease_token=lease_token,
+    )
+
+
+# --------------------------------------------------------------------------- staged work items
+
+
+async def run_teaching_spine_item(
+    session: AsyncSession,
+    generation_id: str,
+    *,
+    require_items: bool = True,
+    worker_id: str | None = None,
+    lease_token: int | None = None,
+) -> dict[str, Any]:
+    """Spine work item: save packet + legality, plan the spine, return its JSON."""
+    packet, legality = await prepare_teaching_inputs(
+        session,
+        generation_id,
+        require_items=require_items,
+        worker_id=worker_id,
+        lease_token=lease_token,
+    )
+    if require_items and not packet.approved_items:
+        from curriculum.approved_items import ItemPoolEmptyError
+
+        raise ItemPoolEmptyError(card_id="unknown", pack_id=None)
+    spine_result = await run_spine_stage(
+        packet, legality, trace_id=f"{generation_id}:staged", generation_id=generation_id
+    )
+    await PageDocumentRepository(session, generation_id).append_event(
+        make_event(
+            "teaching_spine_ready",
+            generation_id=generation_id,
+            status="ready",
+            section_count=len(spine_result.spine.sections),
+        ),
+        worker_id=worker_id,
+        lease_token=lease_token,
+    )
+    return spine_result_to_json(spine_result)
+
+
+async def run_teaching_section_item(
+    session: AsyncSession,
+    generation_id: str,
+    *,
+    spine_json: dict[str, Any],
+    slot_id: str,
+    worker_id: str | None = None,
+    lease_token: int | None = None,
+) -> dict[str, Any]:
+    """Section work item: plan one section against the saved spine."""
+    packet, legality = await load_teaching_inputs(session, generation_id)
+    spine = spine_result_from_json(spine_json).spine
+    result = await run_section_stage(
+        spine,
+        slot_id,
+        packet,
+        legality,
+        trace_id=f"{generation_id}:staged",
+        generation_id=generation_id,
+    )
+    await PageDocumentRepository(session, generation_id).append_event(
+        make_event(
+            "teaching_section_ready",
+            generation_id=generation_id,
+            status="flagged" if result.unresolved else "ready",
+            slot_id=slot_id,
+        ),
+        worker_id=worker_id,
+        lease_token=lease_token,
+    )
+    return section_result_to_json(result)
+
+
+async def finish_and_persist_staged_teaching_plan(
+    session: AsyncSession,
+    generation_id: str,
+    *,
+    spine_json: dict[str, Any],
+    section_jsons: Mapping[str, dict[str, Any]],
+    worker_id: str | None = None,
+    lease_token: int | None = None,
+) -> dict[str, Any]:
+    """Plan work item (staged): assemble, review, gate, then persist like the single path."""
+    packet, legality = await load_teaching_inputs(session, generation_id)
+    spine_result = spine_result_from_json(spine_json)
+    sections = {slot_id: section_result_from_json(data) for slot_id, data in section_jsons.items()}
+    # Section order follows the spine, as the in-process planner produces it.
+    ordered = {
+        section.slot_id: sections[section.slot_id]
+        for section in spine_result.spine.sections
+        if section.slot_id in sections
+    }
+    result = await finish_staged_plan(
+        packet,
+        legality,
+        spine_result,
+        ordered,
+        trace_id=f"{generation_id}:staged",
+        generation_id=generation_id,
+    )
+    return await persist_teaching_result(
+        session,
+        generation_id,
+        packet,
+        result,
+        worker_id=worker_id,
+        lease_token=lease_token,
+    )
 
 
 async def approve_teaching_and_queue(

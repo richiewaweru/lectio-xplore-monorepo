@@ -66,6 +66,9 @@ TEACHING_ITEM_STAGE = "planning_teaching"
 ITEMS_KEY_PREFIX = "items:"
 BACKBONE_ITEM_KEY = "backbone"
 TEACHING_ITEM_KEY = "teaching_plan"
+# Staged teaching planner (phase 8): spine -> one item per section -> teaching_plan.
+TEACHING_SPINE_KEY = "teaching_spine"
+TEACHING_SECTION_KEY_PREFIX = "teaching_section:"
 SOURCE_ARTIFACT_TYPE = "lesson_structural_plan"
 PLAN_ARTIFACT_TYPE = "teaching_plan_revision"
 MAX_ATTEMPTS = 3
@@ -296,12 +299,22 @@ def _stage_state(item: Any) -> str:
     return str(item.status)
 
 
+def _staged_section_total(spine: Any) -> int:
+    """Section count of a ready spine (its output), else 0."""
+    if spine is None or spine.status != "ready":
+        return 0
+    sections = ((spine.output_json or {}).get("spine") or {}).get("sections")
+    return len(sections) if isinstance(sections, list) else 0
+
+
 def preparation_run_view(run: GenerationRunModel) -> PreparationRunView:
     """Plain-data projection input for one preparation Run (work items loaded)."""
     items = active_work_items(tuple(run.work_items or ()))
     card_items = [i for i in items if i.item_key.startswith(ITEMS_KEY_PREFIX)]
     teaching = next((i for i in items if i.item_key == TEACHING_ITEM_KEY), None)
     backbone = next((i for i in items if i.item_key == BACKBONE_ITEM_KEY), None)
+    spine = next((i for i in items if i.item_key == TEACHING_SPINE_KEY), None)
+    section_items = [i for i in items if i.item_key.startswith(TEACHING_SECTION_KEY_PREFIX)]
     failed = [i for i in items if i.status in {"failed_recoverable", "failed_terminal"}]
     retryable = (
         run.status == "failed_recoverable"
@@ -336,6 +349,9 @@ def preparation_run_view(run: GenerationRunModel) -> PreparationRunView:
         ),
         teaching_plan=teaching_state,
         backbone=backbone_state,
+        teaching_spine=_stage_state(spine),
+        teaching_sections_total=_staged_section_total(spine),
+        teaching_sections_ready=sum(1 for i in section_items if i.status == "ready"),
         failed_work_item_ids=tuple(i.id for i in failed),
     )
 
@@ -365,6 +381,83 @@ async def load_preparation_run_views(
     for run in runs:  # ascending: later rows overwrite earlier attempts
         latest[run.source_artifact_id] = run
     return {gid: preparation_run_view(run) for gid, run in latest.items()}
+
+
+async def load_teaching_draft(session: AsyncSession, *, generation_id: str) -> dict[str, Any]:
+    """Spine and sections ready so far on the latest preparation Run (staged mode).
+
+    Read from ready work-item outputs only; ``status`` is ``none`` until the spine
+    is ready (always the case in single mode).
+    """
+    views = (
+        await session.scalars(
+            select(GenerationRunModel)
+            .options(selectinload(GenerationRunModel.work_items))
+            .where(
+                GenerationRunModel.run_type == RunType.PREPARATION.value,
+                GenerationRunModel.source_artifact_type == SOURCE_ARTIFACT_TYPE,
+                GenerationRunModel.source_artifact_id == generation_id,
+            )
+            .order_by(GenerationRunModel.created_at.desc(), GenerationRunModel.id.desc())
+            .limit(1)
+            .execution_options(populate_existing=True)
+        )
+    ).first()
+    empty: dict[str, Any] = {
+        "status": "none",
+        "spine": None,
+        "sections": {},
+        "ready_sections": [],
+        "total_sections": 0,
+    }
+    if views is None:
+        return empty
+    items = active_work_items(tuple(views.work_items or ()))
+    spine_item = next(
+        (i for i in items if i.item_key == TEACHING_SPINE_KEY and i.status == "ready"), None
+    )
+    spine = ((spine_item.output_json or {}).get("spine") if spine_item is not None else None)
+    if not isinstance(spine, dict):
+        return empty
+    spine_sections = [s for s in spine.get("sections") or [] if isinstance(s, dict)]
+    sections: dict[str, Any] = {}
+    for item in items:
+        if not (item.item_key.startswith(TEACHING_SECTION_KEY_PREFIX) and item.status == "ready"):
+            continue
+        output = item.output_json or {}
+        slot_id = item.item_key[len(TEACHING_SECTION_KEY_PREFIX):]
+        sections[slot_id] = {
+            "blocks": [
+                {
+                    "intent": block.get("intent"),
+                    "brief": block.get("brief"),
+                    "task_mode": block.get("task_mode") or "none",
+                    "has_visual": bool(block.get("visual")),
+                }
+                for block in output.get("blocks") or []
+                if isinstance(block, dict)
+            ],
+            "unresolved": bool(output.get("unresolved")),
+        }
+    order = [str(s.get("slot_id")) for s in spine_sections]
+    return {
+        "status": "draft",
+        "spine": {
+            "learner_title": spine.get("learner_title"),
+            "arc": spine.get("arc"),
+            "sections": [
+                {
+                    "slot_id": s.get("slot_id"),
+                    "display_title": s.get("display_title"),
+                    "specific_purpose": s.get("specific_purpose") or "",
+                }
+                for s in spine_sections
+            ],
+        },
+        "sections": sections,
+        "ready_sections": [slot for slot in order if slot in sections],
+        "total_sections": len(order),
+    }
 
 
 def _review_status(state: dict[str, Any]) -> str:
@@ -576,9 +669,12 @@ __all__ = [
     "SOURCE_ARTIFACT_TYPE",
     "TEACHING_ITEM_KEY",
     "TEACHING_ITEM_STAGE",
+    "TEACHING_SECTION_KEY_PREFIX",
+    "TEACHING_SPINE_KEY",
     "add_card_items",
     "admit_preparation_run",
     "item_key",
+    "load_teaching_draft",
     "latest_preparation_run",
     "load_current_source",
     "load_preparation_run_views",

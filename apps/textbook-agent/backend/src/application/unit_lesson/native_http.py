@@ -73,6 +73,18 @@ async def get_lesson_approach(
         "catalogue": state.get("catalogue"),
     }
 
+@native_lesson_router.get("/generations/{generation_id}/lesson-approach/draft")
+async def get_lesson_approach_draft(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Streaming draft of the staged planner: spine plus the sections ready so far."""
+    await _load_owned_generation(generation_id, current_user.id)
+    from application.unit_lesson.preparation_runs import load_teaching_draft
+
+    async with async_session_factory() as session:
+        return await load_teaching_draft(session, generation_id=generation_id)
+
 @native_lesson_router.post("/generations/{generation_id}/lesson-approach/approve")
 async def post_lesson_approach_approve(
     generation_id: str,
