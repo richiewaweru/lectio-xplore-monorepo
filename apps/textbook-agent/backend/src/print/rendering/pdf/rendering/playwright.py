@@ -40,6 +40,9 @@ def _on_request_failed(request) -> None:
     )
 
 
+_FOOTER_LABEL_OVERRIDE_CSS = '.lectio-page-footer::after { content: "" !important; }'
+
+
 _PRINT_ROOT_SNAPSHOT_JS = """
 () => {
   const root = document.querySelector('[data-generation-complete="true"]');
@@ -354,6 +357,11 @@ async def _render_print_route_async(
                 _log_print_snapshot(generation_id, print_snapshot)
 
                 if output_path is not None:
+                    # Chromium cannot resolve counter(pages) for in-flow content
+                    # (renders "Page 0 of 0"); blank the in-page label. The real
+                    # "Page N of M" is stamped after assembly (add_page_numbers),
+                    # once the final page total is known.
+                    await page.add_style_tag(content=_FOOTER_LABEL_OVERRIDE_CSS)
                     await page.pdf(
                         path=str(output_path),
                         format="A4",

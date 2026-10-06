@@ -130,6 +130,7 @@ async def export_generation_pdf(
     request_id: str | None = None,
     render_path: str | None = None,
     v3_answer_key: dict[str, Any] | None = None,
+    full_cover_title: bool = False,
 ) -> PDFExportResult:
     config = PDFExportConfig(settings)
     if not config.enabled:
@@ -152,6 +153,7 @@ async def export_generation_pdf(
                 request_id=request_id,
                 render_path=render_path,
                 v3_answer_key=v3_answer_key,
+                full_cover_title=full_cover_title,
                 export_id=export_id,
                 temp_dir=temp_dir,
                 cleanup_paths=cleanup_paths,
@@ -194,6 +196,7 @@ async def _export_generation_pdf_body(
     request_id: str | None,
     render_path: str | None,
     v3_answer_key: dict[str, Any] | None,
+    full_cover_title: bool,
     export_id: str,
     temp_dir: Path,
     cleanup_paths: list[Path],
@@ -208,7 +211,10 @@ async def _export_generation_pdf_body(
     final_path = temp_dir / f"{generation.id}-{export_id}-final.pdf"
 
     try:
-        cover_title = clean_cover_title(generation.subject or document.subject)
+        cover_title = clean_cover_title(
+            generation.subject or document.subject,
+            trim_words=not full_cover_title,
+        )
         cover_started = time.perf_counter()
         _log_stage("cover_generation", "started", generation.id, request_id)
         generate_cover_pdf(
@@ -217,6 +223,7 @@ async def _export_generation_pdf_body(
             school_name=request.school_name,
             teacher_name=request.teacher_name,
             date_label=request.date,
+            trim_title=not full_cover_title,
         )
         cleanup_paths.append(cover_path)
         _log_stage(
@@ -292,7 +299,11 @@ async def _export_generation_pdf_body(
         assembly_started = time.perf_counter()
         _log_stage("pdf_assembly", "started", generation.id, request_id)
         merge_pdfs(source_paths=source_paths, output_path=final_path)
-        add_page_numbers(pdf_path=final_path, skip_pages=skip_pages)
+        add_page_numbers(
+            pdf_path=final_path,
+            skip_pages=skip_pages,
+            label_format="Page {page} of {total}",
+        )
         page_count = _count_pages(final_path)
         add_metadata(
             pdf_path=final_path,
@@ -396,6 +407,7 @@ async def export_v3_studio_pdf(
         request_id=request_id,
         render_path=f"/studio/print/{generation_id}?edition={request.edition}",
         v3_answer_key=v3_ak_dict,
+        full_cover_title=native_document is not None,
     )
 
 

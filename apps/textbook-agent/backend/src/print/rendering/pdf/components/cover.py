@@ -41,8 +41,9 @@ def generate_cover_pdf(
     school_name: str,
     teacher_name: str,
     date_label: str | None,
+    trim_title: bool = True,
 ) -> Path:
-    cover_title = clean_cover_title(title)
+    cover_title = clean_cover_title(title, trim_words=trim_title)
     formatted_date = format_cover_date(date_label)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -85,7 +86,7 @@ def generate_cover_pdf(
     return output_path
 
 
-def clean_cover_title(raw_title: str) -> str:
+def clean_cover_title(raw_title: str, *, trim_words: bool = True) -> str:
     title = (raw_title or "").strip()
     if not title:
         return "Lesson"
@@ -106,6 +107,10 @@ def clean_cover_title(raw_title: str) -> str:
     words = re.findall(r"[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)?", title)
     if not words:
         return "Lesson"
+
+    if not trim_words:
+        # Authored lesson titles are shown in full (original casing preserved).
+        return re.sub(r"\s+", " ", title).strip(" -") or "Lesson"
 
     trimmed = _trim_title_words(words)
     return " ".join(_title_case_word(word) for word in trimmed) or "Lesson"

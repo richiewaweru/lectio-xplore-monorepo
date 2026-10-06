@@ -393,6 +393,12 @@
 		gap: 12px;
 		margin-bottom: 1rem;
 	}
+	/* Editor chrome (toolbar, quality notes, edit fields) must never reach the exported PDF. */
+	@media print {
+		.print-editor {
+			display: none;
+		}
+	}
 	.toolbar {
 		display: flex;
 		flex-wrap: wrap;
