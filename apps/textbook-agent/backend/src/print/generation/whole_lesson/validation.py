@@ -8,7 +8,7 @@ from typing import Any
 
 from curriculum.approved_items import approved_item_kind
 from curriculum.teaching_plan.compatibility import response_bearing_action
-from curriculum.teaching_plan.models import VisualSpec
+from curriculum.teaching_plan.models import TeachingPlanSection, VisualSpec
 from print.contracts.lectio_page import PAGE_OBJECT_IDS
 from print.generation.page_blocks import validate_intent_departure
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
@@ -185,15 +185,100 @@ def allowed_teaching_evidence_refs(packet: ImmutableLessonPacket) -> set[str]:
     return refs
 
 
-def validate_teaching_plan(
-    plan: TeachingPlan,
-    packet: ImmutableLessonPacket,
-    *,
-    permitted_intents: set[str],
-    excluded_intents: set[str],
-    typical_by_slot: dict[str, set[str]],
-    assessment_intents: set[str] | None = None,
-) -> ValidationReport:
+SECTION_LOCAL_ISSUE_CODES = frozenset(
+    {
+        "EMPTY_SECTION",
+        "SECTION_BLOCK_LIMIT",
+        "POSITION",
+        "DUPLICATE_BLOCK_ID",
+        "INTENT_LEGALITY",
+        "OBJECT_LEAK",
+        "FIGURE_REF_UNKNOWN",
+        "VISUAL_SPEC_INVALID",
+        "FIGURE_REF_MISSING",
+        "BRIEF_TOO_SHORT",
+        "BRIEF_NO_ANCHOR_OR_TERM",
+        "BRIEF_GENERIC",
+        "EXCLUDED_TERM",
+        "EVIDENCE_REF",
+        "UNKNOWN_ITEM",
+        "DUPLICATE_ITEM_SOURCE",
+        "ASSESSMENT_SOURCE_REQUIRED",
+        "FORMATIVE_SOURCE_FORBIDDEN",
+        "TASK_MODE_REQUIRED",
+        "ASSESSMENT_SOURCE_INTENT",
+        "ASSESSMENT_SOURCE_MIX",
+        "MCQ_SOURCE_CARDINALITY",
+        "OPEN_RESPONSE_SOURCE_LIMIT",
+        "QUESTION_CONTENT",
+    }
+)
+"""Codes emitted by ``validate_teaching_section`` (one section's blocks).
+
+``DUPLICATE_BLOCK_ID`` / ``DUPLICATE_ITEM_SOURCE`` only see earlier sections when
+a shared ``TeachingValidationContext`` is passed in."""
+
+LESSON_WIDE_ISSUE_CODES = frozenset(
+    {
+        "SLOT_ORDER",
+        "ANCHOR_USAGE_SLOT_MISMATCH",
+        "LESSON_BLOCK_LIMIT",
+        "UNKNOWN_MISCONCEPTION",
+        "MUST_ESTABLISH_UNCOVERED",
+        "OBJECT_LEAK",
+    }
+)
+"""Codes emitted by ``validate_teaching_plan_structure`` and
+``validate_teaching_plan_lesson`` (whole-plan checks). ``OBJECT_LEAK`` is also a
+section-local code; the lesson-wide variant has path ``$``."""
+
+
+@dataclass
+class TeachingValidationContext:
+    """Packet-derived constants plus cross-section mutable state."""
+
+    packet: ImmutableLessonPacket
+    seen_block_ids: set[str] = field(default_factory=set)
+    seen_source_question_ids: set[str] = field(default_factory=set)
+    referenced_must: set[str] = field(default_factory=set)
+    total_blocks: int = 0
+    must_ids: set[str] = field(init=False)
+    approved_ids: set[str] = field(init=False)
+    approved_by_id: dict[str, Any] = field(init=False)
+    allowed_evidence_refs: set[str] = field(init=False)
+    misconception_ids: set[str] = field(init=False)
+    terminology: set[str] = field(init=False)
+    anchor_vocabulary: set[str] = field(init=False)
+    excluded_terms: set[str] = field(init=False)
+    backbone_figures: dict[str, dict[str, Any]] = field(init=False)
+
+    def __post_init__(self) -> None:
+        packet = self.packet
+        self.must_ids = {entry.id for entry in packet.scope.must_establish}
+        self.approved_ids = set(packet.approved_item_ids())
+        self.approved_by_id = {item.id: item for item in packet.approved_items}
+        self.allowed_evidence_refs = allowed_teaching_evidence_refs(packet)
+        self.misconception_ids = {item.id for item in packet.misconceptions}
+        terminology = {term.lower() for term in packet.scope.terminology}
+        self.anchor_vocabulary = anchor_terms(packet.anchor.description or "")
+        if not terminology:
+            # Empty terminology is allowed when the unit genuinely has none.
+            # For brief grounding, fall back to must_establish tokens so briefs that
+            # correctly cite owned outcomes are not rejected solely for missing vocab.
+            terminology = set().union(
+                *(anchor_terms(entry.statement) for entry in packet.scope.must_establish)
+            ) if packet.scope.must_establish else set()
+        self.terminology = terminology
+        self.excluded_terms = {
+            entry.statement.lower() for entry in packet.scope.must_not_introduce
+        }
+        self.backbone_figures = _backbone_figure_map(packet)
+
+
+def validate_teaching_plan_structure(
+    plan: TeachingPlan, packet: ImmutableLessonPacket
+) -> list[ValidationIssue]:
+    """Lesson-wide slot-shape checks (SLOT_ORDER, ANCHOR_USAGE_SLOT_MISMATCH)."""
     issues: list[ValidationIssue] = []
     slot_ids = [section.slot_id for section in plan.sections]
     expected_slots = [slot.slot_id for slot in packet.slots] or list(REQUIRED_SLOTS)
@@ -218,388 +303,415 @@ def validate_teaching_plan(
                 path="anchor_usage",
             )
         )
+    return issues
 
-    seen_block_ids: set[str] = set()
-    seen_source_question_ids: set[str] = set()
-    total_blocks = 0
-    must_ids = {entry.id for entry in packet.scope.must_establish}
-    referenced_must: set[str] = set()
-    approved_ids = set(packet.approved_item_ids())
-    approved_by_id = {item.id: item for item in packet.approved_items}
-    allowed_evidence_refs = allowed_teaching_evidence_refs(packet)
-    misconception_ids = {item.id for item in packet.misconceptions}
-    terminology = {term.lower() for term in packet.scope.terminology}
-    anchor_vocabulary = anchor_terms(packet.anchor.description or "")
-    if not terminology:
-        # Empty terminology is allowed when the unit genuinely has none.
-        # For brief grounding, fall back to must_establish tokens so briefs that
-        # correctly cite owned outcomes are not rejected solely for missing vocab.
-        terminology = set().union(
-            *(anchor_terms(entry.statement) for entry in packet.scope.must_establish)
-        ) if packet.scope.must_establish else set()
-    excluded_terms = {
-        entry.statement.lower() for entry in packet.scope.must_not_introduce
-    }
 
-    backbone_figures = _backbone_figure_map(packet)
+def validate_teaching_section(
+    section: TeachingPlanSection,
+    packet: ImmutableLessonPacket,
+    *,
+    permitted_intents: set[str],
+    excluded_intents: set[str],
+    typical_by_slot: dict[str, set[str]],
+    assessment_intents: set[str] | None = None,
+    context: TeachingValidationContext | None = None,
+) -> list[ValidationIssue]:
+    """Validate one section's blocks (section-local checks).
 
-    for section in plan.sections:
-        if not section.blocks:
+    With ``context=None`` a fresh context is used, so duplicate-id/source checks
+    only cover this section. Pass one shared context across sections (in plan
+    order) to get the cross-section duplicate checks and to accumulate
+    ``referenced_must`` / ``total_blocks`` for ``validate_teaching_plan_lesson``.
+    """
+    if context is None:
+        context = TeachingValidationContext(packet)
+    issues: list[ValidationIssue] = []
+    seen_block_ids = context.seen_block_ids
+    seen_source_question_ids = context.seen_source_question_ids
+    referenced_must = context.referenced_must
+    must_ids = context.must_ids
+    approved_ids = context.approved_ids
+    approved_by_id = context.approved_by_id
+    allowed_evidence_refs = context.allowed_evidence_refs
+    terminology = context.terminology
+    anchor_vocabulary = context.anchor_vocabulary
+    excluded_terms = context.excluded_terms
+    backbone_figures = context.backbone_figures
+
+    if not section.blocks:
+        issues.append(
+            ValidationIssue(
+                code="EMPTY_SECTION",
+                message=f"section {section.slot_id!r} has no blocks",
+                path=f"sections.{section.slot_id}",
+            )
+        )
+    if len(section.blocks) > packet.limits.max_blocks_per_section:
+        issues.append(
+            ValidationIssue(
+                code="SECTION_BLOCK_LIMIT",
+                message="section exceeds max_blocks_per_section",
+                path=f"sections.{section.slot_id}",
+            )
+        )
+    typical = typical_by_slot.get(section.slot_id, set())
+    for index, block in enumerate(section.blocks):
+        context.total_blocks += 1
+        path = f"sections.{section.slot_id}.blocks[{index}]"
+        if block.position != index:
             issues.append(
                 ValidationIssue(
-                    code="EMPTY_SECTION",
-                    message=f"section {section.slot_id!r} has no blocks",
-                    path=f"sections.{section.slot_id}",
+                    code="POSITION",
+                    message=f"expected position {index}",
+                    path=path,
                 )
             )
-        if len(section.blocks) > packet.limits.max_blocks_per_section:
+        if block.id in seen_block_ids:
             issues.append(
                 ValidationIssue(
-                    code="SECTION_BLOCK_LIMIT",
-                    message="section exceeds max_blocks_per_section",
-                    path=f"sections.{section.slot_id}",
+                    code="DUPLICATE_BLOCK_ID",
+                    message=f"duplicate block id {block.id!r}",
+                    path=path,
                 )
             )
-        typical = typical_by_slot.get(section.slot_id, set())
-        for index, block in enumerate(section.blocks):
-            total_blocks += 1
-            path = f"sections.{section.slot_id}.blocks[{index}]"
-            if block.position != index:
+        seen_block_ids.add(block.id)
+        try:
+            validate_intent_departure(
+                intent=block.intent,
+                typical_intents=typical,
+                permitted_intents=permitted_intents,
+                excluded_intents=excluded_intents,
+                departure_reason=block.departure_reason,
+            )
+        except ValueError as exc:
+            issues.append(
+                ValidationIssue(code="INTENT_LEGALITY", message=str(exc), path=path)
+            )
+
+        leaked = _contains_object_id(block.brief) or _contains_object_id(block.evidence)
+        if leaked:
+            issues.append(
+                ValidationIssue(
+                    code="OBJECT_LEAK",
+                    message=f"page-object id {leaked!r} appears in teaching artifact",
+                    path=path,
+                )
+            )
+
+        if block.visual is not None:
+            figure = backbone_figures.get(block.visual.figure_ref or "")
+            visual_grounding = [
+                _normalize_label_text(text)
+                for text in (
+                    *block.visual.must_show,
+                    packet.lesson.objective,
+                    *(entry.statement for entry in packet.scope.must_establish),
+                    *(_figure_grounding_texts(figure) if figure else ()),
+                )
+            ]
+            if block.visual.figure_ref and figure is None:
                 issues.append(
                     ValidationIssue(
-                        code="POSITION",
-                        message=f"expected position {index}",
-                        path=path,
+                        code="FIGURE_REF_UNKNOWN",
+                        message=(
+                            f"visual.figure_ref {block.visual.figure_ref!r} is not a "
+                            "backbone figure id"
+                        ),
+                        path=f"{path}.visual",
                     )
                 )
-            if block.id in seen_block_ids:
+            for problem in _visual_spec_problems(block.visual, visual_grounding):
                 issues.append(
                     ValidationIssue(
-                        code="DUPLICATE_BLOCK_ID",
-                        message=f"duplicate block id {block.id!r}",
-                        path=path,
+                        code="VISUAL_SPEC_INVALID",
+                        message=problem,
+                        path=f"{path}.visual",
                     )
                 )
-            seen_block_ids.add(block.id)
-            try:
-                validate_intent_departure(
-                    intent=block.intent,
-                    typical_intents=typical,
-                    permitted_intents=permitted_intents,
-                    excluded_intents=excluded_intents,
-                    departure_reason=block.departure_reason,
-                )
-            except ValueError as exc:
-                issues.append(
-                    ValidationIssue(code="INTENT_LEGALITY", message=str(exc), path=path)
-                )
 
-            leaked = _contains_object_id(block.brief) or _contains_object_id(block.evidence)
-            if leaked:
+        needed = _required_figures_for_block(block, packet)
+        if needed:
+            have = block.visual.figure_ref if block.visual is not None else None
+            missing = {
+                qid: fid for qid, fid in needed.items() if fid != have
+            }
+            if missing or len(set(needed.values())) > 1:
                 issues.append(
                     ValidationIssue(
-                        code="OBJECT_LEAK",
-                        message=f"page-object id {leaked!r} appears in teaching artifact",
-                        path=path,
+                        code="FIGURE_REF_MISSING",
+                        message=(
+                            "block owns approved questions that rely on backbone "
+                            f"figures {sorted(set(needed.values()))} (questions "
+                            f"{sorted(needed)}) but its visual.figure_ref is "
+                            f"{have!r}; one block cannot draw more than one figure, "
+                            "so each such question needs a block whose visual "
+                            "figure_ref is its figure id"
+                        ),
+                        path=f"{path}.visual",
                     )
                 )
 
-            if block.visual is not None:
-                figure = backbone_figures.get(block.visual.figure_ref or "")
-                visual_grounding = [
-                    _normalize_label_text(text)
-                    for text in (
-                        *block.visual.must_show,
-                        packet.lesson.objective,
-                        *(entry.statement for entry in packet.scope.must_establish),
-                        *(_figure_grounding_texts(figure) if figure else ()),
-                    )
-                ]
-                if block.visual.figure_ref and figure is None:
-                    issues.append(
-                        ValidationIssue(
-                            code="FIGURE_REF_UNKNOWN",
-                            message=(
-                                f"visual.figure_ref {block.visual.figure_ref!r} is not a "
-                                "backbone figure id"
-                            ),
-                            path=f"{path}.visual",
-                        )
-                    )
-                for problem in _visual_spec_problems(block.visual, visual_grounding):
-                    issues.append(
-                        ValidationIssue(
-                            code="VISUAL_SPEC_INVALID",
-                            message=problem,
-                            path=f"{path}.visual",
-                        )
-                    )
-
-            needed = _required_figures_for_block(block, packet)
-            if needed:
-                have = block.visual.figure_ref if block.visual is not None else None
-                missing = {
-                    qid: fid for qid, fid in needed.items() if fid != have
-                }
-                if missing or len(set(needed.values())) > 1:
-                    issues.append(
-                        ValidationIssue(
-                            code="FIGURE_REF_MISSING",
-                            message=(
-                                "block owns approved questions that rely on backbone "
-                                f"figures {sorted(set(needed.values()))} (questions "
-                                f"{sorted(needed)}) but its visual.figure_ref is "
-                                f"{have!r}; one block cannot draw more than one figure, "
-                                "so each such question needs a block whose visual "
-                                "figure_ref is its figure id"
-                            ),
-                            path=f"{path}.visual",
-                        )
-                    )
-
-            if _word_count(block.brief) < 15:
+        if _word_count(block.brief) < 15:
+            issues.append(
+                ValidationIssue(
+                    code="BRIEF_TOO_SHORT",
+                    message="brief has fewer than 15 words",
+                    path=f"{path}.brief",
+                )
+            )
+        brief_l = block.brief.lower()
+        if (
+            packet.anchor.id not in block.brief
+            and not any(word in brief_l for word in anchor_vocabulary)
+            and not any(term and term in brief_l for term in terminology)
+        ):
+            issues.append(
+                ValidationIssue(
+                    code="BRIEF_NO_ANCHOR_OR_TERM",
+                    message="brief must mention anchor id or approved terminology",
+                    path=f"{path}.brief",
+                )
+            )
+        for phrase in BANNED_BRIEF_PHRASES:
+            if phrase in brief_l:
                 issues.append(
                     ValidationIssue(
-                        code="BRIEF_TOO_SHORT",
-                        message="brief has fewer than 15 words",
+                        code="BRIEF_GENERIC",
+                        message=f"banned generic phrase: {phrase!r}",
                         path=f"{path}.brief",
                     )
                 )
-            brief_l = block.brief.lower()
-            if (
-                packet.anchor.id not in block.brief
-                and not any(word in brief_l for word in anchor_vocabulary)
-                and not any(term and term in brief_l for term in terminology)
-            ):
+        for term in excluded_terms:
+            if term and term in brief_l:
                 issues.append(
                     ValidationIssue(
-                        code="BRIEF_NO_ANCHOR_OR_TERM",
-                        message="brief must mention anchor id or approved terminology",
+                        code="EXCLUDED_TERM",
+                        message=f"excluded term appears in brief: {term!r}",
                         path=f"{path}.brief",
                     )
                 )
-            for phrase in BANNED_BRIEF_PHRASES:
-                if phrase in brief_l:
-                    issues.append(
-                        ValidationIssue(
-                            code="BRIEF_GENERIC",
-                            message=f"banned generic phrase: {phrase!r}",
-                            path=f"{path}.brief",
-                        )
-                    )
-            for term in excluded_terms:
-                if term and term in brief_l:
-                    issues.append(
-                        ValidationIssue(
-                            code="EXCLUDED_TERM",
-                            message=f"excluded term appears in brief: {term!r}",
-                            path=f"{path}.brief",
-                        )
-                    )
 
-            for ref in block.evidence_refs:
-                if ref not in allowed_evidence_refs:
-                    issues.append(
-                        ValidationIssue(
-                            code="EVIDENCE_REF",
-                            message=f"unresolvable evidence_ref {ref!r}",
-                            path=f"{path}.evidence_refs",
-                        )
+        for ref in block.evidence_refs:
+            if ref not in allowed_evidence_refs:
+                issues.append(
+                    ValidationIssue(
+                        code="EVIDENCE_REF",
+                        message=f"unresolvable evidence_ref {ref!r}",
+                        path=f"{path}.evidence_refs",
                     )
-                    continue
-                if ref.startswith(("scope.must_establish.", "must-")):
-                    mid = ref.split(".")[-1]
-                    if mid in must_ids:
-                        referenced_must.add(mid)
-                if ref.startswith("lesson.must_establish") or ref == "lesson.objective":
-                    continue
-                if ref.startswith("anchor."):
-                    aid = ref.split(".", 1)[-1]
-                    if (
-                        aid != packet.anchor.id
-                        and ref != f"anchor.{packet.anchor.id}"
-                        and aid not in {packet.anchor.id, packet.anchor.description}
-                    ):
-                        issues.append(
-                                ValidationIssue(
-                                    code="EVIDENCE_REF",
-                                    message=f"unresolvable evidence_ref {ref!r}",
-                                    path=f"{path}.evidence_refs",
-                                )
-                            )
-                elif ref.startswith(("item.", "approved_item")):
-                    # Approved item ids are revision-bound and may contain a
-                    # dot suffix (for example ``...i1``).  Strip only the
-                    # evidence namespace prefix; splitting on every dot
-                    # truncates the actual id and rejects valid sources.
-                    iid = ref.removeprefix("item.")
-                    if iid not in approved_ids:
-                        issues.append(
+                )
+                continue
+            if ref.startswith(("scope.must_establish.", "must-")):
+                mid = ref.split(".")[-1]
+                if mid in must_ids:
+                    referenced_must.add(mid)
+            if ref.startswith("lesson.must_establish") or ref == "lesson.objective":
+                continue
+            if ref.startswith("anchor."):
+                aid = ref.split(".", 1)[-1]
+                if (
+                    aid != packet.anchor.id
+                    and ref != f"anchor.{packet.anchor.id}"
+                    and aid not in {packet.anchor.id, packet.anchor.description}
+                ):
+                    issues.append(
                             ValidationIssue(
                                 code="EVIDENCE_REF",
-                                message=f"unknown item evidence_ref {ref!r}",
+                                message=f"unresolvable evidence_ref {ref!r}",
                                 path=f"{path}.evidence_refs",
                             )
                         )
+            elif ref.startswith(("item.", "approved_item")):
+                # Approved item ids are revision-bound and may contain a
+                # dot suffix (for example ``...i1``).  Strip only the
+                # evidence namespace prefix; splitting on every dot
+                # truncates the actual id and rejects valid sources.
+                iid = ref.removeprefix("item.")
+                if iid not in approved_ids:
+                    issues.append(
+                        ValidationIssue(
+                            code="EVIDENCE_REF",
+                            message=f"unknown item evidence_ref {ref!r}",
+                            path=f"{path}.evidence_refs",
+                        )
+                    )
 
-            for qid in block.source_question_ids:
-                if qid not in approved_ids:
-                    issues.append(
-                        ValidationIssue(
-                            code="UNKNOWN_ITEM",
-                            message=f"unknown source_question_id {qid!r}",
-                            path=path,
-                        )
-                    )
-                if qid in seen_source_question_ids:
-                    issues.append(
-                        ValidationIssue(
-                            code="DUPLICATE_ITEM_SOURCE",
-                            message=(
-                                f"approved item {qid!r} is already owned by another "
-                                "teaching block"
-                            ),
-                            path=f"{path}.source_question_ids",
-                        )
-                    )
-                seen_source_question_ids.add(qid)
-            if block.task_mode == "assessment" and not block.source_question_ids:
+        for qid in block.source_question_ids:
+            if qid not in approved_ids:
                 issues.append(
                     ValidationIssue(
-                        code="ASSESSMENT_SOURCE_REQUIRED",
+                        code="UNKNOWN_ITEM",
+                        message=f"unknown source_question_id {qid!r}",
+                        path=path,
+                    )
+                )
+            if qid in seen_source_question_ids:
+                issues.append(
+                    ValidationIssue(
+                        code="DUPLICATE_ITEM_SOURCE",
                         message=(
-                            "an assessment task must own one or more approved "
-                            "source_question_ids"
+                            f"approved item {qid!r} is already owned by another "
+                            "teaching block"
                         ),
                         path=f"{path}.source_question_ids",
                     )
                 )
-            if block.task_mode == "formative" and block.source_question_ids:
+            seen_source_question_ids.add(qid)
+        if block.task_mode == "assessment" and not block.source_question_ids:
+            issues.append(
+                ValidationIssue(
+                    code="ASSESSMENT_SOURCE_REQUIRED",
+                    message=(
+                        "an assessment task must own one or more approved "
+                        "source_question_ids"
+                    ),
+                    path=f"{path}.source_question_ids",
+                )
+            )
+        if block.task_mode == "formative" and block.source_question_ids:
+            issues.append(
+                ValidationIssue(
+                    code="FORMATIVE_SOURCE_FORBIDDEN",
+                    message="formative tasks cannot own approved assessment sources",
+                    path=f"{path}.source_question_ids",
+                )
+            )
+        if (
+            block.task_mode == "none"
+            and not block.source_question_ids
+            and block.learner_action is not None
+        ):
+            action = str(block.learner_action.action)
+            if response_bearing_action(action):
                 issues.append(
                     ValidationIssue(
-                        code="FORMATIVE_SOURCE_FORBIDDEN",
-                        message="formative tasks cannot own approved assessment sources",
-                        path=f"{path}.source_question_ids",
+                        code="TASK_MODE_REQUIRED",
+                        message="response-bearing actions require formative or assessment task_mode",
+                        path=f"{path}.task_mode",
                     )
                 )
-            if (
-                block.task_mode == "none"
-                and not block.source_question_ids
-                and block.learner_action is not None
-            ):
-                action = str(block.learner_action.action)
-                if response_bearing_action(action):
-                    issues.append(
-                        ValidationIssue(
-                            code="TASK_MODE_REQUIRED",
-                            message="response-bearing actions require formative or assessment task_mode",
-                            path=f"{path}.task_mode",
-                        )
-                    )
-            if (
-                block.source_question_ids
-                and assessment_intents is not None
-                and block.intent not in assessment_intents
-            ):
-                issues.append(
-                    ValidationIssue(
-                        code="ASSESSMENT_SOURCE_INTENT",
-                        message=(
-                            "source_question_ids may be owned only by an assessment "
-                            f"intent; got {block.intent!r}, eligible={sorted(assessment_intents)}"
-                        ),
-                        path=f"{path}.source_question_ids",
-                    )
+        if (
+            block.source_question_ids
+            and assessment_intents is not None
+            and block.intent not in assessment_intents
+        ):
+            issues.append(
+                ValidationIssue(
+                    code="ASSESSMENT_SOURCE_INTENT",
+                    message=(
+                        "source_question_ids may be owned only by an assessment "
+                        f"intent; got {block.intent!r}, eligible={sorted(assessment_intents)}"
+                    ),
+                    path=f"{path}.source_question_ids",
                 )
-            known_sources = [
+            )
+        known_sources = [
+            approved_by_id[qid]
+            for qid in block.source_question_ids
+            if qid in approved_by_id
+        ]
+        if (
+            block.learner_action is not None
+            and block.source_question_ids
+        ):
+            from curriculum.teaching_plan.compatibility import (
+                ActionSourceIncompatibleError,
+                assert_action_compatible_with_sources,
+            )
+
+            action_sources = [
                 approved_by_id[qid]
                 for qid in block.source_question_ids
                 if qid in approved_by_id
             ]
-            if (
-                block.learner_action is not None
-                and block.source_question_ids
-            ):
-                from curriculum.teaching_plan.compatibility import (
-                    ActionSourceIncompatibleError,
-                    assert_action_compatible_with_sources,
+            try:
+                assert_action_compatible_with_sources(
+                    action=block.learner_action.action,
+                    source_items=action_sources,
                 )
-
-                action_sources = [
-                    approved_by_id[qid]
-                    for qid in block.source_question_ids
-                    if qid in approved_by_id
-                ]
-                try:
-                    assert_action_compatible_with_sources(
-                        action=block.learner_action.action,
-                        source_items=action_sources,
-                    )
-                except ActionSourceIncompatibleError as exc:
-                    issues.append(
-                        ValidationIssue(
-                            code=exc.code,
-                            message=exc.message,
-                            path=f"{path}.learner_action",
-                        )
-                    )
-            if known_sources and len(known_sources) == len(block.source_question_ids):
-                source_kinds = [approved_item_kind(item) for item in known_sources]
-                mcq_ids = [
-                    qid
-                    for qid, kind in zip(block.source_question_ids, source_kinds)
-                    if kind == "multiple_choice"
-                ]
-                open_ids = [
-                    qid
-                    for qid, kind in zip(block.source_question_ids, source_kinds)
-                    if kind == "open_response"
-                ]
-                if mcq_ids and open_ids:
-                    issues.append(
-                        ValidationIssue(
-                            code="ASSESSMENT_SOURCE_MIX",
-                            message=(
-                                "one teaching block cannot mix multiple-choice and "
-                                f"open-response sources; mcq={mcq_ids}, open={open_ids}"
-                            ),
-                            path=f"{path}.source_question_ids",
-                        )
-                    )
-                elif len(mcq_ids) > 1:
-                    issues.append(
-                        ValidationIssue(
-                            code="MCQ_SOURCE_CARDINALITY",
-                            message=(
-                                "a teaching block may own exactly one multiple-choice "
-                                f"source; select one of {mcq_ids} and remove the rest"
-                            ),
-                            path=f"{path}.source_question_ids",
-                        )
-                    )
-                elif len(open_ids) > 6:
-                    issues.append(
-                        ValidationIssue(
-                            code="OPEN_RESPONSE_SOURCE_LIMIT",
-                            message=(
-                                "a questions block may own 1..6 open-response sources; "
-                                f"got {len(open_ids)}"
-                            ),
-                            path=f"{path}.source_question_ids",
-                        )
-                    )
-            # Question content must never appear as invented stems in planner output.
-            if "correct_key" in block.brief.lower() or re.search(
-                r"\bA\)|\bB\)|\bC\)|\bD\)", block.brief
-            ):
+            except ActionSourceIncompatibleError as exc:
                 issues.append(
                     ValidationIssue(
-                        code="QUESTION_CONTENT",
-                        message="planner must not write question content",
-                        path=f"{path}.brief",
+                        code=exc.code,
+                        message=exc.message,
+                        path=f"{path}.learner_action",
                     )
                 )
+        if known_sources and len(known_sources) == len(block.source_question_ids):
+            source_kinds = [approved_item_kind(item) for item in known_sources]
+            mcq_ids = [
+                qid
+                for qid, kind in zip(block.source_question_ids, source_kinds)
+                if kind == "multiple_choice"
+            ]
+            open_ids = [
+                qid
+                for qid, kind in zip(block.source_question_ids, source_kinds)
+                if kind == "open_response"
+            ]
+            if mcq_ids and open_ids:
+                issues.append(
+                    ValidationIssue(
+                        code="ASSESSMENT_SOURCE_MIX",
+                        message=(
+                            "one teaching block cannot mix multiple-choice and "
+                            f"open-response sources; mcq={mcq_ids}, open={open_ids}"
+                        ),
+                        path=f"{path}.source_question_ids",
+                    )
+                )
+            elif len(mcq_ids) > 1:
+                issues.append(
+                    ValidationIssue(
+                        code="MCQ_SOURCE_CARDINALITY",
+                        message=(
+                            "a teaching block may own exactly one multiple-choice "
+                            f"source; select one of {mcq_ids} and remove the rest"
+                        ),
+                        path=f"{path}.source_question_ids",
+                    )
+                )
+            elif len(open_ids) > 6:
+                issues.append(
+                    ValidationIssue(
+                        code="OPEN_RESPONSE_SOURCE_LIMIT",
+                        message=(
+                            "a questions block may own 1..6 open-response sources; "
+                            f"got {len(open_ids)}"
+                        ),
+                        path=f"{path}.source_question_ids",
+                    )
+                )
+        # Question content must never appear as invented stems in planner output.
+        if "correct_key" in block.brief.lower() or re.search(
+            r"\bA\)|\bB\)|\bC\)|\bD\)", block.brief
+        ):
+            issues.append(
+                ValidationIssue(
+                    code="QUESTION_CONTENT",
+                    message="planner must not write question content",
+                    path=f"{path}.brief",
+                )
+            )
+    return issues
 
+
+def validate_teaching_plan_lesson(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+    context: TeachingValidationContext,
+) -> list[ValidationIssue]:
+    """Lesson-wide checks that run after every section has been validated.
+
+    ``context`` must have been shared by all ``validate_teaching_section`` calls
+    (LESSON_BLOCK_LIMIT, MUST_ESTABLISH_UNCOVERED). Slot-shape checks live in
+    ``validate_teaching_plan_structure``.
+    """
+    issues: list[ValidationIssue] = []
+    total_blocks = context.total_blocks
+    must_ids = context.must_ids
+    referenced_must = context.referenced_must
+    misconception_ids = context.misconception_ids
     if total_blocks > packet.limits.max_total_blocks:
         issues.append(
             ValidationIssue(
@@ -656,6 +768,34 @@ def validate_teaching_plan(
             )
         )
 
+    return issues
+
+
+def validate_teaching_plan(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+    *,
+    permitted_intents: set[str],
+    excluded_intents: set[str],
+    typical_by_slot: dict[str, set[str]],
+    assessment_intents: set[str] | None = None,
+) -> ValidationReport:
+    """Combined validation: structure, then each section, then lesson-wide."""
+    context = TeachingValidationContext(packet)
+    issues = validate_teaching_plan_structure(plan, packet)
+    for section in plan.sections:
+        issues.extend(
+            validate_teaching_section(
+                section,
+                packet,
+                permitted_intents=permitted_intents,
+                excluded_intents=excluded_intents,
+                typical_by_slot=typical_by_slot,
+                assessment_intents=assessment_intents,
+                context=context,
+            )
+        )
+    issues.extend(validate_teaching_plan_lesson(plan, packet, context))
     blocking = [issue for issue in issues if issue.blocking]
     return ValidationReport(ok=not blocking, issues=issues)
 
