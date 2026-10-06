@@ -33,6 +33,8 @@ V2_COMPONENT_SELECTOR = "v2_component_selector"
 V2_PATH_STRUCTURAL_PLANNER = "v2_path_structural_planner"
 V2_PATH_CHAT_EDITOR = "v2_path_chat_editor"
 V2_LESSON_APPROACH_PLANNER = "v2_lesson_approach_planner"
+TEACHING_SPINE_PLANNER = "teaching_spine_planner"
+TEACHING_SECTION_PLANNER = "teaching_section_planner"
 V3_CONSTRUCTOR = "v3_constructor"
 V3_VISUAL_TOPOLOGY_PLANNER = "v3_visual_topology_planner"
 V3_LESSON_SOURCEBOOK_WRITER = "v3_lesson_sourcebook_writer"
@@ -75,6 +77,8 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V2_PATH_STRUCTURAL_PLANNER: ModelSlot.STANDARD,
     V2_PATH_CHAT_EDITOR: ModelSlot.STANDARD,
     V2_LESSON_APPROACH_PLANNER: ModelSlot.STANDARD,
+    TEACHING_SPINE_PLANNER: ModelSlot.STANDARD,
+    TEACHING_SECTION_PLANNER: ModelSlot.STANDARD,
     V3_CONSTRUCTOR: ModelSlot.FAST,
     V3_VISUAL_TOPOLOGY_PLANNER: ModelSlot.STANDARD,
     V3_LESSON_SOURCEBOOK_WRITER: ModelSlot.STANDARD,
@@ -147,6 +151,9 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     # passed 3/5 at low, 1/3 at medium (36k+ thinking tokens, truncated JSON,
     # 3-10 min calls), and 0/3 with thinking off (structural rule failures).
     V2_LESSON_APPROACH_PLANNER: "low",
+    # Staged planner calls share the single planner's reasoning setting.
+    TEACHING_SPINE_PLANNER: "low",
+    TEACHING_SECTION_PLANNER: "low",
     V3_CONSTRUCTOR: False,
     V3_VISUAL_TOPOLOGY_PLANNER: False,
     V3_LESSON_SOURCEBOOK_WRITER: False,
@@ -379,6 +386,8 @@ __all__ = [
     "SHARED_SOURCEBOOK_AUTHORING",
     "SHARED_TASK_AUTHORING",
     "TEACHING_PLAN_SEMANTIC_REVIEWER",
+    "TEACHING_SECTION_PLANNER",
+    "TEACHING_SPINE_PLANNER",
     "V2_COMPONENT_SELECTOR",
     "V2_LESSON_APPROACH_PLANNER",
     "V2_MERGE_CRITIC",

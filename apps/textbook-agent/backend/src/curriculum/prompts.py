@@ -134,6 +134,18 @@ def teaching_plan_semantic_reviewer_prompt() -> str:
     return effective_prompt_text("teaching-plan-semantic-reviewer")
 
 
+def teaching_spine_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("teaching-spine")
+
+
+def teaching_section_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("teaching-section")
+
+
 def targeted_lesson_repair_prompt() -> str:
     from core.prompts import effective_prompt_text
 
