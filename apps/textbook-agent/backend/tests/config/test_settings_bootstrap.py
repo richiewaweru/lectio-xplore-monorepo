@@ -160,6 +160,21 @@ def test_settings_allow_local_defaults_in_development(monkeypatch) -> None:
     assert settings.db_echo is False
 
 
+def test_staged_review_defaults_are_off(monkeypatch) -> None:
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("JWT_SECRET_KEY", "super-secret-development-key")
+    monkeypatch.setenv("FRONTEND_ORIGIN", "http://localhost:5173")
+    monkeypatch.setenv("LESSON_BUILDER_PUBLIC_URL", "http://127.0.0.1:5173")
+    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./textbook_agent.db")
+    monkeypatch.delenv("STAGED_LESSON_REVIEW", raising=False)
+    monkeypatch.delenv("STAGED_SECTION_REVIEW", raising=False)
+
+    settings = Settings(_env_file=None)
+
+    assert settings.staged_lesson_review is False
+    assert settings.staged_section_review is False
+
+
 def test_settings_reject_placeholder_secret_in_development(monkeypatch) -> None:
     monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./textbook_agent.db")

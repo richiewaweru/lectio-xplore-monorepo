@@ -199,10 +199,11 @@ class Settings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("STAGED_SECTION_REVIEW"),
     )
-    # Staged planner only. False skips the whole-lesson semantic review and its fix
-    # round (code validators and the final gate still run); for cost-vs-value runs.
+    # Staged planner only. False (default) skips the whole-lesson semantic review and
+    # its fix round (code validators and the final gate still run): on local lessons
+    # the review took 240 s+ or timed out in roughly half the runs. True turns it on.
     staged_lesson_review: bool = Field(
-        default=True,
+        default=False,
         validation_alias=AliasChoices("STAGED_LESSON_REVIEW"),
     )
     page_form_plan_timeout_seconds: int = Field(default=120, ge=1)
