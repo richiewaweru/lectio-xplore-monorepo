@@ -21,7 +21,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import EditableLessonModel, GenerationModel, NativeRealizationModel
-from document.shared_lesson.media import FigureMediaResult
+from document.shared_lesson.media import (
+    BoundFigureMediaOutcome,
+    BoundUnavailableFigureMedia,
+    FigureMediaResult,
+)
 from document.shared_lesson.realization_source import (
     ReadyRealizationSource,
     RealizationOutputError,
@@ -40,20 +44,31 @@ def _utcnow() -> datetime:
 
 
 def _figure_fields_from_media(
-    media: list[FigureMediaResult],
+    media: list[BoundFigureMediaOutcome],
 ) -> dict[str, dict[str, str]]:
-    return {
-        m.figure_node_id: {"asset_id": m.asset_url, "alt": m.alt_text.strip()}
-        for m in media
-        if m.status in ("ready", "ready_with_quality_warning")
-        and m.asset_url.lower().startswith(("http://", "https://"))
-    }
+    fields: dict[str, dict[str, str]] = {}
+    for m in media:
+        if isinstance(m, BoundUnavailableFigureMedia):
+            fields[m.figure_node_id] = {
+                "status": "unavailable",
+                "unavailable_reason": m.reason,
+                "alt": m.alt_text.strip(),
+            }
+        elif m.status in ("ready", "ready_with_quality_warning") and m.asset_url.lower().startswith(
+            ("http://", "https://")
+        ):
+            fields[m.figure_node_id] = {"asset_id": m.asset_url, "alt": m.alt_text.strip()}
+    return fields
 
 
 def _with_figure_media(
     document: dict[str, Any], fields: dict[str, dict[str, str]]
 ) -> dict[str, Any]:
-    """Return a copy of ``document`` with image-less figure nodes given media."""
+    """Return a copy of ``document`` with image-less figure nodes given media.
+
+    A ready asset also replaces an earlier unavailable placeholder; an
+    unavailable outcome only marks figures that have no image and no marker yet.
+    """
     nodes = document.get("nodes")
     if not isinstance(nodes, list):
         return document
@@ -67,12 +82,26 @@ def _with_figure_media(
             and node.get("id") in fields
         ):
             update = fields[node["id"]]
-            node = {
-                **node,
-                "asset_id": update["asset_id"],
-                "alt": update["alt"] or node.get("alt") or node.get("caption") or "",
-            }
-            changed = True
+            alt = update["alt"] or node.get("alt") or node.get("caption") or ""
+            if "asset_id" in update:
+                node = {
+                    k: v
+                    for k, v in node.items()
+                    if k not in ("status", "unavailable_reason")
+                }
+                node = {**node, "asset_id": update["asset_id"], "alt": alt}
+                changed = True
+            elif (
+                node.get("status") != "unavailable"
+                or node.get("unavailable_reason") != update["unavailable_reason"]
+            ):
+                node = {
+                    **node,
+                    "status": "unavailable",
+                    "unavailable_reason": update["unavailable_reason"],
+                    "alt": alt,
+                }
+                changed = True
         patched.append(node)
     return {**document, "nodes": patched} if changed else document
 
@@ -103,8 +132,8 @@ async def backfill_figure_media(
 
     from document.shared_lesson.media import (
         SharedFigureMediaError,
-        bind_durable_media_output,
-        verify_bound_figure_media,
+        bind_durable_media_outcome,
+        verify_bound_media_outcome,
     )
     from document.shared_lesson.media_runtime import MEDIA_STAGE
     from document.shared_lesson.repository import (
@@ -144,7 +173,7 @@ async def backfill_figure_media(
     )
     if run is None:
         return False
-    media: list[FigureMediaResult] = []
+    media: list[BoundFigureMediaOutcome] = []
     for item in active_work_items(tuple(run.work_items)):
         if not (item.stage == MEDIA_STAGE or item.item_key.startswith("media:")):
             continue
@@ -152,8 +181,8 @@ async def backfill_figure_media(
             continue
         try:
             media.append(
-                verify_bound_figure_media(
-                    bind_durable_media_output(item.output_json, stored.document),
+                verify_bound_media_outcome(
+                    bind_durable_media_outcome(item.output_json, stored.document),
                     stored.document,
                 )
             )
@@ -213,7 +242,11 @@ async def materialize_learn_output_from_shared_document(
         )
         .order_by(EditableLessonModel.created_at.desc())
     )
-    figure_media = [m for m in ready.media_results if isinstance(m, FigureMediaResult)]
+    figure_media = [
+        m
+        for m in ready.media_results
+        if isinstance(m, (FigureMediaResult, BoundUnavailableFigureMedia))
+    ]
     if (
         output.status == "completed"
         and isinstance(output.document_json, dict)

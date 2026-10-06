@@ -38,6 +38,8 @@ class ProgressItem:
     error_summary: str | None = None
     recovery_action: str | None = None
     composition_identity: str | None = None
+    # Media items only: the settled output (distinguishes ready from unavailable).
+    output_json: dict | None = None
 
 
 def as_utc_iso(value: datetime | None) -> str | None:
@@ -159,18 +161,19 @@ def project_artifact_progress(
             )
             ready = sum(1 for f in figures if f.status == "ready")
             failed = sum(1 for f in figures if f.status == "failed")
+            unavailable = sum(1 for f in figures if f.status == "unavailable")
             total = len(figures)
             if failed:
                 fig_status: StepStatus = "failed"
-            elif total and ready >= total:
+            elif total and ready + unavailable >= total:
                 fig_status = "done"
-            elif ready or any(f.status == "pending" for f in figures):
+            elif ready or unavailable or any(f.status == "pending" for f in figures):
                 fig_status = "active"
             else:
                 fig_status = "pending"
             add(
                 "media",
-                figures_label(ready=ready, failed=failed, total=total),
+                figures_label(ready=ready, failed=failed, total=total, unavailable=unavailable),
                 pick(fig_status),
                 ready,
                 total,

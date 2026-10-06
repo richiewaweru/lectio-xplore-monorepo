@@ -21,7 +21,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, NativeRealizationModel
-from document.shared_lesson.media import FigureMediaResult
+from document.shared_lesson.media import BoundUnavailableFigureMedia, FigureMediaResult
 from document.shared_lesson.realization_source import (
     ReadyRealizationSource,
     RealizationOutputError,
@@ -79,7 +79,11 @@ async def materialize_print_output_from_shared_document(
     # never be silently dropped or replaced with a placeholder; excluding it
     # here lets the adapter's own required-figure check raise truthfully
     # instead of a caller inventing degraded Print content (18_PRINT_REALIZATION).
-    figure_media = [m for m in ready.media_results if isinstance(m, FigureMediaResult)]
+    figure_media = [
+        m
+        for m in ready.media_results
+        if isinstance(m, (FigureMediaResult, BoundUnavailableFigureMedia))
+    ]
 
     # SharedDocumentPrintMappingError propagates typed; the worker turns it
     # into a terminal validation failure on the work item.

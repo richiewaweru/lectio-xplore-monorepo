@@ -36,9 +36,9 @@ from document.shared_lesson.approved_source import (
 )
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.media import (
-    FigureMediaResult,
+    BoundFigureMediaOutcome,
     SharedFigureMediaError,
-    bind_durable_media_output,
+    bind_durable_media_outcome,
 )
 from document.shared_lesson.media_runtime import MEDIA_STAGE
 from document.shared_lesson.models import SharedLessonDocument
@@ -102,7 +102,7 @@ class ReadyRealizationSource:
     plan_id: str
     plan_revision: int
     plan_hash: str
-    media_results: tuple[FigureMediaResult, ...]
+    media_results: tuple[BoundFigureMediaOutcome, ...]
     #: Advisory-gate findings recorded on the document-QA WorkItem (never part
     #: of the document identity). Empty in blocking mode or when QA was clean.
     quality_flags: tuple[QualityFlag, ...] = ()
@@ -294,19 +294,19 @@ async def ensure_shared_document_run(
 def _document_media_results(
     document: SharedLessonDocument,
     active_items: Sequence[GenerationWorkItemModel],
-) -> tuple[FigureMediaResult, ...]:
+) -> tuple[BoundFigureMediaOutcome, ...]:
     media_items = [
         item
         for item in active_items
         if item.stage == MEDIA_STAGE or item.item_key.startswith("media:")
     ]
-    results: list[FigureMediaResult] = []
+    results: list[BoundFigureMediaOutcome] = []
     for item in media_items:
         if item.status != "ready" or item.output_json is None or not item.output_hash:
             raise SharedFigureMediaError(f"media WorkItem {item.id!r} is not ready")
         if content_hash(item.output_json) != item.output_hash:
             raise SharedFigureMediaError(f"media WorkItem {item.id!r} output hash is stale")
-        results.append(bind_durable_media_output(item.output_json, document))
+        results.append(bind_durable_media_outcome(item.output_json, document))
     return tuple(results)
 
 
@@ -346,6 +346,13 @@ async def load_run_figure_qc(
             records.append(FigureQcRecord(figure_id, "unreviewed", failed=True))
             continue
         output = item.output_json if isinstance(item.output_json, dict) else {}
+        if output.get("status") == "unavailable":
+            records.append(
+                FigureQcRecord(
+                    str(output.get("figure_node_id") or figure_id), "unavailable", failed=True
+                )
+            )
+            continue
         state = str(output.get("qc_state") or "unreviewed")
         if state not in {"passed", "flagged", "unavailable", "unreviewed"}:
             state = "unreviewed"

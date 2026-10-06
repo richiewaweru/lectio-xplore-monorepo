@@ -33,11 +33,16 @@ from document.shared_lesson.media import (
     SharedFigureMediaError,
     SharedFigureMediaProviderFailed,
     SharedFigureWorkOrder,
+    UnavailableFigureMediaResult,
     bind_generated_figure,
     rebuild_figure_work_order,
+    unavailable_figure_result,
 )
 from curriculum.teaching_plan.models import VisualSpec
-from media.generation.provider_errors import safe_summary_for_code
+from media.generation.provider_errors import (
+    is_non_retryable_provider_code,
+    safe_summary_for_code,
+)
 from document.shared_lesson.models import FigureNode, SharedSection
 from document.shared_lesson.runtime import (
     TeachingPlanSource,
@@ -103,6 +108,8 @@ class MediaRuntimeOutcome(BaseModel):
 
     work_item_id: str
     media: ReadyFigureMediaResult | None = None
+    #: Set when retries were exhausted and the figure was settled as unavailable.
+    unavailable: UnavailableFigureMediaResult | None = None
     error_code: str | None = None
     error_summary: str | None = None
     preserved_ready: bool = False
@@ -294,6 +301,13 @@ def _plan_visual_spec(
     return block.visual
 
 
+def _predates_numbered_labels(work: SharedFigureWorkOrder, expected: SharedFigureWorkOrder) -> bool:
+    return (
+        work.work_order.visual.visual_style is None
+        and expected.work_order.visual.visual_style == "diagram_numbered"
+    )
+
+
 def _verify_accepted_section(
     work: SharedFigureWorkOrder,
     section: SharedSection,
@@ -318,6 +332,21 @@ def _verify_accepted_section(
         raise MediaSourceConflict(f"figure work order cannot be re-derived: {exc}") from exc
     if work.figure_semantic_hash != expected.figure_semantic_hash:
         raise MediaSourceConflict("figure work order semantic hash is stale or forged")
+    if work != expected and _predates_numbered_labels(work, expected):
+        # Orders admitted before numbered diagram labels carry no visual_style;
+        # the style is presentation-only (outside the semantic hash), so they
+        # stay valid and resume with their original unlabelled behaviour.
+        expected = expected.model_copy(
+            update={
+                "work_order": expected.work_order.model_copy(
+                    update={
+                        "visual": expected.work_order.visual.model_copy(
+                            update={"visual_style": None}
+                        )
+                    }
+                )
+            }
+        )
     if work != expected:
         raise MediaSourceConflict(
             "figure work order differs from the work order derived from the plan spec "
@@ -581,6 +610,104 @@ async def _fail_after_rollback(
     )
 
 
+def _is_terminal_figure_failure(
+    failure: WorkItemFailure, *, attempt: int, max_attempts: int
+) -> bool:
+    """True when a retryable-class media failure can no longer be retried.
+
+    Terminal means the lesson should ship with a durable "unavailable" figure:
+    the failure is a non-retryable provider code (auth / 4xx), or the work
+    item has used its whole attempt budget.  Failures that carry
+    ``RecoveryAction.NONE`` (integrity, programming, configuration) are never
+    terminal in this sense; they stay hard failures.
+    """
+    if failure.recovery_action != RecoveryAction.RETRY.value:
+        return False
+    if is_non_retryable_provider_code(failure.error_code):
+        return True
+    return attempt >= max_attempts
+
+
+async def _settle_unavailable_after_rollback(
+    job: MediaWorkItemJob,
+    *,
+    identity: SourceIdentity,
+    lease_token: int,
+    failure: WorkItemFailure,
+    attempt: int,
+    now: Any,
+) -> UnavailableFigureMediaResult | None:
+    """Complete the work item with a durable unavailable output (lease committed)."""
+    token = await rollback_for_failure_record(
+        job.session,
+        lease_token=lease_token,
+        lease_committed=True,
+        reclaim=lambda: claim_work_item(
+            job.session,
+            work_item_id=job.work_item_id,
+            worker_id=job.worker_id,
+            source=identity,
+            lease_seconds=job.lease_seconds,
+            now=now,
+        ),
+    )
+    if token is None:
+        return None
+    unavailable = unavailable_figure_result(
+        job.work,
+        error_code=failure.error_code,
+        reason=safe_summary_for_code(failure.error_code)
+        if failure.error_code.startswith(("provider_", "render_"))
+        else failure.safe_summary,
+        attempts=max(attempt, 1),
+    )
+    output = unavailable.model_dump(mode="json")
+    await complete_work_item(
+        job.session,
+        work_item_id=job.work_item_id,
+        worker_id=job.worker_id,
+        lease_token=token,
+        output_json=output,
+        output_hash=content_hash(output),
+        now=now,
+    )
+    return unavailable
+
+
+async def _record_media_failure(
+    job: MediaWorkItemJob,
+    *,
+    identity: SourceIdentity,
+    lease_token: int,
+    failure: WorkItemFailure,
+    attempt: int,
+    max_attempts: int,
+    now: Any,
+) -> tuple[GenerationWorkItemModel | None, UnavailableFigureMediaResult | None]:
+    """Settle a post-claim failure as unavailable when terminal, else record it."""
+    if _is_terminal_figure_failure(failure, attempt=attempt, max_attempts=max_attempts):
+        unavailable = await _settle_unavailable_after_rollback(
+            job,
+            identity=identity,
+            lease_token=lease_token,
+            failure=failure,
+            attempt=attempt,
+            now=now,
+        )
+        if unavailable is not None:
+            return None, unavailable
+        return None, None
+    failed = await _fail_after_rollback(
+        job,
+        identity=identity,
+        lease_token=lease_token,
+        lease_committed=True,
+        failure=failure,
+        now=now,
+    )
+    return failed, None
+
+
 async def execute_figure_media_work_item(
     job: MediaWorkItemJob,
     *,
@@ -602,6 +729,9 @@ async def execute_figure_media_work_item(
     # outside the greenlet raises MissingGreenlet.
     item_id = item.id
     lease_token = item.lease_token or 0
+    run_id = item.run_id
+    attempt = item.attempt
+    max_attempts = item.max_attempts
     compatibility = _checkpoint_compatibility(source=identity, item=item)
     try:
         _validate_item_binding(item, job.work)
@@ -705,25 +835,28 @@ async def execute_figure_media_work_item(
             safe_summary=safe_summary_for_code(provider_code),
             recovery_action=RecoveryAction.RETRY,
         )
-        failed_item = await _fail_after_rollback(
+        failed_item, unavailable = await _record_media_failure(
             job,
             identity=identity,
             lease_token=lease_token,
-            lease_committed=True,
             failure=failure,
+            attempt=attempt,
+            max_attempts=max_attempts,
             now=now,
         )
-        assert failed_item is not None  # lease_committed=True never skips the record
+        # lease_committed=True never skips the record.
+        assert failed_item is not None or unavailable is not None
         await append_event(
             job.session,
-            run_id=failed_item.run_id,
-            work_item_id=failed_item.id,
+            run_id=run_id,
+            work_item_id=item_id,
             event_type="media_provider_failure_diagnostic",
             error_code=failure.error_code,
             safe_payload={"media_block_status": "failed"},
         )
         return MediaRuntimeOutcome(
             work_item_id=item_id,
+            unavailable=unavailable,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
@@ -734,39 +867,39 @@ async def execute_figure_media_work_item(
             safe_summary="Figure media output failed the shared semantic contract.",
             recovery_action=RecoveryAction.RETRY,
         )
-        if (
-            await _fail_after_rollback(
-                job,
-                identity=identity,
-                lease_token=lease_token,
-                lease_committed=True,
-                failure=failure,
-                now=now,
-            )
-            is None
-        ):
+        failed_item, unavailable = await _record_media_failure(
+            job,
+            identity=identity,
+            lease_token=lease_token,
+            failure=failure,
+            attempt=attempt,
+            max_attempts=max_attempts,
+            now=now,
+        )
+        if failed_item is None and unavailable is None:
             raise
         return MediaRuntimeOutcome(
             work_item_id=item_id,
+            unavailable=unavailable,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )
     except Exception as exc:  # noqa: BLE001 - fail closed for unknown provider errors.
         failure = _failure_for_exception(exc)
-        if (
-            await _fail_after_rollback(
-                job,
-                identity=identity,
-                lease_token=lease_token,
-                lease_committed=True,
-                failure=failure,
-                now=now,
-            )
-            is None
-        ):
+        failed_item, unavailable = await _record_media_failure(
+            job,
+            identity=identity,
+            lease_token=lease_token,
+            failure=failure,
+            attempt=attempt,
+            max_attempts=max_attempts,
+            now=now,
+        )
+        if failed_item is None and unavailable is None:
             raise
         return MediaRuntimeOutcome(
             work_item_id=item_id,
+            unavailable=unavailable,
             error_code=failure.error_code,
             error_summary=failure.safe_summary,
         )

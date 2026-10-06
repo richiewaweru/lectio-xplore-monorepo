@@ -62,6 +62,9 @@ DETERMINISTIC_ISSUE_CLASSIFICATION: dict[str, str] = {
     "section_title_mismatch": "hard",
     "source_lineage_mismatch": "hard",
     "required_media_missing": "hard",
+    # Retries exhausted: the lesson ships with a labelled placeholder. Only a
+    # figure with NO media outcome at all is ``required_media_missing`` (hard).
+    "figure_media_unavailable": "advisory",
     "repair_changed_section_identity": "hard",
     "metadata_or_placeholder_leak": "advisory",
     "internal_id_leak": "advisory",
@@ -76,6 +79,23 @@ DETERMINISTIC_ISSUE_CLASSIFICATION: dict[str, str] = {
 
 def is_advisory_deterministic_code(code: str) -> bool:
     return DETERMINISTIC_ISSUE_CLASSIFICATION.get(code) == "advisory"
+
+
+def split_media_outcomes(
+    results: Sequence[Any],
+) -> tuple[tuple[str, ...], dict[str, str]]:
+    """Split bound media outcomes into ready figure ids and unavailable ``id -> reason``.
+
+    Duck-typed on ``status`` so QA keeps no import dependency on the media contract.
+    """
+    ready: list[str] = []
+    unavailable: dict[str, str] = {}
+    for result in results:
+        if getattr(result, "status", "ready") == "unavailable":
+            unavailable[result.figure_node_id] = result.reason
+        else:
+            ready.append(result.figure_node_id)
+    return tuple(ready), unavailable
 
 
 class DocumentQAResult(BaseModel):
@@ -146,6 +166,7 @@ def qa_shared_lesson_document(
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
     available_media_ids: Sequence[str] = (),
+    unavailable_media: Mapping[str, str] | None = None,
 ) -> DocumentQAResult:
     """Run final section, boundary, lineage, media and hash checks.
 
@@ -154,10 +175,14 @@ def qa_shared_lesson_document(
     the bounded repair contract.
     """
     issues: list[ContinuityIssue] = []
+    #: Always advisory (in every quality-gate mode): an exhausted figure must
+    #: never stop the lesson from shipping.
+    unavailable_issues: list[ContinuityIssue] = []
     sections = tuple(document.sections)
     plans = tuple(teaching_plan_sections)
     source_facts_by_section = source_facts_by_section or {}
     required_media_by_section = required_media_by_section or {}
+    unavailable_media = unavailable_media or {}
 
     if len(sections) != len(plans):
         issues.append(
@@ -237,7 +262,18 @@ def qa_shared_lesson_document(
         required_media = set(required_media_by_section.get(section.id, ()))
         if required_media:
             available = set(available_media_ids)
-            missing = sorted(required_media - available)
+            unavailable_here = sorted((required_media - available) & set(unavailable_media))
+            missing = sorted(required_media - available - set(unavailable_media))
+            for figure_id in unavailable_here:
+                unavailable_issues.append(
+                    _issue(
+                        "figure_media_unavailable",
+                        section.id,
+                        unavailable_media[figure_id],
+                        "Retry figure generation, or replace the figure in the editor.",
+                        [figure_id],
+                    )
+                )
             if missing:
                 issues.append(
                     _issue(
@@ -268,10 +304,11 @@ def qa_shared_lesson_document(
             if issue.issue_code not in _SEMANTIC_CONTINUITY_ISSUE_CODES
         )
 
-    advisory: list[ContinuityIssue] = []
+    advisory: list[ContinuityIssue] = list(unavailable_issues)
     if settings.document_quality_gate == "advisory":
-        advisory = [issue for issue in issues if is_advisory_deterministic_code(issue.issue_code)]
-        issues = [issue for issue in issues if issue not in advisory]
+        gated = [issue for issue in issues if is_advisory_deterministic_code(issue.issue_code)]
+        advisory = advisory + gated
+        issues = [issue for issue in issues if issue not in gated]
     return DocumentQAResult(
         document_id=document.id,
         document_revision=document.revision,
@@ -293,4 +330,5 @@ __all__ = [
     "is_advisory_deterministic_code",
     "qa_shared_lesson_document",
     "require_ready_document",
+    "split_media_outcomes",
 ]

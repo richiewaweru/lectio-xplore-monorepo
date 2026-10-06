@@ -15,9 +15,10 @@ from curriculum.shared_tasks.models import ACTION_RESPONSE_TYPES, SharedTaskSpec
 from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.media import (
-    FigureMediaResult,
+    BoundFigureMediaOutcome,
+    BoundUnavailableFigureMedia,
     SharedFigureMediaError,
-    verify_bound_figure_media,
+    verify_bound_media_outcome,
 )
 from document.shared_lesson.models import (
     CalloutNode as SharedCalloutNode,
@@ -382,7 +383,7 @@ _USABLE_MEDIA_STATUSES = frozenset({"ready", "ready_with_quality_warning"})
 
 
 def _ordinary_node(
-    node: Any, media_by_figure: Mapping[str, FigureMediaResult] | None = None
+    node: Any, media_by_figure: Mapping[str, BoundFigureMediaOutcome] | None = None
 ) -> dict[str, Any]:
     base = {"id": node.id, "kind": node.kind, "teaching_block_id": node.teaching_block_id}
     if isinstance(node, SharedParagraphNode):
@@ -393,6 +394,20 @@ def _ordinary_node(
         return {**base, "ordered": node.display.ordered, "items": list(node.display.items)}
     if isinstance(node, SharedFigureNode):
         media = (media_by_figure or {}).get(node.id)
+        if isinstance(media, BoundUnavailableFigureMedia):
+            # Generation exhausted its retries: the lesson ships with a visible,
+            # teacher-safe placeholder instead of an image.
+            return {
+                **base,
+                "status": "unavailable",
+                "unavailable_reason": media.reason,
+                "caption": node.display.caption,
+                "alt": (
+                    node.accessibility.alt_text.strip()
+                    or media.alt_text.strip()
+                    or node.display.caption
+                ),
+            }
         # The Learn figure renderer resolves ``asset_id`` when it is an
         # absolute URL, so a verified media result's URL is carried there.
         # Without media there is no image; alt falls back to the caption.
@@ -457,7 +472,7 @@ def realize_shared_document_for_learn(
     subject: str,
     source_generation_id: str | None = None,
     learn_document_id: str | None = None,
-    figure_media: Sequence[FigureMediaResult] = (),
+    figure_media: Sequence[BoundFigureMediaOutcome] = (),
 ) -> SharedDocumentLearnRealization:
     """Copy one exact READY shared artifact into the existing LearnDocument v2.
 
@@ -490,18 +505,21 @@ def realize_shared_document_for_learn(
     if content_hash(normalized.model_dump(mode="json")) != stored.storage_hash:
         raise SharedDocumentLearnMappingError("shared document storage hash is stale")
 
-    media_by_figure: dict[str, FigureMediaResult] = {}
+    media_by_figure: dict[str, BoundFigureMediaOutcome] = {}
     for media in figure_media:
         if media.figure_node_id in media_by_figure:
             raise SharedDocumentLearnMappingError(
                 f"duplicate media for figure {media.figure_node_id!r}"
             )
         try:
-            verified = verify_bound_figure_media(media, normalized)
+            verified = verify_bound_media_outcome(media, normalized)
         except SharedFigureMediaError as exc:
             raise SharedDocumentLearnMappingError(
                 f"figure {media.figure_node_id!r} media binding failed"
             ) from exc
+        if isinstance(verified, BoundUnavailableFigureMedia):
+            media_by_figure[media.figure_node_id] = verified
+            continue
         # Same rule as Print: a quality-warning image is still usable.
         if verified.status not in _USABLE_MEDIA_STATUSES or not verified.asset_url.lower().startswith(
             ("http://", "https://")

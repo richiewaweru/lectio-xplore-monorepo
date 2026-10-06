@@ -143,7 +143,7 @@ async def verify_shared_document_lineage_for_publish(
 def _without_figure_media(nodes: Mapping[Any, Any]) -> dict[Any, Any]:
     return {
         node_id: (
-            {k: v for k, v in node.items() if k not in ("asset_id", "alt")}
+            {k: v for k, v in node.items() if k not in ("asset_id", "alt", "status", "unavailable_reason")}
             if isinstance(node, Mapping) and node.get("kind") == "figure"
             else node
         )

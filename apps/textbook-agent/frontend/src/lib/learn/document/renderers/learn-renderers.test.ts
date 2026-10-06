@@ -74,6 +74,28 @@ describe('Learn document renderers', () => {
 		expect(none.container.querySelector('[data-testid="figure-img"]')).toBeNull();
 	});
 
+	it('renders a visible placeholder with the reason for an unavailable figure', () => {
+		const view = render(FigureNode, {
+			node: {
+				id: 'f',
+				kind: 'figure',
+				status: 'unavailable',
+				unavailable_reason: 'The figure service was unavailable.',
+				caption: 'A triangle',
+				alt: 'Triangle ABC'
+			},
+			figureNumber: 2
+		});
+		const box = view.container.querySelector('[data-testid="figure-unavailable"] [role="img"]');
+		expect(box?.getAttribute('aria-label')).toContain("Figure couldn't be generated");
+		expect(box?.getAttribute('aria-label')).toContain('The figure service was unavailable.');
+		expect(box?.textContent).toContain("Figure couldn't be generated");
+		expect(box?.textContent).toContain('The figure service was unavailable.');
+		expect(view.container.querySelector('img')).toBeNull();
+		expect(view.container.querySelector('figcaption')?.textContent).toContain('Figure 2. A triangle');
+		view.unmount();
+	});
+
 	it('hides a broken figure frame and caption, then recovers for a changed asset', async () => {
 		const view = render(FigureNode, {
 			node: { id: 'f', kind: 'figure', asset_id: 'one', caption: 'Figure caption' },

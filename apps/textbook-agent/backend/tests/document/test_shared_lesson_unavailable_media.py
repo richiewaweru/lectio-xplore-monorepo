@@ -88,3 +88,27 @@ def test_unavailable_outcome_requires_reason_and_attempts() -> None:
         UnavailableFigureMediaResult.model_validate({**data, "attempts": 0})
     with pytest.raises(ValueError):
         UnavailableFigureMediaResult.model_validate({**data, "asset_url": "https://x"})
+
+
+def test_orders_admitted_before_numbered_labels_still_verify_on_resume() -> None:
+    from document.shared_lesson.media_runtime import MediaSourceConflict, _verify_accepted_section
+    from tests.document.test_shared_lesson_media import _section, _source
+
+    work = _work()
+    assert work.work_order.visual.visual_style == "diagram_numbered"
+    visual = work.work_order.visual.model_copy(update={"visual_style": None})
+    legacy = work.model_copy(
+        update={"work_order": work.work_order.model_copy(update={"visual": visual})}
+    )
+    section = _section("section-a", 0)
+    _verify_accepted_section(legacy, section, _source())  # tolerated
+    _verify_accepted_section(work, section, _source())
+    forged = work.model_copy(
+        update={
+            "work_order": work.work_order.model_copy(
+                update={"visual": visual.model_copy(update={"purpose": "Something else"})}
+            )
+        }
+    )
+    with pytest.raises(MediaSourceConflict):
+        _verify_accepted_section(forged, section, _source())

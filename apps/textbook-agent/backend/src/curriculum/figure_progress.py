@@ -133,6 +133,21 @@ def project_figures(
             )
         identity = _identity(item)
         warnings = [str(w) for w in identity.get("warnings") or []]
+        output = item.output_json if isinstance(getattr(item, "output_json", None), dict) else {}
+        if item.status == "ready" and output.get("status") == "unavailable":
+            return FigureProgressDTO(
+                figure_id=figure_id,
+                section_id=section_id or identity.get("section_id"),
+                section_title=section_title,
+                block_id=block_id,
+                status="unavailable",
+                required=bool(identity.get("required", required)),
+                error_code=str(output.get("error_code") or "") or None,
+                error_summary=str(output.get("reason") or "") or None,
+                attempt=item.attempt,
+                max_attempts=item.max_attempts,
+                warnings=warnings,
+            )
         if item.status == "ready":
             status = "ready"
         elif item.status in _FAILED:
@@ -187,10 +202,14 @@ def project_figures(
     return records
 
 
-def figures_label(*, ready: int, failed: int, total: int) -> str:
-    if total and ready >= total:
+def figures_label(*, ready: int, failed: int, total: int, unavailable: int = 0) -> str:
+    if total and ready + unavailable >= total:
+        if unavailable:
+            return f"Figures: {ready} ready / {unavailable} unavailable"
         return f"Figures: {total} ready"
     parts = [f"{ready} ready"]
+    if unavailable:
+        parts.append(f"{unavailable} unavailable")
     if failed:
         parts.append(f"{failed} failed")
     parts.append(f"{total} planned")

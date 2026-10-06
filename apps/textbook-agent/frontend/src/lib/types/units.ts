@@ -304,7 +304,7 @@ export interface FigureProgress {
 	section_id?: string | null;
 	section_title?: string | null;
 	block_id?: string | null;
-	status: 'planned' | 'pending' | 'ready' | 'failed';
+	status: 'planned' | 'pending' | 'ready' | 'failed' | 'unavailable';
 	required?: boolean;
 	error_code?: string | null;
 	error_summary?: string | null;

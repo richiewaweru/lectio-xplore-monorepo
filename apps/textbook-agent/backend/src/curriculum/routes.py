@@ -378,6 +378,14 @@ async def _attach_progress(
                 ),
                 else_=None,
             ),
+            # Media outputs are small; they tell a ready figure from an unavailable one.
+            case(
+                (
+                    GenerationWorkItemModel.stage == "media_generation",
+                    GenerationWorkItemModel.output_json,
+                ),
+                else_=None,
+            ),
         )
         .where(GenerationWorkItemModel.run_id.in_(run_ids))
         .order_by(GenerationWorkItemModel.created_at)
@@ -397,6 +405,7 @@ async def _attach_progress(
         error_summary,
         recovery_action,
         composition_identity,
+        output_json,
     ) in items:
         by_run.setdefault(run_id, []).append(
             ProgressItem(
@@ -412,6 +421,7 @@ async def _attach_progress(
                 error_summary=error_summary,
                 recovery_action=recovery_action,
                 composition_identity=composition_identity,
+                output_json=output_json if isinstance(output_json, dict) else None,
             )
         )
     shared = runs.get(shared_run_id) if shared_run_id else None

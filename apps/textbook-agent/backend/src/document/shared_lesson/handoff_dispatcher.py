@@ -14,11 +14,12 @@ from document.shared_lesson.handoff import (
 )
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.media import (
-    FigureMediaResult,
+    BoundFigureMediaOutcome,
     SharedFigureMediaError,
-    verify_bound_durable_media,
+    verify_bound_media_outcome,
 )
 from document.shared_lesson.models import FigureNode, SharedLessonDocument, SharedSection
+from document.shared_lesson.qa import split_media_outcomes
 from document.shared_lesson.runtime import TeachingPlanSource, verify_teaching_plan_source
 
 
@@ -49,8 +50,8 @@ def _required_media(document: SharedLessonDocument) -> dict[str, tuple[str, ...]
 def _verify_media(
     document: SharedLessonDocument,
     required_media_by_section: Mapping[str, Sequence[str]] | None,
-    media_results: Sequence[FigureMediaResult],
-) -> tuple[str, ...]:
+    media_results: Sequence[BoundFigureMediaOutcome],
+) -> tuple[tuple[str, ...], dict[str, str]]:
     expected = _required_media(document)
     declared = {
         section_id: tuple(figure_ids)
@@ -66,7 +67,7 @@ def _verify_media(
     expected_ids = {
         (section_id, figure_id) for section_id, values in expected.items() for figure_id in values
     }
-    supplied: dict[tuple[str, str], FigureMediaResult] = {}
+    supplied: dict[tuple[str, str], BoundFigureMediaOutcome] = {}
     for result in media_results:
         identity = (result.section_id, result.figure_node_id)
         if identity in supplied:
@@ -74,7 +75,7 @@ def _verify_media(
                 f"duplicate durable media evidence for {identity!r}"
             )
         try:
-            verify_bound_durable_media(result, document)
+            verify_bound_media_outcome(result, document)
         except SharedFigureMediaError as exc:
             raise SharedDocumentHandoffDispatchError(
                 f"durable media evidence is stale for {identity!r}"
@@ -88,7 +89,8 @@ def _verify_media(
         raise SharedDocumentHandoffDispatchError(
             "durable media evidence does not cover the QA dispatch document"
         )
-    return tuple(sorted(result.figure_node_id for result in supplied.values()))
+    ready_ids, unavailable = split_media_outcomes(list(supplied.values()))
+    return tuple(sorted(ready_ids)), unavailable
 
 
 def _verify_dispatch_identity(result: SharedDocumentQADispatchResult) -> None:
@@ -130,7 +132,7 @@ async def handoff_qa_dispatch_result(
     sections: Mapping[str, SharedSection] | Sequence[SharedSection],
     tasks: Sequence[SharedTaskSpec] = (),
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
-    media_results: Sequence[FigureMediaResult] = (),
+    media_results: Sequence[BoundFigureMediaOutcome] = (),
 ) -> SharedLessonHandoffEvidence:
     """Handoff one already-QA'd document without making another provider call."""
     if not isinstance(result, SharedDocumentQADispatchResult):
@@ -151,7 +153,7 @@ async def handoff_qa_dispatch_result(
         raise SharedDocumentHandoffDispatchError(
             "QA dispatch document source differs from the approved Teaching Plan"
         )
-    available_media_ids = _verify_media(
+    available_media_ids, unavailable_media = _verify_media(
         document,
         required_media_by_section,
         media_results,
@@ -170,6 +172,7 @@ async def handoff_qa_dispatch_result(
             source_facts_by_section=None,
             required_media_by_section=required_media_by_section,
             available_media_ids=available_media_ids,
+            unavailable_media=unavailable_media,
             expected_content_hash=document.content_hash,
             verified_semantic_qa=result.verified_qa.semantic_qa,
         )

@@ -197,6 +197,7 @@ def assemble_shared_lesson_document(
     source_facts_by_section: Mapping[str, Sequence[str]] | None = None,
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
     available_media_ids: Sequence[str] = (),
+    unavailable_media: Mapping[str, str] | None = None,
     expected_content_hash: str | None = None,
 ) -> SharedLessonAssemblyResult:
     """Assemble accepted section outputs and run the final deterministic gate.
@@ -291,6 +292,7 @@ def assemble_shared_lesson_document(
         source_facts_by_section=source_facts_by_section,
         required_media_by_section=required_media_by_section,
         available_media_ids=available_media_ids,
+        unavailable_media=unavailable_media,
     )
     return SharedLessonAssemblyResult(
         document=document,
