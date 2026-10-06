@@ -218,7 +218,12 @@ def test_active_run_projects_planning_with_card_progress_despite_structural_stat
         generation_id="prep-teaching-worker",
         state={"structural_plan": {"sections": []}, "structure_review_open": True},
         preparation_run=PreparationRunView(
-            run_id="run-1", status="running", items_total=3, items_ready=1, teaching_plan="not_started"
+            run_id="run-1",
+            status="running",
+            items_total=3,
+            items_ready=1,
+            teaching_plan="not_started",
+            backbone="ready",
         ),
     )
 
@@ -230,6 +235,30 @@ def test_active_run_projects_planning_with_card_progress_despite_structural_stat
         workspace.preparation.progress.items_total,
         workspace.preparation.progress.items_ready,
     ) == (3, 1)
+    assert workspace.preparation.progress.backbone == "ready"
+
+
+def test_backbone_progress_defaults_and_failed_state() -> None:
+    default = project_lesson_workspace(
+        generation_id="prep-bb",
+        preparation_run=PreparationRunView(run_id="run-1", status="running"),
+    ).preparation
+    assert default.progress.backbone == "not_started"  # legacy runs have no backbone item
+
+    failed = project_lesson_workspace(
+        generation_id="prep-bb",
+        preparation_run=PreparationRunView(
+            run_id="run-1",
+            status="failed_recoverable",
+            error_code="backbone_invalid",
+            retryable=True,
+            backbone="failed",
+            failed_work_item_ids=("wi-bb",),
+        ),
+    ).preparation
+    assert failed.progress.backbone == "failed" and failed.progress.items_total == 0
+    assert failed.progress.failed_work_item_ids == ["wi-bb"]
+    assert failed.error.code == "backbone_invalid"
 
 
 def test_failed_run_projects_failure_with_recovery_action() -> None:

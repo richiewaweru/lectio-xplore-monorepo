@@ -66,6 +66,7 @@ async def test_list_prompts_includes_manifest_entries_with_modified_flag():
     assert payload[EDITABLE_PROMPT_ID]["editable"] is True
     assert payload[EDITABLE_PROMPT_ID]["modified"] is False
     assert payload[LOCKED_PROMPT_ID]["editable"] is False
+    assert payload["lesson-backbone-writer"]["editable"] is False
 
 
 async def test_get_prompt_returns_default_text_and_version():

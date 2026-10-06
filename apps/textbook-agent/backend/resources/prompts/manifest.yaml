@@ -139,3 +139,9 @@ prompts:
     stage_label: Repairs one named lesson target
     editable: false
     version: 1
+
+  - id: lesson-backbone-writer
+    file: lesson-backbone-writer.md
+    stage_label: Writes the lesson's anchor scenario and data
+    editable: false
+    version: 1

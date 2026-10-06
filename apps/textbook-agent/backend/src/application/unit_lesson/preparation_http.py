@@ -22,6 +22,7 @@ from application.unit_lesson.preparation_runs import (
 )
 from core.database.models import GenerationModel
 from core.entities.user import User
+from curriculum.backbone.persistence import load_backbone_record
 from curriculum.planning.persistence import load_chunked_state
 from infra.auth.middleware import get_current_user
 from infra.database.session import get_async_session
@@ -123,6 +124,23 @@ async def get_preparation_structure(
     if not isinstance(plan, dict):
         raise HTTPException(status_code=404, detail="Structural plan not found")
     return {"generation_id": generation_id, "structural_plan": plan}
+
+
+@router.get("/{generation_id}/backbone")
+async def get_preparation_backbone(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    """The lesson backbone (read-only for teachers); 404 until it is ready."""
+    generation = await session.get(GenerationModel, generation_id)
+    if generation is None or generation.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Generation not found")
+    record = await load_backbone_record(session, generation_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Backbone not ready")
+    backbone, digest, _input_hash = record
+    return {"backbone": backbone.model_dump(mode="json"), "hash": digest}
 
 
 __all__ = ["router"]

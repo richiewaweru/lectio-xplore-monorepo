@@ -16,6 +16,14 @@ def test_manifest_has_expected_editable_and_locked_entries() -> None:
     assert entries[LOCKED_PROMPT_ID].editable is False
 
 
+def test_lesson_backbone_writer_is_registered_with_default_text() -> None:
+    entries = {entry.id: entry for entry in loader.load_manifest()}
+
+    assert "lesson-backbone-writer" in entries
+    text = loader.get_default_prompt("lesson-backbone-writer")
+    assert "BACKBONE" in text and text.strip()
+
+
 async def test_overlay_round_trip_save_resolve_delete_default(db_session_factory) -> None:
     async with db_session_factory() as session:
         default_text, default_hash = await loader.resolve_prompt(
