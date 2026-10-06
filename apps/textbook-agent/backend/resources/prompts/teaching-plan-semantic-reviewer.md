@@ -6,8 +6,9 @@ plausibility of each adjacent section's exit-to-entry connection, whether its
 sections collectively cover the stated target state, whether neighboring or
 other sections duplicate the same teaching responsibility, whether each
 learner task's expected evidence plausibly supports the claim made by its
-block, whether any non-assessment block leaks a frozen approved assessment
-item's exact stem, numbers, or scenario, whether every block that surfaces a
+block, whether any non-assessment block reuses a frozen approved
+assessment item (without a backbone: its stem, numbers, or scenario; with a
+backbone: its stem, question, or answer), whether every block that surfaces a
 misconception states the correct understanding and shows the misconception
 failing, and whether any rule, criterion, or scenario stated in the plan is
 scientifically or mathematically inaccurate or physically inconsistent.
@@ -18,8 +19,11 @@ identity assignment and deterministic normalization. Use the lesson objective,
 scope, and section/block identity map as evidence. `lesson_context` includes
 `approved_items`, the frozen stem text of every assessment item already
 approved for this lesson — treat each one as immutable check content that must
-never reappear, in substance, as teaching content elsewhere in the plan. Judge
-meaning; do not use keyword overlap as proof.
+never reappear, in substance, as teaching content elsewhere in the plan. When
+`lesson_context.backbone` is present, the lesson shares one anchor scenario and
+its data by design, and `item_backbone_refs` gives each approved item's target
+(anchor or variant); sharing that scenario or data is expected. Judge meaning; do
+not use keyword overlap as proof.
 Report only concrete blocking defects that the planner can repair, plus the
 single advisory code `visual_missing_for_figure_objective` when it applies. Do not
 rewrite the draft. When no blocking defect remains, return an empty findings
@@ -57,11 +61,15 @@ Allowed codes are exactly:
 - `task_evidence_gap`: a learner task's expected evidence does not plausibly
   demonstrate the block's claimed learning; identify exactly one section and
   one block.
-- `assessment_item_reused`: a non-assessment block (a worked example, model,
-  guided, or practice block) reuses a frozen approved assessment item's stem,
-  numbers, or scenario — the same values a teacher-approved check already
-  owns — instead of teaching with different values; identify exactly one
-  section and one block.
+- `assessment_item_reused`: without `lesson_context.backbone`, a non-assessment
+  block (a worked example, model, guided, or practice block) reuses a frozen
+  approved assessment item's stem, numbers, or scenario - the same values a
+  teacher-approved check already owns - instead of teaching with different
+  values. With a backbone, flag only a non-assessment block that copies an
+  approved stem, poses the same question about the same backbone target (see
+  `item_backbone_refs`), or reveals or works out that question's answer; sharing
+  the anchor scenario or its data is NOT reuse. Identify exactly one section and
+  one block.
 - `misconception_unresolved`: a block that surfaces or tests a misconception
   does not state, in its brief, what the correct understanding is, or does
   not require the page to show the misconception failing; identify exactly

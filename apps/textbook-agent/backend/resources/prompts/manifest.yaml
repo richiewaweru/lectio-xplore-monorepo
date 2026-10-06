@@ -132,7 +132,7 @@ prompts:
     file: teaching-plan-semantic-reviewer.md
     stage_label: Reviews Teaching Plan progression
     editable: false
-    version: 3
+    version: 4
 
   - id: targeted-lesson-repair
     file: targeted-lesson-repair.md
@@ -144,4 +144,4 @@ prompts:
     file: lesson-backbone-writer.md
     stage_label: Writes the lesson's anchor scenario and data
     editable: false
-    version: 1
+    version: 2

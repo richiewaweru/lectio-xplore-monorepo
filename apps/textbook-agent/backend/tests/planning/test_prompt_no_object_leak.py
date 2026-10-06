@@ -138,6 +138,9 @@ def test_backbone_block_present_only_when_packet_has_backbone() -> None:
     assert "{resource_identity}" not in rendered
     assert rendered.index("## Lesson backbone") < rendered.index("## LEARNER ACTION POLICY")
     assert '"item_backbone_refs"' in rendered
+    assert "Share the anchor scenario" in rendered
+    assert "same question about the same target" in rendered
+    assert "takes precedence over any rule about avoiding" not in rendered
 
 
 def test_packet_without_backbone_serializes_and_loads_as_before() -> None:
