@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 
+from curriculum.planning.skeletons import load_skeleton_catalog
 from print.contracts.lectio_page import PAGE_OBJECT_IDS
 from print.generation.catalogue_projections import TeachingGuidanceProjection
 from print.generation.prompts import lesson_approach_planner_prompt
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
 from resource_specs.loader import get_spec
-from resource_specs.renderer import render_resource_identity
+from resource_specs.renderer import render_lesson_design_guidance, render_resource_identity
 
 
 class PromptObjectLeakError(ValueError):
@@ -50,6 +51,11 @@ def render_teaching_prompt(
 ) -> str:
     spec = get_spec(resource_id)
     identity = render_resource_identity(spec)
+    recipe_guidance = load_skeleton_catalog().knowledge_type_guidance(
+        str(packet.lesson.knowledge_type)
+    )
+    if recipe_guidance is not None:
+        identity = f"{identity.rstrip()}\n\n{render_lesson_design_guidance(recipe_guidance)}"
     system = lesson_approach_planner_prompt().replace("{resource_identity}", identity)
     from core.prompts.loader import effective_prompt_text
 

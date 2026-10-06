@@ -16,7 +16,6 @@ from learn.generation.contracts import GenerationInputForm as V3InputForm
 from learn.generation.contracts import GenerationSignalSummary as V3SignalSummary
 from learn.generation.pipeline_dispatch import build_control_patch, select_default_pipeline
 from resource_specs.loader import get_spec
-from resource_specs.renderer import render_spec_for_prompt
 from curriculum.planning.models import StructuralPlan, VariantSpec
 from curriculum.planning.objective_ownership import hash_path_objective
 from curriculum.planning.persistence import (
@@ -28,17 +27,7 @@ from curriculum.planning.persistence import (
 
 def _path_resource_spec() -> dict[str, Any]:
     spec = get_spec("lesson")
-    return {
-        "resource_type": "lesson",
-        "depth": "standard",
-        "spec": spec.model_dump(mode="json"),
-        "rendered": render_spec_for_prompt(
-            spec,
-            depth="standard",
-            active_roles=[],
-            active_supports=[],
-        ),
-    }
+    return {"resource_type": "lesson", "spec_version": spec.version}
 
 
 def _scope_note(scope_contract: dict[str, Any]) -> str:

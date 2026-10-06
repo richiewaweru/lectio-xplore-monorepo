@@ -20,7 +20,11 @@ from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
 from core.routes.prompts import router as prompts_router
-from curriculum.planning.skeletons import initialize_skeleton_catalog
+from curriculum.planning.skeletons import (
+    initialize_skeleton_catalog,
+    load_skeleton_catalog,
+    validate_skeletons_against_spec,
+)
 from curriculum.routes import router as planning_router
 from document.shared_lesson.http import router as shared_document_router
 from infra.config import settings
@@ -53,8 +57,10 @@ from media.diagnostics.v3_image_pipeline_diagnostic import (
     run_grok_probe,
 )
 from media.storage.image_store import local_image_store_root
+from print.contracts.lectio_page import get_intent_catalogue
 from print.http.v3_studio.router import v3_studio_router
 from print.rendering.pdf.runtime import cleanup_stale_pdf_exports
+from resource_specs.loader import get_spec as get_resource_spec
 from resource_specs.loader import initialize_registry as initialize_resource_registry
 
 logger = logging.getLogger("uvicorn.error")
@@ -229,6 +235,11 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(upgrade_database)
     initialize_resource_registry()
     initialize_skeleton_catalog()
+    validate_skeletons_against_spec(
+        load_skeleton_catalog(),
+        get_resource_spec("lesson"),
+        get_intent_catalogue()["intents"],
+    )
     await telemetry_monitor.start()
     pdf_temp_cleaned = cleanup_stale_pdf_exports(
         path_value=settings.pdf_temp_dir,
