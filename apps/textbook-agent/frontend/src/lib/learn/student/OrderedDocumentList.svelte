@@ -71,6 +71,13 @@
 		return sectionDocument(section);
 	}
 
+	function figureCountBefore(index: number): number {
+		return sections.slice(0, index).reduce(
+			(total, section) => total + sectionDocument(section).nodes.filter((node) => node.kind === 'figure').length,
+			0
+		);
+	}
+
 	function interactionCountBefore(index: number): number {
 		return sections.slice(0, index).reduce(
 			(total, section) => total + sectionDocument(section).nodes.filter((node) => node.kind === 'interaction').length,
@@ -101,10 +108,11 @@
 			<div class="lesson-sections">
 				{#each sections as section, index (section.id)}
 					{@const interactionOffset = interactionCountBefore(index)}
+					{@const figureOffset = figureCountBefore(index)}
 					<section class="lesson-section" aria-labelledby={`section-heading-${index + 1}`}>
 						<SectionHeader title={section.title ?? `Part ${index + 1}`} index={index + 1} total={sections.length} />
 						<div id={`section-heading-${index + 1}`} class="section-content">
-							<DocumentCanvas document={renderSection(section, index)} {interactionOffset} attemptsByInteraction={attemptStates} onSubmitInteraction={preview || !onSubmitAttempt ? undefined : onSubmitInteraction} />
+							<DocumentCanvas document={renderSection(section, index)} {interactionOffset} {figureOffset} attemptsByInteraction={attemptStates} onSubmitInteraction={preview || !onSubmitAttempt ? undefined : onSubmitInteraction} />
 						</div>
 					</section>
 				{/each}
@@ -114,10 +122,11 @@
 			{#if selected}
 				{@const selectedIndex = sections.indexOf(selected)}
 				{@const interactionOffset = interactionCountBefore(selectedIndex)}
+					{@const figureOffset = figureCountBefore(selectedIndex)}
 				<section class="lesson-section single-section" aria-labelledby={`section-heading-${selectedIndex + 1}`}>
 					<SectionHeader title={selected.title ?? `Part ${selectedIndex + 1}`} index={selectedIndex + 1} total={sections.length} />
 					<div id={`section-heading-${selectedIndex + 1}`} class="section-content">
-						<DocumentCanvas document={renderSection(selected, selectedIndex)} {interactionOffset} attemptsByInteraction={attemptStates} onSubmitInteraction={preview || !onSubmitAttempt ? undefined : onSubmitInteraction} />
+						<DocumentCanvas document={renderSection(selected, selectedIndex)} {interactionOffset} {figureOffset} attemptsByInteraction={attemptStates} onSubmitInteraction={preview || !onSubmitAttempt ? undefined : onSubmitInteraction} />
 					</div>
 				</section>
 			{/if}

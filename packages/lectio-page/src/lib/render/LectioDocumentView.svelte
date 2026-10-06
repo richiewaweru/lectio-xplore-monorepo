@@ -2,6 +2,7 @@
 	import type { LectioDocument } from '$lib/contract/document';
 	import SectionView from './SectionView.svelte';
 	import BlockView from './BlockView.svelte';
+	import { buildRenderUnits } from '$lib/normalize/document';
 	import '$lib/print/base-print.css';
 
 	let {
@@ -16,6 +17,18 @@
 	const showCover = $derived(front.cover !== false);
 	const showContents = $derived(front.contents !== false);
 	const fields = $derived(front.fields ?? ['Student Name', 'Date']);
+	// Figure numbers run cumulatively across sections.
+	const figureOffsets = $derived.by(() => {
+		let total = 0;
+		return doc.sections.map((section) => {
+			const start = total;
+			for (const unit of buildRenderUnits(section.blocks)) {
+				const lead = unit.kind === 'heading-binding' ? unit.lead : unit.block;
+				if (lead.object === 'figure') total += 1;
+			}
+			return start;
+		});
+	});
 	const runningHead = $derived(front.running_head ?? doc.title);
 </script>
 
@@ -62,7 +75,7 @@
 	<div class="lectio-page-flow">
 		<div class="lectio-main">
 			{#each doc.sections as section, index}
-				<SectionView {section} {index} />
+				<SectionView {section} {index} figureOffset={figureOffsets[index]} />
 			{/each}
 		</div>
 	</div>

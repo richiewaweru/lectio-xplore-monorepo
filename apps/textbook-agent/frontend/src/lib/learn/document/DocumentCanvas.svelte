@@ -24,6 +24,7 @@
 		assets?: Record<string, AssetRef> | null;
 		attemptsByInteraction?: Map<string, InteractionAttemptState>;
 		interactionOffset?: number;
+		figureOffset?: number;
 		onSubmitInteraction?: (args: {
 			interactionId: string;
 			response: Record<string, unknown>;
@@ -64,6 +65,7 @@
 		assets = null,
 		attemptsByInteraction = new Map(),
 		interactionOffset = 0,
+		figureOffset = 0,
 		onSubmitInteraction = undefined,
 		onUpdateNodeText = undefined,
 		onUpdateListItems = undefined,
@@ -114,7 +116,7 @@
 >
 	{#each nodes as node, index (node.id)}
 		{@const selected = selectedNodeId === node.id}
-		{@const figureNumber = node.kind === 'figure' ? nodes.slice(0, index).filter((item) => item.kind === 'figure').length + 1 : undefined}
+		{@const figureNumber = node.kind === 'figure' ? figureOffset + nodes.slice(0, index).filter((item) => item.kind === 'figure').length + 1 : undefined}
 		{@const questionNumber = node.kind === 'interaction' ? interactionOffset + nodes.slice(0, index).filter((item) => item.kind === 'interaction').length + 1 : undefined}
 		<div
 			class="canvas-node"
