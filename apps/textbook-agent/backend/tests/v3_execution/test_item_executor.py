@@ -12,7 +12,10 @@ from curriculum.planning.models import (
     Misconception,
     QuestionBrief,
 )
+from curriculum.backbone.models import LessonBackbone
+from curriculum.items.diagnostics import BackboneRefError, classify_item_failure
 from curriculum.items.generator import (
+    ItemBackboneRef,
     ItemGenerationDraft,
     ItemGenerationResult,
     ItemQuestionDraft,
@@ -83,7 +86,7 @@ def _draft_item(index: int, diagnosis: str | None) -> ItemQuestionDraft:
 
 
 def test_item_executor_public_signature_accepts_only_card() -> None:
-    assert list(inspect.signature(execute_items).parameters) == ["card"]
+    assert list(inspect.signature(execute_items).parameters) == ["card", "backbone"]
 
 
 def test_item_executor_rejects_generated_content_channel() -> None:
@@ -206,3 +209,73 @@ def test_item_requires_exactly_one_correct_option() -> None:
             ],
             expected_answer="One",
         )
+
+
+def _backbone() -> LessonBackbone:
+    return LessonBackbone.model_validate(
+        {
+            "anchor": {
+                "id": "anchor-1",
+                "story": "A potted plant sits in a sunny window.",
+                "data": {"light_hours": 6},
+                "answer": "It makes glucose",
+                "figure_ids": ["fig-1"],
+            },
+            "variants": [{"id": "v1", "change": "shade", "data": {"light_hours": 1}}],
+            "figures": [{"id": "fig-1", "purpose": "Show the plant"}],
+        }
+    )
+
+
+def _drafts_with_refs(*refs: ItemBackboneRef | None) -> ItemGenerationDraft:
+    items = [_draft_item(i, "M1" if i == 1 else "M2" if i == 2 else None) for i in range(1, 6)]
+    return ItemGenerationDraft(
+        items=[
+            item.model_copy(update={"backbone_ref": ref}) for item, ref in zip(items, refs, strict=True)
+        ]
+    )
+
+
+def test_no_backbone_prompt_and_validation_are_unchanged() -> None:
+    plain = build_item_messages(_card())[0]
+    assert "LESSON BACKBONE" not in plain
+    draft = _drafts_with_refs(*([None] * 5))
+    result = validate_item_result(materialize_item_result(draft, _card()), _card())
+    assert result.backbone_refs == {}
+
+
+def test_backbone_prompt_includes_rules_and_ids() -> None:
+    message = build_item_messages(_card(), backbone=_backbone())[0]
+    assert "LESSON BACKBONE" in message
+    assert "A potted plant sits in a sunny window." in message
+    assert "fig-1" in message and "v1" in message
+    flat = " ".join(message.split())
+    assert "Never copy the anchor's worked answer into a stem" in flat
+    assert "backbone_ref.figure_id" in flat
+    repair = build_item_messages(
+        _card(),
+        backbone=_backbone(),
+        repair_errors=["x"],
+        allowed_misconception_ids=["M1"],
+        previous_output={},
+    )[0]
+    assert "LESSON BACKBONE" in repair and "REPAIR CONTEXT" in repair
+
+
+def test_backbone_refs_are_validated_against_the_backbone() -> None:
+    ok = ItemBackboneRef(target="anchor-1", figure_id="fig-1")
+    draft = _drafts_with_refs(ok, ItemBackboneRef(target="v1"), ok, ok, ok)
+    result = validate_item_result(materialize_item_result(draft, _card()), _card(), _backbone())
+    assert result.backbone_refs["biology.photosynthesis.inputs.i2"].target == "v1"
+
+    cases = {
+        "missing": _drafts_with_refs(ok, None, ok, ok, ok),
+        "bad target": _drafts_with_refs(ok, ItemBackboneRef(target="v9"), ok, ok, ok),
+        "bad figure": _drafts_with_refs(ok, ItemBackboneRef(target="v1", figure_id="fig-9"), ok, ok, ok),
+    }
+    for name, bad in cases.items():
+        with pytest.raises(BackboneRefError) as raised:
+            validate_item_result(materialize_item_result(bad, _card()), _card(), _backbone())
+        assert classify_item_failure(raised.value) == ("SEMANTIC", True), name
+    # without a backbone, refs are ignored rather than required
+    validate_item_result(materialize_item_result(cases["missing"], _card()), _card())

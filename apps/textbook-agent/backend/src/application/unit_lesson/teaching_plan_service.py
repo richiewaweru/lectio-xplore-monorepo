@@ -11,7 +11,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel
-from curriculum.approved_items import ItemPoolEmptyError, load_approved_item_records
+from curriculum.approved_items import (
+    ItemPoolEmptyError,
+    load_approved_item_records,
+    load_item_backbone_refs,
+)
+from curriculum.backbone.persistence import load_backbone
 from curriculum.teaching_plan.revisions import teaching_plan_review_identity
 from curriculum.teaching_plan.service import (
     bind_shared_teaching_runner,
@@ -117,6 +122,13 @@ async def build_packet_for_generation(
         require_nonempty=require_items,
     )
 
+    backbone = await load_backbone(session, generation.id)
+    item_backbone_refs = (
+        await load_item_backbone_refs(session=session, concept_card=card)
+        if backbone is not None
+        else {}
+    )
+
     anchor = plan_raw.get("anchor") or {}
     anchor_desc = (
         anchor.get("example")
@@ -171,6 +183,8 @@ async def build_packet_for_generation(
         approved_items=items,
         slot_ids=slot_ids or CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
         required_assessment_slots=required_assessment_slots,
+        backbone=backbone,
+        item_backbone_refs=item_backbone_refs,
     )
 
 

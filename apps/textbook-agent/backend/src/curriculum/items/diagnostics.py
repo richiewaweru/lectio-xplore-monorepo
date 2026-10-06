@@ -15,8 +15,14 @@ from infra.execution.error_policy import classify_provider_error
 OutcomeClass = Literal["OK", "TRANSPORT", "TIMEOUT", "RATE_LIMIT", "CONTRACT", "SEMANTIC", "UNKNOWN"]
 
 
+class BackboneRefError(ValueError):
+    """Item output does not reference the lesson backbone correctly (repairable)."""
+
+
 def classify_item_failure(exc: BaseException) -> tuple[OutcomeClass, bool]:
     """Separate transport vs contract vs semantic item failures."""
+    if isinstance(exc, BackboneRefError):
+        return "SEMANTIC", True
     message = str(exc).lower()
     if isinstance(exc, ValidationError) or (
         isinstance(exc, ValueError)

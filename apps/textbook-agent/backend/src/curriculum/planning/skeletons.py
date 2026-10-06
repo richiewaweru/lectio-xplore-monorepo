@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-
-from contracts.lectio import get_component_card
 
 KnowledgeType = Literal["procedural", "conceptual", "factual", "evaluative"]
 LessonMode = Literal[
@@ -21,6 +21,18 @@ _PROFILE_SUPPORT_LEVEL = {"support": "high", "core": "medium", "extension": "low
 
 class SkeletonCatalogError(ValueError):
     pass
+
+
+_REQUIRED_KNOWLEDGE_TYPES = ("procedural", "conceptual", "factual", "evaluative")
+
+
+@dataclass(frozen=True)
+class KnowledgeTypeGuidance:
+    knowledge_type: str
+    teacher_label: str
+    definition: str
+    demands: tuple[str, ...]
+    contraindicated: tuple[str, ...]
 
 
 class DeviationRequest(BaseModel):
@@ -62,7 +74,6 @@ class SkeletonSlotPreview(BaseModel):
     slot_id: str
     role: str
     purpose: str
-    allowed_components: list[str]
     locked: bool = False
 
 
@@ -124,6 +135,7 @@ class SkeletonCatalog:
         if len(self.skeletons) != len(raw_skeletons):
             raise SkeletonCatalogError("skeleton ids must be present and unique")
         self._validate()
+        self._validate_knowledge_types()
 
     def _require_positive_int(self, key: str) -> int:
         value = self.data.get(key)
@@ -147,19 +159,6 @@ class SkeletonCatalog:
         for slot_id, slot in self.slots.items():
             if not isinstance(slot, dict):
                 raise SkeletonCatalogError(f"slot '{slot_id}' must be a mapping")
-            allowed = slot.get("allowed")
-            if not isinstance(allowed, list) or not allowed:
-                raise SkeletonCatalogError(f"slot '{slot_id}' must declare allowed components")
-            for component_id in allowed:
-                if get_component_card(str(component_id)) is None:
-                    raise SkeletonCatalogError(
-                        f"slot '{slot_id}' references unknown component '{component_id}'"
-                    )
-            preferred = slot.get("preferred", [])
-            if not set(preferred).issubset(set(allowed)):
-                raise SkeletonCatalogError(
-                    f"slot '{slot_id}' preferred components must also be allowed"
-                )
 
         for skeleton_id, skeleton in self.skeletons.items():
             slot_ids = skeleton.get("slots")
@@ -192,6 +191,64 @@ class SkeletonCatalog:
                         raise SkeletonCatalogError(
                             f"skeleton '{skeleton_id}' expansion removed locked check"
                         )
+
+    def _validate_knowledge_types(self) -> None:
+        raw = self.data.get("knowledge_types")
+        if not isinstance(raw, dict):
+            raise SkeletonCatalogError("knowledge_types must be a mapping")
+        self._knowledge_types: dict[str, KnowledgeTypeGuidance] = {}
+        for name in _REQUIRED_KNOWLEDGE_TYPES:
+            entry = raw.get(name)
+            if not isinstance(entry, dict):
+                raise SkeletonCatalogError(f"knowledge_types.{name} must be a mapping")
+            label = entry.get("teacher_label")
+            if not isinstance(label, str) or not label.strip():
+                raise SkeletonCatalogError(
+                    f"knowledge_types.{name}.teacher_label must be a non-empty string"
+                )
+            demands = entry.get("demands")
+            if (
+                not isinstance(demands, list)
+                or not demands
+                or not all(isinstance(item, str) and item.strip() for item in demands)
+            ):
+                raise SkeletonCatalogError(
+                    f"knowledge_types.{name}.demands must be a non-empty list of strings"
+                )
+            contra = entry.get("contraindicated")
+            if not isinstance(contra, list) or not all(isinstance(i, str) for i in contra):
+                raise SkeletonCatalogError(
+                    f"knowledge_types.{name}.contraindicated must be a list of strings"
+                )
+            definition = entry.get("definition")
+            self._knowledge_types[name] = KnowledgeTypeGuidance(
+                knowledge_type=name,
+                teacher_label=label.strip(),
+                definition=" ".join(definition.split()) if isinstance(definition, str) else "",
+                demands=tuple(item.strip() for item in demands),
+                contraindicated=tuple(item.strip() for item in contra),
+            )
+
+    def knowledge_type_guidance(self, knowledge_type: str) -> KnowledgeTypeGuidance | None:
+        return self._knowledge_types.get(str(knowledge_type))
+
+    def all_reachable_slots(self) -> dict[str, set[str]]:
+        """Slot id -> recipes that can place it, including Python toggle insertions."""
+        reachable: dict[str, set[str]] = {}
+        for skeleton_id, skeleton in self.skeletons.items():
+            for slot_id in skeleton.get("slots", []):
+                reachable.setdefault(str(slot_id), set()).add(skeleton_id)
+            for profile in _PROFILE_SUPPORT_LEVEL:
+                for misconception_count in range(4):
+                    expanded, *_rest = self._expand_slots(
+                        skeleton,
+                        profile=profile,
+                        misconception_count=misconception_count,
+                        approved_deviations=[],
+                    )
+                    for slot_id in expanded:
+                        reachable.setdefault(str(slot_id), set()).add(skeleton_id)
+        return reachable
 
     def skeleton_ids(self) -> list[str]:
         return sorted(self.skeletons)
@@ -269,7 +326,6 @@ class SkeletonCatalog:
                 slot_id=slot_id,
                 role=str(self.slots[slot_id].get("role") or slot_id),
                 purpose=str(self.slots[slot_id].get("purpose") or ""),
-                allowed_components=[str(item) for item in self.slots[slot_id]["allowed"]],
                 locked=self.slots[slot_id].get("locked") is True,
             )
             for slot_id in expanded
@@ -564,6 +620,42 @@ def classify_for_preview(objective: str) -> KnowledgeType:
     if any(token in normalized for token in ("identify ", "name ", "list ", "state ", "label ")):
         return "factual"
     return "conceptual"
+
+
+def validate_skeletons_against_spec(
+    catalog: SkeletonCatalog, spec: Any, intent_catalogue: Mapping[str, Any]
+) -> None:
+    """Every typical intent of every reachable slot must be legal for the resource spec."""
+    from print.resources.candidates import _excluded_reasons, _slot_typical_intents
+
+    vocab = getattr(spec, "vocabulary", None)
+    if vocab is None:
+        raise SkeletonCatalogError(
+            f"resource spec '{getattr(spec, 'id', '?')}' has no vocabulary to validate "
+            "skeletons against"
+        )
+    permitted = {str(i) for i in (getattr(vocab.intents, "permitted", None) or [])}
+    excluded = _excluded_reasons(getattr(vocab.intents, "excluded", None))
+    violations: list[str] = []
+    for slot_id, recipes in sorted(catalog.all_reachable_slots().items()):
+        slot = catalog.slots.get(slot_id) or {}
+        who = ",".join(sorted(recipes))
+        for intent in _slot_typical_intents(slot):
+            reasons = []
+            if intent not in intent_catalogue:
+                reasons.append("not in intent catalogue")
+            if intent not in permitted:
+                reasons.append("not in spec permitted intents")
+            if intent in excluded:
+                reasons.append(f"excluded by spec ({excluded[intent]})")
+            for reason in reasons:
+                violations.append(
+                    f"recipe(s) [{who}] slot '{slot_id}' intent '{intent}': {reason}"
+                )
+    if violations:
+        raise SkeletonCatalogError(
+            "skeleton slots conflict with resource spec:\n  " + "\n  ".join(violations)
+        )
 
 
 def _default_skeleton_path() -> Path:

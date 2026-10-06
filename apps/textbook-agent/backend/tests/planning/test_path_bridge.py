@@ -26,7 +26,6 @@ from curriculum.path_models import (
     PathStructuralPagePlan,
     PathStructuralPlan,
     PrepareLessonRequest,
-    SelectedComponent,
     ShapeDeviationCreateRequest,
     UnitGroupInput,
     UnitGroupsWriteRequest,
@@ -122,6 +121,7 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
                 "id": "M1",
                 "description": "Sunlight is the plant's food itself.",
                 "source": "drafted",
+                "risk": "low",
                 "rationale": "Learners often think plants eat light.",
             },
             {
@@ -143,7 +143,13 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
     assert "examples" not in out
     assert out["id"] == "c-1"
     # Misconceptions restricted to the allowed keys; statement mapped; bad source dropped.
-    assert all(set(m).issubset({"id", "description", "source"}) for m in out["misconceptions"])
+    assert all(
+        set(m).issubset({"id", "description", "source", "risk"})
+        for m in out["misconceptions"]
+    )
+    # Risk is kept when valid ("low"); missing risk defaults to "high".
+    assert out["misconceptions"][0]["risk"] == "low"
+    assert out["misconceptions"][1]["risk"] == "high"
     assert out["misconceptions"][0]["description"].startswith("Sunlight")
     assert out["misconceptions"][1]["description"] == "Light just keeps plants warm."
     assert "source" not in out["misconceptions"][1]
@@ -152,6 +158,34 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
     assert card.id == "c-1"
     assert card.objective == lesson.objective
     assert len(card.misconceptions) == 2
+    assert [m.risk for m in card.misconceptions] == ["low", "high"]
+
+
+def test_normalize_page_concept_card_payload_normalizes_risk() -> None:
+    from types import SimpleNamespace
+
+    from application.unit_lesson.prepare import _normalize_page_concept_card_payload
+
+    lesson = SimpleNamespace(concept_id="c-1", objective="Obj.", title="T")
+    out = _normalize_page_concept_card_payload(
+        {
+            "misconceptions": [
+                {"id": "M1", "description": "a", "risk": "LOW"},
+                {"id": "M2", "description": "b", "risk": "medium"},
+                {"id": "M3", "description": "c", "risk": None},
+                {"id": "M4", "description": "d"},
+                "bare string",
+            ]
+        },
+        lesson=lesson,
+    )
+    assert [m["risk"] for m in out["misconceptions"]] == [
+        "low",
+        "high",
+        "high",
+        "high",
+        "high",
+    ]
 
 
 def test_normalize_page_concept_card_payload_drops_empty_misconceptions():
@@ -438,17 +472,7 @@ async def _fake_structural_planner(context: dict) -> PathStructuralPagePlan:
 
 
 async def _fake_component_selector(context: dict) -> ComponentSelection:
-    component_id = context["slot"]["allowed_components"][0]
-    return ComponentSelection(
-        components=[
-            SelectedComponent(
-                slug=component_id,
-                purpose=f"Perform the {context['slot']['slot_id']} cognitive job.",
-                reason="Matches the supplied registry cognitive job.",
-            )
-        ],
-        budget_pressure=None,
-    )
+    raise AssertionError("component selector must not be called")
 
 
 async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None:

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	getPreparationStructure: vi.fn(),
+	getPreparationBackbone: vi.fn(),
 	getLessonApproach: vi.fn(),
 	approveLessonApproach: vi.fn(),
 	startPreparationPlan: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('$lib/api/units', () => ({
 }));
 vi.mock('$lib/api/lesson-planning', () => ({
 	getPreparationStructure: mocks.getPreparationStructure,
+	getPreparationBackbone: mocks.getPreparationBackbone,
 	startPreparationPlan: mocks.startPreparationPlan,
 	regeneratePreparationPlan: mocks.regeneratePreparationPlan,
 	retryPreparationRun: mocks.retryPreparationRun
@@ -114,6 +116,28 @@ describe('Units Teaching Plan review', () => {
 		expect(screen.getByText('Trace water through a plant.')).toBeTruthy();
 	});
 
+	it('renders the read-only backbone summary when the API returns one', async () => {
+		mocks.getPreparationBackbone.mockResolvedValue({
+			hash: 'bb-hash',
+			backbone: {
+				anchor: { id: 'a1', story: 'A garden bed is 6 m by 4 m.', data: { length: 6 }, answer: '24 m2', figure_ids: [] },
+				variants: [],
+				figures: []
+			}
+		});
+		render(PlanPage, { context: new Map([['lessonWorkspace', workspaceContext()]]) });
+		expect(await screen.findByText('A garden bed is 6 m by 4 m.')).toBeTruthy();
+		expect(mocks.getPreparationBackbone).toHaveBeenCalledWith('generation-1');
+	});
+
+	it('shows no backbone summary and no error when the backbone is not ready (null)', async () => {
+		mocks.getPreparationBackbone.mockResolvedValue(null);
+		render(PlanPage, { context: new Map([['lessonWorkspace', workspaceContext()]]) });
+		expect(await screen.findByText('Trace water through a plant.')).toBeTruthy();
+		expect(screen.queryByLabelText('Lesson scenario and data')).toBeNull();
+		expect(screen.queryByRole('alert')).toBeNull();
+	});
+
 	it('keeps approval disabled when the loaded Teaching Plan is blank', async () => {
 		mocks.getLessonApproach.mockResolvedValue({
 			...pending,
@@ -148,7 +172,7 @@ describe('Units Teaching Plan review', () => {
 		const ctx = withPrep({
 			state: 'failed_recoverable', run_id: 'run-1', retryable: true, recovery_action: 'retry',
 			error: { message: 'The preparation run failed.', retryable: true },
-			progress: { items_total: 5, items_ready: 3, items_failed: 2, teaching_plan: 'not_started', failed_work_item_ids: ['wi-1', 'wi-2'] }
+			progress: { items_total: 5, items_ready: 3, items_failed: 2, backbone: 'ready', teaching_plan: 'not_started', failed_work_item_ids: ['wi-1', 'wi-2'] }
 		});
 		mocks.retryPreparationRun.mockResolvedValue(undefined);
 		render(PlanPage, { context: new Map([['lessonWorkspace', ctx]]) });
@@ -186,7 +210,7 @@ describe('Units Teaching Plan review', () => {
 	it('shows planning progress from the lesson-status DTO', async () => {
 		const ctx = withPrep({
 			state: 'planning', run_id: 'run-1',
-			progress: { items_total: 5, items_ready: 3, items_failed: 0, teaching_plan: 'not_started', failed_work_item_ids: [] }
+			progress: { items_total: 5, items_ready: 3, items_failed: 0, backbone: 'ready', teaching_plan: 'not_started', failed_work_item_ids: [] }
 		});
 		render(PlanPage, { context: new Map([['lessonWorkspace', ctx]]) });
 		expect(await screen.findByText('Writing practice items: 3/5 cards')).toBeTruthy();

@@ -3,6 +3,7 @@ import { get } from 'svelte/store';
 import { ensureOk } from '$lib/api/errors';
 import { apiFetch } from '$lib/api/client';
 import { authToken } from '$lib/shared/stores/auth';
+import type { PreparationBackbone } from '$lib/types/backbone';
 import type { PreparationStructure } from '$lib/types/v3';
 
 function bearerHeaders(): Record<string, string> {
@@ -76,4 +77,20 @@ export async function getPreparationStructure(generationId: string): Promise<Pre
 	});
 	await ensureOk(res, 'Could not load the structural lesson plan.');
 	return res.json() as Promise<PreparationStructure>;
+}
+
+/**
+ * Lesson backbone (shared scenario, data, and figures). The server answers 404
+ * until the backbone stage is ready, which is not an error: returns null.
+ */
+export async function getPreparationBackbone(
+	generationId: string
+): Promise<PreparationBackbone | null> {
+	const res = await apiFetch(`/api/v1/preparations/${encodeURIComponent(generationId)}/backbone`, {
+		method: 'GET',
+		headers: bearerHeaders()
+	});
+	if (res.status === 404) return null;
+	await ensureOk(res, 'Could not load the lesson scenario and data.');
+	return res.json() as Promise<PreparationBackbone>;
 }

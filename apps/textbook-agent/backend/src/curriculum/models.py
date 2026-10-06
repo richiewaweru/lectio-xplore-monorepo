@@ -378,6 +378,7 @@ class PreparationProgressDTO(StrictModel):
     items_ready: int = 0
     items_failed: int = 0
     teaching_plan: Literal["not_started", "queued", "running", "ready", "failed"] = "not_started"
+    backbone: Literal["not_started", "queued", "running", "ready", "failed"] = "not_started"
     failed_work_item_ids: list[str] = Field(default_factory=list)
 
 
@@ -614,6 +615,9 @@ class PathStructuralMisconception(BaseModel):
     # Deliberately not a Literal: unrecognised sources are dropped downstream
     # rather than failing the whole plan.
     source: str | None = None
+    # "high" | "low". Not a Literal: anything else is normalised to "high"
+    # downstream (see normalize_misconception_risk) instead of failing the plan.
+    risk: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -621,6 +625,13 @@ class PathStructuralMisconception(BaseModel):
         if isinstance(value, str):
             return {"description": value}
         return value
+
+
+def normalize_misconception_risk(value: object) -> str:
+    """Map a planner-supplied risk onto "high"/"low"; missing or unknown -> "high"."""
+    if isinstance(value, str) and value.strip().lower() == "low":
+        return "low"
+    return "high"
 
 
 # Native page-path provider contract. Upstream identity is intentionally absent.

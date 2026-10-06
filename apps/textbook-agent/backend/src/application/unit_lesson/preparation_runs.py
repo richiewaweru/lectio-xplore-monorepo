@@ -7,8 +7,13 @@ admits a ``preparation`` Run:
 * source identity: ``lesson_structural_plan`` = the prep generation id, pinned to
   ``path_lesson_revision`` and a canonical hash of the structural plan, its
   context, ``planning_spec_json`` and the objective hash;
-* one ``items:{concept_card_id}`` work item per concept card (the worker admits
-  the ``teaching_plan`` item after every card is ready);
+* one ``backbone`` work item (scenario + exact data + answer + figure specs +
+  variants) that the approved questions are written against;
+* the worker then admits one ``items:{concept_card_id}`` work item per concept
+  card once the backbone is ready, and the ``teaching_plan`` item after every
+  card is ready.  (Runs admitted before the backbone existed carry their
+  ``items:*`` items from the start and have no ``backbone`` item; they proceed
+  exactly as before.);
 * one Build for the path lesson, reused by the SharedDocument Run admitted after
   the teacher approves the plan (one timeline).
 
@@ -56,13 +61,18 @@ from infra.generation_runtime import (
 
 PREPARATION_STAGE = "preparation"
 ITEMS_ITEM_STAGE = "item_generation"
+BACKBONE_ITEM_STAGE = "backbone_generation"
 TEACHING_ITEM_STAGE = "planning_teaching"
 ITEMS_KEY_PREFIX = "items:"
+BACKBONE_ITEM_KEY = "backbone"
 TEACHING_ITEM_KEY = "teaching_plan"
 SOURCE_ARTIFACT_TYPE = "lesson_structural_plan"
 PLAN_ARTIFACT_TYPE = "teaching_plan_revision"
 MAX_ATTEMPTS = 3
-DEFINITION_VERSION = "preparation-v1"
+DEFINITION_VERSION = "preparation-v2"
+# Runs admitted before the backbone stage keep the definition their work items
+# were admitted under (idempotent re-admission must match the stored hash).
+LEGACY_DEFINITION_VERSION = "preparation-v1"
 
 # Same precondition the retired chunked approve used.
 APPROVABLE_STAGES = frozenset({"awaiting_review", "plan_ready", "stage2_error", "assembly_blocked"})
@@ -277,11 +287,21 @@ async def latest_preparation_run(
 _RETRYABLE_ERROR_CLASSES = frozenset({"validation", "provider_transport", "provider_output"})
 
 
+def _stage_state(item: Any) -> str:
+    """not_started | queued | running | ready | failed for one single-item stage."""
+    if item is None:
+        return "not_started"
+    if item.status in {"failed_recoverable", "failed_terminal"}:
+        return "failed"
+    return str(item.status)
+
+
 def preparation_run_view(run: GenerationRunModel) -> PreparationRunView:
     """Plain-data projection input for one preparation Run (work items loaded)."""
     items = active_work_items(tuple(run.work_items or ()))
     card_items = [i for i in items if i.item_key.startswith(ITEMS_KEY_PREFIX)]
     teaching = next((i for i in items if i.item_key == TEACHING_ITEM_KEY), None)
+    backbone = next((i for i in items if i.item_key == BACKBONE_ITEM_KEY), None)
     failed = [i for i in items if i.status in {"failed_recoverable", "failed_terminal"}]
     retryable = (
         run.status == "failed_recoverable"
@@ -294,12 +314,8 @@ def preparation_run_view(run: GenerationRunModel) -> PreparationRunView:
             for i in failed
         )
     )
-    if teaching is None:
-        teaching_state = "not_started"
-    elif teaching.status in {"failed_recoverable", "failed_terminal"}:
-        teaching_state = "failed"
-    else:
-        teaching_state = teaching.status
+    teaching_state = _stage_state(teaching)
+    backbone_state = _stage_state(backbone)
     error_code = run.error_code
     error_summary = run.error_summary
     if not (error_code or error_summary):
@@ -319,6 +335,7 @@ def preparation_run_view(run: GenerationRunModel) -> PreparationRunView:
             1 for i in card_items if i.status in {"failed_recoverable", "failed_terminal"}
         ),
         teaching_plan=teaching_state,
+        backbone=backbone_state,
         failed_work_item_ids=tuple(i.id for i in failed),
     )
 
@@ -356,13 +373,7 @@ def _review_status(state: dict[str, Any]) -> str:
     return str((review or {}).get("status") or "").lower()
 
 
-async def _add_card_items(
-    session: AsyncSession,
-    *,
-    run: GenerationRunModel,
-    generation: GenerationModel,
-    source: SourceIdentity,
-) -> int:
+async def _load_cards(session: AsyncSession, generation: GenerationModel) -> list[ConceptCardModel]:
     pack_id = generation.pack_id or generation.id
     cards = list(
         (
@@ -377,8 +388,32 @@ async def _add_card_items(
         raise PreparationRunError(
             "This preparation has no concept cards", code="PREPARATION_NO_CARDS"
         )
-    definition = content_hash({"definition": "preparation-items", "version": DEFINITION_VERSION})
+    return cards
+
+
+async def add_card_items(
+    session: AsyncSession,
+    *,
+    run: GenerationRunModel,
+    generation: GenerationModel,
+    source: SourceIdentity,
+    backbone_hash: str | None = None,
+    definition_version: str = DEFINITION_VERSION,
+) -> int:
+    """Admit one ``items:{card_id}`` work item per concept card (idempotent).
+
+    ``backbone_hash`` binds each item's input identity to the backbone the
+    questions are written against; legacy runs (no backbone) pass ``None`` and
+    keep their original identity.
+    """
+    cards = await _load_cards(session, generation)
+    definition = content_hash(
+        {"definition": "preparation-items", "version": definition_version}
+    )
     for card in cards:
+        identity: dict[str, Any] = {"card_id": card.id, "source_hash": source.source_hash}
+        if backbone_hash is not None:
+            identity["backbone_hash"] = backbone_hash
         try:
             await add_work_item(
                 session,
@@ -386,15 +421,33 @@ async def _add_card_items(
                     run_id=run.id,
                     item_key=item_key(card.id),
                     stage=ITEMS_ITEM_STAGE,
-                    input_hash=content_hash(
-                        {"card_id": card.id, "source_hash": source.source_hash}
-                    ),
+                    input_hash=content_hash(identity),
                     definition_hash=definition,
                 ),
             )
         except WorkItemConflict as exc:  # pragma: no cover - identity is derived from source
             raise PreparationRunError(str(exc), code="PREPARATION_ITEM_CONFLICT") from exc
     return len(cards)
+
+
+async def _add_backbone_item(
+    session: AsyncSession, *, run: GenerationRunModel, source: SourceIdentity
+) -> None:
+    try:
+        await add_work_item(
+            session,
+            WorkItemAdmission(
+                run_id=run.id,
+                item_key=BACKBONE_ITEM_KEY,
+                stage=BACKBONE_ITEM_STAGE,
+                input_hash=content_hash({"source_hash": source.source_hash}),
+                definition_hash=content_hash(
+                    {"definition": "preparation-backbone", "version": DEFINITION_VERSION}
+                ),
+            ),
+        )
+    except WorkItemConflict as exc:  # pragma: no cover - identity is derived from source
+        raise PreparationRunError(str(exc), code="PREPARATION_ITEM_CONFLICT") from exc
 
 
 async def admit_preparation_run(
@@ -488,7 +541,8 @@ async def admit_preparation_run(
         raise PreparationRunError(str(exc), code="PREPARATION_ADMISSION_CONFLICT") from exc
     run = admission.record
     assert isinstance(run, GenerationRunModel)
-    await _add_card_items(session, run=run, generation=ctx.generation, source=source)
+    await _load_cards(session, ctx.generation)  # fail admission early, before any item
+    await _add_backbone_item(session, run=run, source=source)
 
     patch: dict[str, Any] = {
         # Compatibility stamps for readers that predate Runs.  Nothing new reads
@@ -508,16 +562,21 @@ async def admit_preparation_run(
 
 __all__ = [
     "APPROVABLE_STAGES",
+    "BACKBONE_ITEM_KEY",
+    "BACKBONE_ITEM_STAGE",
+    "DEFINITION_VERSION",
     "ITEMS_ITEM_STAGE",
     "ITEMS_KEY_PREFIX",
     "MAX_ATTEMPTS",
     "PLAN_ARTIFACT_TYPE",
+    "LEGACY_DEFINITION_VERSION",
     "PREPARATION_STAGE",
     "PreparationAdmission",
     "PreparationRunError",
     "SOURCE_ARTIFACT_TYPE",
     "TEACHING_ITEM_KEY",
     "TEACHING_ITEM_STAGE",
+    "add_card_items",
     "admit_preparation_run",
     "item_key",
     "latest_preparation_run",

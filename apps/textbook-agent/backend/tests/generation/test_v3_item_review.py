@@ -277,3 +277,38 @@ async def test_regenerate_preserves_teacher_item_and_marks_it_stale() -> None:
             select(PackItemModel).where(PackItemModel.pack_id == pack_id)
         )
         assert len(list(rows.scalars())) == 5
+
+
+@pytest.mark.asyncio
+async def test_patch_card_keeps_and_updates_misconception_risk() -> None:
+    pack_id, card_id = await _seed_pack()
+    async with async_session_factory() as session:
+        card = (
+            await session.execute(
+                select(ConceptCardModel).where(ConceptCardModel.slug == card_id)
+            )
+        ).scalar_one()
+        card.misconceptions = [
+            {"id": "M1", "description": "Plants get food from soil.", "source": "drafted", "risk": "low"},
+            {"id": "M2", "description": "Oxygen is an input.", "source": "drafted", "risk": "high"},
+        ]
+        await session.commit()
+
+    body = {
+        "title": "Inputs to photosynthesis",
+        "objective": "Identify the inputs plants use to make glucose.",
+        "misconceptions": [
+            # risk omitted: the stored rating must be kept, not reset to high.
+            {"id": "M1", "description": "Plants get food from soil.", "source": "drafted"},
+            # risk supplied: it is applied.
+            {"id": "M2", "description": "Oxygen is an input.", "source": "drafted", "risk": "low"},
+        ],
+    }
+    async with _client() as client:
+        response = await client.patch(f"/api/v1/v3/packs/{pack_id}/cards/{card_id}", json=body)
+
+    assert response.status_code == 200, response.text
+    assert [(m["id"], m["risk"]) for m in response.json()["misconceptions"]] == [
+        ("M1", "low"),
+        ("M2", "low"),
+    ]

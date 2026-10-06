@@ -110,6 +110,12 @@ def lesson_sourcebook_writer_prompt() -> str:
     return effective_prompt_text("lesson-sourcebook-writer")
 
 
+def lesson_backbone_writer_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("lesson-backbone-writer")
+
+
 def shared_task_writer_prompt() -> str:
     from core.prompts import effective_prompt_text
 

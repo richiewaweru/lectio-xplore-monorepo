@@ -18,24 +18,44 @@ def render_resource_identity(spec: ResourceSpec) -> str:
     return "\n".join(lines)
 
 
+def render_lesson_design_guidance(guidance) -> str:
+    """Recipe guidance (knowledge-type demands) for the teaching planner prompt."""
+    lines = [
+        f"  Lesson design (from the {guidance.knowledge_type} recipe — "
+        f"{guidance.teacher_label}):"
+    ]
+    if guidance.definition:
+        lines.append(f"  {guidance.definition}")
+    lines.append("  This kind of lesson needs:")
+    lines += [f"    - {x}" for x in guidance.demands]
+    if guidance.contraindicated:
+        lines.append("  Avoid in this kind of lesson:")
+        lines += [f"    - {x}" for x in guidance.contraindicated]
+    return "\n".join(lines)
+
+
 def render_spec_for_prompt(
     spec: ResourceSpec,
     depth: str,
     active_roles: list[str],
     active_supports: list[str],
 ) -> str:
-    limit = spec.depth_limit(depth)
+    limit = spec.depth_limit(depth) if spec.depth is not None else None
     active_role_set = set(active_roles)
     active_support_set = set(active_supports)
-    sections = [
-        section
-        for section in [*spec.sections.required, *spec.sections.optional]
-        if (
-            section.role in active_role_set
-            or section in spec.sections.required
-            or section.only_when_support in active_support_set
-        )
-    ]
+    sections = (
+        [
+            section
+            for section in [*spec.sections.required, *spec.sections.optional]
+            if (
+                section.role in active_role_set
+                or section in spec.sections.required
+                or section.only_when_support in active_support_set
+            )
+        ]
+        if spec.sections is not None
+        else []
+    )
 
     lines = [
         f"Resource type: {spec.label}",
@@ -53,24 +73,26 @@ def render_spec_for_prompt(
             ]
         )
 
-    lines.extend(
-        [
-            "",
-            f"Depth: {depth}",
-            f"Target time: {limit.time_minutes} minutes",
-            f"Section count: {limit.sections}",
-            f"Question count: {limit.questions}",
-        ]
-    )
-    if limit.note:
-        lines.append(f"Depth note: {limit.note}")
-    if limit.warning:
-        lines.append(f"Depth warning: {limit.warning}")
+    if limit is not None:
+        lines.extend(
+            [
+                "",
+                f"Depth: {depth}",
+                f"Target time: {limit.time_minutes} minutes",
+                f"Section count: {limit.sections}",
+                f"Question count: {limit.questions}",
+            ]
+        )
+        if limit.note:
+            lines.append(f"Depth note: {limit.note}")
+        if limit.warning:
+            lines.append(f"Depth warning: {limit.warning}")
 
-    lines.append("")
-    lines.append("Resource sections and component rules:")
-    for section in sections:
-        lines.extend(_render_section(section))
+    if spec.sections is not None:
+        lines.append("")
+        lines.append("Resource sections and component rules:")
+        for section in sections:
+            lines.extend(_render_section(section))
 
     support_blocks = [
         (key, modification)

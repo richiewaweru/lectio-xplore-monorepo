@@ -21,11 +21,45 @@ titles, and the first transition note.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping, Sequence
 
-from curriculum.flow_validation import validate_flow_choice
-from curriculum.models import FlowChoice
+from curriculum.flow_validation import MAX_CONFRONT_SLOTS, validate_flow_choice
+from curriculum.models import FlowChoice, normalize_misconception_risk
 from curriculum.path_models import PathStructuralPagePlan, PathStructuralPlan
+
+
+def high_risk_misconception_count(misconceptions: Iterable[object]) -> int:
+    """Count usable misconceptions rated high-risk (missing/unknown risk is high).
+
+    Rows with no description are dropped by the bridge normaliser, so they must
+    not count here either.
+    """
+    count = 0
+    for item in misconceptions:
+        if isinstance(item, Mapping):
+            text = item.get("description") or item.get("statement")
+            risk = item.get("risk")
+        else:
+            text = getattr(item, "description", None) or getattr(item, "statement", None)
+            risk = getattr(item, "risk", None)
+        if not (isinstance(text, str) and text.strip()):
+            continue
+        if normalize_misconception_risk(risk) == "high":
+            count += 1
+    return count
+
+
+def recommended_slots_for_high_risk_count(
+    by_count: Mapping[str, Sequence[str]] | None,
+    high_risk_count: int,
+    *,
+    default: Sequence[str],
+) -> list[str]:
+    """Recommended flow for a plan with ``high_risk_count`` high-risk misconceptions."""
+    if not by_count:
+        return list(default)
+    key = str(min(max(high_risk_count, 0), MAX_CONFRONT_SLOTS))
+    return list(by_count.get(key) or default)
 
 
 class PathStructuralContextError(ValueError):
@@ -45,6 +79,7 @@ def validate_path_structural_result(
     expected_slots: list[str],
     legal_slots: Mapping[str, Mapping[str, object]] | None = None,
     max_slots: int | None = None,
+    recommended_slots_by_high_risk_count: Mapping[str, Sequence[str]] | None = None,
 ) -> list[str]:
     """Return contract violations. An empty list means the plan is usable.
 
@@ -66,10 +101,49 @@ def validate_path_structural_result(
             f"cards: expected exactly 1 concept card, got {len(plan.cards)}"
         )
 
-    selected_slots = list(plan.selected_slots or expected_slots)
+    recommended_slots = list(expected_slots)
+    if recommended_slots_by_high_risk_count:
+        # Misconception risk is rated by the planner, so the recommendation it is
+        # measured against is the one matching its own high-risk count. Confront
+        # slots earned by high-risk misconceptions are not flow departures.
+        high_risk_count = high_risk_misconception_count(
+            plan.cards[0].misconceptions if plan.cards else []
+        )
+        recommended_slots = recommended_slots_for_high_risk_count(
+            recommended_slots_by_high_risk_count,
+            high_risk_count,
+            default=expected_slots,
+        )
+    selected_slots = list(plan.selected_slots or recommended_slots)
+    if recommended_slots_by_high_risk_count:
+        cap = min(high_risk_count, MAX_CONFRONT_SLOTS)
+        # Recipes with a confront slot get exactly the recommended number. A
+        # recipe without one (e.g. procedural) may add confront only as an
+        # ordinary flow departure, which validate_flow_choice then requires a
+        # rationale for.
+        want = min(recommended_slots.count("confront"), cap)
+        got = selected_slots.count("confront")
+        if high_risk_count == 0 and got:
+            errors.append(
+                f"selected_slots: {got} 'confront' slot(s) but no misconception "
+                "is high-risk; remove them or re-rate the misconceptions' risk."
+            )
+        elif want > 0 and got != want:
+            errors.append(
+                f"selected_slots: expected exactly {want} 'confront' slot(s) "
+                f"for {high_risk_count} high-risk misconception(s) (one per "
+                f"high-risk misconception, at most {MAX_CONFRONT_SLOTS}), got "
+                f"{got}. Follow the recommended_slots_by_high_risk_count entry, "
+                "or re-rate each misconception's risk."
+            )
+        elif want == 0 and got > cap:
+            errors.append(
+                f"selected_slots: at most {cap} 'confront' slot(s) for "
+                f"{high_risk_count} high-risk misconception(s), got {got}."
+            )
     if legal_slots is not None:
         choice = FlowChoice(
-            recommended_slots=list(expected_slots),
+            recommended_slots=list(recommended_slots),
             selected_slots=selected_slots,
             rationale=plan.flow_rationale,
             departures=plan.flow_departures,
@@ -77,7 +151,7 @@ def validate_path_structural_result(
         errors.extend(
             validate_flow_choice(
                 choice,
-                recommended_slots=expected_slots,
+                recommended_slots=recommended_slots,
                 legal_slots=legal_slots,
                 max_slots=max_slots or len(expected_slots),
             )

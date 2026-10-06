@@ -24,7 +24,10 @@ def test_all_resource_specs_load() -> None:
 def test_specs_have_required_sections_and_depths() -> None:
     specs = load_all_specs(SPECS_DIR)
     for spec in specs.values():
-        assert spec.sections.required
+        if spec.sections is not None:
+            assert spec.sections.required
+        if spec.depth is None:
+            continue
         assert {"quick", "standard", "deep"}.issubset(spec.depth)
         for depth_key in ("quick", "standard", "deep"):
             depth_variant = spec.depth[depth_key]
@@ -67,6 +70,8 @@ def test_all_spec_section_component_slugs_resolve_in_registry() -> None:
     specs = load_all_specs(SPECS_DIR)
 
     for spec_id, spec in specs.items():
+        if spec.sections is None:
+            continue
         for section in [*spec.sections.required, *spec.sections.optional]:
             for field_name in (
                 "preferred_components",

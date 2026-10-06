@@ -12,7 +12,9 @@ objects, layouts, or question text.
 - concept_id
 - primary_knowledge_type
 - lesson_mode
-- recommended_slots and legal_slots with slot purposes
+- recommended_slots_by_high_risk_count ("0", "1", "2": the recommended sequence
+  when 0, 1, or 2+ of your misconceptions are high-risk), recommended_slots (the
+  "0" entry), and legal_slots with slot purposes
 - hard_constraints including max_slots and verification
 - scope_contract
 - prior_established
@@ -25,10 +27,21 @@ objects, layouts, or question text.
 
 1. Draft zero to three real misconceptions. Each must support a confident wrong
    answer. A missing term is a knowledge gap, not a misconception.
+   Rate each misconception's `risk`: "high" = common at this level, persistent,
+   and would block the objective if unaddressed; "low" = occasional or
+   peripheral. Low-risk misconceptions stay on the card (they still feed wrong-
+   answer diagnoses and teacher notes) but do not get their own section.
 2. Reuse the carried anchor when it fits. Otherwise choose one concrete anchor
    and state why it is new.
-3. Choose selected_slots from legal_slots. Keep the recommendation when it fits;
-   every meaningful departure needs flow_rationale and flow_departures.
+3. Choose selected_slots from legal_slots. Follow the
+   recommended_slots_by_high_risk_count entry for your number of high-risk
+   misconceptions (use "2" for two or more): where the recipe has confront
+   slots, it gives one per high-risk misconception (at most 2). If no
+   misconception is high-risk, select no `confront` slot. If the recipe has no
+   confront slot, address high-risk misconceptions inside other sections, or add
+   a confront slot only as an explained departure. Keep that recommendation
+   when it fits; every other meaningful departure needs flow_rationale and
+   flow_departures.
 4. Give each selected section a concise title and transition note. Return exactly
    one semantic section payload per selected slot, in selected order.
    The first section's transition_note must be null; only later sections
@@ -61,7 +74,8 @@ The output contains only:
 
 - anchor as {"description": str, "source": "carried"|"new"}
 - one semantic concept-card payload (title/prereqs/misconceptions/opens_by;
-  no id or objective)
+  no id or objective), where each misconception is
+  {"id": "M1", "description": str, "risk": "high"|"low"}
 - selected_slots, flow_rationale, and flow_departures
 - sections with title and transition_note only, one per selected slot in order
 - deviation_request or null
@@ -74,6 +88,8 @@ It contains no components and no blocks.
 1. Did I avoid outputting upstream-owned identity/objective fields?
 2. Are selected_slots legal, bounded, and verification-complete?
 3. Did I return exactly one section payload per selected slot, in order?
-4. Does every misconception pass the confident-wrong-answer test?
+4. Does every misconception pass the confident-wrong-answer test, carry a
+   risk, and do my `confront` slots follow the recommendation for my
+   high-risk count (none when no misconception is high-risk)?
 5. Did I choose any page form or teaching block? Remove it.
 6. Did I contradict prior_established, terminology, or exclusions?

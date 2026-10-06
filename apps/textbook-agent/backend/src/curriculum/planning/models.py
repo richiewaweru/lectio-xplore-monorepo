@@ -213,6 +213,13 @@ class Misconception(BaseModel):
     id: str = Field(description="Misconception id unique within this card, e.g. M1.")
     description: str
     source: Literal["drafted", "teacher"] = "drafted"
+    risk: Literal["high", "low"] = Field(
+        default="high",
+        description=(
+            "high = common, persistent, would block the objective if unaddressed "
+            "(earns a confront section); low = occasional or peripheral."
+        ),
+    )
 
 
 class ConceptCard(BaseModel):

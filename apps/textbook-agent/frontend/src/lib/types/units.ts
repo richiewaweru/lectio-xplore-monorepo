@@ -251,6 +251,8 @@ export interface PreparationProgress {
 	items_total: number;
 	items_ready: number;
 	items_failed: number;
+	/** Lesson backbone stage (runs before items and the teaching plan). */
+	backbone: 'not_started' | 'queued' | 'running' | 'ready' | 'failed';
 	teaching_plan: 'not_started' | 'queued' | 'running' | 'ready' | 'failed';
 	failed_work_item_ids: string[];
 }
@@ -394,7 +396,6 @@ export interface SkeletonSlotPreview {
 	slot_id: string;
 	role: string;
 	purpose: string;
-	allowed_components: string[];
 	locked: boolean;
 }
 
