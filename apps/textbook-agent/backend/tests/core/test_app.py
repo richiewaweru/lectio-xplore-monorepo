@@ -26,6 +26,8 @@ async def test_lifespan_registers_and_stops_shared_document_worker(
     monkeypatch.setattr(app_module, "configure_logging", lambda **_kwargs: None)
     monkeypatch.setattr(app_module, "initialize_resource_registry", lambda: None)
     monkeypatch.setattr(app_module, "initialize_skeleton_catalog", lambda: None)
+    monkeypatch.setattr(app_module, "validate_skeletons_against_spec", lambda *_a: None)
+    monkeypatch.setattr(app_module, "get_resource_spec", lambda _id: None)
     monkeypatch.setattr(app_module, "cleanup_stale_pdf_exports", lambda **_kwargs: 0)
     monkeypatch.setattr(app_module, "async_session_factory", lambda: _SessionContext())
     monkeypatch.setattr(

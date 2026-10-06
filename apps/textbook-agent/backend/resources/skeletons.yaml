@@ -60,7 +60,7 @@ knowledge_types:
                    measure, draw, compute, apply-formula]
     demands:
       - the method must be modelled before it is practised
-      - practice must fade support: worked -> guided -> independent
+      - "practice must fade support: worked -> guided -> independent"
       - errors are usually step-slips, not belief errors
     contraindicated:
       - non-examples          # "here is a wrong one" teaches little about a method
@@ -74,7 +74,7 @@ knowledge_types:
     verb_signals: [explain, relate, distinguish, predict, justify-why, account-for,
                    describe-how, interpret, classify, infer]
     demands:
-      - needs contrast: examples AND non-examples
+      - "needs contrast: examples AND non-examples"
       - this is where misconception confrontation actually lives
       - needs a prediction the learner commits to before being told
     contraindicated:

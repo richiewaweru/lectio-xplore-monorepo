@@ -18,6 +18,22 @@ def render_resource_identity(spec: ResourceSpec) -> str:
     return "\n".join(lines)
 
 
+def render_lesson_design_guidance(guidance) -> str:
+    """Recipe guidance (knowledge-type demands) for the teaching planner prompt."""
+    lines = [
+        f"  Lesson design (from the {guidance.knowledge_type} recipe — "
+        f"{guidance.teacher_label}):"
+    ]
+    if guidance.definition:
+        lines.append(f"  {guidance.definition}")
+    lines.append("  This kind of lesson needs:")
+    lines += [f"    - {x}" for x in guidance.demands]
+    if guidance.contraindicated:
+        lines.append("  Avoid in this kind of lesson:")
+        lines += [f"    - {x}" for x in guidance.contraindicated]
+    return "\n".join(lines)
+
+
 def render_spec_for_prompt(
     spec: ResourceSpec,
     depth: str,
