@@ -115,18 +115,20 @@ class ResourceSpec(BaseModel):
     when_to_use: list[str] = Field(default_factory=list)
     never_use_when: list[str] = Field(default_factory=list)
     allowed_outcomes: list[str] = Field(default_factory=list)
-    depth: dict[str, DepthVariant]
-    sections: SectionsSpec
+    depth: dict[str, DepthVariant] | None = None
+    sections: SectionsSpec | None = None
     forbidden_components: list[str] = Field(default_factory=list)
     supports: dict[str, SupportModification] = Field(default_factory=dict)
-    visuals: VisualPolicy
-    text: TextPolicy
+    visuals: VisualPolicy | None = None
+    text: TextPolicy | None = None
     validation: list[str] = Field(default_factory=list)
     vocabulary: ResourceVocabulary | None = None
     produces_answer_key: bool | None = None
 
 
     def all_allowed_components_for_role(self, role: str) -> set[str]:
+        if self.sections is None:
+            return set()
         for section in [*self.sections.required, *self.sections.optional]:
             if section.role == role:
                 return set(section.preferred_components) | set(section.allowed_components)
@@ -134,10 +136,12 @@ class ResourceSpec(BaseModel):
 
     def forbidden_for_role(self, role: str) -> set[str]:
         role_forbidden: set[str] = set()
-        for section in [*self.sections.required, *self.sections.optional]:
+        for section in self.sections.required + self.sections.optional if self.sections else []:
             if section.role == role:
                 role_forbidden = set(section.forbidden_components)
         return role_forbidden | set(self.forbidden_components)
 
     def depth_limit(self, depth: str) -> DepthVariant:
+        if self.depth is None:
+            raise KeyError(f"Resource spec '{self.id}' declares no depth variants")
         return self.depth[depth]

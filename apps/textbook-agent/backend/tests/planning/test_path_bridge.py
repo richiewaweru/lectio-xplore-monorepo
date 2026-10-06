@@ -26,7 +26,6 @@ from curriculum.path_models import (
     PathStructuralPagePlan,
     PathStructuralPlan,
     PrepareLessonRequest,
-    SelectedComponent,
     ShapeDeviationCreateRequest,
     UnitGroupInput,
     UnitGroupsWriteRequest,
@@ -438,17 +437,7 @@ async def _fake_structural_planner(context: dict) -> PathStructuralPagePlan:
 
 
 async def _fake_component_selector(context: dict) -> ComponentSelection:
-    component_id = context["slot"]["allowed_components"][0]
-    return ComponentSelection(
-        components=[
-            SelectedComponent(
-                slug=component_id,
-                purpose=f"Perform the {context['slot']['slot_id']} cognitive job.",
-                reason="Matches the supplied registry cognitive job.",
-            )
-        ],
-        budget_pressure=None,
-    )
+    raise AssertionError("component selector must not be called")
 
 
 async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None:

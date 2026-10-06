@@ -8,8 +8,6 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from contracts.lectio import get_component_card
-
 KnowledgeType = Literal["procedural", "conceptual", "factual", "evaluative"]
 LessonMode = Literal[
     "first_exposure", "consolidation", "repair", "retrieval", "transfer"
@@ -62,7 +60,6 @@ class SkeletonSlotPreview(BaseModel):
     slot_id: str
     role: str
     purpose: str
-    allowed_components: list[str]
     locked: bool = False
 
 
@@ -147,19 +144,6 @@ class SkeletonCatalog:
         for slot_id, slot in self.slots.items():
             if not isinstance(slot, dict):
                 raise SkeletonCatalogError(f"slot '{slot_id}' must be a mapping")
-            allowed = slot.get("allowed")
-            if not isinstance(allowed, list) or not allowed:
-                raise SkeletonCatalogError(f"slot '{slot_id}' must declare allowed components")
-            for component_id in allowed:
-                if get_component_card(str(component_id)) is None:
-                    raise SkeletonCatalogError(
-                        f"slot '{slot_id}' references unknown component '{component_id}'"
-                    )
-            preferred = slot.get("preferred", [])
-            if not set(preferred).issubset(set(allowed)):
-                raise SkeletonCatalogError(
-                    f"slot '{slot_id}' preferred components must also be allowed"
-                )
 
         for skeleton_id, skeleton in self.skeletons.items():
             slot_ids = skeleton.get("slots")
@@ -269,7 +253,6 @@ class SkeletonCatalog:
                 slot_id=slot_id,
                 role=str(self.slots[slot_id].get("role") or slot_id),
                 purpose=str(self.slots[slot_id].get("purpose") or ""),
-                allowed_components=[str(item) for item in self.slots[slot_id]["allowed"]],
                 locked=self.slots[slot_id].get("locked") is True,
             )
             for slot_id in expanded

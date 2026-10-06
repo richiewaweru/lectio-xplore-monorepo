@@ -394,7 +394,6 @@ export interface SkeletonSlotPreview {
 	slot_id: string;
 	role: string;
 	purpose: string;
-	allowed_components: string[];
 	locked: boolean;
 }
 

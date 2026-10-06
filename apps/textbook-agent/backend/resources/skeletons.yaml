@@ -1,18 +1,38 @@
 # =============================================================================
-# LESSON SKELETONS  v1  (DRAFT — argue with this)
+# LESSON DESIGN  v1  (DRAFT - argue with this)
 # =============================================================================
-# Data, not code. Edited without a deploy. Versioned so old lessons stay
-# explicable.
+# This file owns lesson design: the knowledge types, the slot library
+# (pedagogical functions plus their typical intents), and the recipes
+# (knowledge_type x lesson_mode -> an ordered list of slots).
+#
+# Resource specs (resources/specs/*.yaml) only NARROW what a resource may use.
+# They contain no teaching guidance; all of that lives here.
 #
 # Pipeline:
-#   1. LLM classifies the objective    -> knowledge_type   (1 of 4)
-#   2. This file expands it            -> ordered slots    (deterministic)
-#   3. LLM fills each slot             -> prose + components
-#   4. LLM may request a deviation     -> reason + teacher approval + log
+#   1. Objective -> knowledge_type    (classified in code, not by an LLM)
+#   2. This file -> ordered slots     (deterministic; toggles are implemented
+#                                      in src/curriculum/planning/skeletons.py)
+#   3. The teaching planner fills each slot with blocks and intents
+#   4. A deviation from the recipe needs teacher approval (logged)
 #
-# HARD CONSTRAINT: StructuralPlan.max_six_sections. Every expanded skeleton
-# must be <= 6 slots AFTER toggles. Base skeletons are 5 so one toggle fits.
-# The expander applies toggles in priority order and stops at 6.
+# Read by code at runtime (src/curriculum/planning/skeletons.py):
+#   - version, max_slots
+#   - slots: role, purpose, typical_intents, min_blocks / max_blocks, locked
+#   - skeletons: id, knowledge_type, lesson_mode, slots
+#   - knowledge_types.<type>.demands and .contraindicated (fed to the teaching
+#     planner; being wired in a follow-up step of this same change)
+#
+# Documentation only (NOT read by code):
+#   - the `toggles` section - toggle behaviour is hard-coded in skeletons.py
+#   - verb_signals - classification uses hard-coded tokens in code
+#   - question_arc, rationale, and similar annotations
+#
+# HARD CONSTRAINT: every expanded recipe must be <= 6 slots AFTER toggles
+# (StructuralPlan.max_six_sections; validated at startup). Base recipes have
+# 3-5 slots so a toggle can still fit. The expander applies toggles in
+# priority order and stops at 6.
+#
+# Loaded once at startup (cached); a change needs a restart or redeploy.
 # =============================================================================
 
 version: 1
@@ -97,9 +117,9 @@ knowledge_types:
 # -----------------------------------------------------------------------------
 # 2. SLOT LIBRARY
 # -----------------------------------------------------------------------------
-# A slot is a pedagogical function. A component is a Lectio renderer.
-# The table fixes SLOTS. The LLM picks components WITHIN a slot, from the
-# allowed list only.
+# A slot is a pedagogical function. The teaching planner chooses blocks and
+# intents within a slot, guided by typical_intents and limited by the resource
+# spec vocabulary.
 #
 # carries_card: true  -> this slot teaches a concept, gets card_id, QC applies
 # carries_card: false -> plain section, card_id = null
@@ -111,8 +131,6 @@ slots:
     role: orient
     carries_card: false
     purpose: "Give the learner a reason to care and a concrete situation to hold."
-    preferred: [hook-hero]
-    allowed:   [hook-hero, interview-anchor, insight-strip, timeline-block]
     min_blocks: 1
     max_blocks: 2
     typical_intents:
@@ -123,8 +141,6 @@ slots:
     role: recall
     carries_card: false
     purpose: "Reactivate the specific prior knowledge this lesson depends on. Nothing else."
-    preferred: [prerequisite-strip]
-    allowed:   [prerequisite-strip, key-fact, definition-card, short-answer]
     fill_from: "PathLesson.prerequisites and the preceding lessons' must_establish"
     min_blocks: 1
     max_blocks: 2
@@ -136,16 +152,11 @@ slots:
     role: model
     carries_card: true
     purpose: "Show the method being carried out, with each step's reasoning visible."
-    preferred: [worked-example-card, process-steps]
-    allowed:   [worked-example-card, process-steps, diagram-series, explanation-block]
 
   explain:
     role: explain
     carries_card: true
     purpose: "Build the idea itself. State it, ground it, make it usable."
-    preferred: [explanation-block, definition-card]
-    allowed:   [explanation-block, definition-card, definition-family, key-fact,
-                diagram-block, insight-strip, callout-block]
     min_blocks: 1
     max_blocks: 3
     typical_intents:
@@ -158,8 +169,6 @@ slots:
     purpose: >
       Put a case and a near-miss side by side. The learner must see the
       boundary of the idea, not just the idea.
-    preferred: [comparison-grid, diagram-compare]
-    allowed:   [comparison-grid, diagram-compare, definition-family, key-fact]
     min_blocks: 1
     max_blocks: 3
     typical_intents:
@@ -172,8 +181,6 @@ slots:
     purpose: >
       Name the wrong belief, show why it feels right, then show it failing on
       a case. Correct exposition alone does not count.
-    preferred: [pitfall-alert]
-    allowed:   [pitfall-alert, comparison-grid, callout-block, diagram-compare]
     emitted_per: misconception     # one slot per REAL misconception on the card
     max_instances: 2               # beyond 2, the card is doing too much
     min_blocks: 1
@@ -186,38 +193,26 @@ slots:
     role: organise
     carries_card: true
     purpose: "Impose a structure on the facts so they are retrievable, not just listed."
-    preferred: [comparison-grid, definition-family]
-    allowed:   [comparison-grid, definition-family, glossary-rail, diagram-block,
-                timeline-block, key-fact]
 
   criteria:
     role: criteria
     carries_card: true
     purpose: "Establish what a good answer is judged against, before any case is seen."
-    preferred: [key-fact, comparison-grid]
-    allowed:   [key-fact, comparison-grid, explanation-block, callout-block]
 
   guided:
     role: guided
     carries_card: true
     purpose: "Practice with scaffolding still present. Learner does the thinking, support stays."
-    preferred: [practice-stack]
-    allowed:   [practice-stack, fill-in-blank, short-answer, student-textbox]
 
   independent:
     role: independent
     carries_card: true
     purpose: "Practice with scaffolding removed."
-    preferred: [practice-stack]
-    allowed:   [practice-stack, short-answer, student-textbox]
 
   apply:
     role: apply
     carries_card: true
     purpose: "Use the idea on a context not seen in this lesson."
-    preferred: [short-answer, student-textbox]
-    allowed:   [short-answer, student-textbox, practice-stack, simulation-block,
-                reflection-prompt]
 
   check:
     role: check
@@ -225,8 +220,6 @@ slots:
     purpose: >
       The shared diagnostic. Identical across every variant. Written from the
       card only, never from the prose above it.
-    preferred: [quiz-check]
-    allowed:   [quiz-check]
     locked: true      # never toggled, never removed, never varied by group
     min_blocks: 1
     max_blocks: 1
@@ -238,8 +231,6 @@ slots:
     role: close
     carries_card: false
     purpose: "Consolidate what was established and name what comes next."
-    preferred: [summary-block, what-next-bridge]
-    allowed:   [summary-block, what-next-bridge, reflection-prompt]
     fill_from: "the next PathLesson's title and opens_from"
 
 
