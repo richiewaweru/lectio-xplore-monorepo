@@ -21,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import EditableLessonModel, GenerationModel, NativeRealizationModel
+from document.shared_lesson.media import FigureMediaResult
 from document.shared_lesson.realization_source import (
     ReadyRealizationSource,
     RealizationOutputError,
@@ -36,6 +37,44 @@ from learn.publishing.publish_validation import validate_publishable_lesson_docu
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _figure_fields_from_media(
+    media: list[FigureMediaResult],
+) -> dict[str, dict[str, str]]:
+    return {
+        m.figure_node_id: {"asset_id": m.asset_url, "alt": m.alt_text.strip()}
+        for m in media
+        if m.status in ("ready", "ready_with_quality_warning")
+        and m.asset_url.lower().startswith(("http://", "https://"))
+    }
+
+
+def _with_figure_media(
+    document: dict[str, Any], fields: dict[str, dict[str, str]]
+) -> dict[str, Any]:
+    """Return a copy of ``document`` with image-less figure nodes given media."""
+    nodes = document.get("nodes")
+    if not isinstance(nodes, list):
+        return document
+    changed = False
+    patched: list[Any] = []
+    for node in nodes:
+        if (
+            isinstance(node, dict)
+            and node.get("kind") == "figure"
+            and not node.get("asset_id")
+            and node.get("id") in fields
+        ):
+            update = fields[node["id"]]
+            node = {
+                **node,
+                "asset_id": update["asset_id"],
+                "alt": update["alt"] or node.get("alt") or node.get("caption") or "",
+            }
+            changed = True
+        patched.append(node)
+    return {**document, "nodes": patched} if changed else document
 
 
 async def materialize_learn_output_from_shared_document(
@@ -78,12 +117,24 @@ async def materialize_learn_output_from_shared_document(
         )
         .order_by(EditableLessonModel.created_at.desc())
     )
+    figure_media = [m for m in ready.media_results if isinstance(m, FigureMediaResult)]
     if (
         output.status == "completed"
         and isinstance(output.document_json, dict)
         and existing_editable_id
         and output.shared_document_hash == ready.content_hash
     ):
+        # Lessons realized before figure media was threaded into Learn have
+        # figure nodes with no image.  Re-project only the figure fields from
+        # the Run's verified media (no regeneration, no other edits).
+        if figure_media:
+            media_node_fields = _figure_fields_from_media(figure_media)
+            output.document_json = _with_figure_media(output.document_json, media_node_fields)
+            editable = await session.get(EditableLessonModel, existing_editable_id)
+            if editable is not None and isinstance(editable.document_json, dict):
+                editable.document_json = _with_figure_media(
+                    editable.document_json, media_node_fields
+                )
         return {
             "output_id": output_id,
             "editable_lesson_id": existing_editable_id,
@@ -108,6 +159,7 @@ async def materialize_learn_output_from_shared_document(
         subject=subject,
         source_generation_id=output_id,
         learn_document_id=output_id,
+        figure_media=figure_media,
     )
     learn_document = dict(realized.document.model_dump(mode="json"))
     learn_document["id"] = output_id

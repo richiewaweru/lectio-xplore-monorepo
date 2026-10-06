@@ -7,13 +7,18 @@ existing Learn interaction contract; this module never authors content.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from curriculum.shared_tasks.models import ACTION_RESPONSE_TYPES, SharedTaskSpec
 from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
+from document.shared_lesson.media import (
+    FigureMediaResult,
+    SharedFigureMediaError,
+    verify_bound_figure_media,
+)
 from document.shared_lesson.models import (
     CalloutNode as SharedCalloutNode,
     CompareNode as SharedCompareNode,
@@ -373,7 +378,12 @@ def _task_contract(
     return contract
 
 
-def _ordinary_node(node: Any) -> dict[str, Any]:
+_USABLE_MEDIA_STATUSES = frozenset({"ready", "ready_with_quality_warning"})
+
+
+def _ordinary_node(
+    node: Any, media_by_figure: Mapping[str, FigureMediaResult] | None = None
+) -> dict[str, Any]:
     base = {"id": node.id, "kind": node.kind, "teaching_block_id": node.teaching_block_id}
     if isinstance(node, SharedParagraphNode):
         return {**base, "text": node.display.text}
@@ -382,13 +392,19 @@ def _ordinary_node(node: Any) -> dict[str, Any]:
     if isinstance(node, SharedListNode):
         return {**base, "ordered": node.display.ordered, "items": list(node.display.items)}
     if isinstance(node, SharedFigureNode):
+        media = (media_by_figure or {}).get(node.id)
+        # The Learn figure renderer resolves ``asset_id`` when it is an
+        # absolute URL, so a verified media result's URL is carried there.
+        # Without media there is no image; alt falls back to the caption.
         return {
             **base,
-            "asset_id": node.display.asset_id,
+            "asset_id": media.asset_url if media is not None else node.display.asset_id,
             "caption": node.display.caption,
-            # Learn has no media path, so alt text is usually empty; fall back
-            # to the caption rather than shipping an unlabelled figure.
-            "alt": node.accessibility.alt_text.strip() or node.display.caption,
+            "alt": (
+                node.accessibility.alt_text.strip()
+                or (media.alt_text.strip() if media is not None else "")
+                or node.display.caption
+            ),
         }
     if isinstance(node, SharedTableNode):
         return {
@@ -441,6 +457,7 @@ def realize_shared_document_for_learn(
     subject: str,
     source_generation_id: str | None = None,
     learn_document_id: str | None = None,
+    figure_media: Sequence[FigureMediaResult] = (),
 ) -> SharedDocumentLearnRealization:
     """Copy one exact READY shared artifact into the existing LearnDocument v2.
 
@@ -473,6 +490,27 @@ def realize_shared_document_for_learn(
     if content_hash(normalized.model_dump(mode="json")) != stored.storage_hash:
         raise SharedDocumentLearnMappingError("shared document storage hash is stale")
 
+    media_by_figure: dict[str, FigureMediaResult] = {}
+    for media in figure_media:
+        if media.figure_node_id in media_by_figure:
+            raise SharedDocumentLearnMappingError(
+                f"duplicate media for figure {media.figure_node_id!r}"
+            )
+        try:
+            verified = verify_bound_figure_media(media, normalized)
+        except SharedFigureMediaError as exc:
+            raise SharedDocumentLearnMappingError(
+                f"figure {media.figure_node_id!r} media binding failed"
+            ) from exc
+        # Same rule as Print: a quality-warning image is still usable.
+        if verified.status not in _USABLE_MEDIA_STATUSES or not verified.asset_url.lower().startswith(
+            ("http://", "https://")
+        ):
+            raise SharedDocumentLearnMappingError(
+                f"figure {media.figure_node_id!r} media is not ready"
+            )
+        media_by_figure[media.figure_node_id] = verified
+
     tasks_by_id = {task.id: task for task in normalized.tasks}
     nodes: list[dict[str, Any]] = []
     sections: list[dict[str, Any]] = []
@@ -503,7 +541,7 @@ def realize_shared_document_for_learn(
                     if field in contract:
                         learn_node[field] = contract[field]
             else:
-                learn_node = _ordinary_node(shared_node)
+                learn_node = _ordinary_node(shared_node, media_by_figure)
             nodes.append(learn_node)
             section_node_ids.append(str(learn_node["id"]))
         sections.append(

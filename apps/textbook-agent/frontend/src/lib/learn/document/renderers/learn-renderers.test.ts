@@ -59,6 +59,21 @@ describe('Learn document renderers', () => {
 		warn.mockRestore();
 	});
 
+	it('renders a figure whose asset_id is an https media URL with its alt and caption', () => {
+		const url = 'https://storage.googleapis.com/bucket/figure.png';
+		const view = render(FigureNode, {
+			node: { id: 'f', kind: 'figure', asset_id: url, caption: 'Cap', alt: 'Media alt' }
+		});
+		const image = view.container.querySelector<HTMLImageElement>('[data-testid="figure-img"]');
+		expect(image?.getAttribute('src')).toBe(url);
+		expect(image?.getAttribute('alt')).toBe('Media alt');
+		expect(view.container.querySelector('figcaption')?.textContent).toContain('Cap');
+		view.unmount();
+
+		const none = render(FigureNode, { node: { id: 'f2', kind: 'figure', asset_id: null, caption: 'Cap' } });
+		expect(none.container.querySelector('[data-testid="figure-img"]')).toBeNull();
+	});
+
 	it('hides a broken figure frame and caption, then recovers for a changed asset', async () => {
 		const view = render(FigureNode, {
 			node: { id: 'f', kind: 'figure', asset_id: 'one', caption: 'Figure caption' },
