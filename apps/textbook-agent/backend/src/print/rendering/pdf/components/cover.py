@@ -93,7 +93,9 @@ def clean_cover_title(raw_title: str, *, trim_words: bool = True) -> str:
 
     title = title.splitlines()[0]
     title = re.split(r"\bAudience\s*:", title, maxsplit=1, flags=re.IGNORECASE)[0]
-    title = re.split(r"[.;:!?]", title, maxsplit=1)[0]
+    # Authored titles keep subtitles after a colon; prompt-style text does not.
+    separators = r"[.;!?]" if not trim_words else r"[.;:!?]"
+    title = re.split(separators, title, maxsplit=1)[0]
     title = re.sub(r"\s+", " ", title).strip(" -")
 
     for pattern in _PROMPT_PREFIX_PATTERNS:

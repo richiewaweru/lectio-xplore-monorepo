@@ -40,7 +40,7 @@ def _on_request_failed(request) -> None:
     )
 
 
-_FOOTER_LABEL_OVERRIDE_CSS = '.lectio-page-footer::after { content: "" !important; }'
+_FOOTER_LABEL_OVERRIDE_CSS = r'.lectio-page-footer::after { content: "\00a0" !important; }'
 
 
 _PRINT_ROOT_SNAPSHOT_JS = """
@@ -358,7 +358,9 @@ async def _render_print_route_async(
 
                 if output_path is not None:
                     # Chromium cannot resolve counter(pages) for in-flow content
-                    # (renders "Page 0 of 0"); blank the in-page label. The real
+                    # (renders "Page 0 of 0"); replace the in-page label with an nbsp
+                    # so the footer keeps its line height (the rule must not collapse
+                    # onto the running title). The real
                     # "Page N of M" is stamped after assembly (add_page_numbers),
                     # once the final page total is known.
                     await page.add_style_tag(content=_FOOTER_LABEL_OVERRIDE_CSS)

@@ -260,3 +260,18 @@ def test_add_page_numbers_stamps_page_n_of_m_after_front_matter(tmp_path: Path) 
     assert texts[0] == ""
     assert texts[1:] == ["Page 1 of 3", "Page 2 of 3", "Page 3 of 3"]
     assert not any("Page 0 of 0" in text for text in texts)
+
+
+def test_full_cover_title_keeps_subtitle_after_colon(tmp_path: Path) -> None:
+    full = "Labelling the Water Cycle: Naming and Explaining Its Four Stages"
+    assert clean_cover_title(full, trim_words=False) == full
+    output = generate_cover_pdf(
+        output_path=tmp_path / "cover.pdf",
+        title=full,
+        school_name="S",
+        teacher_name="T",
+        date_label="2026-04-07",
+        trim_title=False,
+    )
+    text = " ".join((PdfReader(str(output)).pages[0].extract_text() or "").split())
+    assert "Four Stages" in text
