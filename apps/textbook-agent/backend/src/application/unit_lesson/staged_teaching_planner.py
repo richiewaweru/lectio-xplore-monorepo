@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 import types
 import uuid
@@ -19,6 +20,14 @@ from pydantic import ValidationError
 from pydantic_ai import Agent
 
 from application.unit_lesson.teaching_planner import (
+    TeachingPlanAttempt,
+    TeachingPlanResult,
+    _action_source_compatibility_errors,
+    _frozen_assessment_reuse_errors,
+    _frozen_assessment_reuse_flags,
+    _repair_missing_assessment_sources,
+    _task_source_contract_errors,
+    _unknown_learner_action_errors,
     _action_source_compatibility_errors_for_section,
     _assessment_source_policy,
     _frozen_assessment_reuse_errors_for_section,
@@ -37,13 +46,25 @@ from curriculum.backbone.models import BackboneFigure
 from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
 from curriculum.planning.skeletons import load_skeleton_catalog
 from curriculum.prompts import teaching_section_prompt, teaching_spine_prompt
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import (
+    TeachingPlan,
     TeachingPlanDraftBlock,
+    TeachingPlanDraftV2,
     TeachingPlanSection,
     VisualSpec,
     materialize_teaching_plan,
 )
-from curriculum.teaching_plan.semantic_review import ADVISORY_ONLY_SEMANTIC_CODES
+from curriculum.teaching_plan.semantic_review import (
+    ADVISORY_ONLY_SEMANTIC_CODES,
+    TeachingPlanSemanticFinding,
+    TeachingPlanSemanticReviewError,
+    TeachingPlanSemanticReviewResult,
+)
+from curriculum.teaching_plan.staged_review import (
+    review_teaching_lesson,
+    review_teaching_section,
+)
 from curriculum.teaching_plan.staged import (
     SpineFigurePlan,
     TeachingSectionDraft,
@@ -66,6 +87,7 @@ from print.generation.catalogue_projections import (
 )
 from print.generation.whole_lesson.legality import (
     LessonLegalitySnapshot,
+    build_lesson_legality_snapshot,
     project_slot_intent_policy,
     snapshot_as_teaching_sets,
 )
@@ -80,11 +102,14 @@ from print.generation.whole_lesson.teaching_errors import (
 )
 from print.generation.whole_lesson.validation import (
     TeachingValidationContext,
+    ValidationIssue,
     ValidationReport,
+    _flag_locations,
     advisory_issue_flags,
     advisory_teaching_qc,
     apply_advisory_gate,
     plan_quality_flag,
+    validate_teaching_plan,
     validate_teaching_section,
 )
 from resource_specs.loader import get_spec
@@ -1113,6 +1138,481 @@ async def plan_teaching_sections(
     return dict(zip(slot_ids, results, strict=True))
 
 
+# --------------------------------------------------------------------------- assembly (phases 5-6)
+
+
+def _solo_plan_and_draft(
+    spine: TeachingSpine, slot_id: str, blocks: list[TeachingPlanDraftBlock]
+) -> tuple[TeachingPlan, TeachingPlanDraftV2]:
+    """One-section TeachingPlan (v2) plus its draft, with the final plan's block ids."""
+    section = _spine_section(spine, slot_id)
+    solo = section.model_copy(update={"bridge_from_previous": None})
+    solo_spine = spine.model_copy(update={"sections": [solo]})
+    draft = assemble_teaching_plan_draft(solo_spine, {slot_id: list(blocks)})
+    return materialize_teaching_plan(draft, slot_ids=[slot_id]), draft
+
+
+def _lesson_context(packet: ImmutableLessonPacket) -> dict[str, Any]:
+    """Reviewer context, same as the single planner (frozen stems alongside ids)."""
+    return {
+        **packet.planner_payload(),
+        "approved_items": [{"id": item.id, "stem": item.stem} for item in packet.approved_items],
+    }
+
+
+def make_section_reviewer(*, trace_id: str, generation_id: str | None):
+    """Adapter matching ``plan_teaching_section``'s ``section_reviewer`` call."""
+
+    async def section_reviewer(
+        *,
+        spine: TeachingSpine,
+        slot_id: str,
+        section: TeachingPlanSection,
+        draft_blocks: list[TeachingPlanDraftBlock],
+        packet: ImmutableLessonPacket,
+    ) -> list[TeachingPlanSemanticFinding]:
+        del section  # the draft blocks are derived from it; ids come from materialization
+        plan, draft = _solo_plan_and_draft(spine, slot_id, draft_blocks)
+        return await review_teaching_section(
+            spine=spine,
+            slot_id=slot_id,
+            section_plan=plan,
+            section_draft=draft,
+            lesson_context=_lesson_context(packet),
+            trace_id=f"{trace_id}:section-review:{slot_id}",
+            generation_id=generation_id,
+        )
+
+    return section_reviewer
+
+
+def _flag_key(flag: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        flag.get("code"),
+        flag.get("source"),
+        tuple(flag.get("section_ids") or ()),
+        tuple(flag.get("block_ids") or ()),
+        flag.get("message"),
+    )
+
+
+def _dedupe_flags(flags: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[tuple[Any, ...]] = set()
+    out: list[dict[str, Any]] = []
+    for flag in flags:
+        key = _flag_key(flag)
+        if key not in seen:
+            seen.add(key)
+            out.append(flag)
+    return out
+
+
+def _finding_flag(finding: TeachingPlanSemanticFinding, *, prefix: str = "") -> dict[str, Any]:
+    return plan_quality_flag(
+        code=finding.code,
+        source="reviewer",
+        message=f"{prefix}{finding.message}",
+        section_ids=list(finding.section_ids),
+        block_ids=list(finding.block_ids),
+        repair_instruction=finding.repair_instruction,
+    )
+
+
+def _split_findings(
+    findings: list[TeachingPlanSemanticFinding], *, advisory_gate: bool
+) -> tuple[list[TeachingPlanSemanticFinding], list[TeachingPlanSemanticFinding]]:
+    """(flagged, blocking): advisory gate or advisory-only codes never block."""
+    flagged = [f for f in findings if advisory_gate or f.code in ADVISORY_ONLY_SEMANTIC_CODES]
+    blocking = [f for f in findings if f not in flagged]
+    return flagged, blocking
+
+
+_ERROR_BLOCK_RE = re.compile(r"block '([^']+)'")
+_ERROR_SLOT_RE = re.compile(r"slot '([^']+)'")
+
+
+def _error_sections(error: str, plan: TeachingPlan) -> list[str]:
+    """Section ids an ownership error text points at (by block id or slot id)."""
+    block_to_slot = {b.id: s.slot_id for s in plan.sections for b in s.blocks}
+    slots = {s.slot_id for s in plan.sections}
+    found: list[str] = []
+    for match in _ERROR_BLOCK_RE.finditer(error):
+        slot = block_to_slot.get(match.group(1))
+        if slot and slot not in found:
+            found.append(slot)
+    for match in _ERROR_SLOT_RE.finditer(error):
+        if match.group(1) in slots and match.group(1) not in found:
+            found.append(match.group(1))
+    return found
+
+
+def _error_blocks(error: str, plan: TeachingPlan) -> list[str]:
+    ids = {b.id for s in plan.sections for b in s.blocks}
+    return [m.group(1) for m in _ERROR_BLOCK_RE.finditer(error) if m.group(1) in ids]
+
+
+def _assemble_and_materialize(
+    spine: TeachingSpine,
+    sections: dict[str, SectionResult],
+    packet: ImmutableLessonPacket,
+    assessment_intents: set[str],
+) -> tuple[TeachingPlanDraftV2, TeachingPlan, list[str]]:
+    """Assemble, materialize, and run the assessment-source safety net.
+
+    The repair runs before any review so the reviewed plan hash is the final one.
+    """
+    slot_ids = [slot.slot_id for slot in packet.slots]
+    try:
+        draft = assemble_teaching_plan_draft(
+            spine, {slot_id: result.blocks for slot_id, result in sections.items()}
+        )
+        plan = materialize_teaching_plan(draft, slot_ids=slot_ids)
+    except ValueError as exc:
+        raise TeachingPlanOutputInvalidError(
+            attempt_count=sum(len(r.attempts) for r in sections.values()),
+            details=[str(exc)],
+        ) from exc
+    ownership_errors = _repair_missing_assessment_sources(plan, packet, assessment_intents)
+    return draft, plan, ownership_errors
+
+
+async def _review_lesson_bound(
+    *,
+    spine: TeachingSpine,
+    plan: TeachingPlan,
+    draft: TeachingPlanDraftV2,
+    packet: ImmutableLessonPacket,
+    trace_id: str,
+    generation_id: str | None,
+) -> TeachingPlanSemanticReviewResult:
+    result = await review_teaching_lesson(
+        spine=spine,
+        plan=plan,
+        draft=draft,
+        lesson_context=_lesson_context(packet),
+        trace_id=trace_id,
+        generation_id=generation_id,
+    )
+    if result.content_hash != teaching_plan_content_hash(plan):
+        raise TeachingPlanSemanticReviewError(
+            "TEACHING_SEMANTIC_REVIEW_INVALID",
+            "Teaching Plan semantic review is not bound to this candidate",
+        )
+    return result
+
+
+async def run_staged_teaching_planner(
+    packet: ImmutableLessonPacket,
+    *,
+    legality: LessonLegalitySnapshot | None = None,
+    trace_id: str | None = None,
+    generation_id: str | None = None,
+    require_items: bool = True,
+) -> TeachingPlanResult:
+    """Spine -> parallel sections -> assembly -> whole-lesson review -> final gate.
+
+    Same signature and result type as ``run_lesson_approach_planner``. Sections that
+    exhaust their retries ship flagged (flag, don't fail); blocking whole-lesson
+    findings get one bounded fix round on the named sections only.
+    """
+    if require_items and not packet.approved_items:
+        from curriculum.approved_items import ItemPoolEmptyError
+
+        raise ItemPoolEmptyError(card_id="unknown", pack_id=None)
+
+    started_all = time.perf_counter()
+    snapshot = legality or build_lesson_legality_snapshot(packet)
+    projections = build_planner_projections(packet, snapshot)
+    teaching_guidance: TeachingGuidanceProjection = projections["teaching_guidance"]
+    permitted = projections["permitted_intents"]
+    excluded = projections["excluded_intents"]
+    typical_by_slot = projections["typical_by_slot"]
+    assessment_intents = set(projections["assessment_source_policy"]["eligible_intents"])
+    advisory_gate = settings.teaching_plan_quality_gate == "advisory"
+    tid = trace_id or str(uuid.uuid4())
+
+    # Spine.
+    spine_prompt = render_staged_prompt(packet, teaching_guidance, kind="spine")
+    spine_started = time.perf_counter()
+    spine_result = await plan_teaching_spine(
+        packet,
+        snapshot=snapshot,
+        teaching_guidance=teaching_guidance,
+        slot_intent_policy=projections["slot_intent_policy"],
+        assessment_source_policy=projections["assessment_source_policy"],
+        trace_id=tid,
+        generation_id=generation_id,
+    )
+    spine = spine_result.spine
+    spine_s = time.perf_counter() - spine_started
+
+    # Sections (parallel; each reviewed on its own, retried alone).
+    reviewer = make_section_reviewer(trace_id=tid, generation_id=generation_id)
+    sections_started = time.perf_counter()
+    sections = await plan_teaching_sections(
+        spine,
+        packet,
+        projections=projections,
+        trace_id=tid,
+        generation_id=generation_id,
+        section_reviewer=reviewer,
+    )
+    sections_s = time.perf_counter() - sections_started
+    extra_attempts: list[tuple[str, SectionAttempt]] = []
+
+    # Assembly + whole-lesson review.
+    draft, plan, ownership_errors = _assemble_and_materialize(
+        spine, sections, packet, assessment_intents
+    )
+    review_started = time.perf_counter()
+    lesson_review = await _review_lesson_bound(
+        spine=spine,
+        plan=plan,
+        draft=draft,
+        packet=packet,
+        trace_id=f"{tid}:lesson-review",
+        generation_id=generation_id,
+    )
+    review_s = time.perf_counter() - review_started
+    flagged, blocking = _split_findings(lesson_review.findings, advisory_gate=advisory_gate)
+    first_blocking_count = len(blocking)
+    review_flags: list[dict[str, Any]] = [_finding_flag(f) for f in flagged]
+    review_unresolved: set[str] = set()
+    timings_fix: dict[str, Any] = {}
+    final_review = lesson_review
+
+    if blocking:
+        fix_started = time.perf_counter()
+        targets: dict[str, list[str]] = {}
+        for finding in blocking:
+            for slot_id in finding.section_ids:
+                if slot_id in sections:
+                    targets.setdefault(slot_id, []).append(
+                        f"SEMANTIC_{finding.code.upper()} sections={list(finding.section_ids)} "
+                        f"blocks={list(finding.block_ids)}: {finding.repair_instruction}"
+                    )
+        fix_note = "Still unresolved after one fix round: "
+        replaced: list[str] = []
+        if targets:
+            section_prompt = render_staged_prompt(packet, teaching_guidance, kind="section")
+            fixed = await asyncio.gather(
+                *(
+                    plan_teaching_section(
+                        spine,
+                        slot_id,
+                        packet,
+                        projections=projections,
+                        system_prompt=section_prompt,
+                        trace_id=f"{tid}:fix",
+                        generation_id=generation_id,
+                        section_reviewer=reviewer,
+                        repair_findings=repair_findings,
+                    )
+                    for slot_id, repair_findings in targets.items()
+                ),
+                return_exceptions=True,
+            )
+            for slot_id, outcome in zip(targets, fixed, strict=True):
+                if isinstance(outcome, BaseException) and not isinstance(outcome, Exception):
+                    raise outcome
+                if isinstance(outcome, Exception):
+                    # Keep the section that already passed its own checks.
+                    extra_attempts.append(
+                        (slot_id, SectionAttempt(attempt=0, error=f"fix round failed: {outcome}"))
+                    )
+                    continue
+                extra_attempts.extend((slot_id, a) for a in outcome.attempts)
+                if outcome.unresolved:
+                    continue  # the earlier version passed section checks; keep it
+                sections[slot_id] = outcome
+                replaced.append(slot_id)
+        if replaced:
+            draft, plan, ownership_errors = _assemble_and_materialize(
+                spine, sections, packet, assessment_intents
+            )
+            final_review = await _review_lesson_bound(
+                spine=spine,
+                plan=plan,
+                draft=draft,
+                packet=packet,
+                trace_id=f"{tid}:lesson-review2",
+                generation_id=generation_id,
+            )
+            flagged, blocking = _split_findings(final_review.findings, advisory_gate=advisory_gate)
+            review_flags = [_finding_flag(f) for f in flagged]
+        for finding in blocking:
+            review_flags.append(_finding_flag(finding, prefix=fix_note))
+            review_unresolved.update(s for s in finding.section_ids if s in sections)
+        timings_fix = {
+            "latency_s": round(time.perf_counter() - fix_started, 4),
+            "sections": list(targets),
+            "replaced": replaced,
+            "unresolved_after": sorted(review_unresolved),
+        }
+
+    # Final safety net on the final plan (no mutation after this point).
+    ownership_errors = list(ownership_errors)
+    ownership_errors.extend(_unknown_learner_action_errors(plan))
+    ownership_errors.extend(_task_source_contract_errors(plan))
+    ownership_errors.extend(_action_source_compatibility_errors(plan, packet))
+    flags: list[dict[str, Any]] = []
+    for result in sections.values():
+        flags.extend(result.flags)
+    flags.extend(review_flags)
+    if advisory_gate:
+        flags.extend(_frozen_assessment_reuse_flags(plan, packet))
+    else:
+        ownership_errors.extend(_frozen_assessment_reuse_errors(plan, packet))
+    validation = validate_teaching_plan(
+        plan,
+        packet,
+        permitted_intents=permitted,
+        excluded_intents=excluded,
+        typical_by_slot=typical_by_slot,
+        assessment_intents=assessment_intents,
+    )
+    qc_findings = advisory_teaching_qc(plan)
+    if advisory_gate:
+        flags.extend(advisory_issue_flags(plan, validation, qc_findings))
+        validation = apply_advisory_gate(validation)
+
+    unresolved_sections = {s for s, r in sections.items() if r.unresolved} | review_unresolved
+    failing: list[str] = []
+    gate_issues: list[ValidationIssue] = []
+    for issue in validation.issues:
+        if issue.blocking:
+            located, blocks = _flag_locations(plan, issue.path)
+            if located and set(located) <= unresolved_sections:
+                flags.append(
+                    plan_quality_flag(
+                        code=issue.code,
+                        source="validator",
+                        message=issue.message,
+                        section_ids=located,
+                        block_ids=blocks,
+                    )
+                )
+                issue = ValidationIssue(
+                    code=issue.code, message=issue.message, path=issue.path, blocking=False
+                )
+            else:
+                failing.append(f"{issue.code}: {issue.message}")
+        gate_issues.append(issue)
+    for error in ownership_errors:
+        located = _error_sections(error, plan)
+        if located and set(located) <= unresolved_sections:
+            flags.append(
+                plan_quality_flag(
+                    code=error.split(":", 1)[0].strip() or "TEACHING_OWNERSHIP",
+                    source="validator",
+                    message=error,
+                    section_ids=located,
+                    block_ids=_error_blocks(error, plan),
+                )
+            )
+        else:
+            failing.append(error)
+    if failing:
+        raise TeachingPlanOutputInvalidError(
+            attempt_count=len(spine_result.attempts)
+            + sum(len(r.attempts) for r in sections.values())
+            + len(extra_attempts),
+            details=failing,
+        )
+    validation = ValidationReport(ok=True, issues=gate_issues)
+
+    if final_review.content_hash != teaching_plan_content_hash(plan):
+        raise TeachingPlanSemanticReviewError(
+            "TEACHING_SEMANTIC_REVIEW_INVALID",
+            "Teaching Plan semantic review is not bound to the final plan",
+        )
+    qc = [finding.to_dict() for finding in qc_findings]
+    qc.append(
+        {
+            "code": "TEACHING_PLAN_SEMANTIC_REVIEW_PASS",
+            "content_hash": final_review.content_hash,
+        }
+    )
+
+    # Attempts: spine tries, then section tries, then the final assembled plan.
+    section_prompt_text = render_staged_prompt(packet, teaching_guidance, kind="section")
+    attempts: list[TeachingPlanAttempt] = []
+
+    def _add(prompt: str, raw: str, error: str | None, *, assembled: bool = False) -> None:
+        attempts.append(
+            TeachingPlanAttempt(
+                prompt=prompt,
+                raw_response=raw,
+                plan=plan if assembled else None,
+                validation=validation if assembled else ValidationReport(ok=False, issues=[]),
+                qc=qc if assembled else [],
+                attempt=len(attempts) + 1,
+                error=error,
+                semantic_review=final_review if assembled else None,
+            )
+        )
+
+    for rec in spine_result.attempts:
+        _add(spine_prompt, rec.raw_response, rec.error)
+    for slot_id, result in sections.items():
+        for rec in result.attempts:
+            _add(section_prompt_text, rec.raw_response, rec.error)
+    for _slot_id, rec in extra_attempts:
+        _add(section_prompt_text, rec.raw_response, rec.error)
+    _add(spine_prompt, "", None, assembled=True)
+
+    raw_response = json.dumps(
+        {
+            "spine": [a.raw_response for a in spine_result.attempts],
+            "sections": {
+                slot_id: [a.raw_response for a in result.attempts]
+                for slot_id, result in sections.items()
+            },
+        }
+    )
+    stage_timings: dict[str, Any] = {
+        "total_s": round(time.perf_counter() - started_all, 4),
+        "spine": {
+            "wall_s": round(spine_s, 4),
+            "latency_s": round(sum(a.latency_s for a in spine_result.attempts), 4),
+            "attempts": len(spine_result.attempts),
+        },
+        "sections_wall_s": round(sections_s, 4),
+        "sections": {
+            slot_id: {
+                "latency_s": round(result.latency_s, 4),
+                "attempts": len(result.attempts),
+                "unresolved": result.unresolved,
+            }
+            for slot_id, result in sections.items()
+        },
+        "lesson_review": {
+            "latency_s": round(review_s, 4),
+            "findings": len(lesson_review.findings),
+            "blocking": first_blocking_count,
+        },
+        "fix_round": timings_fix,
+        "fix_round_attempts": len(extra_attempts),
+        "flags": len(_dedupe_flags(flags)),
+    }
+    return TeachingPlanResult(
+        plan=plan,
+        validation=validation,
+        qc=qc,
+        prompt=spine_prompt,
+        raw_response=raw_response,
+        teaching_guidance=teaching_guidance,
+        attempts=attempts,
+        typical_by_slot=typical_by_slot,
+        permitted_intents=permitted,
+        excluded_intents=excluded,
+        legality=snapshot,
+        semantic_review=final_review,
+        flags=_dedupe_flags(flags),
+        stage_timings=stage_timings,
+    )
+
+
 __all__ = [
     "SectionAttempt",
     "SectionResult",
@@ -1125,7 +1625,9 @@ __all__ = [
     "plan_teaching_section",
     "plan_teaching_sections",
     "plan_teaching_spine",
+    "make_section_reviewer",
     "render_staged_prompt",
+    "run_staged_teaching_planner",
     "repair_spine_figure_plan",
     "section_check_errors",
     "section_payload",

@@ -20,6 +20,7 @@ from curriculum.backbone.persistence import load_backbone
 from curriculum.teaching_plan.revisions import teaching_plan_review_identity
 from curriculum.teaching_plan.service import (
     bind_shared_teaching_runner,
+    bind_staged_teaching_runner,
     plan_shared_teaching,
 )
 from print.generation.whole_lesson.events import make_event
@@ -33,11 +34,13 @@ from print.generation.whole_lesson.packet_builder import (
     build_lesson_packet,
 )
 from print.generation.whole_lesson.repository import PageDocumentRepository
+from application.unit_lesson.staged_teaching_planner import run_staged_teaching_planner
 from application.unit_lesson.teaching_planner import run_lesson_approach_planner
 from curriculum.planning.persistence import load_chunked_state
 
 # Composition root: bind the application-owned planner without curriculum importing it.
 bind_shared_teaching_runner(run_lesson_approach_planner)
+bind_staged_teaching_runner(run_staged_teaching_planner)
 
 
 def slot_ids_from_structural_plan(plan_raw: Mapping[str, Any] | dict[str, Any] | None) -> tuple[str, ...]:

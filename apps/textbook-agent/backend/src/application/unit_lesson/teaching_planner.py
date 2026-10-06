@@ -103,6 +103,8 @@ class TeachingPlanResult:
     semantic_review: TeachingPlanSemanticReviewResult
     # Advisory quality flags (advisory gate only). Never part of the hashed plan.
     flags: list[dict[str, Any]] = field(default_factory=list)
+    # Per-stage latencies/attempt counts (staged planner only; empty for single).
+    stage_timings: dict[str, Any] = field(default_factory=dict)
 
 
 def _assessment_forms_for_intent(intent: str) -> set[str]:

@@ -186,6 +186,12 @@ class Settings(BaseSettings):
         default="advisory",
         validation_alias=AliasChoices("TEACHING_PLAN_QUALITY_GATE"),
     )
+    # "single": one planner call (default). "staged": spine + parallel section
+    # calls + whole-lesson review; same TeachingPlan output.
+    teaching_planner_mode: Literal["single", "staged"] = Field(
+        default="single",
+        validation_alias=AliasChoices("TEACHING_PLANNER_MODE"),
+    )
     page_form_plan_timeout_seconds: int = Field(default=120, ge=1)
     page_standard_writer_timeout_seconds: int = Field(
         default=180,
