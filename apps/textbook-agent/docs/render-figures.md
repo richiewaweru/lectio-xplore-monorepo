@@ -1,6 +1,6 @@
 # Code-rendered figures (`media/render`)
 
-Status: built on `feat/render-figures`, behind `LECTIO_RENDER_FIGURES` (default `off`).
+Status: on by default (`LECTIO_RENDER_FIGURES=auto`); set it to `off` as a kill switch.
 
 ## Why
 Image models draw what looks plausible, not exact geometry. The L-shaped-floor lesson
@@ -42,8 +42,8 @@ VisualGeneratorWorkOrder (purpose, must_show, labels, caption + referring senten
 | Situation | Result |
 |---|---|
 | No family fits / builder call fails | `Fallback` -> existing image path; `render_family_fallback` log event (hint, purpose) |
-| Family chosen, still invalid after 2 repairs | `Unavailable` -> failed block (`render_spec_invalid`); never an image |
-| Labels cannot fit legibly | `Unavailable` (`render_layout_failed`) |
+| Family chosen, still invalid after 2 repairs | `Unavailable` -> failed attempt (`render_spec_invalid`); never an image. After the work item's 3 attempts the figure ships as unavailable (see below) |
+| Labels cannot fit legibly | Same, with `render_layout_failed` |
 | Rendered, a number not found in text | `ready_with_quality_warning` with `qc_reasons` |
 | Rendered cleanly | `ready` |
 
@@ -73,29 +73,69 @@ Each module exposes `validate`, `draw`, `describe` (alt text), `numbers`, `GALLE
   `tests/document/test_render_routing_executor.py`.
 
 ## Turning it on
-Set `LECTIO_RENDER_FIGURES=auto` on the backend. Resolve the two open items below first.
+`LECTIO_RENDER_FIGURES` = `auto` (default) | `off` (kill switch: every figure takes the
+image path). Tests default it to `off` in `tests/conftest.py` and opt in explicitly.
 
-## Open items (found while wiring)
-1. **A failed required figure blocks the lesson.** `bind_generated_figure` raises for a
-   failed block (`document/shared_lesson/media.py:566`), and the post-section pipeline
-   returns `blocked` when required media failed (`post_section_pipeline.py:334`). The
-   agreed policy is "ship the rest, flag the figure". Until that exists, an `Unavailable`
-   render blocks a lesson that an inexact image would previously have let through.
-   Decide before enabling `auto`: either build "figure unavailable" shipping, or
-   temporarily route `Unavailable` to the image path.
-2. **Print with SVG is unverified.** Learn renders `<img src>` (`frontend/src/lib/learn/document/renderers/FigureNode.svelte:26`), so SVG works there.
-   Print passes `media.asset_url` straight through (`print/generation/shared_document_adapter.py:119`).
-   Chromium should keep it vector, but this has not been checked end to end. If it fails,
-   bind the PNG (`fallback_image_url`) for print.
+End-to-end check (2026-10-06, local, Grade 6 "Area of compound shapes"):
+- 6 figures, all ready on attempt 1. 3 were code-rendered (`polygon_area`, served as
+  `image/svg+xml`); 3 fell back to the image provider with numbered labels and a key band.
+- Learn showed "Figure 1." to "Figure 6." in order. Print exported a 13-page PDF with
+  continuous numbering, and the lesson reached READY.
+- Seen during that run and fixed here: captions said "on square grid paper" but the code
+  figures had no grid (`polygon_area` now has `grid`). Fallback telemetry fields were also
+  missing, because the JSON log allowlist dropped them (`infra/logging.py`).
+- Known limits:
+  - Chromium embeds the SVG as a high-resolution raster in the PDF; it is sharp but not vector.
+  - The unavailable-figure placeholder was not hit in this run; tests cover it.
+  - The Learn caption text looked faint in a headless screenshot (unconfirmed).
+  - Older drivers (`run_whole_lesson_proof.py`, `live_treasure_joe_d_unit_learn.py`) still call
+    the removed `/api/v1/v3/chunked/{id}/approve` route.
 
-## Follow-ups (separate work orders)
-- Numbered labels for `diagram` mode: digits drawn by the model, words in a code key band;
-  turn the compositor on in the shared path; digit-count QC.
+## Unavailable figures ship (all modes)
+Decided 2026-10-06 for render, diagram and image figures alike.
+- When a figure's media exhausts its retries (3 work-item attempts), or fails with a
+  non-retryable provider code (HTTP 400/401/403/404), `media_runtime` completes the media
+  WorkItem with a durable `UnavailableFigureMediaResult`: the same verified identity as a
+  ready result, no asset, a teacher-safe `reason` and the attempt count
+  (`document/shared_lesson/media.py`).
+- Every checkpoint (document QA, handoff, finalizer, promote, realization) accepts it.
+  QA emits `figure_media_unavailable` as **advisory** (flagged in both gate modes).
+- A declared figure with **no** media result stays a hard `required_media_missing`.
+  That points to a pipeline bug. Integrity/checkpoint failures also stay hard.
+- Learn shows a "Figure couldn't be generated" placeholder with the reason. Print emits
+  `asset.status = "failed"`, which shows the existing "Figure unavailable" placeholder.
+  Issue projection and lesson progress report the figure as unavailable (warning).
+
+## Numbered labels for diagram figures
+Diagram-mode figures that reach the image path (including render fallbacks) use
+`visual_style = "diagram_numbered"` for every provider:
+- the model draws only the digits 1..N on the named parts;
+- `diagram_compositor` appends a key band ("1 Petal", "2 Stamen", ...);
+- visual QC checks each digit appears exactly once and no words appear.
+Work orders admitted before this change (no style) still verify on resume.
+
+## Figure numbering
+Figures are numbered 1..N across the whole lesson in Learn (`figureOffset` per section
+canvas) and Print (`SectionView` seeded per section). Before, each section restarted at 1.
+
+## Next work order: retry a single figure (deferred)
+Not minimal, because a shipped lesson's Run is terminal. What it needs:
+1. A reopen transition (`ready` -> `running`, stage media) in
+   `infra/generation_runtime/repository.py`, plus the Run-status guards widened at
+   `media_runtime.py` (admit_repaired ~487), `repository.py` (~1871, ~1913) and
+   `post_section_pipeline.py` (~153).
+2. A `regeneration_nonce` in the figure composition identity, so the replacement passes the
+   changed-identity guard (`repository.py` ~1876) and gets a fresh attempt budget.
+3. A route `POST /runs/{run_id}/figures/{figure_node_id}/regenerate`. It rebuilds the order
+   from the active leaf (`work_order_from_composition_identity`), admits the replacement
+   and reopens the Run.
+4. A document-QA and finalize re-run path that takes the existing document plus the new
+   media and writes a new document revision. The review-leaf path assumes an edited draft.
+Until then, teachers use the whole-lesson Regenerate.
+
+## Remaining follow-ups
 - Teacher edit for rendered figures ("move the notch to the top-right" -> spec update -> redraw).
-- Teacher view of flagged figures (QC reasons, render warnings).
-- Figure numbering at document assembly (every figure is currently "Figure 1").
-- v2 families driven by fallback telemetry (`circle_parts` first); a general geometry
-  canvas only after that.
+- v2 render families driven by `render_family_fallback` telemetry (`circle_parts` first).
 
 ## Note for the planning chat
 Optional, small: add `"render"` to `VisualSpecMode` and a free-form `render_type: str | None`

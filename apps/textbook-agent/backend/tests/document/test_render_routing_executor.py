@@ -85,10 +85,12 @@ def _make(monkeypatch, tmp_path, builder, mode="auto"):
 
 def test_mode_parsing(monkeypatch):
     monkeypatch.delenv("LECTIO_RENDER_FIGURES", raising=False)
-    assert render_figures_mode() == "off"
+    assert render_figures_mode() == "auto"
     monkeypatch.setenv("LECTIO_RENDER_FIGURES", "AUTO")
     assert render_figures_mode() == "auto"
-    monkeypatch.setenv("LECTIO_RENDER_FIGURES", "bogus")
+    monkeypatch.setenv("LECTIO_RENDER_FIGURES", "off")
+    assert render_figures_mode() == "off"
+    monkeypatch.setenv("LECTIO_RENDER_FIGURES", "false")
     assert render_figures_mode() == "off"
 
 

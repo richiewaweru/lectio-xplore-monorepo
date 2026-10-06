@@ -59,10 +59,10 @@ class SharedFigureExecutorAdapter:
 
 
 def render_figures_mode() -> str:
-    """``LECTIO_RENDER_FIGURES``: "off" (default) or "auto"; unknown -> "off"."""
+    """``LECTIO_RENDER_FIGURES``: "auto" (default) or "off" (the kill switch)."""
 
-    raw = (os.environ.get("LECTIO_RENDER_FIGURES") or "off").strip().lower()
-    return raw if raw == "auto" else "off"
+    raw = (os.environ.get("LECTIO_RENDER_FIGURES") or "auto").strip().lower()
+    return "off" if raw in {"off", "0", "false", "no"} else "auto"
 
 
 SpecBuilderFactory = Callable[[str, str], SpecBuilder]
