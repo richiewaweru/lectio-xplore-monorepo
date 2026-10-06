@@ -32,6 +32,14 @@ EVIDENCE = "The garden bed anchor shows the idea concretely for learners right h
 @pytest.fixture(autouse=True)
 def _blocking_gate(monkeypatch):
     monkeypatch.setattr(settings, "teaching_plan_quality_gate", "blocking")
+    monkeypatch.setattr(settings, "staged_section_review", True)
+
+
+def _over() -> TeachingSectionDraft:
+    """Three blocks where the spine allows at most two."""
+    return TeachingSectionDraft.model_validate(
+        {"blocks": [_block("explain-cause"), _block("orient"), _block("explain-cause")]}
+    )
 
 
 def _block(intent: str, **kw: Any) -> dict:
@@ -152,8 +160,9 @@ def test_section_payload_contents() -> None:
         "spine", "section", "slot", "slot_intent_policy", "lesson", "scope", "anchor",
         "terminology", "assigned_items", "assigned_misconceptions", "backbone_targets",
         "backbone_figures", "figure_plan", "reserved_assessment_scenarios",
-        "assessment_source_policy", "planned_block_count",
+        "assessment_source_policy", "planned_block_count", "min_blocks",
     }
+    assert payload["min_blocks"] == 2 and payload["planned_block_count"] == 2
     assert payload["section"]["slot_id"] == "check"
     assert [i["approved_item_id"] for i in payload["assigned_items"]] == ["q1", "q2"]
     assert set(payload["assigned_items"][0]) == {
@@ -258,7 +267,7 @@ def test_all_good_one_call_per_section(monkeypatch) -> None:
 
 def test_only_bad_section_retried(monkeypatch) -> None:
     scripts = _all_good()
-    bad = TeachingSectionDraft.model_validate({"blocks": [_block("explain-cause")]})
+    bad = _over()
     scripts["explain"] = [bad, _good("explain")]
     fake, results, _, _ = _run_all(monkeypatch, scripts)
     assert fake.calls("explain") == 2
@@ -274,32 +283,134 @@ def test_only_bad_section_retried(monkeypatch) -> None:
 
 def test_exhausted_section_ships_flagged_and_assembles(monkeypatch) -> None:
     scripts = _all_good()
-    bad = TeachingSectionDraft.model_validate({"blocks": [_block("explain-cause")]})
+    bad = _over()
     scripts["explain"] = [bad]
     fake, results, spine, _ = _run_all(monkeypatch, scripts)
     assert fake.calls("explain") == 3
     r = results["explain"]
-    assert r.unresolved and len(r.blocks) == 1
+    assert r.unresolved and len(r.blocks) == 3
     unresolved = [f for f in r.flags if f["code"] == "TEACHING_SECTION_UNRESOLVED"]
     assert len(unresolved) == 1
     assert unresolved[0]["section_ids"] == ["explain"] and unresolved[0]["block_ids"] == []
     assert "SECTION_BLOCK_COUNT" in unresolved[0]["message"]
     assert not results["orient"].unresolved and not results["check"].unresolved
     plan = _assemble(spine, results)
-    assert [b.id for b in plan.sections[1].blocks] == ["explain-b1"]
+    assert [b.id for b in plan.sections[1].blocks] == ["explain-b1", "explain-b2", "explain-b3"]
 
 
-def test_nothing_parses_raises_invalid(monkeypatch) -> None:
+def test_nothing_parses_ships_empty_unresolved_section(monkeypatch) -> None:
     scripts = _all_good()
     scripts["orient"] = [ValueError("not json")]
+    fake, results, spine, _ = _run_all(monkeypatch, scripts)
+    assert fake.calls("orient") == 3
+    r = results["orient"]
+    assert r.unresolved and r.blocks == [] and r.draft is None
+    assert [f["code"] for f in r.flags] == ["TEACHING_SECTION_UNRESOLVED"]
+    assert r.flags[0]["section_ids"] == ["orient"]
+    assert not results["explain"].unresolved
+    assert _assemble(spine, results).sections[0].blocks == []
+
+
+def test_unexpected_model_behavior_is_flagged_not_raised(monkeypatch) -> None:
+    from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+    scripts = _all_good()
+    scripts["orient"] = [UnexpectedModelBehavior("Exceeded maximum retries")]
+    _, results, _, _ = _run_all(monkeypatch, scripts)
+    assert results["orient"].unresolved and results["orient"].blocks == []
+
+
+def test_unexpected_exception_in_one_section_is_flagged(monkeypatch) -> None:
+    real = stp.plan_teaching_section
+
+    async def wrapped(spine, slot_id, *args, **kw):
+        if slot_id == "explain":
+            raise RuntimeError("bug")
+        return await real(spine, slot_id, *args, **kw)
+
+    monkeypatch.setattr(stp, "plan_teaching_section", wrapped)
+    _, results, _, _ = _run_all(monkeypatch, _all_good())
+    r = results["explain"]
+    assert r.unresolved and r.blocks == []
+    assert r.flags[0]["code"] == "TEACHING_SECTION_UNRESOLVED"
+    assert "bug" in r.flags[0]["message"]
+    assert not results["orient"].unresolved and not results["check"].unresolved
+
+
+def test_all_sections_transport_failure_reraises(monkeypatch) -> None:
+    scripts = {s: [TimeoutError("down")] for s in ("orient", "explain", "check")}
     Fake(monkeypatch, scripts)
     spine, packet, proj = _context()
-    with pytest.raises(TeachingPlanOutputInvalidError):
+    with pytest.raises(TimeoutError):
         asyncio.run(
             stp.plan_teaching_sections(
                 spine, packet, projections=proj, trace_id="t", generation_id="g"
             )
         )
+
+
+def test_some_transport_failures_are_flagged_not_raised(monkeypatch) -> None:
+    scripts = _all_good()
+    scripts["orient"] = [TimeoutError("down")]
+    _, results, _, _ = _run_all(monkeypatch, scripts)
+    assert results["orient"].unresolved
+    assert not results["explain"].unresolved
+
+
+def test_section_block_count_is_a_maximum(monkeypatch) -> None:
+    spine, packet, proj = _context()
+    one = [TeachingPlanDraftBlock.model_validate(_block("explain-cause"))]
+    section = stp.materialize_one_section(spine, "explain", one)
+    errors, _, _ = stp.section_check_errors(spine, "explain", section, packet, proj)
+    assert errors == []  # 1 block <= planned 2 is fine
+    three = [TeachingPlanDraftBlock.model_validate(b) for b in _over().model_dump()["blocks"]]
+    section = stp.materialize_one_section(spine, "explain", three)
+    errors, _, _ = stp.section_check_errors(spine, "explain", section, packet, proj)
+    assert any(e.startswith("SECTION_BLOCK_COUNT") and "1..2" in e for e in errors)
+
+
+def test_check_section_needs_one_block_per_assigned_item() -> None:
+    spine, packet, proj = _context()
+    blocks = [TeachingPlanDraftBlock.model_validate(_check_block("q1", visual=FIG_VISUAL))]
+    section = stp.materialize_one_section(spine, "check", blocks)
+    errors, _, _ = stp.section_check_errors(spine, "check", section, packet, proj)
+    codes = _codes(errors)
+    assert "SECTION_BLOCK_COUNT" in codes and "SECTION_SOURCES_MISMATCH" in codes
+
+
+def test_block_binding_two_items_is_rejected() -> None:
+    spine, packet, proj = _context()
+    both = _check_block("q1", visual=FIG_VISUAL)
+    both["source_question_ids"] = ["q1", "q2"]
+    blocks = [TeachingPlanDraftBlock.model_validate(both),
+              TeachingPlanDraftBlock.model_validate(_block("explain-cause"))]
+    section = stp.materialize_one_section(spine, "check", blocks)
+    errors, _, _ = stp.section_check_errors(spine, "check", section, packet, proj)
+    assert "SECTION_BLOCK_MULTIPLE_SOURCES" in _codes(errors)
+
+
+def test_section_reviewer_failure_is_advisory_flag(monkeypatch) -> None:
+    Fake(monkeypatch, _all_good())
+    spine, packet, proj = _context()
+
+    async def broken(**kw):
+        raise TimeoutError("reviewer timed out")
+
+    result = asyncio.run(
+        stp.plan_teaching_section(
+            spine, "orient", packet, projections=proj, system_prompt="s",
+            trace_id="t", generation_id=None, section_reviewer=broken,
+        )
+    )
+    assert not result.unresolved and len(result.attempts) == 1
+    assert [f["code"] for f in result.flags] == ["SECTION_REVIEW_UNAVAILABLE"]
+
+
+def test_configured_section_reviewer_follows_setting(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "staged_section_review", False)
+    assert stp.configured_section_reviewer(trace_id="t", generation_id=None) is None
+    monkeypatch.setattr(settings, "staged_section_review", True)
+    assert stp.configured_section_reviewer(trace_id="t", generation_id=None) is not None
 
 
 def test_transport_errors_retry_without_repair_then_reraise(monkeypatch) -> None:

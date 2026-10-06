@@ -24,7 +24,7 @@ from curriculum.teaching_plan.staged import (
 from infra.config import settings
 from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 from tests.planning.legality_fixtures import make_snapshot
-from tests.planning.test_staged_sections import _block, _good
+from tests.planning.test_staged_sections import _block, _good, _over
 from tests.planning.test_staged_spine import _draft_dict, _packet
 
 SLOTS = ["orient", "explain", "check"]
@@ -33,6 +33,8 @@ SLOTS = ["orient", "explain", "check"]
 @pytest.fixture(autouse=True)
 def _blocking_gate(monkeypatch):
     monkeypatch.setattr(settings, "teaching_plan_quality_gate", "blocking")
+    monkeypatch.setattr(settings, "staged_section_review", True)
+    monkeypatch.setattr(settings, "staged_lesson_review", True)
 
 
 def _snapshot():
@@ -95,11 +97,13 @@ class Harness:
         return len(self.section_calls.get(slot, []))
 
 
-def _finding(code: str, sections: list[str]) -> TeachingPlanSemanticFinding:
+def _finding(
+    code: str, sections: list[str], blocks: list[str] | None = None
+) -> TeachingPlanSemanticFinding:
     return TeachingPlanSemanticFinding(
         code=code,
         section_ids=sections,
-        block_ids=[],
+        block_ids=blocks or [],
         message=f"Concrete {code} defect across the lesson.",
         repair_instruction=f"Repair the {code} defect in the named section.",
     )
@@ -108,6 +112,14 @@ def _finding(code: str, sections: list[str]) -> TeachingPlanSemanticFinding:
 async def _run(**kw):
     return await stp.run_staged_teaching_planner(
         _packet(), legality=_snapshot(), trace_id="t", generation_id="g", **kw
+    )
+
+
+def _bad_explain() -> TeachingSectionDraft:
+    """Two blocks (within budget) but one brief is too short: fails every attempt."""
+    return TeachingSectionDraft.model_validate(
+        {"blocks": [_block("explain-cause", brief="Area in few words only."),
+                    _block("explain-cause")]}
     )
 
 
@@ -175,8 +187,8 @@ async def test_require_items(monkeypatch) -> None:
 
 
 async def test_always_failing_section_ships_flagged(monkeypatch) -> None:
-    # One block where the spine plans two: SECTION_BLOCK_COUNT on every attempt.
-    short = TeachingSectionDraft.model_validate({"blocks": [_block("explain-cause")]})
+    # A too-short brief fails the section checks on every attempt.
+    short = _bad_explain()
     h = Harness(monkeypatch, scripts={"orient": [_good("orient")], "explain": [short],
                                       "check": [_good("check")]})
     result = await _run()
@@ -192,7 +204,7 @@ async def test_always_failing_section_ships_flagged(monkeypatch) -> None:
 async def test_unresolved_section_error_becomes_flag_but_resolved_section_fails(
     monkeypatch,
 ) -> None:
-    short = TeachingSectionDraft.model_validate({"blocks": [_block("explain-cause")]})
+    short = _bad_explain()
     Harness(monkeypatch, scripts={"orient": [_good("orient")], "explain": [short],
                                   "check": [_good("check")]})
     monkeypatch.setattr(
@@ -375,3 +387,91 @@ async def test_staged_plan_visuals_reach_figure_nodes_and_plan_figure_spec(monke
     for _, block in with_visual:
         assert resolved[block.id] == block.visual
     assert resolved["check-b1"].purpose == "See the dimensions of the bed."  # backbone copy
+
+
+# ------------------------------------------------------------------ review settings
+
+
+async def test_section_review_off_lesson_review_reports_all_codes(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "staged_section_review", False)
+    seen: list[dict] = []
+    h = Harness(
+        monkeypatch,
+        lesson_reviews=[[_finding("task_evidence_gap", ["explain"], ["explain-b1"])], []],
+    )
+    original = h._review
+
+    async def spy(**kwargs):
+        seen.append(kwargs)
+        return await original(**kwargs)
+
+    monkeypatch.setattr(semantic_review, "_run_structured", spy)
+    result = await _run()
+    assert h.section_review_calls == 0
+    assert h.lesson_review_calls == 2
+    # Section-local finding is blocking, routed to the named section, fixed once.
+    assert h.calls("explain") == 2 and h.calls("orient") == 1
+    errors = h.section_calls["explain"][1]["repair"]["validation_errors"]
+    assert errors[0].startswith("SEMANTIC_TASK_EVIDENCE_GAP sections=['explain']")
+    assert "task_evidence_gap" in seen[0]["system_prompt"]
+    assert "NOT reviewed separately" in seen[0]["system_prompt"]
+    assert result.semantic_review.content_hash == _hash_of(result)
+
+
+async def test_section_review_off_run_section_stage_has_no_reviewer(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "staged_section_review", False)
+    h = Harness(monkeypatch)
+    spine = stp.materialize_teaching_spine(
+        _draft_dict(), slot_ids=SLOTS, item_backbone_refs=_packet().item_backbone_refs
+    )
+    stp.repair_spine_figure_plan(spine, _packet())
+    result = await stp.run_section_stage(
+        spine, "orient", _packet(), _snapshot(), trace_id="t", generation_id="g"
+    )
+    assert not result.unresolved and h.section_review_calls == 0
+
+
+async def test_lesson_review_failure_is_advisory_flag(monkeypatch) -> None:
+    h = Harness(monkeypatch)
+
+    async def broken(**kwargs):
+        if kwargs["caller"] == "teaching_lesson_reviewer":
+            raise TimeoutError("reviewer timed out after 240s")
+        return await h._review(**kwargs)
+
+    monkeypatch.setattr(semantic_review, "_run_structured", broken)
+    result = await _run()
+    assert result.validation.ok and result.semantic_review is None
+    flag = next(f for f in result.flags if f["code"] == "LESSON_REVIEW_UNAVAILABLE")
+    assert flag["source"] == "reviewer" and "could not run" in flag["message"]
+    assert result.stage_timings["lesson_review"]["state"] == "unavailable"
+    assert {"code": "TEACHING_PLAN_SEMANTIC_REVIEW_SKIPPED", "state": "unavailable"} in result.qc
+
+
+async def test_lesson_review_off_skips_review_and_fix_round(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "staged_lesson_review", False)
+    h = Harness(monkeypatch, lesson_reviews=[[_finding("progression_gap", ["explain"])]])
+    result = await _run()
+    assert h.lesson_review_calls == 0 and h.calls("explain") == 1
+    assert result.semantic_review is None and result.validation.ok
+    assert result.flags == []
+    assert result.stage_timings["lesson_review"]["state"] == "skipped"
+    assert result.stage_timings["fix_round"] == {}
+    assert {"code": "TEACHING_PLAN_SEMANTIC_REVIEW_SKIPPED", "state": "skipped"} in result.qc
+
+
+async def test_no_output_section_flows_through_finish_as_flag(monkeypatch) -> None:
+    scripts = {s: [_good(s)] for s in SLOTS}
+    scripts["orient"] = [ValueError("not json")]
+    h = Harness(monkeypatch, scripts=scripts)
+    result = await _run()
+    assert h.calls("orient") == 3
+    orient = result.plan.sections[0]
+    assert orient.blocks == [] and orient.slot_id == "orient"
+    assert ("TEACHING_SECTION_UNRESOLVED", ("orient",)) in {
+        (f["code"], tuple(f["section_ids"])) for f in result.flags
+    }
+    assert result.stage_timings["sections"]["orient"]["unresolved"] is True
+    assert result.semantic_review is None or result.semantic_review.content_hash == _hash_of(
+        result
+    )

@@ -100,7 +100,8 @@ class TeachingPlanResult:
     permitted_intents: set[str]
     excluded_intents: set[str]
     legality: LessonLegalitySnapshot
-    semantic_review: TeachingPlanSemanticReviewResult
+    # None when the staged planner skipped or could not run the lesson review.
+    semantic_review: TeachingPlanSemanticReviewResult | None
     # Advisory quality flags (advisory gate only). Never part of the hashed plan.
     flags: list[dict[str, Any]] = field(default_factory=list)
     # Per-stage latencies/attempt counts (staged planner only; empty for single).

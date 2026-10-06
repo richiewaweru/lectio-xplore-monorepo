@@ -37,6 +37,8 @@ LESSON_REVIEW_CODES: frozenset[str] = frozenset(
     }
 )
 
+ALL_REVIEW_CODES: frozenset[str] = SECTION_REVIEW_CODES | LESSON_REVIEW_CODES
+
 SECTION_REVIEW_SCOPE = (
     "## REVIEW SCOPE\n\n"
     "This is a SECTION-SCOPED review. Review only the one section contained in "
@@ -57,12 +59,26 @@ LESSON_REVIEW_SCOPE = (
 )
 
 
+FULL_LESSON_REVIEW_SCOPE = (
+    "## REVIEW SCOPE\n\n"
+    "This is a WHOLE-LESSON review and the only semantic review this lesson gets: "
+    "sections are NOT reviewed separately, so review block-level defects as well as "
+    "cross-section ones. Report only these finding codes: task_evidence_gap, "
+    "assessment_item_reused, misconception_unresolved, factual_inaccuracy, "
+    "progression_gap, adjacent_exit_entry, target_coverage_gap, "
+    "duplicate_section_responsibility, visual_missing_for_figure_objective. Every "
+    "finding must name the section_ids (and block_ids when known) it concerns so a fix "
+    "can be routed to those sections alone. Do not report any other code."
+)
+
+
 def section_review_prompt() -> str:
     return f"{teaching_plan_semantic_reviewer_prompt()}\n\n{SECTION_REVIEW_SCOPE}"
 
 
-def lesson_review_prompt() -> str:
-    return f"{teaching_plan_semantic_reviewer_prompt()}\n\n{LESSON_REVIEW_SCOPE}"
+def lesson_review_prompt(*, include_section_codes: bool = False) -> str:
+    scope = FULL_LESSON_REVIEW_SCOPE if include_section_codes else LESSON_REVIEW_SCOPE
+    return f"{teaching_plan_semantic_reviewer_prompt()}\n\n{scope}"
 
 
 async def review_teaching_section(
@@ -109,23 +125,29 @@ async def review_teaching_lesson(
     lesson_context: dict[str, Any],
     trace_id: str | None = None,
     generation_id: str | None = None,
+    include_section_codes: bool = False,
 ) -> TeachingPlanSemanticReviewResult:
-    """Whole-lesson check; only lesson-level codes, bound to the plan content hash."""
+    """Whole-lesson check, bound to the plan content hash.
+
+    Lesson-level codes only by default. ``include_section_codes`` (used when sections
+    are not reviewed individually) also allows the section-local codes.
+    """
+    allowed = ALL_REVIEW_CODES if include_section_codes else LESSON_REVIEW_CODES
     findings = await _review_candidate(
         draft=draft,
         plan=plan,
         lesson_context=lesson_context,
         trace_id=trace_id,
         generation_id=generation_id,
-        system_prompt=lesson_review_prompt(),
+        system_prompt=lesson_review_prompt(include_section_codes=include_section_codes),
         extra_payload={
             "teaching_spine": spine.model_dump(mode="json"),
             "review_scope": {
                 "kind": "lesson",
-                "allowed_codes": sorted(LESSON_REVIEW_CODES),
+                "allowed_codes": sorted(allowed),
             },
         },
-        allowed_codes=LESSON_REVIEW_CODES,
+        allowed_codes=allowed,
         caller="teaching_lesson_reviewer",
     )
     return TeachingPlanSemanticReviewResult(
@@ -135,6 +157,7 @@ async def review_teaching_lesson(
 
 
 __all__ = [
+    "ALL_REVIEW_CODES",
     "LESSON_REVIEW_CODES",
     "SECTION_REVIEW_CODES",
     "review_teaching_lesson",

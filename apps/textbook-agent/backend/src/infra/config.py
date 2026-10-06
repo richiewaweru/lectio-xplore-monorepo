@@ -192,6 +192,19 @@ class Settings(BaseSettings):
         default="single",
         validation_alias=AliasChoices("TEACHING_PLANNER_MODE"),
     )
+    # Staged planner only. False (default): sections are not semantically reviewed
+    # one by one; the whole-lesson review reports every code and routes blocking
+    # findings to the named sections. True: also review each section on its own.
+    staged_section_review: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("STAGED_SECTION_REVIEW"),
+    )
+    # Staged planner only. False skips the whole-lesson semantic review and its fix
+    # round (code validators and the final gate still run); for cost-vs-value runs.
+    staged_lesson_review: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("STAGED_LESSON_REVIEW"),
+    )
     page_form_plan_timeout_seconds: int = Field(default=120, ge=1)
     page_standard_writer_timeout_seconds: int = Field(
         default=180,

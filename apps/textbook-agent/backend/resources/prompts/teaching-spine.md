@@ -79,11 +79,20 @@ asset.
 
 ## APPROVED ITEM PLACEMENT
 
-Every approved item id in the input is placed in exactly one section's
-`approved_item_ids`: none left out, none placed twice, none invented.
+Placing approved items is selective, as in `assessment_source_policy.rules`
+(`selection_is_optional`): you choose which approved items the lesson uses.
+You need not place every item. An item is placed at most once, ids are copied
+verbatim, and none is invented.
 
   - When `required_assessment_slots` is non-empty, approved items go only in
     those slots, and each of those slots receives at least one item.
+  - When it is empty, a section whose slot typically holds
+    check-understanding or diagnose-misconception work needs at least one item
+    for that check; other items are optional.
+  - One item per block: a section may own no more items than it has blocks, so
+    its `approved_item_ids` count never exceeds its `planned_block_count`. Spread
+    items over the allowed slots, or leave extras unplaced, rather than piling
+    them into one section.
   - A section's items are the ones its assessment blocks will bind later, so
     place them where the learner has been taught what they check.
   - You never write question text, stems, options, or answers.
@@ -122,14 +131,15 @@ lessons have zero figures that the spine plans beyond the backbone's.
 
 ## BLOCK BUDGET
 
-`planned_block_count` is the exact number of blocks the section call must
-write. One is common. Use more only when the slot's purpose genuinely needs
-more moves, not to fill space.
+`planned_block_count` is the MAXIMUM number of blocks the section call may
+write; the section call writes between max(1, the number of items you assigned
+it) and that maximum. One is common. Use more only when the slot's purpose
+genuinely needs more moves, not to fill space.
 
   - Stay within the limits for that section and its slot.
-  - The counts across all sections sum to no more than the lesson limit.
-  - A section that owns approved items needs enough blocks for its assessment
-    work plus whatever teaching the slot's purpose still requires.
+  - The maximums across all sections sum to no more than the lesson limit.
+  - A section that owns approved items needs at least one block per item, plus
+    room for whatever teaching the slot's purpose still requires.
 
 ## ACCURACY
 
@@ -146,7 +156,8 @@ is technically false to make it shorter. Never use a term from
   Never output more or fewer sections than there are supplied slots.
   Never write blocks, intents, briefs, evidence, or learner actions.
   Never invent a misconception, an approved item, or a figure id.
-  Never place an approved item in two sections or leave one unplaced.
+  Never place an approved item in two sections, or more items in a section than
+  it has blocks.
   Never name a page object, format, or layout anywhere in your output.
   Never exceed the block limits.
 
@@ -192,8 +203,10 @@ Every later section has a meaningful bridge and transition.
      starting state, for the first section)?
   3. Does each section own a distinct responsibility?
   4. Is every scope.must_establish statement owned by a section?
-  5. Is every approved item placed exactly once, in an allowed slot?
+  5. Is each placed approved item in exactly one section, in an allowed slot,
+     with every required assessment slot owning at least one and no section
+     owning more items than planned_block_count?
   6. Is every focused misconception assigned to a section?
   7. Does every figure_plan entry use only a backbone figure id that exists?
-  8. Do the planned block counts fit the limits and sum within the lesson limit?
+  8. Do the planned block maximums fit the limits and sum within the lesson limit?
   9. Is every statement I wrote actually true?

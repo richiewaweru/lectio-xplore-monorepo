@@ -35,6 +35,7 @@ from tests.application.test_3a_preparation_runs import (
     _workspace,
 )
 from tests.planning.test_staged_assembly import SLOTS, Harness, _snapshot
+from tests.planning.test_staged_sections import _good
 from tests.planning.test_staged_spine import _packet
 
 
@@ -335,3 +336,29 @@ async def test_default_staged_runners_persist_events_and_the_draft_revision(
     )
     workspace = await _workspace(db_session_factory, prep_id)
     assert workspace.state == "awaiting_review" and workspace.progress.teaching_plan == "ready"
+
+
+async def test_stage_path_respects_review_settings_and_empty_sections(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "teaching_plan_quality_gate", "blocking")
+    monkeypatch.setattr(settings, "staged_section_review", False)
+    monkeypatch.setattr(settings, "staged_lesson_review", False)
+    scripts = {slot: [_good(slot)] for slot in SLOTS}
+    scripts["orient"] = [ValueError("not json")]  # no usable output: empty flagged section
+    h = Harness(monkeypatch, scripts=scripts)
+    packet, snapshot = _packet(), _snapshot()
+    spine_result = await stp.run_spine_stage(packet, snapshot, trace_id="t", generation_id="g")
+    sections = {}
+    for slot in SLOTS:
+        result = await stp.run_section_stage(
+            spine_result.spine, slot, packet, snapshot, trace_id="t", generation_id="g"
+        )
+        sections[slot] = stp.section_result_from_json(stp.section_result_to_json(result))
+    assert sections["orient"].unresolved and sections["orient"].blocks == []
+    assert sections["orient"].draft is None
+    result = await stp.finish_staged_plan(
+        packet, snapshot, spine_result, sections, trace_id="t", generation_id="g"
+    )
+    assert h.section_review_calls == 0 and h.lesson_review_calls == 0
+    assert result.semantic_review is None
+    assert result.plan.sections[0].blocks == []
+    assert "TEACHING_SECTION_UNRESOLVED" in {f["code"] for f in result.flags}

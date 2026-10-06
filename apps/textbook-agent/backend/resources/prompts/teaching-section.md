@@ -29,8 +29,9 @@ them.
 
 ## WRITE ONLY THIS SECTION'S BLOCKS
 
-Write exactly `planned_block_count` blocks, no more and no fewer, in teaching
-order. Never output ids for blocks or sections, a slot id, a position, or any
+Write between max(1, the number of assigned approved items) and
+`planned_block_count` blocks, in teaching order. `planned_block_count` is a
+maximum, not a target: use fewer when the section's job needs fewer. Never output ids for blocks or sections, a slot id, a position, or any
 continuity field; the backend attaches them. Output blocks only.
 
 You work with:
@@ -93,7 +94,7 @@ an approved item. Use `none` only for passive actions. Formative tasks leave
 The section's assigned approved items are supplied as `{approved_item_id, kind,
 stem, allowed_actions, evidence_ref}`. Bind exactly this section's assigned
 approved items (the spine's `approved_item_ids`), each in exactly one
-assessment block, and no others:
+assessment block (so at most one item per block), and no others:
 
   - A non-empty `source_question_ids` is legal only on a block whose intent is in
     the assessment source policy's `eligible_intents`. Leave it empty on every
@@ -190,7 +191,8 @@ scrutiny exactly as written.
 
   Never change or contradict the spine, the objective, the scope, or the anchor.
   Never write a block for another section's job.
-  Never write more or fewer than `planned_block_count` blocks.
+  Never write more than `planned_block_count` blocks, or fewer than one block per
+  assigned approved item.
   Never output block ids, section ids, slot ids, or continuity fields.
   Never use an excluded intent.
   Never emit a heading block. Headings come from section titles.
@@ -255,7 +257,7 @@ wherever the same entry is needed. When a block has no sourcebook needs, set
 
 ## SELF-CHECK
 
-  1. Exactly `planned_block_count` blocks?
+  1. Between max(1, assigned items) and `planned_block_count` blocks?
   2. Do the blocks lead from this section's entry_state to its exit_state and
      establish its must_establish, without repeating avoid_repeating?
   3. Is every assigned approved item bound exactly once, on an eligible intent,

@@ -194,7 +194,15 @@ def test_item_checks() -> None:
     def unplaced(d):
         d["sections"][2]["approved_item_ids"] = ["q1"]
 
-    assert _codes(stp.spine_check_errors(*_spine(_mutated(unplaced)))) == {"SPINE_ITEM_UNPLACED"}
+    # Selection is optional: leaving an approved item unplaced is legal.
+    assert _codes(stp.spine_check_errors(*_spine(_mutated(unplaced)))) == set()
+
+    def too_many(d):
+        d["sections"][2]["planned_block_count"] = 1
+
+    assert _codes(stp.spine_check_errors(*_spine(_mutated(too_many)))) == {
+        "SPINE_ITEM_BLOCK_BUDGET"
+    }
 
     def empty(d):
         d["sections"][2]["approved_item_ids"] = []
@@ -203,6 +211,25 @@ def test_item_checks() -> None:
     codes = _codes(stp.spine_check_errors(*_spine(_mutated(empty))))
     assert "SPINE_ASSESSMENT_SLOT_EMPTY" in codes
     assert "SPINE_ITEM_OUTSIDE_ASSESSMENT_SLOT" in codes
+
+
+def test_items_per_section_bounded_by_block_maximum_not_total() -> None:
+    # The real-run failure: more items than the check section has blocks.
+    def crowded(d):
+        d["sections"][2]["planned_block_count"] = 1
+        d["sections"][2]["approved_item_ids"] = ["q1"]
+
+    spine, packet = _spine(_mutated(crowded))
+    assert stp.spine_check_errors(spine, packet) == []
+
+
+def test_block_budget_sums_maxima() -> None:
+    def over(d):
+        for section in d["sections"]:
+            section["planned_block_count"] = 3
+
+    codes = _codes(stp.spine_check_errors(*_spine(_mutated(over))))
+    assert "SPINE_BLOCK_BUDGET" in codes
 
 
 def test_items_may_go_anywhere_without_required_slots() -> None:
@@ -315,7 +342,7 @@ def test_three_bad_attempts_raise(monkeypatch) -> None:
     with pytest.raises(TeachingPlanOutputInvalidError) as info:
         run()
     assert info.value.attempt_count == 3
-    assert any("SPINE_ITEM_UNPLACED" in d for d in info.value.details)
+    assert any("SPINE_ASSESSMENT_SLOT_EMPTY" in d for d in info.value.details)
     assert len(payloads) == 3
 
 

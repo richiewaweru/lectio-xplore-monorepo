@@ -115,11 +115,15 @@ from print.generation.whole_lesson.validation import (
 from resource_specs.loader import get_spec
 from resource_specs.renderer import render_lesson_design_guidance, render_resource_identity
 
+_LEGACY_REQUIRED_SOURCE_INTENTS = frozenset({"check-understanding", "diagnose-misconception"})
+
 SECTION_REPAIR_INSTRUCTION = (
     "Return the complete corrected section JSON (blocks only). Change only what is "
     "required to satisfy these errors and keep everything else as it was. Write "
-    "exactly planned_block_count blocks. Bind each assigned approved item to exactly "
-    "one block, copying ids verbatim, and bind nothing else. Copy every backbone "
+    "between max(1, number of assigned items) and planned_block_count blocks "
+    "(planned_block_count is a maximum). Bind each assigned approved item to exactly "
+    "one block (at most one item per block), copying ids verbatim, and bind nothing "
+    "else. Copy every backbone "
     "figure in figure_plan into a block's visual with figure_ref set to its id."
 )
 
@@ -127,12 +131,14 @@ SPINE_REPAIR_INSTRUCTION = (
     "Return the complete corrected TeachingSpine JSON. Change only the fields "
     "required to satisfy these errors and keep everything else as it was. Every "
     "entry_state statement of a section must be covered by the previous section's "
-    "exit_state (the first section's by starting_state or prior_established). Place "
-    "every approved item id exactly once, copying ids verbatim, and only in "
-    "required_assessment_slots sections when that list is non-empty. Use only "
-    "misconception ids and backbone figure ids that exist in the fixed input. Keep "
-    "planned_block_count within each slot's min_blocks..max_blocks and the "
-    "lesson's block limits."
+    "exit_state (the first section's by starting_state or prior_established). Placing "
+    "approved items is optional, but never place an item twice, copy ids verbatim, "
+    "and when required_assessment_slots is non-empty every one of those slots must own "
+    "at least one item and items go only there. A section may own no more items than "
+    "its planned_block_count (one item per block). Use only "
+    "misconception ids and backbone figure ids that exist in the fixed input. "
+    "planned_block_count is a maximum; keep it within each slot's min_blocks..max_blocks "
+    "and keep the sum within the lesson's block limit."
 )
 
 
@@ -308,12 +314,17 @@ def spine_check_errors(spine: TeachingSpine, packet: ImmutableLessonPacket) -> l
                 f"SPINE_ITEM_DUPLICATE: approved item '{item_id}' is placed in "
                 f"{len(where)} sections ({', '.join(where)}); place it in exactly one."
             )
-    for item in packet.approved_items:
-        if item.id not in placements:
+    # Selection is optional (same rule as the single planner): unplaced items are fine.
+    # What is required is that each required assessment slot owns one, and that a
+    # section never owns more items than it has blocks (one item per block).
+    for section in sections:
+        if len(section.approved_item_ids) > section.planned_block_count:
             errors.append(
-                f"SPINE_ITEM_UNPLACED: approved item '{item.id}' is not placed in any "
-                "section; add it to one section's approved_item_ids"
-                + (f" (one of {required_slots})." if required_slots else ".")
+                f"SPINE_ITEM_BLOCK_BUDGET: section {section.slot_id} is assigned "
+                f"{len(section.approved_item_ids)} approved items but plans only "
+                f"{section.planned_block_count} blocks; each item needs its own block "
+                "(at most one item per block), so assign fewer items to this section "
+                "(items are optional) or raise planned_block_count within its limit."
             )
     if required_slots:
         by_slot = {s.slot_id: s for s in sections}
@@ -385,8 +396,8 @@ def spine_check_errors(spine: TeachingSpine, packet: ImmutableLessonPacket) -> l
             )
     if total > limits.max_total_blocks:
         errors.append(
-            f"SPINE_BLOCK_BUDGET: planned blocks total {total} exceeds the lesson limit "
-            f"of {limits.max_total_blocks}; reduce planned_block_count in some sections."
+            f"SPINE_BLOCK_BUDGET: planned block maxima total {total} exceeds the lesson "
+            f"limit of {limits.max_total_blocks}; reduce planned_block_count in some sections."
         )
     return errors
 
@@ -695,7 +706,9 @@ def section_payload(
             "allowed_evidence_refs": policy.get("allowed_evidence_refs", []),
             "forbidden_terminology": policy.get("forbidden_terminology", []),
         },
+        # planned_block_count is a MAXIMUM; one block per assigned item at least.
         "planned_block_count": section.planned_block_count,
+        "min_blocks": max(1, len(section.approved_item_ids)),
     }
 
 
@@ -846,11 +859,21 @@ def section_check_errors(
         errors.extend(_frozen_assessment_reuse_errors_for_section(section, packet))
 
     planned = spine_section.planned_block_count
-    if len(section.blocks) != planned:
+    minimum = max(1, len(spine_section.approved_item_ids))
+    if not minimum <= len(section.blocks) <= planned:
         errors.append(
             f"SECTION_BLOCK_COUNT: section {slot_id} has {len(section.blocks)} blocks but "
-            f"the spine plans exactly {planned}; write exactly {planned} blocks."
+            f"the spine allows {minimum}..{planned} (planned_block_count {planned} is a "
+            f"maximum; one block per assigned approved item at least); write between "
+            f"{minimum} and {planned} blocks."
         )
+    for block in section.blocks:
+        if len(block.source_question_ids) > 1:
+            errors.append(
+                f"SECTION_BLOCK_MULTIPLE_SOURCES: block {block.id!r} binds "
+                f"{len(block.source_question_ids)} approved items; bind at most one item "
+                "per block."
+            )
 
     bound = [sid for block in section.blocks for sid in block.source_question_ids]
     expected_items = list(spine_section.approved_item_ids)
@@ -870,6 +893,20 @@ def section_check_errors(
             f"approved items {expected_items}, each in exactly one block's "
             f"source_question_ids ({'; '.join(parts)})."
         )
+    if not packet.required_assessment_slots:
+        # Legacy packets: check/diagnose blocks need a bound source (same rule the
+        # single planner enforces after assembly).
+        for block in section.blocks:
+            if (
+                block.intent in _LEGACY_REQUIRED_SOURCE_INTENTS
+                and not block.source_question_ids
+            ):
+                errors.append(
+                    f"SECTION_REQUIRED_SOURCE_MISSING: block {block.id!r} intent="
+                    f"{block.intent!r} needs one of this section's assigned approved "
+                    "items; bind it, or use a different intent when the section has "
+                    "no assigned item."
+                )
 
     present_refs = {
         block.visual.figure_ref
@@ -999,10 +1036,8 @@ async def plan_teaching_section(
                     details = repair_errors
                     record.errors = repair_errors
                 else:
-                    from pydantic_ai.exceptions import UnexpectedModelBehavior
-
-                    if isinstance(exc, UnexpectedModelBehavior):
-                        raise
+                    # Includes UnexpectedModelBehavior (malformed output): retry, and
+                    # if every attempt fails the section ships flagged, not raised.
                     repair_errors = structured_output_errors(exc)
                     record.errors = repair_errors
                     details = repair_errors
@@ -1015,16 +1050,33 @@ async def plan_teaching_section(
         draft, section, flags = review_after
         blocks = _draft_blocks_from_section(section)
         if section_reviewer is not None:
-            findings = list(
-                await section_reviewer(
-                    spine=spine,
-                    slot_id=slot_id,
-                    section=section,
-                    draft_blocks=blocks,
-                    packet=packet,
+            try:
+                findings = list(
+                    await section_reviewer(
+                        spine=spine,
+                        slot_id=slot_id,
+                        section=section,
+                        draft_blocks=blocks,
+                        packet=packet,
+                    )
+                    or []
                 )
-                or []
-            )
+            except Exception as exc:  # noqa: BLE001 - reviewer outage is advisory
+                findings = []
+                flags = [
+                    *flags,
+                    plan_quality_flag(
+                        code="SECTION_REVIEW_UNAVAILABLE",
+                        source="reviewer",
+                        message=(
+                            f"Section {slot_id} could not be semantically reviewed "
+                            f"({type(exc).__name__}: {exc}); it passed its code checks."
+                        ),
+                        section_ids=[slot_id],
+                        block_ids=[],
+                        repair_instruction="Review this section manually before approval.",
+                    ),
+                ]
             record.review_findings = [
                 f.model_dump(mode="json") if hasattr(f, "model_dump") else dict(f)
                 for f in findings
@@ -1099,9 +1151,42 @@ async def plan_teaching_section(
             f"teaching section {slot_id} exhausted {len(attempts)} provider attempts"
         )
         raise last_exception
-    raise TeachingPlanOutputInvalidError(
-        attempt_count=len(attempts), details=details
-    ) from last_exception
+    # No attempt produced parseable output: ship an empty unresolved section. The
+    # final gate turns issues located inside unresolved sections into flags.
+    return _empty_unresolved_section(
+        slot_id,
+        attempts,
+        reason=f"no attempt produced usable output ({'; '.join(details) or 'unknown error'})",
+        latency_s=time.perf_counter() - started_all,
+    )
+
+
+def _empty_unresolved_section(
+    slot_id: str,
+    attempts: list[SectionAttempt],
+    *,
+    reason: str,
+    latency_s: float,
+) -> SectionResult:
+    """Zero-block unresolved section carrying a TEACHING_SECTION_UNRESOLVED flag."""
+    return SectionResult(
+        slot_id=slot_id,
+        draft=None,
+        blocks=[],
+        attempts=attempts,
+        flags=[
+            plan_quality_flag(
+                code="TEACHING_SECTION_UNRESOLVED",
+                source="validator",
+                message=f"Section {slot_id} has no blocks: {reason}",
+                section_ids=[slot_id],
+                block_ids=[],
+                repair_instruction="Write this section's blocks before approval.",
+            )
+        ],
+        unresolved=True,
+        latency_s=latency_s,
+    )
 
 
 async def plan_teaching_sections(
@@ -1114,7 +1199,13 @@ async def plan_teaching_sections(
     section_reviewer: Any | None = None,
     max_attempts: int = 3,
 ) -> dict[str, SectionResult]:
-    """Run every section call in parallel; exhaustion flags a section, never raises."""
+    """Run every section call in parallel and flag, don't fail.
+
+    A section that exhausts its retries, or whose call raises unexpectedly, becomes an
+    unresolved flagged section (zero blocks when nothing usable came back). The one
+    exception: when EVERY section failed with a transport/provider error the provider
+    is down, so the first such error is re-raised for the work-item retry to handle.
+    """
     system_prompt = render_staged_prompt(
         packet, projections.get("teaching_guidance"), kind="section"
     )
@@ -1133,9 +1224,29 @@ async def plan_teaching_sections(
                 section_reviewer=section_reviewer,
             )
             for slot_id in slot_ids
-        )
+        ),
+        return_exceptions=True,
     )
-    return dict(zip(slot_ids, results, strict=True))
+    for outcome in results:
+        if isinstance(outcome, BaseException) and not isinstance(outcome, Exception):
+            raise outcome  # cancellation etc.
+    failures = [o for o in results if isinstance(o, Exception)]
+    if failures and len(failures) == len(results) and all(
+        is_transport_error(f) for f in failures
+    ):
+        raise failures[0]
+    out: dict[str, SectionResult] = {}
+    for slot_id, outcome in zip(slot_ids, results, strict=True):
+        if isinstance(outcome, Exception):
+            out[slot_id] = _empty_unresolved_section(
+                slot_id,
+                [SectionAttempt(attempt=1, error=f"{type(outcome).__name__}: {outcome}")],
+                reason=f"{type(outcome).__name__}: {outcome}",
+                latency_s=0.0,
+            )
+        else:
+            out[slot_id] = outcome
+    return out
 
 
 # --------------------------------------------------------------------------- assembly (phases 5-6)
@@ -1158,6 +1269,13 @@ def _lesson_context(packet: ImmutableLessonPacket) -> dict[str, Any]:
         **packet.planner_payload(),
         "approved_items": [{"id": item.id, "stem": item.stem} for item in packet.approved_items],
     }
+
+
+def configured_section_reviewer(*, trace_id: str, generation_id: str | None):
+    """Per-section reviewer when ``staged_section_review`` is on, else ``None``."""
+    if not settings.staged_section_review:
+        return None
+    return make_section_reviewer(trace_id=trace_id, generation_id=generation_id)
 
 
 def make_section_reviewer(*, trace_id: str, generation_id: str | None):
@@ -1276,6 +1394,46 @@ def _assemble_and_materialize(
     return draft, plan, ownership_errors
 
 
+async def _review_lesson_safe(
+    *,
+    spine: TeachingSpine,
+    plan: TeachingPlan,
+    draft: TeachingPlanDraftV2,
+    packet: ImmutableLessonPacket,
+    trace_id: str,
+    generation_id: str | None,
+) -> tuple[TeachingPlanSemanticReviewResult | None, dict[str, Any] | None]:
+    """Whole-lesson review that never fails the plan.
+
+    Returns ``(result, None)`` or ``(None, advisory LESSON_REVIEW_UNAVAILABLE flag)``
+    when the reviewer errors or times out.
+    """
+    try:
+        return (
+            await _review_lesson_bound(
+                spine=spine,
+                plan=plan,
+                draft=draft,
+                packet=packet,
+                trace_id=trace_id,
+                generation_id=generation_id,
+            ),
+            None,
+        )
+    except Exception as exc:  # noqa: BLE001 - reviewer outage is advisory
+        return None, plan_quality_flag(
+            code="LESSON_REVIEW_UNAVAILABLE",
+            source="reviewer",
+            message=(
+                "The whole-lesson semantic review could not run "
+                f"({type(exc).__name__}: {exc}); the plan passed its code checks."
+            ),
+            section_ids=[],
+            block_ids=[],
+            repair_instruction="Read the plan end to end before approving it.",
+        )
+
+
 async def _review_lesson_bound(
     *,
     spine: TeachingSpine,
@@ -1292,6 +1450,7 @@ async def _review_lesson_bound(
         lesson_context=_lesson_context(packet),
         trace_id=trace_id,
         generation_id=generation_id,
+        include_section_codes=not settings.staged_section_review,
     )
     if result.content_hash != teaching_plan_content_hash(plan):
         raise TeachingPlanSemanticReviewError(
@@ -1401,7 +1560,9 @@ async def run_section_stage(
         ),
         trace_id=trace_id,
         generation_id=generation_id,
-        section_reviewer=make_section_reviewer(trace_id=trace_id, generation_id=generation_id),
+        section_reviewer=configured_section_reviewer(
+            trace_id=trace_id, generation_id=generation_id
+        ),
     )
 
 
@@ -1443,7 +1604,7 @@ async def run_staged_teaching_planner(
     spine_s = time.perf_counter() - spine_started
 
     # Sections (parallel; each reviewed on its own, retried alone).
-    reviewer = make_section_reviewer(trace_id=tid, generation_id=generation_id)
+    reviewer = configured_section_reviewer(trace_id=tid, generation_id=generation_id)
     sections_started = time.perf_counter()
     sections = await plan_teaching_sections(
         spine_result.spine,
@@ -1503,7 +1664,7 @@ async def finish_staged_plan(
     assessment_intents = set(projections["assessment_source_policy"]["eligible_intents"])
     advisory_gate = settings.teaching_plan_quality_gate == "advisory"
     spine_prompt = render_staged_prompt(packet, teaching_guidance, kind="spine")
-    reviewer = make_section_reviewer(trace_id=tid, generation_id=generation_id)
+    reviewer = configured_section_reviewer(trace_id=tid, generation_id=generation_id)
     extra_attempts: list[tuple[str, SectionAttempt]] = []
 
     # Assembly + whole-lesson review.
@@ -1511,18 +1672,27 @@ async def finish_staged_plan(
         spine, sections, packet, assessment_intents
     )
     review_started = time.perf_counter()
-    lesson_review = await _review_lesson_bound(
-        spine=spine,
-        plan=plan,
-        draft=draft,
-        packet=packet,
-        trace_id=f"{tid}:lesson-review",
-        generation_id=generation_id,
-    )
+    lesson_review: TeachingPlanSemanticReviewResult | None = None
+    review_state = "skipped"
+    review_flags: list[dict[str, Any]] = []
+    if settings.staged_lesson_review:
+        lesson_review, unavailable = await _review_lesson_safe(
+            spine=spine,
+            plan=plan,
+            draft=draft,
+            packet=packet,
+            trace_id=f"{tid}:lesson-review",
+            generation_id=generation_id,
+        )
+        review_state = "ran"
+        if unavailable is not None:
+            review_state = "unavailable"
+            review_flags.append(unavailable)
     review_s = time.perf_counter() - review_started
-    flagged, blocking = _split_findings(lesson_review.findings, advisory_gate=advisory_gate)
+    first_findings = lesson_review.findings if lesson_review is not None else []
+    flagged, blocking = _split_findings(first_findings, advisory_gate=advisory_gate)
     first_blocking_count = len(blocking)
-    review_flags: list[dict[str, Any]] = [_finding_flag(f) for f in flagged]
+    review_flags.extend(_finding_flag(f) for f in flagged)
     review_unresolved: set[str] = set()
     timings_fix: dict[str, Any] = {}
     final_review = lesson_review
@@ -1576,7 +1746,7 @@ async def finish_staged_plan(
             draft, plan, ownership_errors = _assemble_and_materialize(
                 spine, sections, packet, assessment_intents
             )
-            final_review = await _review_lesson_bound(
+            final_review, unavailable = await _review_lesson_safe(
                 spine=spine,
                 plan=plan,
                 draft=draft,
@@ -1584,8 +1754,11 @@ async def finish_staged_plan(
                 trace_id=f"{tid}:lesson-review2",
                 generation_id=generation_id,
             )
-            flagged, blocking = _split_findings(final_review.findings, advisory_gate=advisory_gate)
+            second_findings = final_review.findings if final_review is not None else []
+            flagged, blocking = _split_findings(second_findings, advisory_gate=advisory_gate)
             review_flags = [_finding_flag(f) for f in flagged]
+            if unavailable is not None:
+                review_flags.append(unavailable)
         for finding in blocking:
             review_flags.append(_finding_flag(finding, prefix=fix_note))
             review_unresolved.update(s for s in finding.section_ids if s in sections)
@@ -1667,18 +1840,23 @@ async def finish_staged_plan(
         )
     validation = ValidationReport(ok=True, issues=gate_issues)
 
-    if final_review.content_hash != teaching_plan_content_hash(plan):
+    if final_review is not None and final_review.content_hash != teaching_plan_content_hash(
+        plan
+    ):
         raise TeachingPlanSemanticReviewError(
             "TEACHING_SEMANTIC_REVIEW_INVALID",
             "Teaching Plan semantic review is not bound to the final plan",
         )
     qc = [finding.to_dict() for finding in qc_findings]
-    qc.append(
-        {
-            "code": "TEACHING_PLAN_SEMANTIC_REVIEW_PASS",
-            "content_hash": final_review.content_hash,
-        }
-    )
+    if final_review is not None:
+        qc.append(
+            {
+                "code": "TEACHING_PLAN_SEMANTIC_REVIEW_PASS",
+                "content_hash": final_review.content_hash,
+            }
+        )
+    else:
+        qc.append({"code": "TEACHING_PLAN_SEMANTIC_REVIEW_SKIPPED", "state": review_state})
 
     # Attempts: spine tries, then section tries, then the final assembled plan.
     section_prompt_text = render_staged_prompt(packet, teaching_guidance, kind="section")
@@ -1734,7 +1912,8 @@ async def finish_staged_plan(
         },
         "lesson_review": {
             "latency_s": round(review_s, 4),
-            "findings": len(lesson_review.findings),
+            "state": review_state,
+            "findings": len(first_findings),
             "blocking": first_blocking_count,
         },
         "fix_round": timings_fix,

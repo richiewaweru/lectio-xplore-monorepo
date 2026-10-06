@@ -96,8 +96,12 @@ teaching guidance (same projections the single planner builds today).
 
 - section count and order equal `packet.slots`
 - `entry_state[n]` covered by `exit_state[n-1]` (reuse the coverage helper in `continuity.py`)
-- every required approved item is placed exactly once, only in `required_assessment_slots`
-  when that list is non-empty
+- approved-item placement follows the single planner's rule: selection is optional, no item
+  twice, and when `required_assessment_slots` is non-empty each of those slots owns at least
+  one item and items go only there; a section owns at most `planned_block_count` items (one
+  item per block)
+- `planned_block_count` is a maximum: a section may write `max(1, assigned items)` to
+  `planned_block_count` blocks, and the sum of maxima stays within the lesson limit
 - every `misconception_focus_ids` entry is assigned to at least one section
 - `backbone_figure_id` values exist in `packet.backbone.figures`
 
