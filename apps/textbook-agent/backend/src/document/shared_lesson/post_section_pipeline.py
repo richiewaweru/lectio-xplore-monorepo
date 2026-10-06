@@ -31,7 +31,10 @@ from document.shared_lesson.document_qa_dispatcher import (
     dispatch_reviewed_figure_media,
     dispatch_shared_document_qa,
 )
-from document.shared_lesson.figure_executor_adapter import SharedFigureExecutorAdapter
+from document.shared_lesson.figure_executor_adapter import (
+    RoutingFigureExecutor,
+    SharedFigureExecutorAdapter,
+)
 from document.shared_lesson.finalization_dispatcher import (
     SharedLessonFinalizationDispatchError,
     SharedLessonFinalizationDispatchOutcome,
@@ -275,7 +278,7 @@ async def run_post_section_pipeline(
             selected_media_executor = (
                 media_executor
                 if media_executor is not None
-                else SharedFigureExecutorAdapter(run_id=run_id)
+                else RoutingFigureExecutor(SharedFigureExecutorAdapter(run_id=run_id))
             )
             if review_leaf0 is not None:
                 # A reviewer already saved and submitted a text-only correction
