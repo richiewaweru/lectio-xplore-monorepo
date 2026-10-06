@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -34,6 +34,21 @@ class BackboneFigure(BaseModel):
     must_show: list[str] = Field(default_factory=list)
     labels_required: list[str] = Field(default_factory=list)
     data: dict[str, Any] = Field(default_factory=dict)
+    # None means "diagram" (code-rendered). Excluded from dumps when None so the
+    # canonical hash of backbones stored before this field existed is unchanged.
+    mode: Literal["diagram", "image"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+    @property
+    def effective_mode(self) -> Literal["diagram", "image"]:
+        return self.mode or "diagram"
+
+    @model_validator(mode="after")
+    def _image_is_described(self) -> BackboneFigure:
+        if self.mode == "image" and not [item for item in self.must_show if item.strip()]:
+            raise ValueError("image figures must describe what to show in must_show")
+        return self
 
 
 class BackboneAnchor(BaseModel):

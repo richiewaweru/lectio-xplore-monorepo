@@ -80,9 +80,15 @@ class VisualSpec(BaseModel):
     )
     must_not_show: list[str] = Field(default_factory=list)
     required: bool = True
+    figure_ref: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Backbone figure id this visual draws, when it draws one.",
+    )
 
     @model_validator(mode="after")
     def _normalize(self) -> VisualSpec:
+        self.figure_ref = (self.figure_ref or "").strip() or None
         self.purpose = self.purpose.strip()
         self.must_show = _clean_text_list(self.must_show)
         self.labels_required = _clean_text_list(self.labels_required)

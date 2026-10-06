@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 
 import pytest
@@ -366,3 +367,32 @@ def test_draft_block_visual_is_nullable_in_provider_schema_and_materializes() ->
     )
     visual = plan.sections[1].blocks[0].visual
     assert visual is not None and visual.must_show == ["evaporation"]
+
+
+def test_visual_without_figure_ref_dumps_without_key_and_keeps_pre_change_hash() -> None:
+    plan = TeachingPlan.model_validate(
+        _legacy_plan_with_visual(
+            {"purpose": "See the order of stages.", "must_show": ["evaporation", "condensation"]}
+        )
+    )
+    visual = plan.model_dump(mode="json")["sections"][0]["blocks"][0]["visual"]
+    assert "figure_ref" not in visual
+    # Hash computed with the pre-figure_ref code on the same content.
+    assert (
+        teaching_plan_content_hash(plan)
+        == "0838e633ababbc32c28119d487bf32c05ff6575b02d16432a850bdab2b559c82"
+    )
+
+
+def test_figure_ref_is_normalized_and_changes_hash_when_set() -> None:
+    base = {"purpose": "See the order.", "must_show": ["evaporation"]}
+    blank = TeachingPlan.model_validate(_legacy_plan_with_visual({**base, "figure_ref": "  "}))
+    assert blank.sections[0].blocks[0].visual.figure_ref is None
+    ref = TeachingPlan.model_validate(_legacy_plan_with_visual({**base, "figure_ref": " fig-1 "}))
+    assert ref.sections[0].blocks[0].visual.figure_ref == "fig-1"
+    assert ref.model_dump(mode="json")["sections"][0]["blocks"][0]["visual"]["figure_ref"] == "fig-1"
+    assert teaching_plan_content_hash(ref) != teaching_plan_content_hash(blank)
+
+
+def test_draft_schema_includes_figure_ref() -> None:
+    assert "figure_ref" in json.dumps(TeachingPlanDraftV2.model_json_schema())
