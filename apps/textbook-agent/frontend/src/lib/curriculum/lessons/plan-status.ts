@@ -47,7 +47,10 @@ export function isPlanPollingState(state: PreparationWorkspaceStatus['state'] | 
 /** Teacher-facing progress line while a plan is being generated. */
 export function planProgressText(progress: PreparationProgress | null | undefined): string {
 	if (!progress) return 'Preparing structure and teaching plan…';
-	const { items_total: total, items_ready: ready, teaching_plan: teaching } = progress;
+	const { items_total: total, items_ready: ready, teaching_plan: teaching, backbone } = progress;
+	if ((backbone === 'queued' || backbone === 'running') && total === 0) {
+		return 'Writing the lesson scenario and data…';
+	}
 	if (teaching === 'queued' || teaching === 'running') return 'Writing the Teaching Plan…';
 	if (teaching === 'ready') return 'Finishing the Teaching Plan…';
 	if (total > 0 && ready < total) return `Writing practice items: ${ready}/${total} cards`;
@@ -63,7 +66,9 @@ export function planFailureMessage(
 	if (prep?.state === 'failed_recoverable') {
 		const failed = prep.progress?.items_failed ?? 0;
 		const base =
-			failed > 0
+			prep.progress?.backbone === 'failed'
+				? 'The lesson scenario and data could not be written.'
+				: failed > 0
 				? `${failed} practice ${failed === 1 ? 'item' : 'items'} could not be written.`
 				: 'Plan generation stopped before it finished.';
 		return message ? `${base} ${message}` : `${base} You can retry.`;
