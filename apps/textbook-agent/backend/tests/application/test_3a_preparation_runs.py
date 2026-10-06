@@ -39,10 +39,10 @@ from core.database.models import (
 from core.entities.user import User
 from curriculum.backbone.errors import BackboneOutputInvalidError
 from curriculum.backbone.models import LessonBackbone, backbone_hash
-from curriculum.backbone.persistence import load_backbone
+from curriculum.backbone.persistence import load_backbone, store_backbone
 from curriculum.backbone.writer import BackboneRun
 from curriculum.items.diagnostics import attempt_record
-from curriculum.items.generator import ItemGenerationResult, ItemGenerationRun
+from curriculum.items.generator import ItemBackboneRef, ItemGenerationResult, ItemGenerationRun
 from curriculum.planning.models import (
     AnchorSpec,
     ItemOption,
@@ -117,9 +117,14 @@ def _context() -> dict[str, Any]:
     }
 
 
-def _result(card_id: str) -> ItemGenerationResult:
+def _result(card_id: str, *, with_refs: bool = False) -> ItemGenerationResult:
     return ItemGenerationResult(
         card_id=card_id,
+        backbone_refs=(
+            {f"{card_id}-q{i}": ItemBackboneRef(target="anchor-1", figure_id="fig-1") for i in range(1, 6)}
+            if with_refs
+            else {}
+        ),
         items=[
             QuestionBrief(
                 question_id=f"{card_id}-q{i}",
@@ -166,6 +171,7 @@ class _Calls:
     def __init__(self) -> None:
         self.events: list[str] = []
         self.fail: dict[str, BaseException] = {}
+        self.item_backbones: list[LessonBackbone | None] = []
 
     async def backbone_runner(self, inputs, *, generation_id, max_attempts=2):  # noqa: ANN001
         self.events.append("backbone")
@@ -187,13 +193,14 @@ class _Calls:
             correlation_id=f"backbone:{generation_id}",
         )
 
-    async def item_runner(self, card, *, generation_id, max_attempts=3):  # noqa: ANN001
+    async def item_runner(self, card, *, generation_id, max_attempts=3, backbone=None):  # noqa: ANN001
         self.events.append(f"items:{card.id}")
+        self.item_backbones.append(backbone)
         exc = self.fail.get(card.id)
         if exc is not None:
             raise exc
         return ItemGenerationRun(
-            result=_result(card.id),
+            result=_result(card.id, with_refs=backbone is not None),
             attempts=[
                 attempt_record(
                     correlation_id=f"item:{generation_id}:{card.id}",
@@ -549,6 +556,15 @@ async def test_worker_runs_backbone_then_items_then_teaching_plan_and_finalizes_
         )
         generation = await session.get(GenerationModel, prep_id)
     assert rows == 10
+    assert calls.item_backbones == [_backbone(), _backbone()]  # items are written against it
+    async with db_session_factory() as session:
+        stored_rows = list(
+            (await session.scalars(select(PackItemModel).where(PackItemModel.pack_id == prep_id))).all()
+        )
+    assert {
+        (row.backbone_ref["target"], row.backbone_ref["figure_id"], row.backbone_ref["backbone_hash"])
+        for row in stored_rows
+    } == {("anchor-1", "fig-1", backbone_hash(_backbone()))}
     assert generation.status == "awaiting_teaching_approval"  # written by save_teaching_plan
 
     workspace = await _workspace(db_session_factory, prep_id)
@@ -799,6 +815,49 @@ async def test_expired_lease_is_reclaimed_by_a_second_worker(
         )
     assert item.status == "ready" and item.lease_owner == "live-worker" and item.attempt == 2
     assert (await _run(db_session_factory, prep_id)).status == "ready"
+
+
+@pytest.mark.asyncio
+async def test_items_are_reused_only_under_the_same_backbone_hash(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    from application.unit_lesson.preparation_items import generate_card_items
+
+    user_id = "3a-stale-backbone"
+    _lesson, prep_id = await _seed(db_session, user_id=user_id)
+    calls = _Calls()
+    card_id = f"{user_id}-c1"
+    async with db_session_factory() as session:
+        await store_backbone(session, prep_id, _backbone(), input_hash="h1")
+        await session.commit()
+
+    async def run_card() -> dict[str, Any]:
+        return await generate_card_items(
+            session_factory=db_session_factory,
+            generation_id=prep_id,
+            card_id=card_id,
+            item_runner=calls.item_runner,
+        )
+
+    assert (await run_card())["skipped"] is False
+    assert (await run_card())["skipped"] is True  # same backbone hash: reuse
+    assert calls.events == [f"items:{card_id}"]
+
+    changed = _backbone().model_copy(deep=True)
+    changed.anchor.story = "A covered leaf loses 15 mL of water in 3 hours."
+    async with db_session_factory() as session:
+        await store_backbone(session, prep_id, changed, input_hash="h2")
+        await session.commit()
+    summary = await run_card()
+    assert summary["skipped"] is False  # stale under the new backbone: regenerated
+    assert calls.item_backbones[-1] == changed
+    async with db_session_factory() as session:
+        rows = list(
+            (await session.scalars(select(PackItemModel).where(PackItemModel.pack_id == prep_id))).all()
+        )
+    assert len(rows) == 5
+    assert {r.backbone_ref["backbone_hash"] for r in rows} == {backbone_hash(changed)}
+    assert not any(r.stale for r in rows)
 
 
 @pytest.mark.asyncio

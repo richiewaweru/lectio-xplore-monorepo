@@ -117,6 +117,32 @@ async def load_approved_item_records(
     return tuple(records)
 
 
+async def load_item_backbone_refs(
+    *,
+    session: AsyncSession,
+    concept_card: ConceptCardModel,
+) -> dict[str, dict[str, Any]]:
+    """Approved item id -> {target, figure_id} for the same rows as the loader above.
+
+    Kept out of ApprovedItemRecord so the teacher approval snapshot key set is unchanged.
+    """
+    stmt = select(PackItemModel).where(
+        PackItemModel.card_id == concept_card.id,
+        PackItemModel.stale.is_(False),
+    )
+    if concept_card.pack_id:
+        stmt = stmt.where(PackItemModel.pack_id == concept_card.pack_id)
+    refs: dict[str, dict[str, Any]] = {}
+    for row in (await session.execute(stmt)).scalars().all():
+        raw = row.backbone_ref
+        if isinstance(raw, dict) and raw.get("target"):
+            refs[str(row.id)] = {
+                "target": str(raw["target"]),
+                "figure_id": raw.get("figure_id"),
+            }
+    return refs
+
+
 def approved_item_ids(records: tuple[ApprovedItemRecord, ...]) -> tuple[str, ...]:
     return tuple(record.id for record in records)
 

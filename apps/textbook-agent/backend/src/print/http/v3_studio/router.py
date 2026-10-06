@@ -61,6 +61,8 @@ from print.rendering.pdf.service import (
 from resource_specs.loader import get_spec, list_spec_ids
 from resource_specs.renderer import render_spec_for_prompt
 from v3_blueprint.models import ProductionBlueprint
+from curriculum.backbone.models import backbone_hash
+from curriculum.backbone.persistence import load_backbone
 from curriculum.items.generator import execute_items
 from curriculum.planning.models import (
     ItemOption,
@@ -983,8 +985,14 @@ async def regenerate_pack_card_items(
             level=form.grade_level,
             notation=plan.variant_spec().voice.notation,
         )
-    generated = await execute_items(approved_card)
-    await _persist_item_results(card_pack_id, [generated])
+    async with async_session_factory() as session:
+        backbone = await load_backbone(session, generation_id)
+    generated = await execute_items(approved_card, backbone=backbone)
+    await _persist_item_results(
+        card_pack_id,
+        [generated],
+        backbone_hash_value=backbone_hash(backbone) if backbone is not None else None,
+    )
     reviews = await _load_item_reviews(card_pack_id, card_id=card_id)
     return reviews[0]
 

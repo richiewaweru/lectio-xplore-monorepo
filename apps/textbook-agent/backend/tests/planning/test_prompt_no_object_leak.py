@@ -102,3 +102,82 @@ def test_prompt_omits_recipe_block_for_unknown_knowledge_type() -> None:
     guidance = project_teaching_guidance(permitted_intent_ids={"orient", "explain"})
     rendered = render_teaching_prompt(_packet("any"), guidance)
     assert "Lesson design (from the" not in rendered
+
+
+_GUIDANCE_INTENTS = {
+    "orient",
+    "explain",
+    "explain-cause",
+    "diagnose-misconception",
+    "check-understanding",
+}
+
+_BACKBONE = {
+    "anchor": {
+        "id": "anchor-1",
+        "story": "Two identical plants, one in a dark cupboard.",
+        "data": {"days": 7},
+        "answer": None,
+        "figure_ids": [],
+    },
+    "variants": [],
+    "figures": [],
+}
+
+
+def test_backbone_block_present_only_when_packet_has_backbone() -> None:
+    load_all_specs()
+    guidance = project_teaching_guidance(permitted_intent_ids=_GUIDANCE_INTENTS)
+    plain = render_teaching_prompt(_packet(), guidance)
+    assert "## Lesson backbone" not in plain
+    with_backbone = _packet().model_copy(
+        update={"backbone": _BACKBONE, "item_backbone_refs": {"item-1": {"target": "anchor-1", "figure_id": None}}}
+    )
+    rendered = render_teaching_prompt(with_backbone, guidance)
+    assert "## Lesson backbone" in rendered
+    assert "{resource_identity}" not in rendered
+    assert rendered.index("## Lesson backbone") < rendered.index("## LEARNER ACTION POLICY")
+    assert '"item_backbone_refs"' in rendered
+
+
+def test_packet_without_backbone_serializes_and_loads_as_before() -> None:
+    packet = _packet()
+    dumped = packet.model_dump(mode="json")
+    assert "backbone" not in dumped and "item_backbone_refs" not in dumped
+    assert "backbone" not in packet.planner_payload()
+    assert ImmutableLessonPacket.model_validate(dumped) == packet  # old persisted rows load
+    with_backbone = packet.model_copy(update={"backbone": _BACKBONE})
+    round_tripped = ImmutableLessonPacket.model_validate(with_backbone.model_dump(mode="json"))
+    assert round_tripped.backbone == _BACKBONE
+
+
+def test_build_lesson_packet_uses_backbone_anchor_and_refs() -> None:
+    from curriculum.approved_items import ApprovedItemRecord
+    from curriculum.backbone.models import LessonBackbone
+    from print.generation.whole_lesson.packet_builder import build_lesson_packet
+
+    record = ApprovedItemRecord(
+        id="p:c.i1", card_id="c", stem="s", options=({"key": "a", "text": "x"},), correct_key="a", diagnoses={}
+    )
+    packet = build_lesson_packet(
+        path_lesson_id="l",
+        subject="S",
+        grade_level="G",
+        objective="o",
+        knowledge_type="conceptual",
+        lesson_mode="first_exposure",
+        must_establish=[],
+        must_not_introduce=[],
+        terminology=[],
+        anchor_id="old",
+        anchor_description="old description",
+        misconceptions=[],
+        prior_established=[],
+        approved_items=[record],
+        backbone=LessonBackbone.model_validate(_BACKBONE),
+        item_backbone_refs={"p:c.i1": {"target": "anchor-1", "figure_id": None}, "gone": {"target": "x"}},
+    )
+    assert packet.anchor.id == "anchor-1"
+    assert packet.anchor.description == _BACKBONE["anchor"]["story"]
+    assert packet.item_backbone_refs == {"p:c.i1": {"target": "anchor-1", "figure_id": None}}
+    assert "backbone" in packet.planner_payload()
