@@ -161,6 +161,48 @@ def test_approval_rejects_same_revision_replacement_and_persists_snapshot_digest
     assert teaching_plan_content_hash(approved.plan) == expected_hash
 
 
+def test_approval_rejects_plan_with_empty_sections_until_blocks_are_added() -> None:
+    from curriculum.teaching_plan.revisions import TeachingPlanHasEmptySectionsError
+    from curriculum.teaching_plan.service import edit_teaching_plan
+
+    state: dict = {}
+    store = TeachingRevisionStore(state)
+    plan = _plan()
+    payload = plan.model_dump(mode="json")
+    empty = dict(payload["sections"][0])
+    empty["slot_id"] = "explain"
+    empty["blocks"] = []
+    payload["sections"] = [*payload["sections"], empty]
+    store.record_draft(payload, preparation_hash="upstream-input-hash", revision=1)
+
+    with pytest.raises(TeachingPlanHasEmptySectionsError) as info:
+        store.approve(expected_revision=1)
+    assert info.value.code == "TEACHING_PLAN_HAS_EMPTY_SECTIONS"
+    assert info.value.section_ids == ["explain"]
+    assert "explain" in str(info.value)
+    assert isinstance(info.value, TeachingRevisionConflictError)
+    assert state["teaching_review"].get("approved_revision") is None
+
+    # The teacher adds a block through the plan edit path, then approval succeeds.
+    fixed = dict(payload)
+    filled = dict(empty)
+    filled["blocks"] = [
+        {
+            "id": "explain-b1",
+            "position": 0,
+            "intent": "explain",
+            "brief": "Explain the idea.",
+            "evidence": "A relevant observation.",
+        }
+    ]
+    fixed["sections"] = [payload["sections"][0], filled]
+    edit_teaching_plan(state, fixed, preparation_hash="upstream-input-hash")
+    state["teaching_plan"] = dict(store.get_revision(store.current_revision()).plan)
+    revision = store.current_revision()
+    approved = store.approve(expected_revision=revision)
+    assert approved.status == "approved"
+
+
 def test_approval_rejects_sourcebook_needs_without_explicit_refs() -> None:
     state: dict = {}
     store = TeachingRevisionStore(state)

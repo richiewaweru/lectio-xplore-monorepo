@@ -104,6 +104,7 @@ async def post_lesson_approach_approve(
         )
     from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
     from curriculum.teaching_plan.revisions import (
+        TeachingPlanHasEmptySectionsError,
         TeachingRevisionConflictError,
         TeachingRevisionContentError,
     )
@@ -176,6 +177,16 @@ async def post_lesson_approach_approve(
             await session.commit()
         except HTTPException:
             raise
+        except TeachingPlanHasEmptySectionsError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": exc.code,
+                    "message": str(exc),
+                    "section_ids": exc.section_ids,
+                    "recovery_action": "edit_plan",
+                },
+            ) from exc
         except (TeachingRevisionConflictError, TeachingRevisionContentError) as exc:
             raise HTTPException(
                 status_code=409,

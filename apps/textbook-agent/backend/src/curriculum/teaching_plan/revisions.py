@@ -24,6 +24,20 @@ class TeachingRevisionConflictError(ValueError):
     code = "TEACHING_REVISION_CONFLICT"
 
 
+class TeachingPlanHasEmptySectionsError(TeachingRevisionConflictError):
+    """A section has no blocks (an unresolved staged section); it cannot be approved."""
+
+    code = "TEACHING_PLAN_HAS_EMPTY_SECTIONS"
+
+    def __init__(self, section_ids: list[str]) -> None:
+        self.section_ids = list(section_ids)
+        names = ", ".join(self.section_ids)
+        super().__init__(
+            f"These sections have no blocks yet: {names}. Add blocks to each one, or "
+            "regenerate the plan, before approving."
+        )
+
+
 class TeachingRevisionContentError(ValueError):
     """A persisted Teaching Plan snapshot is missing or diverges from its digest."""
 
@@ -482,6 +496,9 @@ class TeachingRevisionStore:
             raise TeachingRevisionConflictError(
                 "current Teaching Plan bytes differ from the pending revision snapshot"
             )
+        empty_sections = [s.slot_id for s in pending_plan.sections if not s.blocks]
+        if empty_sections:
+            raise TeachingPlanHasEmptySectionsError(empty_sections)
         try:
             validate_sourcebook_need_refs(pending_plan)
         except ValueError as exc:
