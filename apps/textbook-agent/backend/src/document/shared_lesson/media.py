@@ -519,6 +519,7 @@ def _figure_order_from(
         must_show=list(spec.must_show),
         labels_required=list(spec.labels_required),
         must_not_show=list(spec.must_not_show),
+        visual_style="diagram_numbered" if spec.mode == "diagram" else None,
     )
     order = VisualGeneratorWorkOrder(
         work_order_id=f"shared-media-{semantic_hash}",

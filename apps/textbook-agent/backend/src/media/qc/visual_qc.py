@@ -10,6 +10,7 @@ from pydantic_ai.messages import BinaryContent
 
 from infra.authoring.model_policy import V3_VISUAL_QC, get_v3_model_settings, get_v3_slot
 from infra.authoring.structured_provider import NO_OUTPUT_RETRY, prepare_structured_agent
+from media.diagram_compositor import normalize_labels
 from media.generation.contracts import VisualGeneratorWorkOrder
 
 
@@ -28,6 +29,34 @@ def visual_qc_enabled() -> bool:
     }
 
 
+def _numbered_style_check(order: VisualGeneratorWorkOrder) -> str:
+    labels = list(normalize_labels(order.visual.labels_required))
+    count = len(labels)
+    if count == 0:
+        return """
+Numbered-label contract for diagram_numbered:
+- There are no required labels: the artwork must contain no visible text at all.
+- Flag any words, letters, or digits in the artwork.
+        """
+    key = "\n".join(f"  {idx} = {label}" for idx, label in enumerate(labels, start=1))
+    return f"""
+Numbered-label contract for diagram_numbered:
+- The artwork (everything above the white key band at the bottom) must contain
+  exactly the digits 1 to {count}, each appearing exactly once, as small numerals
+  on or beside the parts they number. Part names, for reference only:
+{key}
+- The key band at the bottom was drawn by code and lists the numbers with their
+  names. It is correct by construction: EXCLUDE it from the text check and do not
+  flag its words.
+- Flag any missing digit, any duplicated digit, any digit outside 1..{count}, and
+  ANY words, letters, titles, captions, or sentences inside the artwork.
+- Flag a digit that is clearly placed on the wrong kind of part (for example the
+  numeral for a petal sitting on the stem). Do not flag small placement offsets.
+- Treat MUST SHOW as semantic structure, not as permission to render its words.
+Also flag if the digits are not legible in print.
+    """
+
+
 def _criteria_prompt(
     order: VisualGeneratorWorkOrder,
     *,
@@ -41,10 +70,12 @@ def _criteria_prompt(
     dimension_guidance = (
         "Do not treat dimension labels or numbers as allowed text unless they are "
         "explicitly in the closed label set."
-        if visual_style == "diagram_precision"
+        if visual_style in {"diagram_precision", "diagram_numbered"}
         else "Dimension labels are allowed when required; area calculations or sums are not."
     )
-    if visual_style == "diagram_precision":
+    if visual_style == "diagram_numbered":
+        style_check = _numbered_style_check(order)
+    elif visual_style == "diagram_precision":
         style_check = """
 Closed-label contract for diagram_precision:
 - The deterministic compositor label band must contain exactly the LABELS
@@ -65,7 +96,9 @@ Also flag if important labels are not legible in print.
         style_check = "\nAlso flag if important labels are not legible in print."
 
     topology_check = ""
-    if topology_raster or visual_style == "diagram_precision":
+    if visual_style != "diagram_numbered" and (
+        topology_raster or visual_style == "diagram_precision"
+    ):
         topology_check = """
 Topology raster criteria:
 - Exact labels from the closed label set must appear, each once, with no extra
