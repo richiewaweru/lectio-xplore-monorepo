@@ -12,6 +12,7 @@
 		getPreparedLessonStatus
 	} from '$lib/api/units';
 	import {
+		getPreparationBackbone,
 		getPreparationStructure,
 		startPreparationPlan,
 		regeneratePreparationPlan,
@@ -25,6 +26,7 @@
 	import { realizePrintFromGeneration } from '$lib/api/realizations';
 	import type { PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import type { V3StructuralPlan } from '$lib/types/v3';
+	import type { LessonBackbone } from '$lib/types/backbone';
 	import { Button, ProgressSteps, InlineError, Card } from '$lib/ui';
 	import {
 		lessonWorkspaceHref,
@@ -43,6 +45,7 @@
 	} from '$lib/curriculum/lessons/plan-status';
 	import StructuralPlanPreview from '$lib/curriculum/lessons/StructuralPlanPreview.svelte';
 	import StructuralPlanActions from '$lib/curriculum/lessons/StructuralPlanActions.svelte';
+	import BackboneSummary from '$lib/curriculum/lessons/BackboneSummary.svelte';
 	import TeachingPlanReview from '$lib/curriculum/lessons/TeachingPlanReview.svelte';
 	import TeachingPlanFlags from '$lib/curriculum/lessons/TeachingPlanFlags.svelte';
 	import {
@@ -78,7 +81,9 @@
 	let approvalCheck = $state<'ok' | 'bad' | null>(null);
 	// Set once this page verified an approval it just submitted.
 	let approvedLocally = $state(false);
+	let backbone = $state<LessonBackbone | null>(null);
 	let hydrationSeq = 0;
+	let backboneSeq = 0;
 
 	const unitId = $derived(ctx.unitId);
 	const lessonId = $derived(ctx.lessonId);
@@ -167,6 +172,28 @@
 		const kind = prep?.review_kind ?? null;
 		untrack(() => void hydrate(gid, state, kind));
 	});
+
+	// Read-only backbone summary: fetched once the stage is ready or the plan
+	// is awaiting review. A 404 ("not ready") resolves to null, never an error.
+	const backboneAvailable = $derived(
+		prep?.progress?.backbone === 'ready' || prep?.state === 'awaiting_review' || prep?.state === 'approved'
+	);
+	$effect(() => {
+		const gid = generationId;
+		const available = backboneAvailable;
+		untrack(() => void loadBackbone(gid, available));
+	});
+
+	async function loadBackbone(gid: string | null, available: boolean) {
+		const seq = ++backboneSeq;
+		if (!gid || !available) return;
+		try {
+			const doc = await getPreparationBackbone(gid);
+			if (seq === backboneSeq) backbone = doc?.backbone ?? null;
+		} catch {
+			if (seq === backboneSeq) backbone = null;
+		}
+	}
 
 	async function hydrate(
 		gid: string | null,
@@ -417,6 +444,7 @@
 
 	onDestroy(() => {
 		hydrationSeq++;
+		backboneSeq++;
 	});
 
 	const teachingReview = $derived(lessonApproach?.teaching_review ?? null);
@@ -507,6 +535,9 @@
 		<section class="stage">
 			<p class="eyebrow">Teaching plan</p>
 			<TeachingPlanFlags flags={lessonApproach?.teaching_flags ?? []} />
+			{#if backbone}
+				<BackboneSummary {backbone} />
+			{/if}
 			<Card padding="md">
 				{#if lessonApproach?.teaching_plan}
 					<TeachingPlanReview

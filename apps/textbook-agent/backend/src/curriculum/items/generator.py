@@ -9,8 +9,10 @@ from core.llm.runner import RetryPolicy, run_llm
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from pydantic_ai import Agent
 
+from curriculum.backbone.models import LessonBackbone
 from curriculum.llm_contract_errors import structured_output_errors
 from curriculum.items.diagnostics import (
+    BackboneRefError,
     OutcomeClass,
     attempt_record,
     classify_item_failure,
@@ -28,12 +30,22 @@ ITEM_NODE = "v3_item_executor"
 ITEM_MAX_ATTEMPTS = 3
 
 
+class ItemBackboneRef(BaseModel):
+    """Which backbone scenario an item is about (anchor/variant id) and its figure."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    target: str = Field(min_length=1)
+    figure_id: str | None = None
+
+
 class ItemQuestionDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     prompt_text: str = Field(min_length=1)
     options: list[ItemOption] = Field(min_length=2)
     expected_answer: str = Field(min_length=1)
+    backbone_ref: ItemBackboneRef | None = None
 
 
 class ItemGenerationDraft(BaseModel):
@@ -54,6 +66,8 @@ class ItemGenerationResult(BaseModel):
     normalized_correct_diagnoses_cleared: int = Field(ge=0, default=0)
     coverage: dict[str, int] = Field(default_factory=dict)
     unmapped_options: int = Field(ge=0, default=0)
+    # question_id -> backbone reference (empty when no backbone was supplied).
+    backbone_refs: dict[str, ItemBackboneRef] = Field(default_factory=dict)
     _missing_misconceptions: tuple[str, ...] = PrivateAttr(default=())
 
     @property
@@ -72,9 +86,32 @@ class ItemGenerationRun:
     correlation_id: str = ""
 
 
+def _validate_backbone_refs(result: ItemGenerationResult, backbone: LessonBackbone) -> None:
+    targets = {backbone.anchor.id, *(v.id for v in backbone.variants)}
+    figure_ids = {f.id for f in backbone.figures}
+    for item in result.items:
+        ref = result.backbone_refs.get(item.question_id)
+        if ref is None:
+            raise BackboneRefError(
+                f"Item '{item.question_id}' is missing backbone_ref; every item must be "
+                f"about one of {sorted(targets)}"
+            )
+        if ref.target not in targets:
+            raise BackboneRefError(
+                f"Item '{item.question_id}' backbone_ref.target '{ref.target}' is not the "
+                f"anchor or a variant; use one of {sorted(targets)}"
+            )
+        if ref.figure_id is not None and ref.figure_id not in figure_ids:
+            raise BackboneRefError(
+                f"Item '{item.question_id}' backbone_ref.figure_id '{ref.figure_id}' is not "
+                f"a backbone figure; use one of {sorted(figure_ids)} or null"
+            )
+
+
 def validate_item_result(
     result: ItemGenerationResult,
     card: ConceptCard,
+    backbone: LessonBackbone | None = None,
 ) -> ItemGenerationResult:
     if result.card_id != card.id:
         raise ValueError(
@@ -82,6 +119,9 @@ def validate_item_result(
         )
     if len({item.question_id for item in result.items}) != len(result.items):
         raise ValueError("Item question ids must be unique")
+
+    if backbone is not None:
+        _validate_backbone_refs(result, backbone)
 
     known = {row.id for row in card.misconceptions}
     observed: Counter[str] = Counter()
@@ -117,8 +157,12 @@ def materialize_item_result(
 ) -> ItemGenerationResult:
     cleared = 0
     normalized_items: list[QuestionBrief] = []
+    backbone_refs: dict[str, ItemBackboneRef] = {}
     for index, item in enumerate(draft.items, start=1):
         payload = item.model_dump(mode="json")
+        payload.pop("backbone_ref", None)
+        if item.backbone_ref is not None:
+            backbone_refs[f"{card.id}.i{index}"] = item.backbone_ref
         for option in payload.get("options") or []:
             if option.get("correct") is True and option.get("diagnoses") is not None:
                 option["diagnoses"] = None
@@ -135,12 +179,15 @@ def materialize_item_result(
         card_id=card.id,
         items=normalized_items,
         normalized_correct_diagnoses_cleared=cleared,
+        backbone_refs=backbone_refs,
     )
 
 
-async def execute_items(card: ConceptCard) -> ItemGenerationResult:
+async def execute_items(
+    card: ConceptCard, *, backbone: LessonBackbone | None = None
+) -> ItemGenerationResult:
     """Generate one shared diagnostic set from one approved card only."""
-    run = await execute_items_with_diagnostics(card)
+    run = await execute_items_with_diagnostics(card, backbone=backbone)
     return run.result
 
 
@@ -150,6 +197,7 @@ async def execute_items_with_diagnostics(
     generation_id: str | None = None,
     correlation_id: str | None = None,
     max_attempts: int = ITEM_MAX_ATTEMPTS,
+    backbone: LessonBackbone | None = None,
 ) -> ItemGenerationRun:
     """Same as execute_items, but every provider attempt is correlated and classified."""
     node = ITEM_NODE
@@ -184,10 +232,11 @@ async def execute_items_with_diagnostics(
     for attempt in range(1, budget + 1):
         started = time.perf_counter()
         try:
-            user_prompt = build_item_messages(card)
+            user_prompt = build_item_messages(card, backbone=backbone)
             if attempt >= 2 and repair_errors:
                 user_prompt = build_item_messages(
                     card,
+                    backbone=backbone,
                     repair_errors=repair_errors,
                     allowed_misconception_ids=allowed_misconception_ids,
                     previous_output=previous_output,
@@ -219,17 +268,17 @@ async def execute_items_with_diagnostics(
             if isinstance(raw, ItemGenerationDraft):
                 draft = raw
                 parsed = materialize_item_result(draft, card)
-                validated = validate_item_result(parsed, card)
+                validated = validate_item_result(parsed, card, backbone)
             elif isinstance(raw, ItemGenerationResult):
-                validated = validate_item_result(raw, card)
+                validated = validate_item_result(raw, card, backbone)
             elif hasattr(raw, "model_dump"):
                 draft = ItemGenerationDraft.model_validate(raw.model_dump())
                 parsed = materialize_item_result(draft, card)
-                validated = validate_item_result(parsed, card)
+                validated = validate_item_result(parsed, card, backbone)
             else:
                 draft = ItemGenerationDraft.model_validate(raw)
                 parsed = materialize_item_result(draft, card)
-                validated = validate_item_result(parsed, card)
+                validated = validate_item_result(parsed, card, backbone)
 
             attempts.append(
                 attempt_record(
@@ -302,6 +351,7 @@ async def execute_items_with_diagnostics(
 __all__ = [
     "ITEM_MAX_ATTEMPTS",
     "ITEM_NODE",
+    "ItemBackboneRef",
     "ItemGenerationDraft",
     "ItemGenerationResult",
     "ItemGenerationRun",

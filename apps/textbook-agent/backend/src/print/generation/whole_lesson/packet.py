@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 
 class ScopeEntry(BaseModel):
@@ -110,13 +110,27 @@ class ImmutableLessonPacket(BaseModel):
     required_assessment_slots: list[str] = Field(default_factory=list)
     limits: LessonLimits = Field(default_factory=LessonLimits)
     resource_id: str = "lesson"
+    # Lesson backbone (LessonBackbone.model_dump) the approved questions were written
+    # against, and approved item id -> {target, figure_id}. Both are omitted from
+    # serialization when empty so packets (and any hash over them) stay byte-stable.
+    backbone: dict[str, Any] | None = None
+    item_backbone_refs: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+    @model_serializer(mode="wrap")
+    def _omit_empty_backbone(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        if not data.get("backbone"):
+            data.pop("backbone", None)
+        if not data.get("item_backbone_refs"):
+            data.pop("item_backbone_refs", None)
+        return data
 
     def approved_item_ids(self) -> list[str]:
         return [item.id for item in self.approved_items]
 
     def planner_payload(self) -> dict[str, Any]:
         """Subset visible to the teaching planner (fixed identities only)."""
-        return {
+        payload: dict[str, Any] = {
             "lesson": self.lesson.model_dump(mode="json"),
             "scope": self.scope.model_dump(mode="json"),
             "anchor": self.anchor.model_dump(mode="json"),
@@ -127,3 +141,10 @@ class ImmutableLessonPacket(BaseModel):
             "approved_item_ids": self.approved_item_ids(),
             "limits": self.limits.model_dump(mode="json"),
         }
+        if self.backbone:
+            payload["backbone"] = dict(self.backbone)
+            if self.item_backbone_refs:
+                payload["item_backbone_refs"] = {
+                    key: dict(value) for key, value in self.item_backbone_refs.items()
+                }
+        return payload

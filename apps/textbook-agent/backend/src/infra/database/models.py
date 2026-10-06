@@ -636,6 +636,8 @@ class PackItemModel(Base):
     correct_key = Column(String, nullable=False)
     diagnoses = Column(JSON_DOCUMENT_TYPE, nullable=False, default=dict)
     stale = Column(Boolean, nullable=False, default=False)
+    # {"target", "figure_id", "backbone_hash"}; NULL when written without a backbone.
+    backbone_ref = Column(JSON_DOCUMENT_TYPE, nullable=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     card = relationship("ConceptCardModel", back_populates="items")

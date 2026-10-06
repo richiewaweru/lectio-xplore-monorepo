@@ -1,7 +1,8 @@
 """Option D 3A: plan generation (per-card items + V2 Teaching Plan) on the shared runtime.
 
-Covers Run admission (idempotent, one item per card, shared Build), the
-PreparationWorker (items first, then ``teaching_plan``), finalization and the
+Covers Run admission (idempotent, one ``backbone`` item first, shared Build),
+the PreparationWorker (backbone, then per-card items, then ``teaching_plan``;
+runs admitted before the backbone stage still complete), finalization and the
 projection, typed failure + retry/regenerate, lease reclaim, the legacy state,
 and Build reuse by the SharedDocument Run.  Providers are always stubbed.
 """
@@ -36,8 +37,12 @@ from core.database.models import (
     PackItemModel,
 )
 from core.entities.user import User
+from curriculum.backbone.errors import BackboneOutputInvalidError
+from curriculum.backbone.models import LessonBackbone, backbone_hash
+from curriculum.backbone.persistence import load_backbone, store_backbone
+from curriculum.backbone.writer import BackboneRun
 from curriculum.items.diagnostics import attempt_record
-from curriculum.items.generator import ItemGenerationResult, ItemGenerationRun
+from curriculum.items.generator import ItemBackboneRef, ItemGenerationResult, ItemGenerationRun
 from curriculum.planning.models import (
     AnchorSpec,
     ItemOption,
@@ -112,9 +117,14 @@ def _context() -> dict[str, Any]:
     }
 
 
-def _result(card_id: str) -> ItemGenerationResult:
+def _result(card_id: str, *, with_refs: bool = False) -> ItemGenerationResult:
     return ItemGenerationResult(
         card_id=card_id,
+        backbone_refs=(
+            {f"{card_id}-q{i}": ItemBackboneRef(target="anchor-1", figure_id="fig-1") for i in range(1, 6)}
+            if with_refs
+            else {}
+        ),
         items=[
             QuestionBrief(
                 question_id=f"{card_id}-q{i}",
@@ -132,18 +142,65 @@ def _result(card_id: str) -> ItemGenerationResult:
     )
 
 
+def _backbone() -> LessonBackbone:
+    return LessonBackbone.model_validate(
+        {
+            "anchor": {
+                "id": "anchor-1",
+                "story": "A covered leaf loses 12 mL of water in 3 hours.",
+                "data": {"water_lost_ml": 12, "hours": 3},
+                "answer": "4 mL per hour",
+                "figure_ids": ["fig-1"],
+            },
+            "variants": [
+                {"id": "v1", "change": "other numbers", "data": {"water_lost_ml": 20, "hours": 4}}
+            ],
+            "figures": [
+                {
+                    "id": "fig-1",
+                    "purpose": "Show the leaf setup",
+                    "must_show": ["leaf", "bag"],
+                    "labels_required": ["12 mL"],
+                }
+            ],
+        }
+    )
+
+
 class _Calls:
     def __init__(self) -> None:
         self.events: list[str] = []
         self.fail: dict[str, BaseException] = {}
+        self.item_backbones: list[LessonBackbone | None] = []
 
-    async def item_runner(self, card, *, generation_id, max_attempts=3):  # noqa: ANN001
+    async def backbone_runner(self, inputs, *, generation_id, max_attempts=2):  # noqa: ANN001
+        self.events.append("backbone")
+        exc = self.fail.get("backbone")
+        if exc is not None:
+            raise exc
+        return BackboneRun(
+            backbone=_backbone(),
+            attempts=[
+                attempt_record(
+                    correlation_id=f"backbone:{generation_id}",
+                    card_id="backbone",
+                    attempt=1,
+                    started_at=time.perf_counter(),
+                    outcome_class="OK",
+                    retryable=False,
+                )
+            ],
+            correlation_id=f"backbone:{generation_id}",
+        )
+
+    async def item_runner(self, card, *, generation_id, max_attempts=3, backbone=None):  # noqa: ANN001
         self.events.append(f"items:{card.id}")
+        self.item_backbones.append(backbone)
         exc = self.fail.get(card.id)
         if exc is not None:
             raise exc
         return ItemGenerationRun(
-            result=_result(card.id),
+            result=_result(card.id, with_refs=backbone is not None),
             attempts=[
                 attempt_record(
                     correlation_id=f"item:{generation_id}:{card.id}",
@@ -245,6 +302,7 @@ def _worker(factory, calls: _Calls, worker_id: str = "prep-w1", **kwargs) -> Pre
         worker_id=worker_id,
         item_runner=calls.item_runner,
         teaching_runner=calls.teaching_runner,
+        backbone_runner=calls.backbone_runner,
         **kwargs,
     )
 
@@ -256,7 +314,7 @@ async def _tick(worker: PreparationWorker, factory, *, now: datetime | None = No
     return progressed
 
 
-async def _drain(worker, factory, *, max_ticks: int = 12) -> None:
+async def _drain(worker, factory, *, max_ticks: int = 16) -> None:
     for _ in range(max_ticks):
         if not await _tick(worker, factory):
             return
@@ -293,7 +351,7 @@ async def _workspace(factory, prep_id: str):
 
 
 @pytest.mark.asyncio
-async def test_admission_is_idempotent_with_one_item_per_card(
+async def test_admission_is_idempotent_and_admits_only_the_backbone_item(
     db_session: AsyncSession, db_session_factory
 ) -> None:
     user_id = "3a-admit"
@@ -326,7 +384,7 @@ async def test_admission_is_idempotent_with_one_item_per_card(
         )
         builds = await session.scalar(select(func.count()).select_from(GenerationBuildModel))
         build = await session.get(GenerationBuildModel, run.build_id)
-    assert keys == [f"items:{user_id}-c1", f"items:{user_id}-c2"]
+    assert keys == ["backbone"]  # items:* are admitted by the worker once it is ready
     assert builds == 1 and build is not None and build.path_lesson_id == lesson.id
     # Compatibility stamps: the structural review is closed; the Run is the status.
     state = await load_chunked_state(prep_id, db_session)
@@ -433,7 +491,7 @@ async def test_http_structure_preview_is_owner_scoped(
 
 
 @pytest.mark.asyncio
-async def test_worker_runs_items_then_teaching_plan_and_finalizes_ready(
+async def test_worker_runs_backbone_then_items_then_teaching_plan_and_finalizes_ready(
     db_session: AsyncSession, db_session_factory
 ) -> None:
     user_id = "3a-flow"
@@ -442,13 +500,41 @@ async def test_worker_runs_items_then_teaching_plan_and_finalizes_ready(
     calls = _Calls()
     worker = _worker(db_session_factory, calls)
 
+    first = (await _workspace(db_session_factory, prep_id)).progress
+    assert (first.backbone, first.items_total, first.teaching_plan) == ("queued", 0, "not_started")
+
+    assert await _tick(worker, db_session_factory) is True  # backbone (+ admits items:*)
+    assert calls.events == ["backbone"]
+    progress = (await _workspace(db_session_factory, prep_id)).progress
+    assert (progress.backbone, progress.items_total, progress.items_ready) == ("ready", 2, 0)
+    async with db_session_factory() as session:
+        stored = await load_backbone(session, prep_id)
+        state = await load_chunked_state(prep_id, session)
+    assert stored == _backbone()
+    assert state["backbone"]["hash"] == backbone_hash(_backbone())
+    assert state["backbone_generation"]["attempts"][0]["class"] == "OK"
+    assert "backbone" not in state["structural_plan"] and "backbone" not in state["context"]
+    run_now = await _run(db_session_factory, prep_id)
+    assert (await load_current_source(db_session, generation_id=prep_id)).source_hash == run_now.source_hash
+    for item in run_now.work_items:  # items are bound to the backbone they are written against
+        if item.item_key.startswith("items:"):
+            from infra.execution.checkpoints import content_hash
+
+            assert item.input_hash == content_hash(
+                {
+                    "card_id": item.item_key[len("items:"):],
+                    "source_hash": run_now.source_hash,
+                    "backbone_hash": backbone_hash(_backbone()),
+                }
+            )
+
     assert await _tick(worker, db_session_factory) is True  # card 1
-    assert calls.events == [f"items:{user_id}-c1"]
+    assert calls.events == ["backbone", f"items:{user_id}-c1"]
     assert (await _workspace(db_session_factory, prep_id)).state == "planning"
     assert (await _workspace(db_session_factory, prep_id)).progress.items_ready == 1
 
     assert await _tick(worker, db_session_factory) is True  # card 2 (+ admits teaching_plan)
-    assert calls.events == [f"items:{user_id}-c1", f"items:{user_id}-c2"]
+    assert calls.events == ["backbone", f"items:{user_id}-c1", f"items:{user_id}-c2"]
     async with db_session_factory() as session:
         item = await session.scalar(
             select(GenerationWorkItemModel).where(GenerationWorkItemModel.item_key == "teaching_plan")
@@ -470,12 +556,22 @@ async def test_worker_runs_items_then_teaching_plan_and_finalizes_ready(
         )
         generation = await session.get(GenerationModel, prep_id)
     assert rows == 10
+    assert calls.item_backbones == [_backbone(), _backbone()]  # items are written against it
+    async with db_session_factory() as session:
+        stored_rows = list(
+            (await session.scalars(select(PackItemModel).where(PackItemModel.pack_id == prep_id))).all()
+        )
+    assert {
+        (row.backbone_ref["target"], row.backbone_ref["figure_id"], row.backbone_ref["backbone_hash"])
+        for row in stored_rows
+    } == {("anchor-1", "fig-1", backbone_hash(_backbone()))}
     assert generation.status == "awaiting_teaching_approval"  # written by save_teaching_plan
 
     workspace = await _workspace(db_session_factory, prep_id)
     assert workspace.state == "awaiting_review" and workspace.review_kind == "teaching_plan"
     assert workspace.run_id == run.id
     assert workspace.progress.items_total == 2 and workspace.progress.teaching_plan == "ready"
+    assert workspace.progress.backbone == "ready"
     assert workspace.recovery_action == "review"
 
 
@@ -671,8 +767,12 @@ async def test_rejected_plan_regenerates_and_ready_run_cannot_regenerate_while_p
     assert (await _run(db_session_factory, prep_id)).status == "ready"
     workspace = await _workspace(db_session_factory, prep_id)
     assert workspace.state == "awaiting_review"  # a fresh pending draft replaces the rejection
-    # Items were not regenerated for the new attempt (fresh rows already exist).
+    # Items were not regenerated for the new attempt (fresh rows already exist),
+    # and the same-input backbone they were written against is reused.
     assert calls.events.count(f"items:{user_id}-c1") == 1
+    assert calls.events.count("backbone") == 1
+    new_run = await _run(db_session_factory, prep_id)
+    assert {i.item_key for i in new_run.work_items} >= {"backbone", f"items:{user_id}-c1"}
     async with db_session_factory() as session:
         assert (
             await session.scalar(
@@ -692,7 +792,9 @@ async def test_expired_lease_is_reclaimed_by_a_second_worker(
     long_ago = _naive_now() - timedelta(hours=1)
     source = await load_current_source(db_session, generation_id=prep_id)
     async with db_session_factory() as session:
-        item = await session.scalar(select(GenerationWorkItemModel))
+        item = await session.scalar(
+            select(GenerationWorkItemModel).where(GenerationWorkItemModel.item_key == "backbone")
+        )
         claimed = await claim_work_item(
             session,
             work_item_id=item.id,
@@ -709,10 +811,53 @@ async def test_expired_lease_is_reclaimed_by_a_second_worker(
     await _drain(live, db_session_factory)
     async with db_session_factory() as session:
         item = await session.scalar(
-            select(GenerationWorkItemModel).where(GenerationWorkItemModel.item_key.like("items:%"))
+            select(GenerationWorkItemModel).where(GenerationWorkItemModel.item_key == "backbone")
         )
     assert item.status == "ready" and item.lease_owner == "live-worker" and item.attempt == 2
     assert (await _run(db_session_factory, prep_id)).status == "ready"
+
+
+@pytest.mark.asyncio
+async def test_items_are_reused_only_under_the_same_backbone_hash(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    from application.unit_lesson.preparation_items import generate_card_items
+
+    user_id = "3a-stale-backbone"
+    _lesson, prep_id = await _seed(db_session, user_id=user_id)
+    calls = _Calls()
+    card_id = f"{user_id}-c1"
+    async with db_session_factory() as session:
+        await store_backbone(session, prep_id, _backbone(), input_hash="h1")
+        await session.commit()
+
+    async def run_card() -> dict[str, Any]:
+        return await generate_card_items(
+            session_factory=db_session_factory,
+            generation_id=prep_id,
+            card_id=card_id,
+            item_runner=calls.item_runner,
+        )
+
+    assert (await run_card())["skipped"] is False
+    assert (await run_card())["skipped"] is True  # same backbone hash: reuse
+    assert calls.events == [f"items:{card_id}"]
+
+    changed = _backbone().model_copy(deep=True)
+    changed.anchor.story = "A covered leaf loses 15 mL of water in 3 hours."
+    async with db_session_factory() as session:
+        await store_backbone(session, prep_id, changed, input_hash="h2")
+        await session.commit()
+    summary = await run_card()
+    assert summary["skipped"] is False  # stale under the new backbone: regenerated
+    assert calls.item_backbones[-1] == changed
+    async with db_session_factory() as session:
+        rows = list(
+            (await session.scalars(select(PackItemModel).where(PackItemModel.pack_id == prep_id))).all()
+        )
+    assert len(rows) == 5
+    assert {r.backbone_ref["backbone_hash"] for r in rows} == {backbone_hash(changed)}
+    assert not any(r.stale for r in rows)
 
 
 @pytest.mark.asyncio
@@ -789,7 +934,8 @@ async def test_projection_states_for_new_and_legacy_preparations(
     await _admit(db_session, prep_id, user_id)
     workspace = await _workspace(db_session_factory, prep_id)
     assert workspace.state == "planning" and workspace.run_id
-    assert workspace.progress.items_total == 1 and workspace.progress.items_ready == 0
+    assert workspace.progress.items_total == 0 and workspace.progress.items_ready == 0
+    assert workspace.progress.backbone == "queued"
 
     # legacy: an old row with no marker, no plan and no Run (its worker stage is ignored)
     _legacy_lesson, legacy_id = await _seed(db_session, user_id="3a-proj-legacy")
@@ -865,3 +1011,143 @@ def test_reviewer_output_failure_is_retryable() -> None:
     )
     assert failure.recovery_action == "retry"
     assert failure.error_code == "preparation_reviewer_output_invalid"
+
+
+# --------------------------------------------------------------------- backbone
+
+
+@pytest.mark.asyncio
+async def test_backbone_failure_is_typed_isolated_and_retries_to_ready(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    user_id = "3a-bb-fail"
+    _lesson, prep_id = await _seed(db_session, user_id=user_id)
+    await _admit(db_session, prep_id, user_id)
+    calls = _Calls()
+    calls.fail["backbone"] = BackboneOutputInvalidError(
+        attempt_count=2, details=["anchor.figure_ids: unknown figure"]
+    )
+    worker = _worker(db_session_factory, calls)
+    await _drain(worker, db_session_factory)
+
+    run = await _run(db_session_factory, prep_id)
+    assert run.status == "failed_recoverable"
+    assert calls.events == ["backbone"]  # no items or plan before the backbone exists
+    item = next(i for i in run.work_items if i.item_key == "backbone")
+    assert item.status == "failed_recoverable" and item.error_code == "backbone_invalid"
+    assert item.error_class == "provider_output" and item.recovery_action == "retry"
+    assert "scenario" in item.error_summary
+
+    workspace = await _workspace(db_session_factory, prep_id)
+    assert workspace.state == "failed_recoverable" and workspace.retryable is True
+    assert workspace.progress.backbone == "failed" and workspace.progress.items_total == 0
+    assert workspace.progress.failed_work_item_ids == [item.id]
+    assert workspace.error is not None and workspace.error.code == "backbone_invalid"
+
+    del calls.fail["backbone"]
+    async with db_session_factory() as session:
+        await retry_work_item(session, work_item_id=item.id, owner_user_id=user_id)
+        await session.commit()
+    await _drain(worker, db_session_factory)
+    assert (await _run(db_session_factory, prep_id)).status == "ready"
+    assert calls.events[:2] == ["backbone", "backbone"]
+    assert calls.events.count(f"items:{user_id}-c1") == 1
+
+
+@pytest.mark.asyncio
+async def test_backbone_provider_timeout_uses_provider_mapping(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    user_id = "3a-bb-timeout"
+    _lesson, prep_id = await _seed(db_session, user_id=user_id)
+    await _admit(db_session, prep_id, user_id)
+    calls = _Calls()
+    calls.fail["backbone"] = TimeoutError("provider timed out")
+    await _drain(_worker(db_session_factory, calls), db_session_factory)
+    run = await _run(db_session_factory, prep_id)
+    item = next(i for i in run.work_items if i.item_key == "backbone")
+    assert item.error_class == "provider_transport" and item.recovery_action == "retry"
+    assert item.error_code != "backbone_invalid"
+
+
+@pytest.mark.asyncio
+async def test_legacy_run_without_backbone_item_still_completes(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    """A run admitted before the backbone stage (items:* from the start) is unchanged."""
+    from application.unit_lesson.preparation_runs import (
+        LEGACY_DEFINITION_VERSION,
+        add_card_items,
+    )
+    from infra.generation_runtime import SourceIdentity
+
+    user_id = "3a-legacy-run"
+    _lesson, prep_id = await _seed(db_session, user_id=user_id, cards=("c1", "c2"))
+    admission = await _admit(db_session, prep_id, user_id)
+    # Rewrite the run into its pre-backbone shape.
+    async with db_session_factory() as session:
+        backbone_item = await session.scalar(
+            select(GenerationWorkItemModel).where(
+                GenerationWorkItemModel.run_id == admission.run.id,
+                GenerationWorkItemModel.item_key == "backbone",
+            )
+        )
+        await session.delete(backbone_item)
+        run = await session.get(GenerationRunModel, admission.run.id)
+        generation = await session.get(GenerationModel, prep_id)
+        await add_card_items(
+            session,
+            run=run,
+            generation=generation,
+            source=SourceIdentity(
+                source_artifact_type=run.source_artifact_type,
+                source_artifact_id=run.source_artifact_id,
+                source_revision=run.source_revision,
+                source_hash=run.source_hash,
+            ),
+            definition_version=LEGACY_DEFINITION_VERSION,
+        )
+        await session.commit()
+
+    calls = _Calls()
+    await _drain(_worker(db_session_factory, calls), db_session_factory)
+    assert "backbone" not in calls.events
+    assert calls.events == [f"items:{user_id}-c1", f"items:{user_id}-c2", "teaching_plan"]
+    assert (await _run(db_session_factory, prep_id)).status == "ready"
+    workspace = await _workspace(db_session_factory, prep_id)
+    assert workspace.progress.backbone == "not_started" and workspace.progress.items_total == 2
+    assert workspace.progress.teaching_plan == "ready"
+
+
+@pytest.mark.asyncio
+async def test_http_backbone_is_owner_scoped_and_404_until_ready(
+    db_session: AsyncSession, db_session_factory
+) -> None:
+    user_id = "3a-bb-http"
+    _lesson, prep_id = await _seed(db_session, user_id=user_id)
+
+    async def override_session():
+        async with db_session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_async_session] = override_session
+    app.dependency_overrides[get_current_user] = lambda: _user(user_id)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            before = await client.get(f"/api/v1/preparations/{prep_id}/backbone")
+            await _admit(db_session, prep_id, user_id)
+            await _tick(_worker(db_session_factory, _Calls()), db_session_factory)
+            ok = await client.get(f"/api/v1/preparations/{prep_id}/backbone")
+            app.dependency_overrides[get_current_user] = lambda: _user("intruder")
+            foreign = await client.get(f"/api/v1/preparations/{prep_id}/backbone")
+    finally:
+        app.dependency_overrides.pop(get_async_session, None)
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert before.status_code == 404
+    assert ok.status_code == 200
+    assert ok.json() == {
+        "backbone": _backbone().model_dump(mode="json"),
+        "hash": backbone_hash(_backbone()),
+    }
+    assert foreign.status_code == 404

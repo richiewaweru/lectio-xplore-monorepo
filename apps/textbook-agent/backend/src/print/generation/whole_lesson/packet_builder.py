@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from curriculum.approved_items import ApprovedItemRecord
+from curriculum.backbone.models import LessonBackbone
 from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ApprovedItemRef,
@@ -59,6 +60,8 @@ def build_lesson_packet(
     approved_items: tuple[ApprovedItemRecord, ...] | list[ApprovedItemRecord],
     slot_ids: tuple[str, ...] = CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
     required_assessment_slots: list[str] | tuple[str, ...] | None = None,
+    backbone: LessonBackbone | None = None,
+    item_backbone_refs: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> ImmutableLessonPacket:
     catalog = load_skeleton_catalog()
     slots: list[SlotRecord] = []
@@ -124,6 +127,21 @@ def build_lesson_packet(
         for record in approved_items
     ]
 
+    if backbone is not None:
+        # The backbone anchor is the lesson's single shared scenario.
+        anchor_id = backbone.anchor.id
+        anchor_description = backbone.anchor.story
+    approved_ids = {item.id for item in items}
+    backbone_refs = (
+        {
+            str(key): {"target": value.get("target"), "figure_id": value.get("figure_id")}
+            for key, value in (item_backbone_refs or {}).items()
+            if str(key) in approved_ids and isinstance(value, Mapping)
+        }
+        if backbone is not None
+        else {}
+    )
+
     known_slots = set(slot_ids)
     assessment_slots = [
         str(slot_id)
@@ -153,4 +171,6 @@ def build_lesson_packet(
         required_assessment_slots=assessment_slots,
         limits=LessonLimits(),
         resource_id="lesson",
+        backbone=backbone.model_dump(mode="json") if backbone is not None else None,
+        item_backbone_refs=backbone_refs,
     )

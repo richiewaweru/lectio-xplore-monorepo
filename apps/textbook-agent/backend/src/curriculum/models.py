@@ -378,6 +378,7 @@ class PreparationProgressDTO(StrictModel):
     items_ready: int = 0
     items_failed: int = 0
     teaching_plan: Literal["not_started", "queued", "running", "ready", "failed"] = "not_started"
+    backbone: Literal["not_started", "queued", "running", "ready", "failed"] = "not_started"
     failed_work_item_ids: list[str] = Field(default_factory=list)
 
 

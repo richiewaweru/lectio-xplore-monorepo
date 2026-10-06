@@ -21,6 +21,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel, PackItemModel
+from curriculum.backbone.models import backbone_hash
+from curriculum.backbone.persistence import load_backbone
 from curriculum.items.generator import ItemGenerationResult, ItemGenerationRun
 from curriculum.planning.models import (
     ConceptCard,
@@ -89,10 +91,26 @@ def item_row_teacher_edited(row: PackItemModel) -> bool:
     )
 
 
+def _stored_backbone_ref(ref: Any, digest: str | None) -> dict[str, Any] | None:
+    if ref is None or digest is None:
+        return None
+    return {"target": ref.target, "figure_id": ref.figure_id, "backbone_hash": digest}
+
+
+def item_row_matches_backbone(row: PackItemModel, digest: str | None) -> bool:
+    """True when the row may be reused under the current backbone (None = no backbone)."""
+    if digest is None:
+        return True
+    ref = row.backbone_ref
+    return isinstance(ref, dict) and ref.get("backbone_hash") == digest
+
+
 async def write_pack_item_rows(
     session: AsyncSession,
     pack_id: str,
     results: list[ItemGenerationResult],
+    *,
+    backbone_hash_value: str | None = None,
 ) -> None:
     for result in results:
         stored = await session.execute(
@@ -120,6 +138,9 @@ async def write_pack_item_rows(
                 "correct_key": correct.key,
                 "diagnoses": {option.key: option.diagnoses for option in item.options},
                 "stale": False,
+                "backbone_ref": _stored_backbone_ref(
+                    result.backbone_refs.get(item.question_id), backbone_hash_value
+                ),
             }
             if existing is None:
                 session.add(
@@ -143,11 +164,14 @@ async def persist_item_results(
     results: list[ItemGenerationResult],
     *,
     session_factory: SessionFactory | None = None,
+    backbone_hash_value: str | None = None,
 ) -> None:
     if session_factory is None:
         from core.database.session import async_session_factory as session_factory
     async with session_factory() as session:
-        await write_pack_item_rows(session, pack_id, results)
+        await write_pack_item_rows(
+            session, pack_id, results, backbone_hash_value=backbone_hash_value
+        )
         await session.commit()
 
 
@@ -227,6 +251,17 @@ async def generate_card_items(
                 )
             ).all()
         )
+        backbone = await load_backbone(session, generation_id)
+        current_hash = backbone_hash(backbone) if backbone is not None else None
+        if current_hash is not None:
+            # Items written against another (or no) backbone are stale: never reuse them.
+            changed = False
+            for item in stored:
+                if not item.stale and not item_row_matches_backbone(item, current_hash):
+                    item.stale = True
+                    changed = True
+            if changed:
+                await session.commit()
         fresh = sum(1 for item in stored if not item.stale) == FRESH_ITEMS_PER_CARD
         state = await load_chunked_state(generation_id, session)
         session.expunge(card_row)
@@ -250,7 +285,12 @@ async def generate_card_items(
     )
     budget = max_attempts if max_attempts is not None else item_gen.ITEM_MAX_ATTEMPTS
     try:
-        run = await item_runner(card, generation_id=generation_id, max_attempts=budget)
+        run = await item_runner(
+            card,
+            generation_id=generation_id,
+            max_attempts=budget,
+            **({"backbone": backbone} if backbone is not None else {}),
+        )
     except Exception as exc:
         journal = list(getattr(exc, "item_attempts", []) or [])
         failed_row = {
@@ -277,7 +317,9 @@ async def generate_card_items(
     if fence is not None:
         await fence()
     async with session_factory() as session:
-        await write_pack_item_rows(session, pack_id, [run.result])
+        await write_pack_item_rows(
+            session, pack_id, [run.result], backbone_hash_value=current_hash
+        )
         await session.commit()
     result = run.result
     return {
@@ -295,6 +337,7 @@ __all__ = [
     "approved_card_for_items",
     "decode_chunked_context",
     "generate_card_items",
+    "item_row_matches_backbone",
     "item_row_teacher_edited",
     "load_structural_plan",
     "persist_item_results",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from core.prompts import effective_prompt_text
+from curriculum.backbone.models import LessonBackbone
 from curriculum.planning.models import ConceptCard
 
 
@@ -17,9 +18,26 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+BACKBONE_ITEM_RULES = """
+LESSON BACKBONE (the only scenarios, shapes and data you may use)
+Every question is about the anchor or one of its variants (state which in
+backbone_ref.target, using the anchor or variant id). If the learner must look
+at a figure to answer, set backbone_ref.figure_id to that figure's id and make
+the stem refer to it. Do not invent other scenarios, shapes or data. Never copy
+the anchor's worked answer into a stem.
+Add to each item: "backbone_ref": {"target": "<anchor or variant id>", "figure_id": "<figure id or null>"}
+"""
+
+
+def backbone_prompt_block(backbone: LessonBackbone) -> str:
+    data = backbone.model_dump(mode="json")
+    return BACKBONE_ITEM_RULES + json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n"
+
+
 def build_item_messages(
     card: ConceptCard,
     *,
+    backbone: LessonBackbone | None = None,
     repair_errors: list[str] | None = None,
     allowed_misconception_ids: list[str] | None = None,
     previous_output: object | None = None,
@@ -65,8 +83,13 @@ and assigns stable ids from the approved card and item order.
 
 APPROVED CARD
 """
+    if backbone is not None:
+        base_prompt = base_prompt + json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n"
+        base_prompt += backbone_prompt_block(backbone)
+        payload = None
+    tail = "" if payload is None else json.dumps(payload, ensure_ascii=False, sort_keys=True)
     if repair_errors is None:
-        return [base_prompt + json.dumps(payload, ensure_ascii=False, sort_keys=True)]
+        return [base_prompt + tail]
 
     allowed_ids = allowed_misconception_ids or []
     errors_json = json.dumps(list(repair_errors), ensure_ascii=False)
@@ -98,7 +121,7 @@ APPROVED CARD
         + "- Keep all approved card and item identities owned by the backend.\n"
     )
 
-    return [repair_prompt + json.dumps(payload, ensure_ascii=False, sort_keys=True)]
+    return [repair_prompt + tail]
 
 
-__all__ = ["build_item_messages", "get_item_system_prompt"]
+__all__ = ["BACKBONE_ITEM_RULES", "backbone_prompt_block", "build_item_messages", "get_item_system_prompt"]

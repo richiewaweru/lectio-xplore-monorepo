@@ -199,6 +199,8 @@ class PreparationRunView:
     items_ready: int = 0
     items_failed: int = 0
     teaching_plan: str = "not_started"
+    # not_started | queued | running | ready | failed (same vocabulary as teaching_plan)
+    backbone: str = "not_started"
     failed_work_item_ids: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -210,6 +212,7 @@ def _progress(run: PreparationRunView | None) -> PreparationProgressDTO | None:
         items_ready=run.items_ready,
         items_failed=run.items_failed,
         teaching_plan=run.teaching_plan,  # type: ignore[arg-type]
+        backbone=run.backbone,  # type: ignore[arg-type]
         failed_work_item_ids=list(run.failed_work_item_ids),
     )
 

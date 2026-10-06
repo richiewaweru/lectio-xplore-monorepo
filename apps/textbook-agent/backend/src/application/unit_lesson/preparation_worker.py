@@ -1,8 +1,12 @@
 """Shared-runtime worker for Preparation Runs (Option D, 3A).
 
-A ``preparation`` Run turns an approved lesson structure into per-card practice
-items and a draft V2 Teaching Plan:
+A ``preparation`` Run turns an approved lesson structure into a lesson backbone,
+per-card practice items and a draft V2 Teaching Plan:
 
+* ``backbone`` - the structured anchor (scenario, exact data, answer, figure
+  specs, variants) the questions are written against; runs first.  The worker
+  admits the ``items:*`` items once it is ready.  Runs admitted before the
+  backbone stage existed have no ``backbone`` item and skip straight to items.
 * ``items:{concept_card_id}`` - one work item per concept card (independently
   retryable); the worker generates that card's items and writes ``pack_items``
   with the same rules the old whole-pack loop had.
@@ -36,14 +40,19 @@ from sqlalchemy import exc as sqlalchemy_exc
 from sqlalchemy import or_, select
 from sqlalchemy.orm import selectinload
 
+from core.database.models import GenerationModel
+from application.unit_lesson.preparation_backbone import generate_lesson_backbone
 from application.unit_lesson.preparation_items import generate_card_items
 from application.unit_lesson.preparation_runs import (
+    BACKBONE_ITEM_KEY,
     ITEMS_KEY_PREFIX,
+    LEGACY_DEFINITION_VERSION,
     PLAN_ARTIFACT_TYPE,
     TEACHING_ITEM_KEY,
     TEACHING_ITEM_STAGE,
     DEFINITION_VERSION,
     PreparationRunError,
+    add_card_items,
     load_current_source,
     run_source,
 )
@@ -122,7 +131,19 @@ def classify_failure(exc: BaseException) -> WorkItemFailure:
             safe_summary="A temporary storage error interrupted the plan. Retry it.",
             recovery_action=RecoveryAction.RETRY,
         )
+    from curriculum.backbone.errors import BackboneOutputInvalidError
     from curriculum.teaching_plan.semantic_review import TeachingPlanSemanticReviewError
+
+    if isinstance(exc, BackboneOutputInvalidError):
+        return WorkItemFailure(
+            error_code="backbone_invalid",
+            error_class=ErrorClass.PROVIDER_OUTPUT,
+            safe_summary=(
+                "The lesson's example scenario could not be written in a valid form. "
+                "Retry it."
+            ),
+            recovery_action=RecoveryAction.RETRY,
+        )
 
     if isinstance(exc, TeachingPlanSemanticReviewError):
         # The reviewer's own output was unusable (bad provider output), not a
@@ -180,6 +201,12 @@ def _default_item_runner() -> Callable[..., Any]:
     return execute_items_with_diagnostics
 
 
+def _default_backbone_runner() -> Callable[..., Any]:
+    from curriculum.backbone.writer import generate_backbone
+
+    return generate_backbone
+
+
 def _default_teaching_runner() -> Callable[..., Any]:
     from application.unit_lesson.teaching_plan_service import run_and_persist_teaching_plan
 
@@ -215,6 +242,7 @@ class PreparationWorker:
         scan_limit: int = _DEFAULT_SCAN_LIMIT,
         item_runner: Callable[..., Any] | None = None,
         teaching_runner: Callable[..., Any] | None = None,
+        backbone_runner: Callable[..., Any] | None = None,
     ) -> None:
         if lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
@@ -230,6 +258,7 @@ class PreparationWorker:
         self.scan_limit = scan_limit
         self._item_runner = item_runner
         self._teaching_runner = teaching_runner
+        self._backbone_runner = backbone_runner
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
 
@@ -270,11 +299,93 @@ class PreparationWorker:
                 await asyncio.wait_for(self._stop.wait(), timeout=self.poll_interval_seconds)
 
     async def run_one(self, session: Any, *, now: datetime | None = None) -> bool:
-        """One tick: admit any due ``teaching_plan`` item, then execute one item."""
+        """One tick: admit any due ``items:*`` / ``teaching_plan`` items, then execute one."""
         current = _now(now)
-        progressed = await self._admit_teaching_items(session)
+        progressed = await self._admit_items_items(session)
+        progressed = await self._admit_teaching_items(session) or progressed
         progressed = await self._execute_one(session, current) or progressed
         return progressed
+
+    # -------------------------------------------------------------- items admit
+
+    async def _admit_items_items(self, session: Any) -> bool:
+        """Admit ``items:*`` for runs whose backbone is ready and have none yet."""
+        backbone_ready = (
+            select(GenerationWorkItemModel.id)
+            .where(
+                GenerationWorkItemModel.run_id == GenerationRunModel.id,
+                GenerationWorkItemModel.item_key == BACKBONE_ITEM_KEY,
+                GenerationWorkItemModel.status == "ready",
+            )
+            .exists()
+        )
+        has_items = (
+            select(GenerationWorkItemModel.id)
+            .where(
+                GenerationWorkItemModel.run_id == GenerationRunModel.id,
+                GenerationWorkItemModel.item_key.like(f"{ITEMS_KEY_PREFIX}%"),
+            )
+            .exists()
+        )
+        run_ids = list(
+            (
+                await session.scalars(
+                    select(GenerationRunModel.id)
+                    .where(
+                        GenerationRunModel.run_type == "preparation",
+                        GenerationRunModel.status == "running",
+                        backbone_ready,
+                        ~has_items,
+                    )
+                    .order_by(GenerationRunModel.created_at.asc())
+                    .limit(self.scan_limit)
+                )
+            ).all()
+        )
+        progressed = False
+        for run_id in run_ids:
+            progressed = await self._admit_items_for(session, str(run_id)) or progressed
+        return progressed
+
+    async def _admit_items_for(self, session: Any, run_id: str) -> bool:
+        """Once the backbone is ready, admit one ``items:{card_id}`` per concept card."""
+        run = await session.scalar(
+            select(GenerationRunModel)
+            .options(selectinload(GenerationRunModel.work_items))
+            .where(GenerationRunModel.id == run_id)
+            .execution_options(populate_existing=True)
+        )
+        if run is None or run.status not in {"queued", "running"}:
+            return False
+        active = active_work_items(tuple(run.work_items))
+        backbone = next((i for i in active if i.item_key == BACKBONE_ITEM_KEY), None)
+        if (
+            backbone is None
+            or backbone.status != "ready"
+            or any(i.item_key.startswith(ITEMS_KEY_PREFIX) for i in active)
+        ):
+            return False
+        digest = (backbone.output_json or {}).get("hash")
+        if not digest:
+            return False
+        try:
+            generation = await session.get(
+                GenerationModel, run.source_artifact_id, populate_existing=True
+            )
+            if generation is None:
+                return False
+            await add_card_items(
+                session,
+                run=run,
+                generation=generation,
+                source=run_source(run),
+                backbone_hash=str(digest),
+            )
+            await session.commit()
+        except (WorkItemConflict, InvalidRunTransition, PreparationRunError):
+            await session.rollback()
+            return False
+        return True
 
     # ---------------------------------------------------------- teaching admit
 
@@ -323,6 +434,18 @@ class PreparationWorker:
             or any(i.status != "ready" for i in card_items)
         ):
             return False
+        identity: dict[str, Any] = {
+            "source_hash": run.source_hash,
+            "items": sorted((i.item_key, i.output_hash) for i in card_items),
+        }
+        backbone = next((i for i in active if i.item_key == BACKBONE_ITEM_KEY), None)
+        if backbone is not None:
+            if backbone.status != "ready":
+                return False
+            identity["backbone_hash"] = (backbone.output_json or {}).get("hash")
+        # Runs admitted before the backbone stage have no backbone item: keep the
+        # exact identity and definition they were admitted under.
+        version = DEFINITION_VERSION if backbone is not None else LEGACY_DEFINITION_VERSION
         try:
             admission = await add_work_item(
                 session,
@@ -330,16 +453,9 @@ class PreparationWorker:
                     run_id=run.id,
                     item_key=TEACHING_ITEM_KEY,
                     stage=TEACHING_ITEM_STAGE,
-                    input_hash=content_hash(
-                        {
-                            "source_hash": run.source_hash,
-                            "items": sorted(
-                                (i.item_key, i.output_hash) for i in card_items
-                            ),
-                        }
-                    ),
+                    input_hash=content_hash(identity),
                     definition_hash=content_hash(
-                        {"definition": "preparation-teaching-plan", "version": DEFINITION_VERSION}
+                        {"definition": "preparation-teaching-plan", "version": version}
                     ),
                 ),
             )
@@ -361,6 +477,7 @@ class PreparationWorker:
                         GenerationRunModel.run_type == "preparation",
                         GenerationRunModel.status.in_(("queued", "running")),
                         or_(
+                            GenerationWorkItemModel.item_key == BACKBONE_ITEM_KEY,
                             GenerationWorkItemModel.item_key.like(f"{ITEMS_KEY_PREFIX}%"),
                             GenerationWorkItemModel.item_key == TEACHING_ITEM_KEY,
                         ),
@@ -425,6 +542,10 @@ class PreparationWorker:
             await self._assert_source_unchanged(session, run_id)
             if item_key == TEACHING_ITEM_KEY:
                 await self._run_teaching(
+                    session, item_id=item_id, lease_token=lease_token, run_id=run_id, now=now
+                )
+            elif item_key == BACKBONE_ITEM_KEY:
+                await self._run_backbone(
                     session, item_id=item_id, lease_token=lease_token, run_id=run_id, now=now
                 )
             else:
@@ -547,6 +668,58 @@ class PreparationWorker:
             yield
         finally:
             reset_prompt_cache(token)
+
+    # ---------------------------------------------------------------- backbone
+
+    async def _run_backbone(
+        self,
+        session: Any,
+        *,
+        item_id: str,
+        lease_token: int,
+        run_id: str,
+        now: datetime,
+    ) -> None:
+        run = await session.get(GenerationRunModel, run_id, populate_existing=True)
+        if run is None:
+            raise _SourceChanged("the preparation Run is unavailable")
+        owner_id = str(run.owner_user_id)
+        generation_id = str(run.source_artifact_id)
+        runner = self._backbone_runner or _default_backbone_runner()
+
+        async def fence() -> None:
+            async with self.session_factory() as fence_session:
+                await heartbeat_work_item(
+                    fence_session,
+                    work_item_id=item_id,
+                    worker_id=self.worker_id,
+                    lease_token=lease_token,
+                    lease_seconds=self.lease_seconds,
+                )
+                await fence_session.commit()
+
+        async with self._prompt_scope(owner_id):
+            summary = await self._heartbeated(
+                item_id=item_id,
+                lease_token=lease_token,
+                coro=generate_lesson_backbone(
+                    session_factory=self.session_factory,
+                    generation_id=generation_id,
+                    backbone_runner=runner,
+                    fence=fence,
+                ),
+            )
+        await complete_work_item(
+            session,
+            work_item_id=item_id,
+            worker_id=self.worker_id,
+            lease_token=lease_token,
+            output_json=summary,
+            output_hash=content_hash(summary),
+            now=now,
+        )
+        await session.commit()
+        await self._admit_items_for(session, run_id)
 
     # ------------------------------------------------------------------- items
 

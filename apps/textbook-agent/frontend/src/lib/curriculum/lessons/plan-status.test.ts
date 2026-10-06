@@ -14,6 +14,7 @@ const progress = (over: Partial<PreparationProgress> = {}): PreparationProgress 
 	items_total: 5,
 	items_ready: 0,
 	items_failed: 0,
+	backbone: 'ready',
 	teaching_plan: 'not_started',
 	failed_work_item_ids: [],
 	...over
@@ -60,6 +61,17 @@ describe('planProgressText', () => {
 		);
 	});
 
+	it('shows the backbone line while it runs and nothing has been admitted', () => {
+		for (const backbone of ['queued', 'running'] as const) {
+			expect(planProgressText(progress({ items_total: 0, backbone }))).toBe(
+				'Writing the lesson scenario and data…'
+			);
+		}
+		expect(planProgressText(progress({ items_total: 5, items_ready: 1, backbone: 'ready' }))).toBe(
+			'Writing practice items: 1/5 cards'
+		);
+	});
+
 	it('falls back to a generic line without progress', () => {
 		expect(planProgressText(null)).toMatch(/preparing/i);
 		expect(planProgressText(progress({ items_total: 0 }))).toMatch(/preparing/i);
@@ -81,6 +93,15 @@ describe('planFailureMessage and actions', () => {
 		expect(msg).toMatch(/2 practice items could not be written/);
 	});
 
+	it('surfaces a backbone failure', () => {
+		const msg = planFailureMessage({
+			state: 'failed_recoverable',
+			error: { message: 'The scenario was invalid.' },
+			progress: progress({ items_total: 0, backbone: 'failed', failed_work_item_ids: ['backbone'] })
+		});
+		expect(msg).toBe('The lesson scenario and data could not be written. The scenario was invalid.');
+	});
+
 	it('uses the backend message for terminal failures', () => {
 		expect(
 			planFailureMessage({ state: 'failed_terminal', error: { message: 'Invalid plan' } })
@@ -100,6 +121,12 @@ describe('planFailureMessage and actions', () => {
 		expect(canRetryPlan({ ...base, run_id: null })).toBe(false);
 		expect(canRetryPlan({ ...base, progress: progress() })).toBe(false);
 		expect(canRetryPlan({ ...base, state: 'failed_terminal' })).toBe(false);
+		expect(
+			canRetryPlan({
+				...base,
+				progress: progress({ backbone: 'failed', failed_work_item_ids: ['backbone'] })
+			})
+		).toBe(true);
 	});
 
 	it('offers regenerate for failed runs only', () => {
