@@ -53,6 +53,15 @@ export function planProgressText(progress: PreparationProgress | null | undefine
 	}
 	if (teaching === 'queued' || teaching === 'running') return 'Writing the Teaching Plan…';
 	if (teaching === 'ready') return 'Finishing the Teaching Plan…';
+	// Staged planner: the spine, then the sections, before the plan is assembled.
+	const spine = progress.teaching_spine ?? 'not_started';
+	const sectionsTotal = progress.teaching_sections_total ?? 0;
+	const sectionsReady = progress.teaching_sections_ready ?? 0;
+	if (spine === 'queued' || spine === 'running') return 'Planning the lesson spine…';
+	if (sectionsTotal > 0 && sectionsReady < sectionsTotal) {
+		return `Writing sections: ${sectionsReady}/${sectionsTotal}`;
+	}
+	if (sectionsTotal > 0) return 'Sections written. Reviewing the Teaching Plan…';
 	if (total > 0 && ready < total) return `Writing practice items: ${ready}/${total} cards`;
 	if (total > 0) return 'Practice items ready. Preparing the Teaching Plan…';
 	return 'Preparing structure and teaching plan…';

@@ -1,0 +1,304 @@
+# Staged teaching planner
+
+Status: **staged is the only teaching planner** (phase 9). The single-call planner and its
+`teaching_planner_mode` flag are gone. The whole-lesson review is **off by default**, behind
+`staged_lesson_review` (env `STAGED_LESSON_REVIEW`); the per-section review is also off, behind
+`staged_section_review` (env `STAGED_SECTION_REVIEW`). Branch `feat/staged-teaching-planner`,
+PR #18, off `main` at 858c2165. The sections below describe the design and are kept for history; where
+they mention the single planner or `teaching_planner_mode`, phase 9 supersedes them.
+
+## Phase 9 outcome
+
+### Comparison results
+
+Four local lessons, DeepSeek `deepseek-flash`, one run each:
+
+| Mode | Result |
+|---|---|
+| Single planner | 153-241 s when it worked; failed 2 of 4 because its semantic reviewer timed out at 240 s |
+| Staged, whole-lesson review on | The review timed out (240 s) in 2 of 4 and took 306 s in another; the plan was flagged and continued, so 335-678 s end to end |
+| Staged, no lesson review | 87-137 s, 4 of 4 ok, every section resolved on the first attempt, figures attached |
+
+One staged run also failed because the spine's state-chain heuristic rejected `entry_state` three
+times. That check is now a repair (below).
+
+Decision: staged only, lesson review off by default.
+
+### Spine state chain is a repair, not an error
+
+The word-coverage check between a section's `entry_state` and the previous section's
+`exit_state` (the first section against `starting_state` plus `prior_established`) no longer
+fails the spine. `repair_spine_state_chain` appends each uncovered `entry_state` statement to the
+previous section's `exit_state` (to the spine's `starting_state` for the first section) and
+records a `spine_state_chain` entry in the spine result's `repairs`. All other spine checks
+(section count, item placement, misconception assignment, figure ids, block budget) are still
+errors that trigger a retry.
+
+### Approval guard
+
+A plan with a section that has no blocks (an unresolved section, flag
+`TEACHING_SECTION_UNRESOLVED`) cannot be approved. `TeachingRevisionStore.approve` raises
+`TeachingPlanHasEmptySectionsError` (a `TeachingRevisionConflictError`); both approve paths
+(`path=learn` and `path=print`) return HTTP 409 with `code: TEACHING_PLAN_HAS_EMPTY_SECTIONS`,
+`section_ids`, a plain-language `message` and `recovery_action: edit_plan`. The plan page already
+shows the structured `message` from a 409. Recording a revised plan that has blocks in every
+section (`edit_teaching_plan` / `record_draft`) makes it approvable again. There is no HTTP route
+for editing blocks yet, so today the teacher's way out is to regenerate the plan.
+
+### In-flight single-mode runs
+
+A preparation Run created before this change may hold a bare `teaching_plan` work item with no
+`teaching_spine`. The worker leaves it alone (it does not admit a spine next to it) and runs it
+through the in-process teaching runner, which now plans with the staged planner
+(`run_staged_teaching_planner`). A failure is recorded like any other failure and `regenerate`
+restarts the Run as a normal staged Run.
+
+### Follow-up
+
+Background lesson review (advisory flags arriving after the plan is ready) if teachers miss it.
+
+## Why
+
+The teaching planner (`run_lesson_approach_planner`,
+`backend/src/application/unit_lesson/teaching_planner.py`) is one LLM call that writes the
+whole `TeachingPlanDraftV2`: title, arc, start and target states, anchor usage, misconception
+focus, every section's continuity fields, and every block's brief, learner action, task mode,
+sources and figure spec. A second LLM call (`review_teaching_plan_draft`) then reviews the
+whole plan.
+
+### Baseline (local DB, last ~3 weeks, DeepSeek `deepseek-flash`, 2026-10-06)
+
+- **Planner LLM call** (`llm_calls.caller = v2_lesson_approach_planner`): median ~100 s, range
+  81-308 s. On average ~16.5k tokens in, ~19.5k out, ~21.8k thinking.
+- **Preparation runs that actually plan:** 210-564 s end to end. The planner call accounts for
+  only 90-180 s of that. The rest is **not visible**: the semantic reviewer
+  (`_run_structured`, caller `teaching_plan_semantic_reviewer`) and the backbone writer don't
+  write `llm_calls` rows, so their time can't be measured today.
+- **Retries:** most lessons succeed on the first attempt. The failure cascade is real, though:
+  one run hit `TeachingPlanOutputInvalidError` twice, so the work item retried 3 times x 2
+  internal attempts = 6 planner calls, about 1,074 s of planner time and 1,179 s for the run.
+- **For context, the writing stage (`shared_document` runs) is the bigger wait:** typically
+  2-10 min, outliers over 20 min. Sections are already written in parallel there. The slow
+  pieces are a single slow section writer (up to ~500 s), media (up to ~1,170 s) and document QA.
+  4 of the last 12 runs ended `failed_terminal`. That's out of scope here, but worth its own
+  look.
+
+What to expect: the staged planner should cut a normal planning stage by a minute or more and
+show progress. Its main win is removing the 6-call failure cascade. It won't fix the
+writing-stage wait.
+
+Problems:
+
+- **One mistake costs everything.** Any error (one invalid figure spec, one learner-action
+  mismatch) regenerates the whole plan. There are only 2 attempts, so a second unrelated slip
+  fails the run.
+- **Nothing to show.** The teacher waits about 8 minutes with nothing on screen.
+
+The main goal is that one failure can no longer sink the run. Speed and streaming come second.
+
+## What changes and what doesn't
+
+Only the teaching-plan stage changes.
+
+```
+1. Structural planner        unchanged
+2. Item generation           unchanged
+   Backbone                  unchanged (input to the new planner)
+3. Teaching planner          REPLACED (behind a flag) by:
+     3a spine call
+     3b section calls, in parallel
+     3c per-section review + one whole-lesson check
+     3d assembly into TeachingPlanDraftV2 -> materialize_teaching_plan
+4. Approval, section writers, continuity/boundary checks, media   unchanged
+```
+
+The output is the same `TeachingPlan` model as today, built by the same
+`materialize_teaching_plan`. Approval, the content hash, `continuity.py`, the composer, the
+writers and media can't tell which planner built it.
+
+## Settings (history: the original flag)
+
+This section originally described `teaching_planner_mode` (`single` | `staged`, default
+`single`) with an exit plan to delete the single path. Phase 9 did that: the setting and
+`run_lesson_approach_planner` are removed. What remains in `backend/src/infra/config.py`:
+`staged_lesson_review` (default `False`), `staged_section_review` (default `False`) and the
+existing `teaching_plan_quality_gate`.
+
+## 3a. Spine call
+
+One small call that decides the lesson-wide structure.
+
+**Input:** `packet.planner_payload()` (lesson, scope, anchor, misconceptions,
+prior_established, slots, required_assessment_slots, approved item ids, limits, backbone,
+item_backbone_refs), approved item stems, `slot_intent_policy`, `assessment_source_policy`,
+teaching guidance (same projections the single planner builds today).
+
+**Output (`TeachingSpineDraft`, new):**
+
+- lesson level: `learner_title`, `arc`, `starting_state`, `target_state`, `anchor_usage`,
+  `misconception_focus_ids`
+- per section, in slot order: `display_title`, `specific_purpose`, `transition`,
+  `entry_state`, `must_establish`, `avoid_repeating`, `bridge_from_previous`, `exit_state`
+- per section assignments:
+  - `misconception_ids`: which misconceptions this section confronts
+  - `approved_item_ids`: which approved items this section binds
+  - `figure_plan`: a short list of figures the section owns, each with a `purpose`, plus a
+    `backbone_figure_id` when it reuses a backbone figure (see Visuals)
+
+**Code checks on the spine (no LLM):**
+
+- section count and order equal `packet.slots`
+- `entry_state[n]` covered by `exit_state[n-1]` (reuse the coverage helper in `continuity.py`)
+- approved-item placement follows the single planner's rule: selection is optional, no item
+  twice, and when `required_assessment_slots` is non-empty each of those slots owns at least
+  one item and items go only there; a section owns at most `planned_block_count` items (one
+  item per block)
+- `planned_block_count` is a maximum: a section may write `max(1, assigned items)` to
+  `planned_block_count` blocks, and the sum of maxima stays within the lesson limit
+- every `misconception_focus_ids` entry is assigned to at least one section
+- `backbone_figure_id` values exist in `packet.backbone.figures`
+
+**Backbone variants come from code, not the model:** once items are placed, a section's
+variant follows from `item_backbone_refs` for its assigned items. A section with no item uses
+the anchor.
+
+**Retry:** only the spine, up to 3 attempts, with the errors attached, like today's repair
+payload.
+
+## 3b. Section calls (parallel)
+
+One call per section, all run together with `asyncio.gather`, inside the existing
+`teaching_plan` work item for now.
+
+**Input:** the spine (whole, read-only), this section's slot, its `slot_intent_policy`
+entry, its assigned approved items (ids + stems + allowed_actions from
+`assessment_source_policy`), its misconceptions, its backbone target(s) and figures, and the
+`reserved_assessment_scenarios`.
+
+**Output:** that section's `blocks` (`TeachingPlanDraftBlock` list, unchanged schema),
+including `visual` where the spine's `figure_plan` says so.
+
+**Checks:** the existing block-level validators, run on this section only:
+`VISUAL_SPEC_INVALID`, learner-action/source compatibility, task-mode/source contract,
+unknown learner actions, object leaks, brief length, evidence refs. The deterministic
+repairs (`_repair_sources_outside_structural_slots`, `_repair_incompatible_assessment_sources`,
+`_repair_invalid_evidence_refs`, `_repair_briefs_missing_anchor_grounding`) also apply per
+section.
+
+**Retry:** only the failing section, up to 3 attempts. If it still fails, policy is
+**flag, don't fail**: the section ships with a `plan_quality_flag` for the teacher to fix
+before approval. (Configurable later; matches the advisory gates.)
+
+## 3c. Review
+
+- **Per section, in parallel:** the existing semantic reviewer prompt, scoped to one section
+  plus the spine. Section-local codes (`task_evidence_gap`, `assessment_item_reused`,
+  `misconception_unresolved`, accuracy) route back to that section's call.
+- **One whole-lesson check:** cross-section repetition, coverage of `target_state`, adjacent
+  handoffs, and `visual_missing_for_figure_objective` (lesson-level, advisory). Findings name
+  sections, so fixes go to those sections' calls, not a full rerun.
+
+## 3d. Assembly
+
+Build a `TeachingPlanDraftV2` from spine + section blocks, then call
+`materialize_teaching_plan`. Then run the existing whole-plan `validate_teaching_plan` and
+`advisory_teaching_qc` as a final safety net. Ownership/assessment checks
+(`_missing_assessment_sources` etc.) run here too; with the spine assigning items they should
+already pass.
+
+## Visuals
+
+This is how figures work today. The staged planner must keep all of it intact.
+
+1. **The plan decides.** `TeachingPlanBlock.visual: VisualSpec | None` is the only source of
+   "this block has a figure" (`curriculum/teaching_plan/models.py`). Fields: `mode`
+   (`diagram`|`image`), `purpose`, `must_show`, `labels_required`, `must_not_show`, `required`.
+2. **The plan is checked.** `_visual_spec_problems` (`print/generation/whole_lesson/validation.py`)
+   needs a purpose and at least one `must_show` entry. Every `labels_required` entry must appear
+   inside `must_show`, the lesson objective or the packet's `scope.must_establish`. Failures
+   raise `VISUAL_SPEC_INVALID`.
+3. **The composer places it.** `composer.py` adds a figure node right after the block's own
+   nodes, with id `shared-figure-node` hashed from `(section_slot_id, block.id)`.
+4. **Media reads the plan spec.** `media.py::_plan_figure_spec` looks the block up by
+   `node.teaching_block_id` and treats its `VisualSpec` as authoritative. The writer's caption
+   and the sentences that refer to the figure are added as context only. The render path
+   (`docs/render-figures.md`) picks a family from that spec; otherwise the image path runs.
+   An unavailable figure ships flagged.
+5. **Labels are checked against the text.** `figure_consistency.py` checks `labels_required`
+   against the written section.
+
+What the staged planner must guarantee:
+
+- **Block ids stay the same.** Ids are `{slot_id}-b{position+1}`, assigned by
+  `materialize_teaching_plan`. Always assemble through it; never assign ids in section calls.
+  Figure node ids and media work orders depend on it.
+- **`visual` stays per block, same schema.** Section calls emit `VisualSpec` on blocks exactly
+  as today. No new fields are required.
+- **`VISUAL_SPEC_INVALID` stays a section-local check** and only retries that section. The
+  label grounding uses lesson-level text (objective, `scope.must_establish`), so a section call
+  needs those in its input.
+- **Backbone figures become the default source** (an improvement, not just parity). On `main`
+  the backbone has `figures` (`id`, `purpose`, `must_show`, `labels_required`, `data`), but no
+  code links them to plan `VisualSpec`s; the prompt only tells the planner to "build around the
+  anchor and its figures". With the spine assigning `backbone_figure_id` per figure, the section
+  call copies that figure's `purpose` / `must_show` / `labels_required` into the block's
+  `VisualSpec`, so the same figure looks the same in every section. A code check confirms the
+  copy matches. Figures with no backbone link are written freely, as today.
+- **`visual_missing_for_figure_objective`** moves to the whole-lesson check (it is lesson-level
+  and advisory today).
+
+### Coordination: `feat/backbone-figures-reuse`
+
+Another session has this branch in progress (uncommitted as of 2026-10-06, worktree
+`C:/Projects/lectio-wt-figures`). It adds `BackboneFigure.mode` (`diagram`|`image`, `None`
+means diagram), rewrites `BACKBONE_TEACHING_GUIDANCE` in `prompt_render.py`, and edits the
+semantic reviewer prompt about reusing the anchor versus approved items.
+
+- Reuse `BACKBONE_TEACHING_GUIDANCE` by import in the spine and section prompts; don't copy
+  the text.
+- Reuse the semantic reviewer prompt; scope it with a section wrapper rather than forking it.
+- When copying a backbone figure into a `VisualSpec`, map `effective_mode` to `VisualSpec.mode`
+  once that branch lands.
+- Rebase onto `main` after it merges, before phase 3.
+
+## Phases
+
+| # | What | Touches existing code |
+|---|---|---|
+| 0 | Observability: make the semantic reviewer and backbone writer calls write `llm_calls` rows (caller, node, attempt, latency, tokens, `generation_id`) like `run_llm` does, so both planners can be timed. Pass `generation_id` into `review_teaching_plan_draft`. Baseline numbers are above. | Yes, logging only |
+| 1 | Finalize this spec: `TeachingSpineDraft` schema, section-call I/O, prompt outlines. | No |
+| 2 | Split the validators by scope: section-local vs lesson-wide, with no behaviour change. The single planner keeps calling the same combined function. | Yes, refactor only, existing tests must pass |
+| 3 | Spine: schema, prompt (`resources/prompts/teaching-spine.md` + manifest), code checks, variant derivation, retry. | No |
+| 4 | Section calls: prompt (`teaching-section.md`), run in parallel, per-section validation + deterministic repairs + retry + flag fallback. | No |
+| 5 | Assembly + final gate via `materialize_teaching_plan` + `validate_teaching_plan`. | No |
+| 6 | Review split: per-section review + whole-lesson check + routing fixes to a section. | No |
+| 7 | **Build** a local comparison script, `backend/scripts/compare_teaching_planners.py`: given generation ids, it builds each packet with `build_packet_for_generation` from the local DB, runs both modes, and writes both plans plus a report (wall-clock per call, attempts, flags, validation issues, block ids with `visual`, a section-by-section diff) to `outputs/planner-compare/`. It writes nothing to the DB. **Running it happens locally**; the cloud session only builds it and tests it against a fake model. No real lesson data is committed (the repo is public). | No |
+| 8 | Streaming: `teaching_spine` and `teaching_section:{slot}` work items with progress; plan page shows the spine first, then sections as they land, marked "draft" until the whole-lesson check passes. | Runtime + frontend |
+| 9 | **Done.** Staged is the only planner; single path, its setting, model-policy node, prompt and tests removed; lesson review off by default. See Phase 9 outcome. | Yes, deletion |
+
+**Cloud scope:** the cloud session builds phases 0-8 end to end, with the flag defaulting to
+`single`, so nothing changes until someone switches it. Unit tests use fake models only; no API
+keys or database are needed. Phase 9 (switching the default, deleting the old path) waits for the
+local comparison.
+
+Phases 3-6 run inside the existing `teaching_plan` work item (parallelism via
+`asyncio.gather`), so the runtime and UI don't change until phase 8.
+
+## Tests
+
+- Unit: spine code checks (state chaining, item placement, misconception coverage, figure
+  ids); variant derivation from `item_backbone_refs`; assembly gives the same block ids as
+  `materialize_teaching_plan`.
+- Unit: one failing section retries alone; others are not re-called (count calls on a fake
+  model).
+- Unit: section that exhausts retries ships flagged, plan still materializes.
+- Integration: staged plan through composer -> figure nodes -> `_plan_figure_spec` resolves
+  every `visual` block.
+- Tests that only exercised the single planner were deleted in phase 9; shared validator and repair tests stay.
+
+## Open questions
+
+- Retry budget per piece (3 proposed) and overall wall-clock cap.
+- Whether item placement is fully code-assigned (deterministic) or spine-proposed and
+  code-checked. Start with spine-proposed + checks; switch if the spine misplaces items.
+- Does the plan page already subscribe to per-work-item progress (affects phase 8 size)?

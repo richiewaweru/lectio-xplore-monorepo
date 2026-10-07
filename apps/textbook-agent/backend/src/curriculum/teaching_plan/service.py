@@ -1,8 +1,8 @@
 """Curriculum-owned teaching planner entrypoints.
 
-Print adapts to these helpers rather than owning a second planner. The
-provider call lives in application.unit_lesson.teaching_planner and is
-bound at composition time so curriculum never imports print product modules.
+Print adapts to these helpers rather than owning a second planner. The staged
+planner lives in application.unit_lesson.staged_teaching_planner and is bound at
+composition time so curriculum never imports print product modules.
 """
 
 from __future__ import annotations
@@ -15,13 +15,13 @@ from curriculum.teaching_plan.models import TeachingPlan
 from curriculum.teaching_plan.revisions import TeachingRevisionStore
 
 SharedTeachingRunner = Callable[..., Awaitable[Any]]
-_shared_teaching_runner: SharedTeachingRunner | None = None
+_staged_teaching_runner: SharedTeachingRunner | None = None
 
 
-def bind_shared_teaching_runner(runner: SharedTeachingRunner) -> None:
-    """Register the application-owned teaching planner implementation."""
-    global _shared_teaching_runner
-    _shared_teaching_runner = runner
+def bind_staged_teaching_runner(runner: SharedTeachingRunner) -> None:
+    """Register the application-owned staged teaching planner implementation."""
+    global _staged_teaching_runner
+    _staged_teaching_runner = runner
 
 
 async def plan_shared_teaching(
@@ -32,12 +32,12 @@ async def plan_shared_teaching(
     generation_id: str | None = None,
     require_items: bool = True,
 ):
-    """Run the single shared teaching planner (Print-adapted call site)."""
-    runner = _shared_teaching_runner
+    """Run the staged teaching planner (Print-adapted call site)."""
+    runner = _staged_teaching_runner
     if runner is None:
         raise RuntimeError(
-            "shared teaching planner is not bound; call "
-            "bind_shared_teaching_runner from the application composition root"
+            "no staged teaching planner is bound; call bind_staged_teaching_runner "
+            "from the application composition root"
         )
     return await runner(
         packet,

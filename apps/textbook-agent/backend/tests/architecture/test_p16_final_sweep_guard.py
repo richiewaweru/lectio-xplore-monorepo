@@ -116,7 +116,7 @@ def test_retired_learn_and_document_writer_prompts_are_not_in_manifest() -> None
 
 
 PLANNER_ENTRY_POINTS = {
-    "run_lesson_approach_planner",
+    "run_staged_teaching_planner",
     "review_teaching_plan_draft",
     "run_and_persist_teaching_plan",
 }
@@ -124,9 +124,9 @@ _SRC = Path(__file__).resolve().parents[2] / "src"
 
 
 def test_planner_lives_in_application_layer() -> None:
-    from application.unit_lesson import teaching_plan_service, teaching_planner
+    from application.unit_lesson import staged_teaching_planner, teaching_plan_service
 
-    assert callable(teaching_planner.run_lesson_approach_planner)
+    assert callable(staged_teaching_planner.run_staged_teaching_planner)
     assert callable(teaching_plan_service.run_and_persist_teaching_plan)
 
 

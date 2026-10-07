@@ -36,11 +36,6 @@ from curriculum.planning.persistence import load_chunked_state
 EVIDENCE_ROOT = Path(__file__).resolve().parents[4] / "docs" / "evidence" / "whole-lesson-runs"
 PROMPT_RESOURCES = Path(__file__).resolve().parents[1] / "resources"
 PROMPT_MANIFEST = {
-    "lesson_approach": {
-        "id": "lesson-approach-planner",
-        "file": "lesson-approach-planner-v2.txt",
-        "version": 2,
-    },
     "form_planner": {
         "id": "form-planner",
         "file": "form-planner-v1.txt",
@@ -765,11 +760,6 @@ async def capture(
             for key, entry in PROMPT_MANIFEST.items()
         },
     }
-    teaching_prompt = page.get("teaching_prompt")
-    if teaching_prompt:
-        manifest["prompts"]["lesson_approach"]["rendered_sha256"] = (
-            _rendered_prompt_sha256(str(teaching_prompt))
-        )
     _write(run_dir / "00-manifest.yaml", _dump_yaml(manifest))
     return missing
 

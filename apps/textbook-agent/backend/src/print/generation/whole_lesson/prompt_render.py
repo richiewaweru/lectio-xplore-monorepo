@@ -2,15 +2,7 @@
 
 from __future__ import annotations
 
-import json
-
-from curriculum.planning.skeletons import load_skeleton_catalog
 from print.contracts.lectio_page import PAGE_OBJECT_IDS
-from print.generation.catalogue_projections import TeachingGuidanceProjection
-from print.generation.prompts import lesson_approach_planner_prompt
-from print.generation.whole_lesson.packet import ImmutableLessonPacket
-from resource_specs.loader import get_spec
-from resource_specs.renderer import render_lesson_design_guidance, render_resource_identity
 
 
 class PromptObjectLeakError(ValueError):
@@ -68,39 +60,3 @@ choosing a different scenario than the approved items; they never permit copying
 an approved stem.
 
 Figures: every approved question whose backbone reference has a figure_id must be owned by a block whose visual has figure_ref set to that id; copy mode, purpose, must_show and labels_required from that backbone figure. Teaching blocks may also show a backbone figure the same way (for example the worked example on the anchor's figure). For backbone figures this replaces the default of adding no visual; still add no other visuals for variety."""
-
-
-def render_teaching_prompt(
-    packet: ImmutableLessonPacket,
-    teaching_guidance: TeachingGuidanceProjection,
-    *,
-    resource_id: str = "lesson",
-) -> str:
-    spec = get_spec(resource_id)
-    identity = render_resource_identity(spec)
-    recipe_guidance = load_skeleton_catalog().knowledge_type_guidance(
-        str(packet.lesson.knowledge_type)
-    )
-    if recipe_guidance is not None:
-        identity = f"{identity.rstrip()}\n\n{render_lesson_design_guidance(recipe_guidance)}"
-    if packet.backbone:
-        identity = f"{identity.rstrip()}\n\n{BACKBONE_TEACHING_GUIDANCE}"
-    system = lesson_approach_planner_prompt().replace("{resource_identity}", identity)
-    from core.prompts.loader import effective_prompt_text
-
-    learner_action_policy = effective_prompt_text("learner-action-policy")
-    payload = {
-        "fixed_input": packet.planner_payload(),
-        "teaching_guidance": teaching_guidance.to_dict(),
-    }
-    user = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
-    rendered = (
-        f"{system}\n\n## LEARNER ACTION POLICY\n\n{learner_action_policy}"
-        f"\n\nThis policy supersedes any narrower reading that learner actions "
-        f"are only formal assessment. Path-agnostic actions may appear before, "
-        f"during, or after explanation when they improve the sequence.\n\n"
-        f"## USER INPUT\n\n{user}"
-    )
-    assert_no_page_object_ids(rendered, where="lesson-approach prompt")
-    return rendered
-

@@ -199,6 +199,11 @@ def _coverage(statement: str | None, text: str) -> bool:
     return overlap >= 1 and overlap / len(expected) >= (0.5 if len(expected) > 2 else 1.0)
 
 
+def statement_covered(statement: str | None, text: str) -> bool:
+    """Public alias of the continuity coverage check."""
+    return _coverage(statement, text)
+
+
 def _issue(
     code: str,
     section_id: str,

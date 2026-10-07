@@ -20,6 +20,8 @@
 	} from '$lib/api/lesson-planning';
 	import {
 		getLessonApproach,
+		getLessonApproachDraft,
+		type LessonApproachDraft,
 		approveLessonApproach,
 		rejectLessonApproach
 	} from '$lib/api/teaching-plan';
@@ -47,6 +49,7 @@
 	import StructuralPlanActions from '$lib/curriculum/lessons/StructuralPlanActions.svelte';
 	import BackboneSummary from '$lib/curriculum/lessons/BackboneSummary.svelte';
 	import TeachingPlanReview from '$lib/curriculum/lessons/TeachingPlanReview.svelte';
+	import TeachingPlanDraft from '$lib/curriculum/lessons/TeachingPlanDraft.svelte';
 	import TeachingPlanFlags from '$lib/curriculum/lessons/TeachingPlanFlags.svelte';
 	import {
 		canApproveTeachingPlan,
@@ -82,8 +85,10 @@
 	// Set once this page verified an approval it just submitted.
 	let approvedLocally = $state(false);
 	let backbone = $state<LessonBackbone | null>(null);
+	let planDraft = $state<LessonApproachDraft | null>(null);
 	let hydrationSeq = 0;
 	let backboneSeq = 0;
+	let draftSeq = 0;
 
 	const unitId = $derived(ctx.unitId);
 	const lessonId = $derived(ctx.lessonId);
@@ -183,6 +188,36 @@
 		const available = backboneAvailable;
 		untrack(() => void loadBackbone(gid, available));
 	});
+
+	// Staged planner: once the spine is ready, read the draft (spine + the sections
+	// ready so far). The status poll above refreshes `progress` every few seconds;
+	// the draft is re-read whenever its ready-section count changes.
+	const draftAvailable = $derived(
+		prep?.state === 'planning' &&
+			(prep.progress?.teaching_spine === 'ready' || (prep.progress?.teaching_sections_total ?? 0) > 0)
+	);
+	const draftKey = $derived(`${draftAvailable}:${prep?.progress?.teaching_sections_ready ?? 0}`);
+	$effect(() => {
+		const gid = generationId;
+		const available = draftAvailable;
+		void draftKey;
+		untrack(() => void loadDraft(gid, available));
+	});
+
+	async function loadDraft(gid: string | null, available: boolean) {
+		const seq = ++draftSeq;
+		if (!gid || !available) {
+			planDraft = null;
+			return;
+		}
+		try {
+			const doc = await getLessonApproachDraft(gid);
+			if (seq === draftSeq) planDraft = doc.status === 'draft' ? doc : null;
+		} catch {
+			// The draft is a progress preview only; the status poll still drives the page.
+			if (seq === draftSeq) planDraft = null;
+		}
+	}
 
 	async function loadBackbone(gid: string | null, available: boolean) {
 		const seq = ++backboneSeq;
@@ -479,6 +514,9 @@
 	{:else if busy === 'prepare' || busy === 'reprepare' || phase === 'working'}
 		<Card padding="lg">
 			<p class="working">{busy === 'prepare' || busy === 'reprepare' ? 'Preparing structure and teaching plan…' : workingText}</p>
+			{#if phase === 'working' && planDraft}
+				<TeachingPlanDraft draft={planDraft} />
+			{/if}
 		</Card>
 	{:else if phase === 'legacy_unsupported'}
 		<Card padding="lg">

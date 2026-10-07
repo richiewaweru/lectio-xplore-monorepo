@@ -1069,6 +1069,87 @@ async def test_p03_standalone_studio_print_approval_is_retired(
 
 
 @pytest.mark.asyncio
+async def test_approval_route_rejects_plan_with_empty_sections(
+    db_session_factory, monkeypatch
+) -> None:
+    """An unresolved zero-block section cannot be approved; typed 409 names it."""
+    from unittest.mock import AsyncMock
+
+    import application.unit_lesson.native_http as native_http
+    from core.entities.user import User
+
+    user_id = "empty-section-teacher"
+    plan = TeachingPlan(
+        teaching_plan_id="tp-empty-section",
+        revision=1,
+        preparation_hash="empty-input",
+        arc="Trace water through the plant.",
+        sections=[
+            {
+                "slot_id": "orient",
+                "specific_purpose": "Observe water movement.",
+                "blocks": [
+                    {
+                        "id": "orient-b1",
+                        "position": 0,
+                        "intent": "orient",
+                        "brief": "Observe a leaf.",
+                        "evidence": "A relevant observation.",
+                    }
+                ],
+            },
+            {"slot_id": "explain", "specific_purpose": "Explain the idea.", "blocks": []},
+        ],
+    )
+    state = empty_page_document_state()
+    TeachingRevisionStore(state).record_draft(plan, preparation_hash="empty-input", revision=1)
+    state["lesson_packet"] = {"lesson": {"objective": "Objective"}, "approved_items": []}
+    async with db_session_factory() as setup:
+        setup.add(UserModel(id=user_id, email=f"{user_id}@example.invalid", name="Teacher"))
+        source = GenerationModel(
+            id="empty-section-preparation",
+            user_id=user_id,
+            subject="Science",
+            context="Lesson",
+            status="awaiting_teaching_approval",
+            requested_template_id="lesson",
+            requested_preset_id="default",
+            chunked_state_json={
+                "page_document_v2": state,
+                "stage": "awaiting_teaching_approval",
+                "native_whole_lesson": True,
+            },
+        )
+        setup.add(source)
+        await setup.commit()
+
+    monkeypatch.setattr(native_http, "async_session_factory", db_session_factory)
+    monkeypatch.setattr(native_http, "_load_owned_generation", AsyncMock(return_value=source))
+    teacher = User(
+        id=user_id,
+        email=f"{user_id}@example.invalid",
+        name="Teacher",
+        created_at="2026-09-23T00:00:00Z",
+        updated_at="2026-09-23T00:00:00Z",
+    )
+    for path in ("learn", "print"):
+        with pytest.raises(HTTPException) as error:
+            await native_http.post_lesson_approach_approve(
+                source.id,
+                native_http.LessonApproachApproveRequest(
+                    expected_revision=1,
+                    expected_content_hash=teaching_plan_content_hash(plan),
+                ),
+                teacher,
+                path=path,
+            )
+        assert error.value.status_code == 409
+        assert error.value.detail["code"] == "TEACHING_PLAN_HAS_EMPTY_SECTIONS"
+        assert error.value.detail["section_ids"] == ["explain"]
+        assert "explain" in error.value.detail["message"]
+
+
+@pytest.mark.asyncio
 async def test_p03_missing_unit_path_provenance_cannot_fall_back_to_studio(
     db_session: AsyncSession,
 ) -> None:

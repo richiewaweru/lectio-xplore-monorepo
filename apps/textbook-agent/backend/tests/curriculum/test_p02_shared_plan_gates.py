@@ -411,8 +411,8 @@ def test_p02_s06_edit_creates_revision_old_approved_readable() -> None:
 @pytest.mark.asyncio
 async def test_p02_print_adapts_to_curriculum_teaching_service() -> None:
     """Print binds the curriculum façade rather than owning a duplicated planner."""
-    from curriculum.teaching_plan.service import bind_shared_teaching_runner
-    from application.unit_lesson.teaching_planner import run_lesson_approach_planner
+    from application.unit_lesson.staged_teaching_planner import run_staged_teaching_planner
+    from curriculum.teaching_plan.service import bind_staged_teaching_runner
 
     called = {}
 
@@ -420,9 +420,9 @@ async def test_p02_print_adapts_to_curriculum_teaching_service() -> None:
         called["ok"] = True
         return SimpleNamespace(plan=None)
 
-    bind_shared_teaching_runner(fake_run)
+    bind_staged_teaching_runner(fake_run)
     try:
         await plan_shared_teaching(SimpleNamespace(), require_items=False)
         assert called["ok"] is True
     finally:
-        bind_shared_teaching_runner(run_lesson_approach_planner)
+        bind_staged_teaching_runner(run_staged_teaching_planner)

@@ -186,6 +186,20 @@ class Settings(BaseSettings):
         default="advisory",
         validation_alias=AliasChoices("TEACHING_PLAN_QUALITY_GATE"),
     )
+    # False (default): sections are not semantically reviewed
+    # one by one; the whole-lesson review reports every code and routes blocking
+    # findings to the named sections. True: also review each section on its own.
+    staged_section_review: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("STAGED_SECTION_REVIEW"),
+    )
+    # False (default) skips the whole-lesson semantic review and
+    # its fix round (code validators and the final gate still run): on local lessons
+    # the review took 240 s+ or timed out in roughly half the runs. True turns it on.
+    staged_lesson_review: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("STAGED_LESSON_REVIEW"),
+    )
     page_form_plan_timeout_seconds: int = Field(default=120, ge=1)
     page_standard_writer_timeout_seconds: int = Field(
         default=180,

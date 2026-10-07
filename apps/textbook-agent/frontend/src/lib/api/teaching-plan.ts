@@ -21,6 +21,35 @@ export async function getLessonApproach(generationId: string): Promise<LessonApp
 	return res.json() as Promise<LessonApproachView>;
 }
 
+export interface LessonApproachDraftBlock {
+	intent: string;
+	brief: string;
+	task_mode: string;
+	has_visual: boolean;
+}
+
+/** Streaming draft of the staged planner: the spine plus the sections ready so far. */
+export interface LessonApproachDraft {
+	status: 'draft' | 'none';
+	spine: {
+		learner_title: string;
+		arc: string;
+		sections: { slot_id: string; display_title: string; specific_purpose: string }[];
+	} | null;
+	sections: Record<string, { blocks: LessonApproachDraftBlock[]; unresolved: boolean }>;
+	ready_sections: string[];
+	total_sections: number;
+}
+
+export async function getLessonApproachDraft(generationId: string): Promise<LessonApproachDraft> {
+	const res = await apiFetch(
+		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/lesson-approach/draft`,
+		{ headers: bearerHeaders() }
+	);
+	await ensureOk(res, 'Could not load the lesson draft.');
+	return res.json() as Promise<LessonApproachDraft>;
+}
+
 export async function approveLessonApproach(
 	generationId: string,
 	payload: {

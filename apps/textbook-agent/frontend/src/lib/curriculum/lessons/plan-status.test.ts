@@ -72,6 +72,26 @@ describe('planProgressText', () => {
 		);
 	});
 
+	it('reports the staged spine and section progress before the plan is assembled', () => {
+		const staged = (over: Partial<PreparationProgress>) =>
+			planProgressText(progress({ items_ready: 5, ...over }));
+		expect(staged({ teaching_spine: 'queued' })).toBe('Planning the lesson spine…');
+		expect(staged({ teaching_spine: 'running' })).toBe('Planning the lesson spine…');
+		expect(
+			staged({ teaching_spine: 'ready', teaching_sections_total: 4, teaching_sections_ready: 1 })
+		).toBe('Writing sections: 1/4');
+		expect(
+			staged({ teaching_spine: 'ready', teaching_sections_total: 4, teaching_sections_ready: 4 })
+		).toBe('Sections written. Reviewing the Teaching Plan…');
+		expect(staged({ teaching_spine: 'ready', teaching_sections_total: 4, teaching_plan: 'running' })).toBe(
+			'Writing the Teaching Plan…'
+		);
+		// Single mode (fields absent or zero) is unchanged.
+		expect(staged({ teaching_spine: 'not_started' })).toBe(
+			'Practice items ready. Preparing the Teaching Plan…'
+		);
+	});
+
 	it('falls back to a generic line without progress', () => {
 		expect(planProgressText(null)).toMatch(/preparing/i);
 		expect(planProgressText(progress({ items_total: 0 }))).toMatch(/preparing/i);

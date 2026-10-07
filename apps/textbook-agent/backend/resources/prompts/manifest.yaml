@@ -134,6 +134,18 @@ prompts:
     editable: false
     version: 4
 
+  - id: teaching-spine
+    file: teaching-spine.md
+    stage_label: Plans the Teaching Plan spine
+    editable: false
+    version: 1
+
+  - id: teaching-section
+    file: teaching-section.md
+    stage_label: Plans one Teaching Plan section
+    editable: false
+    version: 1
+
   - id: targeted-lesson-repair
     file: targeted-lesson-repair.md
     stage_label: Repairs one named lesson target

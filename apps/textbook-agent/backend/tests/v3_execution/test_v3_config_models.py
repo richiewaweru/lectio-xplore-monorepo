@@ -10,7 +10,7 @@ from infra.authoring.model_policy.models import (
     SECTION_COMPOSER,
     SHARED_SECTION_WRITER,
     TEACHING_PLAN_SEMANTIC_REVIEWER,
-    V2_LESSON_APPROACH_PLANNER,
+    TEACHING_SPINE_PLANNER,
     V2_PATH_CHAT_EDITOR,
     V2_PATH_PLANNER,
     V2_PATH_STRUCTURAL_PLANNER,
@@ -199,7 +199,7 @@ def test_constrained_path_planner_disables_provider_reasoning(
 
     This is the node that previously held the UI in planning for minutes with
     thinking enabled (see the V3_NODE_REASONING comment). It is distinct from
-    V2_LESSON_APPROACH_PLANNER (the shared/V2 Teaching Plan planner), which is
+    the teaching spine/section planners (the shared Teaching Plan planner), which are
     intentionally enabled for thinking below.
     """
     monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
@@ -212,16 +212,16 @@ def test_constrained_path_planner_disables_provider_reasoning(
     assert settings["extra_body"] == {"thinking": {"type": "disabled"}}
 
 
-def test_lesson_approach_planner_enables_provider_reasoning(
+def test_teaching_planner_enables_provider_reasoning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The shared/V2 Teaching Plan planner runs with low DeepSeek thinking."""
+    """The staged Teaching Plan planner runs with low DeepSeek thinking."""
     monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
     monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-flash")
     monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
     monkeypatch.setenv("V3_STANDARD_API_KEY_ENV", "DEEPSEEK_API_KEY")
 
-    settings = get_v3_model_settings(V2_LESSON_APPROACH_PLANNER)
+    settings = get_v3_model_settings(TEACHING_SPINE_PLANNER)
     assert settings == {
         "openai_reasoning_effort": "low",
         "extra_body": {"thinking": {"type": "enabled"}},
@@ -277,7 +277,7 @@ def test_document_semantic_qa_uses_standard_slot() -> None:
 
 def test_thinking_enabled_capabilities_use_deepseek_reasoning() -> None:
     """WORK PACKAGE A: these capabilities run with DeepSeek thinking on."""
-    assert V3_NODE_REASONING[V2_LESSON_APPROACH_PLANNER] == "low"
+    assert V3_NODE_REASONING[TEACHING_SPINE_PLANNER] == "low"
     assert V3_NODE_REASONING[DOCUMENT_SEMANTIC_QA] == "low"
     for node in (
         TEACHING_PLAN_SEMANTIC_REVIEWER,

@@ -234,6 +234,7 @@ async def _run_structured(
     system_prompt: str,
     user_payload: dict[str, Any],
     trace_id: str | None,
+    generation_id: str | None = None,
 ) -> OutputT:
     model, provider_output, structured_context, spec, _source = prepare_structured_agent(
         node_name=node,
@@ -254,7 +255,7 @@ async def _run_structured(
     result = await run_llm(
         trace_id=trace_id or str(uuid.uuid4()),
         caller=caller,
-        generation_id=None,
+        generation_id=generation_id,
         agent=agent,
         user_prompt=json.dumps(user_payload, indent=2, sort_keys=True),
         model=model,
