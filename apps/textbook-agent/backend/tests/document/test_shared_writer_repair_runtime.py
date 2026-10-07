@@ -245,6 +245,91 @@ async def test_admission_binds_exact_issue_plan_composition_and_prior_output(mon
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("issue_code", "admitted"),
+    [
+        ("boundary_bridge_missing", True),
+        ("exit_state_unrealized", True),
+        ("boundary_repetition", False),
+    ],
+)
+@pytest.mark.parametrize("check", ["boundary", "section"])
+async def test_admission_mirrors_semantic_adjudication_rule(
+    monkeypatch, issue_code, admitted, check
+) -> None:
+    source = _source()
+    previous = _section("s1", 0, "The first idea.")
+    original = _section("s2", 1, "The second idea.")
+    repaired = _section("s2", 1, "Connect the first idea to the second idea.")
+    request = _request(source, "s2")
+    prior_result = _result(original)
+    predecessor = SimpleNamespace(
+        id="writer-old",
+        item_key="write:s2",
+        replaces_work_item_id=None,
+        run_id="run-1",
+        stage="section_writing",
+        status="ready",
+        output_json=prior_result.model_dump(mode="json"),
+        output_hash=content_hash(prior_result.model_dump(mode="json")),
+        composition_identity=_stable_hash(request.composition_plan.model_dump(mode="json")),
+    )
+
+    class Session:
+        def __init__(self):
+            self.calls = 0
+
+        async def scalar(self, _statement):
+            self.calls += 1
+            return predecessor if self.calls == 1 else None
+
+    async def fake_replace(_session, _request):
+        return "replacement-row"
+
+    async def no_boundary_proof(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(runtime, "replace_work_item", fake_replace)
+    monkeypatch.setattr(runtime, "_verify_boundary_proof", no_boundary_proof)
+    found = (
+        ContinuityIssue(
+            issue_code=issue_code,
+            affected_section_id="s2",
+            explanation="Deterministic finding.",
+            required_correction="Fix it.",
+        ),
+    )
+    monkeypatch.setattr(
+        runtime,
+        "validate_section_boundary",
+        lambda **_kwargs: found if check == "boundary" else (),
+    )
+    monkeypatch.setattr(
+        runtime,
+        "validate_section_continuity",
+        lambda **_kwargs: found if check == "section" else (),
+    )
+    call = runtime.admit_writer_repair_work_item(
+        Session(),
+        owner_user_id="owner",
+        source=source,
+        predecessor_work_item_id=predecessor.id,
+        accepted_section=original,
+        writer_request=request,
+        boundary_result=_boundary_result(previous, original, repaired),
+        boundary_work_item_id="boundary-1",
+        issue=_issue(),
+        previous_section=previous,
+        next_section=original,
+    )
+    if admitted:
+        assert (await call).item == "replacement-row"
+    else:
+        with pytest.raises(runtime.WriterRepairRuntimeError, match="revalidation"):
+            await call
+
+
+@pytest.mark.asyncio
 async def test_admission_rejects_unchanged_or_forged_issue(monkeypatch) -> None:
     source = _source()
     previous = _section("s1", 0, "The first idea.")
@@ -638,6 +723,85 @@ async def test_execution_persists_section_result_and_preserves_sibling(monkeypat
     )
     monkeypatch.setattr(runtime, "validate_section_boundary", lambda **_kwargs: ())
     monkeypatch.setattr(runtime, "validate_section_continuity", lambda **_kwargs: ())
+    outcome = await runtime.execute_writer_repair_work_item(
+        runtime.WriterRepairWorkItemJob(
+            session=Session(),
+            work_item_id=item.id,
+            worker_id="worker",
+            source=source,
+            work=work,
+            writer_request=request,
+        )
+    )
+    assert outcome.result == work.replacement
+    assert completed[0]["output_json"] == work.replacement.model_dump(mode="json")
+
+
+@pytest.mark.asyncio
+async def test_execution_accepts_semantically_adjudicable_findings(monkeypatch) -> None:
+    source = _source()
+    previous = _section("s1", 0, "The first idea.")
+    original = _section("s2", 1, "The second idea.")
+    repaired = _section("s2", 1, "Connect the first idea to the second idea.")
+    request = _request(source, "s2")
+    work = runtime.WriterRepairWorkOrder(
+        source=runtime._identity(source),
+        section_id="s2",
+        composition_identity=_stable_hash(request.composition_plan.model_dump(mode="json")),
+        prior_writer_work_item_id="writer-old",
+        prior_writer_output_hash="old-output-hash",
+        boundary_work_item_id="boundary-1",
+        accepted_section_output_hash=runtime.accepted_section_output_hash(original),
+        issue=_issue(),
+        previous_section=previous,
+        next_section=original,
+        replacement=_result(repaired),
+    )
+    item = SimpleNamespace(
+        id="writer-repair",
+        run_id="run-1",
+        stage="section_writing",
+        input_hash=work.identity_hash,
+        definition_hash=_stable_hash(runtime.WRITER_REPAIR_DEFINITION),
+        composition_identity=work.composition_identity,
+        lease_token=4,
+    )
+
+    class Session:
+        async def scalars(self, _statement):
+            return SimpleNamespace(all=lambda: [item])
+
+    async def fake_claim(*_args, **_kwargs):
+        return item
+
+    completed = []
+
+    async def fake_complete(_session, **kwargs):
+        completed.append(kwargs)
+        return item
+
+    async def fake_checkpoint(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(runtime, "claim_work_item", fake_claim)
+    monkeypatch.setattr(runtime, "load_compatible_checkpoint", fake_checkpoint)
+    monkeypatch.setattr(runtime, "persist_checkpoint", fake_checkpoint)
+    monkeypatch.setattr(runtime, "complete_work_item", fake_complete)
+    monkeypatch.setattr(
+        runtime,
+        "_active_boundary_sections",
+        lambda *_args, **_kwargs: _active_sections(previous, repaired),
+    )
+    lexical = (
+        ContinuityIssue(
+            issue_code="boundary_bridge_missing",
+            affected_section_id="s2",
+            explanation="Deterministic finding.",
+            required_correction="Fix it.",
+        ),
+    )
+    monkeypatch.setattr(runtime, "validate_section_boundary", lambda **_kwargs: lexical)
+    monkeypatch.setattr(runtime, "validate_section_continuity", lambda **_kwargs: lexical)
     outcome = await runtime.execute_writer_repair_work_item(
         runtime.WriterRepairWorkItemJob(
             session=Session(),
