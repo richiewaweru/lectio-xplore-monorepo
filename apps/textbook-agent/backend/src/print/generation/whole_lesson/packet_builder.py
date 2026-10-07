@@ -20,6 +20,7 @@ from print.generation.whole_lesson.packet import (
     SlotRecord,
 )
 from curriculum.planning.skeletons import load_skeleton_catalog
+from curriculum.teaching_plan.instance_ids import catalog_slot_key, normalize_slot_instance_ids
 
 CONCEPTUAL_FIRST_EXPOSURE_SLOTS = ("orient", "explain", "confront", "check")
 
@@ -64,9 +65,12 @@ def build_lesson_packet(
     item_backbone_refs: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> ImmutableLessonPacket:
     catalog = load_skeleton_catalog()
+    slot_ids = tuple(normalize_slot_instance_ids(slot_ids))
     slots: list[SlotRecord] = []
     for slot_id in slot_ids:
-        raw = dict(catalog.slots.get(slot_id) or {})
+        # Repeated slots carry unique instance ids (confront, confront-2);
+        # catalogue definitions are keyed by the slot's role/type.
+        raw = dict(catalog.slots.get(catalog_slot_key(catalog.slots, slot_id)) or {})
         typical_raw = raw.get("typical_intents") or raw.get("candidate_intents") or {}
         if isinstance(typical_raw, Mapping):
             typical = [

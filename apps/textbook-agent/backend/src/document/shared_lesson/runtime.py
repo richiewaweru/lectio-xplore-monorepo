@@ -44,6 +44,7 @@ from document.shared_lesson.writer import (
 )
 from infra.execution.checkpoints import content_hash
 from infra.database.models import GenerationWorkItemModel
+from infra.llm.runner import is_provider_request_rejected, is_retryable_provider_error
 from infra.generation_runtime import (
     CheckpointCompatibilityError,
     CheckpointIntegrityError,
@@ -306,7 +307,9 @@ async def _record_execution_failure(
         recovery = RecoveryAction.NONE
         code = "checkpoint_integrity_failure"
         summary = "Persisted checkpoint failed compatibility or integrity validation."
-    elif isinstance(error, (TimeoutError, ConnectionError)):
+    elif isinstance(error, (TimeoutError, ConnectionError)) or is_retryable_provider_error(
+        error
+    ):
         error_class = ErrorClass.PROVIDER_TRANSPORT
         recovery = RecoveryAction.RETRY
         code = "provider_transport"
@@ -333,6 +336,13 @@ async def _record_execution_failure(
         recovery = RecoveryAction.RETRY
         code = "invalid_section_output"
         summary = "Section output failed deterministic validation."
+    elif is_provider_request_rejected(error):
+        # Provider rejected the request (400/401/403/404...): resending cannot
+        # help, but it is a provider/config fault, not a programming error.
+        error_class = ErrorClass.UNSUPPORTED_CONTRACT
+        recovery = RecoveryAction.NONE
+        code = "provider_request_rejected"
+        summary = "The AI provider rejected the section request."
     else:
         error_class = ErrorClass.INTERNAL_PROGRAMMING
         recovery = RecoveryAction.NONE

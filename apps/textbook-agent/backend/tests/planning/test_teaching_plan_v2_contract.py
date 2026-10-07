@@ -239,8 +239,9 @@ def test_v2_bridge_shape_requires_null_first_and_meaningful_subsequent(
 def test_v2_section_slots_are_unique_and_anchor_ownership_is_exact() -> None:
     payload = deepcopy(_v2_plan_payload())
     payload["sections"][1]["slot_id"] = "orient"
-    with pytest.raises(ValidationError, match="slot_ids must be unique"):
-        TeachingPlan.model_validate(payload)
+    # Repeated slot types are legitimate: they get unique instance ids.
+    plan = TeachingPlan.model_validate(payload)
+    assert [s.slot_id for s in plan.sections][:2] == ["orient", "orient-2"]
 
     payload = deepcopy(_v2_plan_payload())
     payload["anchor_usage"][0]["slot_id"] = "foreign-slot"
@@ -277,8 +278,9 @@ def test_v2_materialization_rejects_duplicate_or_foreign_slot_ownership() -> Non
         materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
 
     draft = TeachingPlanDraftV2.model_validate(_v2_draft_payload())
-    with pytest.raises(ValueError, match="slot_ids must be unique"):
-        materialize_teaching_plan(draft, slot_ids=["orient", "orient"])
+    # Repeated slot types are normalized, not rejected.
+    repeated = materialize_teaching_plan(draft, slot_ids=["orient", "orient"])
+    assert [s.slot_id for s in repeated.sections] == ["orient", "orient-2"]
 
     with pytest.raises(ValueError, match="surrounding whitespace"):
         materialize_teaching_plan(draft, slot_ids=["orient ", "explain"])

@@ -67,6 +67,42 @@ def test_multi_select_choice_answer_accepts_a_set_of_option_letters() -> None:
     )
 
 
+def _select_many(answer_text: str) -> tuple[list[dict], list[dict]]:
+    blocks = _blocks()
+    blocks[1]["content"]["options"] += [
+        {"letter": "D", "text": "Air"},
+        {"letter": "E", "text": "Water"},
+    ]
+    entries = [
+        {"question_id": "q-open-1", "answer": "Light is required."},
+        {"question_id": "q-mcq-1", "answer": [{"type": "text", "value": answer_text}]},
+    ]
+    return blocks, entries
+
+
+def test_select_many_teacher_copy_with_option_text_passes() -> None:
+    # Shape the Print adapter writes for a select-many task with three correct
+    # options (a production Print build failed on this as "A; B; C").
+    blocks, entries = _select_many(
+        "A — Plants need light and water to grow.; B — Plants are green.; "
+        "C — Leaves are the part of the plant in the air."
+    )
+    validate_answer_key_integrity(blocks, entries)
+
+
+def test_select_many_option_text_containing_semicolon_passes() -> None:
+    blocks, entries = _select_many(
+        "B — Minerals; not food; E — Water, taken in by the roots"
+    )
+    validate_answer_key_integrity(blocks, entries)
+
+
+def test_select_many_teacher_copy_with_unknown_letter_rejected() -> None:
+    blocks, entries = _select_many("A — Food; F — Something else")
+    with pytest.raises(AnswerKeyIntegrityError, match="MCQ answer"):
+        validate_answer_key_integrity(blocks, entries)
+
+
 def test_orphan_answer_rejected() -> None:
     entries = _valid_entries() + [{"question_id": "unknown-q", "answer": "X"}]
     with pytest.raises(AnswerKeyIntegrityError, match="orphan"):

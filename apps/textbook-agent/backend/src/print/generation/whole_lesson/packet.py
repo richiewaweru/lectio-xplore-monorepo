@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
+from curriculum.teaching_plan.instance_ids import normalize_slot_instance_ids
+
 
 class ScopeEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -124,6 +126,16 @@ class ImmutableLessonPacket(BaseModel):
         if not data.get("item_backbone_refs"):
             data.pop("item_backbone_refs", None)
         return data
+
+    @model_validator(mode="after")
+    def _normalize_repeated_slot_ids(self) -> ImmutableLessonPacket:
+        # Repeated slot types are legitimate; give repeats unique instance ids
+        # (confront, confront-2) instead of failing, including for stored packets.
+        ids = [slot.slot_id for slot in self.slots]
+        if len(ids) != len(set(ids)):
+            for slot, unique in zip(self.slots, normalize_slot_instance_ids(ids), strict=True):
+                slot.slot_id = unique
+        return self
 
     def approved_item_ids(self) -> list[str]:
         return [item.id for item in self.approved_items]

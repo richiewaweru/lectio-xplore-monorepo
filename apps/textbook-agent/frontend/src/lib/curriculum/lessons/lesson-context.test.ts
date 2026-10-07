@@ -35,6 +35,27 @@ describe('canonical Unit lesson workspace mapping', () => {
 		expect(lessonArtifactUi(status, 'print').regenerable).toBe(false);
 	});
 
+	it('offers Regenerate when a recoverable realization carries a non-retryable document failure', () => {
+		// Real status shape: realization recovery "retry", but the shared document
+		// run failed terminally (error.retryable false, error.recovery_action
+		// "regenerate"). Previously neither Retry nor Regenerate was offered.
+		const status = base({
+			workspace: {
+				preparation: { state: 'approved', approved_snapshot_verified: true },
+				learn: {
+					state: 'failed_recoverable', realization_id: 'lr', recovery_action: 'retry',
+					error: { message: 'Section runtime failed unexpectedly.', retryable: false, recovery_action: 'regenerate' }
+				},
+				print: {
+					state: 'failed_recoverable', realization_id: 'pr', recovery_action: 'retry',
+					error: { message: 'Transient', retryable: true, recovery_action: 'retry' }
+				}
+			}
+		});
+		expect(lessonArtifactUi(status, 'learn')).toMatchObject({ retryable: false, regenerable: true });
+		expect(lessonArtifactUi(status, 'print')).toMatchObject({ retryable: true, regenerable: false });
+	});
+
 	it.each([
 		['not_started', 'not_prepared'],
 		['planning', 'preparing'],

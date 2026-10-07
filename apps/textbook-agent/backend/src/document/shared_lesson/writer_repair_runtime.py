@@ -19,7 +19,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_serializer
 from sqlalchemy import select
 
 from curriculum.teaching_plan.models import TeachingPlanSection
-from document.shared_lesson.boundary import BoundaryValidationResult
+from document.shared_lesson.boundary import (
+    SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES,
+    BoundaryValidationResult,
+)
 from document.shared_lesson.boundary_runtime import accepted_section_output_hash
 from document.shared_lesson.continuity import (
     ContinuityIssue,
@@ -340,6 +343,14 @@ def _repair_input_hash(work: WriterRepairWorkOrder) -> str:
     return work.identity_hash
 
 
+def _hard_revalidation_failure(issues: Any) -> bool:
+    """Mirror boundary.py: lexical findings the semantic review already
+    adjudicated (proof status pass) are not hard failures; anything else is."""
+    return any(
+        issue.issue_code not in SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES for issue in issues
+    )
+
+
 async def admit_writer_repair_work_item(
     session: Any,
     *,
@@ -438,19 +449,26 @@ async def admit_writer_repair_work_item(
         if previous_section != boundary_result.previous_section:
             raise WriterRepairRuntimeError("healthy boundary sibling changed during repair")
         boundary_previous, boundary_next = previous_section, repaired_section
-    # Admission repeats deterministic checks against the exact changed output.
-    if validate_section_boundary(
-        previous_section=boundary_previous,
-        previous_plan=previous_plan,
-        next_section=boundary_next,
-        next_plan=next_plan,
+    # Admission repeats deterministic checks against the exact changed output,
+    # with the same adjudication rule as boundary.py: the proof's semantic
+    # review already passed lexical-threshold findings, so only hard failures
+    # reject here.
+    if _hard_revalidation_failure(
+        validate_section_boundary(
+            previous_section=boundary_previous,
+            previous_plan=previous_plan,
+            next_section=boundary_next,
+            next_plan=next_plan,
+        )
     ):
         raise WriterRepairRuntimeError("targeted repair does not pass boundary revalidation")
     target_plan = previous_plan if issue.affected_section_id == previous_section.id else next_plan
-    if validate_section_continuity(
-        section=repaired_section,
-        teaching_plan_section=target_plan,
-        expected_nodes=_expected_shapes(writer_request),
+    if _hard_revalidation_failure(
+        validate_section_continuity(
+            section=repaired_section,
+            teaching_plan_section=target_plan,
+            expected_nodes=_expected_shapes(writer_request),
+        )
     ):
         raise WriterRepairRuntimeError("targeted repair does not pass section revalidation")
     work = WriterRepairWorkOrder(
@@ -647,20 +665,24 @@ async def execute_writer_repair_work_item(
             item=item,
             work=job.work,
         )
-        if validate_section_boundary(
-            previous_section=previous_active,
-            previous_plan=previous_plan,
-            next_section=next_active,
-            next_plan=next_plan,
+        if _hard_revalidation_failure(
+            validate_section_boundary(
+                previous_section=previous_active,
+                previous_plan=previous_plan,
+                next_section=next_active,
+                next_plan=next_plan,
+            )
         ):
             raise WriterRepairSourceConflict("active writer output failed boundary revalidation")
         target_plan = (
             previous_plan if job.work.section_id == job.work.previous_section.id else next_plan
         )
-        if validate_section_continuity(
-            section=repaired,
-            teaching_plan_section=target_plan,
-            expected_nodes=_expected_shapes(job.writer_request),
+        if _hard_revalidation_failure(
+            validate_section_continuity(
+                section=repaired,
+                teaching_plan_section=target_plan,
+                expected_nodes=_expected_shapes(job.writer_request),
+            )
         ):
             raise WriterRepairSourceConflict("active writer output failed section revalidation")
         if checkpoint is None:

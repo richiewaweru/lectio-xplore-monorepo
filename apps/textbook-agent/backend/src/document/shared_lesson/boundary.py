@@ -111,7 +111,7 @@ _INTERNAL_REVIEW_TEXT = re.compile(
     r"learn widget|print page|model planning)\b",
     re.IGNORECASE,
 )
-_SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES = frozenset(
+SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES = frozenset(
     {
         "boundary_bridge_missing",
         "boundary_prerequisite_gap",
@@ -120,6 +120,7 @@ _SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES = frozenset(
         "exit_state_unrealized",
     }
 )
+_SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES = SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES
 
 
 class BoundaryValidationResult(_ClosedModel):
@@ -310,7 +311,7 @@ async def validate_and_repair_boundary(
     initial = deterministic
     reviewer = semantic_validator or default_boundary_semantic_validator
     lexical_only = bool(deterministic) and all(
-        issue.issue_code in _SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES for issue in deterministic
+        issue.issue_code in SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES for issue in deterministic
     )
     if not deterministic or lexical_only:
         semantic_calls = 1
@@ -475,7 +476,7 @@ async def validate_and_repair_boundary(
     # semantic review adjudicate only those lexical coverage findings; shape
     # and other hard failures still stop here.
     if any(
-        issue.issue_code not in _SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES
+        issue.issue_code not in SEMANTIC_ADJUDICABLE_BOUNDARY_ISSUES
         for issue in remaining
     ):
         return BoundaryValidationResult(

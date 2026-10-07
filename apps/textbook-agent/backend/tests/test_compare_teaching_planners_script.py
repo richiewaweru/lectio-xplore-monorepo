@@ -91,6 +91,7 @@ async def test_run_compare_writes_files_and_report(monkeypatch, tmp_path) -> Non
         "### Flags by code",
         "### Validation issues",
         "### Blocks with `visual`",
+        "### Jargon in teacher-facing fields",
         "## Section-by-section diff",
     ):
         assert heading in report
@@ -248,6 +249,64 @@ def test_section_diff_and_report_pure() -> None:
     both = CMP.build_report(base, reviewed)
     assert "### Slot `check`" in both and "staged-lessonreview" in both
     assert CMP.section_diff(None, None) == []
+
+
+def _jargon_plan():
+    return {
+        "plan": {
+            "learner_title": "Anchors and blocks",
+            "starting_state": ["Knows the model", "Plain start"],
+            "sections": [
+                {
+                    "slot_id": "orient",
+                    "display_title": "Warm up",
+                    "specific_purpose": "x" * 200 + " node",
+                    "blocks": [],
+                },
+                {"slot_id": "check", "display_title": "Check", "specific_purpose": "Fine", "blocks": []},
+            ],
+        },
+        "ok": True,
+    }
+
+
+def test_jargon_whole_word_matching() -> None:
+    def hits(text):
+        return CMP.jargon_counts({"plan": {"learner_title": text}}).get("learner_title", [])
+
+    assert hits("modelling and modelled") == []
+    assert hits("blocked") == []
+    assert hits("Anchors, BLOCK and Slot") == ["anchors", "block", "slot"]
+    assert hits("a variant of the backbone") == ["variant", "backbone"]
+
+
+def test_jargon_counts_paths_and_missing_fields() -> None:
+    counts = CMP.jargon_counts(_jargon_plan())
+    assert counts == {
+        "learner_title": ["anchors", "blocks"],
+        "starting_state[0]": ["model"],
+        "sections[orient].specific_purpose": ["node"],
+    }
+    assert CMP.jargon_total(_jargon_plan()) == 4
+    # v2 fields absent / no plan at all.
+    assert CMP.jargon_counts(_plan([{"slot_id": "a", "display_title": "Clean"}])) == {}
+    assert CMP.jargon_total(None) == 0
+
+
+def test_jargon_in_report_and_summary() -> None:
+    report = CMP.build_report(_jargon_plan(), None)
+    assert "### Jargon in teacher-facing fields" in report
+    assert "Total: 4" in report
+    assert "`sections[orient].specific_purpose`: node" in report
+    assert "x" * 200 not in report and "..." in report
+    clean = CMP.build_report(_plan([{"slot_id": "a", "display_title": "Clean"}]), None)
+    assert "### Jargon in teacher-facing fields" in clean
+    assert clean.rstrip().split("### Jargon in teacher-facing fields")[1].split("\n")[2] == "None"
+
+    summary = CMP.build_summary([{"generation_id": "g", "staged": [_jargon_plan()]}])
+    header = summary.splitlines()[2]
+    assert header.endswith("| visual blocks | jargon |")
+    assert summary.splitlines()[4].endswith("| 0 | 4 |")
 
 
 def test_default_out_is_gitignored_location() -> None:

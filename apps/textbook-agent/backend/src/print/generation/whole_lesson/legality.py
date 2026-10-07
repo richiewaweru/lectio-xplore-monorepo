@@ -21,6 +21,7 @@ from print.generation.whole_lesson.packet import ImmutableLessonPacket
 from print.resources.candidates import assemble_lesson_guidance
 from resource_specs.loader import get_spec
 from curriculum.planning.skeletons import load_skeleton_catalog
+from curriculum.teaching_plan.instance_ids import catalog_slot_key
 
 
 class LessonLegalitySnapshot(BaseModel):
@@ -100,7 +101,7 @@ def build_lesson_legality_snapshot(
     catalog = load_skeleton_catalog()
     slots = {
         slot.slot_id: {
-            **dict(catalog.slots.get(slot.slot_id) or {}),
+            **dict(catalog.slots.get(catalog_slot_key(catalog.slots, slot.slot_id)) or {}),
             "slot_id": slot.slot_id,
             "typical_intents": list(slot.typical_intents),
         }

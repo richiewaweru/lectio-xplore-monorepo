@@ -1377,3 +1377,115 @@ async def test_provider_observes_committed_claim_and_writer_checkpoint(
         assert persisted is not None
         assert persisted.status == "ready"
         assert persisted.checkpoint_json is not None
+
+
+def _model_http_error(status: int):
+    from pydantic_ai.exceptions import ModelHTTPError
+
+    return ModelHTTPError(status, "test-model", {"error": "x"})
+
+
+def _provider_error_cases():
+    from pydantic_ai.exceptions import ModelAPIError
+
+    return [
+        (ModelAPIError("test-model", "Connection error."), True),
+        (_model_http_error(503), True),
+        (_model_http_error(429), True),
+        (_model_http_error(408), True),
+        (_model_http_error(401), False),
+        (_model_http_error(403), False),
+        (_model_http_error(400), False),
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("error", "retryable"), _provider_error_cases())
+async def test_provider_api_errors_are_transport_not_internal(
+    monkeypatch, error, retryable
+) -> None:
+    from infra.generation_runtime import ErrorClass, RecoveryAction
+
+    recorded = []
+
+    async def fake_fail(_session, **kwargs):
+        recorded.append(kwargs["failure"])
+        return SimpleNamespace(id=kwargs["work_item_id"], run_id="run-1")
+
+    monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", _append_event_noop)
+    await _record_execution_failure(
+        "session", work_item_id="item-1", worker_id="worker-1", lease_token=1, error=error
+    )
+
+    failure = recorded[0]
+    assert failure.error_class != ErrorClass.INTERNAL_PROGRAMMING
+    if retryable:
+        assert failure.error_class == ErrorClass.PROVIDER_TRANSPORT
+        assert failure.recovery_action == RecoveryAction.RETRY
+        assert failure.error_code == "provider_transport"
+    else:
+        assert failure.recovery_action == RecoveryAction.NONE
+        assert failure.error_code == "provider_request_rejected"
+
+
+@pytest.mark.asyncio
+async def test_arbitrary_runtime_error_stays_internal_programming(monkeypatch) -> None:
+    from infra.generation_runtime import ErrorClass, RecoveryAction
+
+    recorded = []
+
+    async def fake_fail(_session, **kwargs):
+        recorded.append(kwargs["failure"])
+        return SimpleNamespace(id=kwargs["work_item_id"], run_id="run-1")
+
+    monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", _append_event_noop)
+    await _record_execution_failure(
+        "session",
+        work_item_id="item-1",
+        worker_id="worker-1",
+        lease_token=1,
+        error=RuntimeError("boom"),
+    )
+
+    assert recorded[0].error_class == ErrorClass.INTERNAL_PROGRAMMING
+    assert recorded[0].recovery_action == RecoveryAction.NONE
+    assert recorded[0].error_code == "section_runtime_error"
+
+
+def test_provider_transport_section_failure_is_auto_retryable() -> None:
+    from document.shared_lesson.auto_retry import is_leaf_auto_retryable
+
+    item = SimpleNamespace(
+        status="failed_recoverable",
+        recovery_action="retry",
+        error_class="provider_transport",
+        error_code="provider_transport",
+        attempt=1,
+        max_attempts=3,
+    )
+    assert is_leaf_auto_retryable(item) is True
+
+
+@pytest.mark.parametrize(("error", "retryable"), _provider_error_cases())
+def test_other_shared_document_runtimes_classify_provider_api_errors(error, retryable) -> None:
+    from document.shared_lesson import (
+        boundary_runtime,
+        qa_runtime,
+        sourcebook_runtime,
+        task_runtime,
+    )
+    from infra.generation_runtime import ErrorClass, RecoveryAction
+
+    for module in (boundary_runtime, qa_runtime, sourcebook_runtime, task_runtime):
+        failure = module._failure_for_exception(error)
+        assert failure.error_class != ErrorClass.INTERNAL_PROGRAMMING
+        if retryable:
+            assert failure.error_class == ErrorClass.PROVIDER_TRANSPORT
+            assert failure.recovery_action == RecoveryAction.RETRY
+        else:
+            assert failure.recovery_action == RecoveryAction.NONE
+            assert failure.error_code.endswith("provider_request_rejected")
+        internal = module._failure_for_exception(RuntimeError("boom"))
+        assert internal.error_class == ErrorClass.INTERNAL_PROGRAMMING

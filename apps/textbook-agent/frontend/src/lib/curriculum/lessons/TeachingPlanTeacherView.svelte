@@ -89,9 +89,9 @@
 					{#each figures as figure}
 						<p class="note">Figure: {figure}</p>
 					{/each}
-					{#each (section.blocks ?? []).filter((b) => b.departure_reason?.trim()) as block (block.id)}
-						<p class="note">{block.departure_reason}</p>
-					{/each}
+					<!-- Departure reasons are planner reasoning (slot/intent vocabulary);
+					     they stay in "Inspect full plan" only. -->
+
 				</div>
 			</li>
 		{/each}

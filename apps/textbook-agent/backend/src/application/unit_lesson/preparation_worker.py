@@ -672,9 +672,10 @@ class PreparationWorker:
         except Exception as exc:
             await session.rollback()
             LOGGER.warning(
-                "Preparation work item failed work_item_id=%s error=%s",
+                "Preparation work item failed work_item_id=%s error=%s: %s",
                 item_id,
                 type(exc).__name__,
+                str(exc)[:500],
                 exc_info=not isinstance(exc, _TRANSIENT_ERRORS),
             )
             await self._record_failure(

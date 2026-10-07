@@ -125,13 +125,17 @@ def validate_answer_key_integrity(
                 str(run.get("value", "")) for run in raw_answer if isinstance(run, dict)
             )
         answer = str(raw_answer or "")
-        # Teacher copy prints the letter and its option text; only the letters
-        # (the part before each em dash) are checked against the options.
-        answer = "; ".join(part.split(" — ", 1)[0] for part in answer.split("; "))
+        # Teacher copy prints each correct letter with its option text, joined by
+        # "; " ("A — text; C — text").  Only the letters are checked, read as the
+        # token before each em dash so option text containing "; " cannot split
+        # into a bogus letter.
         # ``choices`` is also the closed Print treatment for a SharedTaskSpec
-        # select-many response.  Its answer key is a comma-separated set of
-        # option letters; accept that set while retaining strict membership.
-        answer_letters = [part for part in re.split(r"[,\s]+", answer) if part]
+        # select-many response; a bare key is a comma- or semicolon-separated set
+        # of option letters.  Accept either form while retaining strict membership.
+        if " — " in answer:
+            answer_letters = re.findall(r"(?:^|;\s*)([^\s;,]+) — ", answer)
+        else:
+            answer_letters = [part for part in re.split(r"[,;\s]+", answer) if part]
         if not answer_letters or any(part not in letters for part in answer_letters):
             raise AnswerKeyIntegrityError(
                 f"MCQ answer {answer!r} not in options {sorted(letters)} for {block_id!r}"

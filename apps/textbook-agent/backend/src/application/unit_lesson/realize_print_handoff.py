@@ -30,6 +30,7 @@ from curriculum.teaching_plan.consumers import (
 )
 from application.unit_lesson.realization_projection import is_legacy_realization
 from application.unit_lesson.realization_retry import (
+    admit_fresh_shared_document_run,
     retry_allowed,
     retry_failed_run_in_place,
 )
@@ -629,6 +630,11 @@ async def retry_print_realization(
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Print realization not found")
+    # The old shared-document Run may be the reason this retry fell through
+    # (failed terminal / unretryable): pin the new revision to a fresh one.
+    await admit_fresh_shared_document_run(
+        session, row=row, owner_user_id=user_id, label="Print"
+    )
     await _create_print_output_generation(
         session,
         source=source,

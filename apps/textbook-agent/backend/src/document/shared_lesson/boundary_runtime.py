@@ -44,6 +44,7 @@ from document.shared_lesson.writer import SectionWriteResult, SectionWriterReque
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.execution.leases import LeaseLostError
+from infra.llm.runner import is_provider_request_rejected, is_retryable_provider_error
 from infra.generation_runtime import (
     AdmissionResult,
     ErrorClass,
@@ -839,7 +840,7 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
             safe_summary="Boundary validation exceeded its aggregate deadline.",
             recovery_action=RecoveryAction.RETRY,
         )
-    if isinstance(exc, (TimeoutError, ConnectionError)):
+    if isinstance(exc, (TimeoutError, ConnectionError)) or is_retryable_provider_error(exc):
         return WorkItemFailure(
             error_code="boundary_provider_transport",
             error_class=ErrorClass.PROVIDER_TRANSPORT,
@@ -871,6 +872,13 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
             error_class=ErrorClass.PROVIDER_OUTPUT,
             safe_summary="Boundary semantic provider returned invalid output.",
             recovery_action=RecoveryAction.RETRY,
+        )
+    if is_provider_request_rejected(exc):
+        return WorkItemFailure(
+            error_code="boundary_provider_request_rejected",
+            error_class=ErrorClass.UNSUPPORTED_CONTRACT,
+            safe_summary="Boundary semantic provider rejected the request.",
+            recovery_action=RecoveryAction.NONE,
         )
     return WorkItemFailure(
         error_code="boundary_runtime_error",
