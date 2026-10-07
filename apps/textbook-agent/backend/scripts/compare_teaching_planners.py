@@ -37,6 +37,7 @@ import argparse
 import asyncio
 import difflib
 import json
+import re
 import sys
 import time
 from collections import Counter
@@ -284,6 +285,41 @@ def visual_blocks(result: dict[str, Any] | None) -> list[dict[str, Any]]:
     return found
 
 
+_JARGON_RE = re.compile(r"\b(anchor|slot|model|node|backbone|variant|block)s?\b", re.IGNORECASE)
+
+
+def _jargon_fields(result: dict[str, Any] | None) -> list[tuple[str, str]]:
+    """Teacher-facing ``(field path, text)`` pairs; absent v2 fields are skipped."""
+    plan = (result or {}).get("plan") or {}
+    fields: list[tuple[str, str]] = []
+    if isinstance(plan.get("learner_title"), str):
+        fields.append(("learner_title", plan["learner_title"]))
+    for key in ("starting_state", "target_state"):
+        for index, text in enumerate(plan.get(key) or []):
+            if isinstance(text, str):
+                fields.append((f"{key}[{index}]", text))
+    for index, section in enumerate(_sections(result)):
+        ref = section.get("slot_id") or index
+        for key in ("display_title", "specific_purpose"):
+            if isinstance(section.get(key), str):
+                fields.append((f"sections[{ref}].{key}", section[key]))
+    return fields
+
+
+def jargon_counts(result: dict[str, Any] | None) -> dict[str, list[str]]:
+    """Internal-vocabulary words found in teacher-facing fields, by field path."""
+    found: dict[str, list[str]] = {}
+    for path, text in _jargon_fields(result):
+        words = [m.group(0).lower() for m in _JARGON_RE.finditer(text)]
+        if words:
+            found[path] = words
+    return found
+
+
+def jargon_total(result: dict[str, Any] | None) -> int:
+    return sum(len(words) for words in jargon_counts(result).values())
+
+
 def _section_summary(section: dict[str, Any] | None) -> dict[str, Any]:
     if section is None:
         return {
@@ -439,6 +475,21 @@ def _mode_section(result: dict[str, Any] | None, label: str) -> list[str]:
     else:
         lines.append("None.")
     lines.append("")
+
+    jargon = jargon_counts(result)
+    texts = dict(_jargon_fields(result))
+    lines += ["### Jargon in teacher-facing fields", ""]
+    if jargon:
+        lines.append(f"Total: {jargon_total(result)}")
+        lines.append("")
+        for path, words in jargon.items():
+            text = texts[path]
+            if len(text) > 160:
+                text = text[:157] + "..."
+            lines.append(f"- `{path}`: {', '.join(words)} - {_escape(text)}")
+    else:
+        lines.append("None")
+    lines.append("")
     return lines
 
 
@@ -507,8 +558,8 @@ def build_summary(entries: list[dict[str, Any]]) -> str:
     lines = [
         "# Planner comparison summary",
         "",
-        "| generation | mode | run | status | wall_s | calls | flags | blocking issues | visual blocks |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| generation | mode | run | status | wall_s | calls | flags | blocking issues | visual blocks | jargon |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for entry in entries:
         for mode in MODES:
@@ -520,7 +571,7 @@ def build_summary(entries: list[dict[str, Any]]) -> str:
                     f"| {_escape(entry['generation_id'])} | {label} | {index} "
                     f"| {'ok' if r.get('ok') else 'FAILED'} | {_fmt(r.get('wall_s'))} "
                     f"| {len(r.get('llm_calls') or [])} | {len(r.get('flags') or [])} "
-                    f"| {blocking} | {len(visual_blocks(r))} |"
+                    f"| {blocking} | {len(visual_blocks(r))} | {jargon_total(r)} |"
                 )
     return "\n".join(lines) + "\n"
 
