@@ -17,6 +17,7 @@ from curriculum.approved_items import (
     load_item_backbone_refs,
 )
 from curriculum.backbone.persistence import load_backbone
+from curriculum.teaching_plan.instance_ids import normalize_slot_instance_ids
 from curriculum.teaching_plan.revisions import teaching_plan_review_identity
 from curriculum.teaching_plan.service import (
     bind_staged_teaching_runner,
@@ -51,12 +52,18 @@ bind_staged_teaching_runner(run_staged_teaching_planner)
 
 
 def slot_ids_from_structural_plan(plan_raw: Mapping[str, Any] | dict[str, Any] | None) -> tuple[str, ...]:
-    """Derive packet slot IDs from persisted structural-plan section order."""
+    """Derive packet slot instance IDs from persisted structural-plan section order.
+
+    The role is the slot type; a repeated role (two ``confront`` sections) is
+    legitimate and becomes unique instance ids (``confront``, ``confront-2``).
+    """
     sections = (plan_raw or {}).get("sections") or []
     return tuple(
-        str(section.get("role") or section.get("id"))
-        for section in sections
-        if isinstance(section, dict) and (section.get("role") or section.get("id"))
+        normalize_slot_instance_ids(
+            str(section.get("role") or section.get("id"))
+            for section in sections
+            if isinstance(section, dict) and (section.get("role") or section.get("id"))
+        )
     )
 
 

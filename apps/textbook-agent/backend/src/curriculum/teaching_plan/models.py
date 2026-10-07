@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
+from curriculum.teaching_plan.instance_ids import normalize_slot_instance_ids
+
 Difficulty = Literal["guided", "independent"]
 TaskMode = Literal["none", "formative", "assessment"]
 LearnerActionId = Literal[
@@ -166,9 +168,11 @@ class AnchorUsageEntry(BaseModel):
 
 
 def _reject_duplicate_anchor_usages(entries: list[AnchorUsageEntry]) -> None:
+    """Repeated slot types are legitimate: make anchor_usage ids unique, don't fail."""
     slot_ids = [e.slot_id for e in entries]
     if len(slot_ids) != len(set(slot_ids)):
-        raise ValueError("anchor_usage slot_id values must be unique")
+        for entry, unique in zip(entries, normalize_slot_instance_ids(slot_ids), strict=True):
+            entry.slot_id = unique
 
 
 class TeachingPlan(BaseModel):
@@ -224,7 +228,11 @@ class TeachingPlan(BaseModel):
         if any(slot_id != slot_id.strip() for slot_id in slot_ids):
             raise ValueError("v2 section slot_ids cannot have surrounding whitespace")
         if len(slot_ids) != len(set(slot_ids)):
-            raise ValueError("v2 Teaching Plan section slot_ids must be unique")
+            for section, unique in zip(
+                self.sections, normalize_slot_instance_ids(slot_ids), strict=True
+            ):
+                section.slot_id = unique
+            slot_ids = [section.slot_id for section in self.sections]
         if any(entry.slot_id != entry.slot_id.strip() for entry in self.anchor_usage):
             raise ValueError("anchor_usage slot_id cannot have surrounding whitespace")
         if any(entry.slot_id not in set(slot_ids) for entry in self.anchor_usage):
@@ -474,8 +482,7 @@ def materialize_teaching_plan(
             raise ValueError("Teaching Plan slot_ids must be non-empty")
         if any(slot_id != slot_id.strip() for slot_id in slot_ids):
             raise ValueError("Teaching Plan slot_ids cannot have surrounding whitespace")
-        if len(slot_ids) != len(set(slot_ids)):
-            raise ValueError("Teaching Plan slot_ids must be unique")
+        slot_ids = normalize_slot_instance_ids(slot_ids)
         if any(
             entry.slot_id != entry.slot_id.strip() or entry.slot_id not in set(slot_ids)
             for entry in draft.anchor_usage

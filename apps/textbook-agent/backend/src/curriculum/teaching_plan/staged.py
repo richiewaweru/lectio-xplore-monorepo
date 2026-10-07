@@ -10,6 +10,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from curriculum.backbone.models import ANCHOR_ID
+from curriculum.teaching_plan.instance_ids import normalize_slot_instance_ids
 from curriculum.teaching_plan.models import (
     AnchorUsageEntry,
     TeachingPlanDraftBlock,
@@ -128,6 +129,7 @@ def materialize_teaching_spine(
     item_backbone_refs: dict[str, dict],
 ) -> TeachingSpine:
     """Attach slot ids by position and derive each section's backbone targets."""
+    slot_ids = normalize_slot_instance_ids(slot_ids)
     if len(draft.sections) != len(slot_ids):
         raise ValueError(
             f"spine has {len(draft.sections)} sections but packet has {len(slot_ids)} slots"

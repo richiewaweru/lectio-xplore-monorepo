@@ -19,6 +19,7 @@ from resource_specs.candidates import (
 from resource_specs.loader import get_spec
 from curriculum.planning.models import SectionBlockPlan
 from curriculum.planning.skeletons import load_skeleton_catalog
+from curriculum.teaching_plan.instance_ids import catalog_slot_key
 
 FIRST_SLICE_OBJECTS = frozenset(
     {"prose", "list", "table", "figure", "worked-example", "questions"}
@@ -58,7 +59,7 @@ def guidance_for_slot(slot_id: str) -> SlotGuidance:
     intents, objects = _catalogues()
     spec = get_spec("lesson")
     catalog = load_skeleton_catalog()
-    slot = dict(catalog.slots[slot_id])
+    slot = dict(catalog.slots[catalog_slot_key(catalog.slots, slot_id)])
     slot["slot_id"] = slot_id
     return assemble_slot_guidance(
         resource_spec=spec,
@@ -74,7 +75,7 @@ def candidates_for_slot(slot_id: str) -> tuple[IntentCandidate, ...]:
     intents, objects = _catalogues()
     spec = get_spec("lesson")
     catalog = load_skeleton_catalog()
-    slot = dict(catalog.slots[slot_id])
+    slot = dict(catalog.slots[catalog_slot_key(catalog.slots, slot_id)])
     slot["slot_id"] = slot_id
     return resolve_block_candidates(
         resource_spec=spec,
