@@ -20,6 +20,7 @@ sourcebook and every finished section keep their outputs.
 
 from __future__ import annotations
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -32,16 +33,21 @@ from core.database.models import NativeRealizationModel
 from document.shared_lesson.boundary_recovery import recover_boundary_repair_leaves
 from document.shared_lesson.realization_source import (
     PendingRealizationSource,
+    RealizationAttemptsExhausted,
+    RealizationSourceNotFound,
     RealizationSourceResult,
+    ensure_shared_document_run,
 )
 from infra.database.models import GenerationRunModel
 from infra.generation_runtime import (
     AttemptLimitExceeded,
     InvalidRunTransition,
     InvalidWorkItemTransition,
+    RunNotFound,
     WorkItemConflict,
     WorkItemUnavailable,
     active_work_items,
+    cancel_run,
     retry_work_items,
 )
 
@@ -194,4 +200,83 @@ async def _retry_shared_document_leaves(
     return True
 
 
-__all__ = ["RETRYABLE_STATUSES", "retry_allowed", "retry_failed_run_in_place"]
+async def admit_fresh_shared_document_run(
+    session: AsyncSession,
+    *,
+    row: NativeRealizationModel,
+    owner_user_id: str,
+    label: str,
+) -> GenerationRunModel:
+    """Pin a retried realization to a usable (non-failed) shared-document Run.
+
+    Called on the new-revision fallthrough, after in-place retry declined.  A
+    pinned shared-document Run that is ``failed_recoverable`` but has no
+    retryable leaves would be *reused* by ``ensure_shared_document_run`` (it is
+    not terminal), leaving the realization re-projected as failed.  It is
+    therefore cancelled first -- the same step as the shared-document
+    regenerate endpoint -- so the deterministic bounded attempt keys admit a
+    fresh Run.  ``failed_terminal``/``cancelled`` pinned Runs are advanced by
+    ``ensure_shared_document_run`` itself; ready/active Runs are reused, so
+    Learn and Print converge on one Run per lesson.  Does not commit; on a
+    typed failure the session is rolled back before the 409 is raised so no
+    partial cancel/admission survives.
+    """
+    try:
+        pinned_id = getattr(row, "shared_document_run_id", None)
+        if pinned_id:
+            pinned = await session.scalar(
+                select(GenerationRunModel)
+                .where(
+                    GenerationRunModel.id == pinned_id,
+                    GenerationRunModel.owner_user_id == owner_user_id,
+                    GenerationRunModel.run_type == "shared_document",
+                )
+                .execution_options(populate_existing=True)
+            )
+            if pinned is not None and pinned.status == "failed_recoverable":
+                await cancel_run(session, run_id=pinned.id, owner_user_id=owner_user_id)
+        shared_run = await ensure_shared_document_run(
+            session, owner_user_id=owner_user_id, path_lesson_id=str(row.path_lesson_id)
+        )
+    except RealizationSourceNotFound as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_SOURCE_UNAVAILABLE",
+                "message": str(exc),
+                "recovery_action": "reprepare",
+            },
+        ) from exc
+    except RealizationAttemptsExhausted as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_ATTEMPTS_EXHAUSTED",
+                "message": f"This lesson's document attempts are used up, so {label} cannot "
+                "be regenerated. Regenerate the lesson plan instead.",
+                "recovery_action": "reprepare",
+            },
+        ) from exc
+    except (InvalidRunTransition, RunNotFound) as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SHARED_DOCUMENT_NOT_REGENERATABLE",
+                "message": "The lesson document cannot be regenerated right now.",
+            },
+        ) from exc
+    row.shared_document_run_id = shared_run.id
+    row.shared_document_state = "ready" if shared_run.status == "ready" else "pending"
+    await session.flush()
+    return shared_run
+
+
+__all__ = [
+    "RETRYABLE_STATUSES",
+    "admit_fresh_shared_document_run",
+    "retry_allowed",
+    "retry_failed_run_in_place",
+]

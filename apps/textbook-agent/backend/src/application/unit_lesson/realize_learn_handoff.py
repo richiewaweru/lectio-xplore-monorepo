@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.unit_lesson.realization_projection import is_legacy_realization
 from application.unit_lesson.realization_retry import (
+    admit_fresh_shared_document_run,
     retry_allowed,
     retry_failed_run_in_place,
 )
@@ -541,6 +542,11 @@ async def retry_learn_realization(
     row = row_result.scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="Learn realization not found")
+    # The old shared-document Run may be the reason this retry fell through
+    # (failed terminally / unretryable): pin the new revision to a fresh one.
+    await admit_fresh_shared_document_run(
+        session, row=row, owner_user_id=user_id, label="Learn"
+    )
     output = GenerationModel(
         id=output_id,
         user_id=user_id,
