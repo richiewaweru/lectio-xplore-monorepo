@@ -47,13 +47,22 @@ Write `arc` as two or three sentences a teacher could read aloud, specific to
 this lesson, not to any lesson on the topic. The arc is a commitment; every
 section must serve it.
 
+Teacher-facing wording: `learner_title`, `starting_state`, `target_state`, and
+each section's `display_title` and `specific_purpose` are read by the teacher.
+Write them in plain classroom language. Refer to the example by what it is
+(for instance "Aisha's bean seedling" or "the spider plant on the windowsill"),
+never as "the anchor". Never use the pipeline words anchor, slot, model, node,
+backbone, variant, block, or intent in those five fields.
+
 ## STATE CHAINING
 
 Sections are read in order, and each section call sees only the spine and its
 own section. The chain between sections is therefore load-bearing.
 
   - The first section's entry_state is covered by starting_state and what
-    prior_established already taught.
+    prior_established already taught. Write that entry_state with the same
+    wording as starting_state; a downstream repair step matches them by token
+    overlap, so keep them consistent.
   - Every entry_state entry of a later section is covered by the previous
     section's exit_state. Reuse the previous exit wording closely enough that
     the coverage is plain; do not require something no earlier section
@@ -76,6 +85,11 @@ The anchor is fixed. For each section, write `anchor_usage`: what that section
 does with the anchor. Introduce it once and return to it. A lesson that names
 the anchor in the opening and never uses it again has wasted its most concrete
 asset.
+
+`anchor_usage` and the other internal fields (must_establish,
+avoid_repeating, bridge_from_previous, entry_state, exit_state) may keep using
+the word "anchor". The plain-language restriction applies only to the five
+teacher-facing fields named above.
 
 ## APPROVED ITEM PLACEMENT
 
@@ -210,3 +224,6 @@ Every later section has a meaningful bridge and transition.
   7. Does every figure_plan entry use only a backbone figure id that exists?
   8. Do the planned block maximums fit the limits and sum within the lesson limit?
   9. Is every statement I wrote actually true?
+ 10. Do learner_title, starting_state, target_state, display_title and
+     specific_purpose avoid the words anchor, slot, model, node, backbone,
+     variant, block, and intent?

@@ -108,7 +108,7 @@ prompts:
     file: shared-section-writer.md
     stage_label: Writes shared lesson section content
     editable: false
-    version: 2
+    version: 3
 
   - id: boundary-continuity-validator
     file: boundary-continuity-validator.md
@@ -138,7 +138,7 @@ prompts:
     file: teaching-spine.md
     stage_label: Plans the Teaching Plan spine
     editable: false
-    version: 1
+    version: 2
 
   - id: teaching-section
     file: teaching-section.md

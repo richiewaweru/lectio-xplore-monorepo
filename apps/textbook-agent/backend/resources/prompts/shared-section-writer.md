@@ -83,6 +83,15 @@ only the named node-level issues.
   to succeed. It is never learner-facing wording: never quote it, paraphrase
   it into a stated answer, or let it leak into `display`/`accessibility`
   text.
+- **No planning vocabulary in learner-visible text.** Learners never see the
+  lesson's planning words. In every learner-visible string (prose, captions,
+  alt text, accessibility descriptions, prompts, labels) refer to the lesson's
+  example by its concrete name or content, for instance "Aisha's bean
+  seedling", never as "the anchor", "the variant", "the backbone", or "the
+  scenario data". Do not echo plan phrases such as "with the support removed"
+  or "scaffolding" to learners; say what the learner should do instead. This
+  restricts only what learners read: the instructions above about task
+  anchors and `task_anchor` still apply as written.
 - **Stay factually accurate.** Do not state a simplification, generalization,
   or shortcut that is false, even if it reads simply. When simplifying,
   simplify the explanation, not the truth of the claim.
