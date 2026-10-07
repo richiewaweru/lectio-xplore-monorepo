@@ -309,7 +309,11 @@ async def test_boundary_failure_is_pending_repair_and_preserves_ready_writers(
     )
 
     assert result.state == "pending_repair"
-    assert len(result.pending_repair_work_item_ids) == 1
+    # The validated targeted repair is admitted in the same dispatch: nothing
+    # is left stalled as pending_repair, and the linked boundary replacement is
+    # queued for the next dispatch to validate.
+    assert result.pending_repair_work_item_ids == ()
+    assert len(result.pending_work_item_ids) == 1
     for admission in admissions:
         writer = await db_session.get(GenerationWorkItemModel, admission.work_item_id)
         assert writer is not None and writer.status == "ready"
