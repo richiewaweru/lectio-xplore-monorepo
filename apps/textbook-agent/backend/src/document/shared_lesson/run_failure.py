@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from document.shared_lesson.auto_retry import is_leaf_auto_retryable
+from document.shared_lesson.boundary_recovery import looks_like_recoverable_boundary_leaf
 from infra.config import settings as _settings
 
 _FAILED_STATUSES = frozenset({"failed_recoverable", "failed_terminal"})
@@ -31,6 +32,9 @@ class RunFailureSummary:
     retryable: bool
     auto_retrying: bool
     failed_count: int
+    #: True when the lead failure is a falsely terminal boundary repair leaf that
+    #: a Retry recovers in place (see ``boundary_recovery``).
+    boundary_recoverable: bool = False
 
 
 def summarize_failed_leaves(
@@ -52,6 +56,11 @@ def summarize_failed_leaves(
     # Media failures are the common, most actionable case: report them first.
     failed.sort(key=lambda item: 0 if item.stage == _MEDIA_STAGE else 1)
     lead = failed[0]
+    # A boundary leaf terminally failed as ``boundary_checkpoint_integrity``
+    # while holding a valid repair proof is recovered by Retry, not by
+    # regenerating the whole lesson.
+    recoverable = [looks_like_recoverable_boundary_leaf(item) for item in failed]
+    boundary_recoverable = all(recoverable)
     return RunFailureSummary(
         error_code=str(lead.error_code or "RUN_FAILED"),
         safe_summary=str(lead.error_summary or "A step of this lesson failed."),
@@ -60,14 +69,22 @@ def summarize_failed_leaves(
         work_item_id=str(lead.id),
         attempt=int(lead.attempt),
         max_attempts=int(lead.max_attempts),
-        recovery_action=str(lead.recovery_action) if lead.recovery_action else None,
+        recovery_action=(
+            "retry"
+            if boundary_recoverable
+            else str(lead.recovery_action)
+            if lead.recovery_action
+            else None
+        ),
         retryable=all(
-            item.status == "failed_recoverable" and item.recovery_action == "retry"
+            (item.status == "failed_recoverable" and item.recovery_action == "retry")
+            or looks_like_recoverable_boundary_leaf(item)
             for item in failed
         ),
         auto_retrying=bool(auto_retry_enabled)
         and all(is_leaf_auto_retryable(item) for item in failed),
         failed_count=len(failed),
+        boundary_recoverable=boundary_recoverable,
     )
 
 

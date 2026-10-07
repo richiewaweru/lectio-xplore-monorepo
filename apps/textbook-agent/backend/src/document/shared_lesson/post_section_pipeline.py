@@ -18,12 +18,15 @@ from document.shared_lesson.assembly import (
     assemble_shared_lesson_document,
 )
 from document.shared_lesson.boundary import BoundaryRepairEngine, BoundarySemanticValidator
+from document.shared_lesson.boundary_runtime import BOUNDARY_STAGE
 from document.shared_lesson.boundary_dispatcher import (
     BoundaryDispatchError,
     BoundaryDispatchResult,
     dispatch_shared_document_boundaries,
 )
 from document.shared_lesson.composer import SectionCompositionPlan
+from document.shared_lesson.continuity import ContinuityIssue
+from document.shared_lesson.quality_flags import boundary_transition_flag
 from document.shared_lesson.document_qa_dispatcher import (
     SharedDocumentQADispatchError,
     SharedDocumentQADispatchResult,
@@ -112,6 +115,55 @@ def _expected_shapes(
         )
         for section_id, composition in compositions.items()
     }
+
+
+def _boundary_quality_flags(active_items: Any, sections: Mapping[str, Any]) -> tuple[Any, ...]:
+    """One plain-language ``boundary_check`` flag per fallback boundary.
+
+    A boundary that could not be repaired (issues in both sections, or its one
+    bounded writer repair was already spent) completes with ``advisories`` in
+    its output; a boundary that was repaired and then passed carries none and
+    produces no flag.
+    """
+    collected: list[tuple[int, Any]] = []
+    for item in active_items:
+        output = item.output_json
+        if (
+            item.stage != BOUNDARY_STAGE
+            or item.status != "ready"
+            or not isinstance(output, Mapping)
+            or not output.get("advisories")
+        ):
+            continue
+        work = output.get("work")
+        if not isinstance(work, Mapping):
+            continue
+        issues: list[ContinuityIssue] = []
+        for raw in output["advisories"]:
+            try:
+                issues.append(ContinuityIssue.model_validate(raw))
+            except ValueError:
+                continue
+        if not issues:
+            continue
+        previous_id = str(work.get("previous_section_id", ""))
+        next_id = str(work.get("next_section_id", ""))
+        previous = sections.get(previous_id)
+        next_ = sections.get(next_id)
+        collected.append(
+            (
+                int(getattr(previous, "position", 0) or 0),
+                boundary_transition_flag(
+                    previous_section_id=previous_id,
+                    next_section_id=next_id,
+                    previous_title=getattr(previous, "title", None) or previous_id,
+                    next_title=getattr(next_, "title", None) or next_id,
+                    issues=issues,
+                ),
+            )
+        )
+    collected.sort(key=lambda pair: pair[0])
+    return tuple(flag for _position, flag in collected)
 
 
 def _find_review_leaf(active_items: Any) -> Any:
@@ -454,6 +506,7 @@ async def run_post_section_pipeline(
                 },
                 required_media_by_section=required_media,
                 media_results=media_results,
+                boundary_quality_flags=_boundary_quality_flags(active_items, sections),
                 semantic_validator=qa_semantic_validator,
                 worker_id=f"{worker_id}:qa",
             )

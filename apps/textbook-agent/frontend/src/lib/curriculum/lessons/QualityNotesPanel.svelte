@@ -40,7 +40,7 @@
 					<div class="head">
 						<strong>{flag.message}</strong>
 					</div>
-					<p class="meta">Section: {flag.section_id}</p>
+					<p class="meta">Section: {flag.next_section_title ?? flag.section_id}</p>
 					<p class="suggestion">Suggestion: {flag.required_correction}</p>
 				</li>
 			{/each}

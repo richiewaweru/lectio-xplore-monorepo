@@ -99,11 +99,16 @@ export function regenerateSharedDocument(runId: string): Promise<RegenerateDocum
 export interface QualityFlag {
 	code: string;
 	severity: 'warning';
-	source: 'semantic_qa' | 'deterministic_qa' | 'writer_warning';
+	source: 'semantic_qa' | 'deterministic_qa' | 'writer_warning' | 'boundary_check';
 	message: string;
 	section_id: string;
 	node_ids: string[];
 	required_correction: string;
+	previous_section_id?: string;
+	next_section_id?: string;
+	previous_section_title?: string;
+	next_section_title?: string;
+	internal_issue_codes?: string[];
 }
 
 export interface QualityFlagsResponse {

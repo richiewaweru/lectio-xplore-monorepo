@@ -176,6 +176,11 @@ class DocumentQAWorkItemJob:
     #: Shape findings from composer/writer are recorded as teacher-visible
     #: quality flags only. They never enter semantic review or block READY.
     advisory_issues: tuple[ContinuityIssue, ...] = ()
+    #: One plain-language warning per boundary that could not be repaired
+    #: (issues in both sections, or the single bounded writer repair was
+    #: spent). They are ``boundary_check`` quality flags under BOTH gate modes and never gate
+    #: READY. Not part of any QA identity hash.
+    boundary_quality_flags: tuple[QualityFlag, ...] = ()
 
 
 class DocumentQAOutcome(BaseModel):
@@ -664,6 +669,8 @@ async def execute_document_qa_work_item(
                 ),
                 source="deterministic_qa",
             )
+        # Boundary advisories are teacher-visible under both gate modes.
+        quality_flags += tuple(job.boundary_quality_flags)
         if semantic_shape_issues and not combined_actionable_issues:
             # Presentation-target findings from a semantic reviewer are
             # advisory under both gate modes; preserve them in flags above.

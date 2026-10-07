@@ -1043,6 +1043,120 @@ async def retry_work_items(
     return tuple(items)
 
 
+async def requeue_failed_terminal_work_item(
+    session: AsyncSession,
+    *,
+    work_item_id: str,
+    owner_user_id: str,
+    expected_error_code: str,
+    now: datetime | None = None,
+) -> GenerationWorkItemModel:
+    """Requeue one active ``failed_terminal`` leaf whose failure was a resolvable false positive.
+
+    Generic, application-gated recovery primitive: the caller proves (outside
+    this layer) that the failure carrying ``expected_error_code`` should not
+    have been terminal.  The leaf returns to ``queued`` under a bumped fence
+    WITHOUT consuming an attempt; its checkpoint is retained, error and output
+    fields are cleared, and the parent Run is refreshed (``failed_terminal``
+    -> ``queued`` when no other terminal leaf remains).  Only an active leaf
+    whose persisted ``error_code`` equals ``expected_error_code`` qualifies.
+    """
+    current_time = _utcnow(now)
+    run_id = await session.scalar(
+        select(GenerationWorkItemModel.run_id)
+        .join(GenerationRunModel, GenerationRunModel.id == GenerationWorkItemModel.run_id)
+        .where(
+            GenerationWorkItemModel.id == work_item_id,
+            GenerationRunModel.owner_user_id == owner_user_id,
+        )
+    )
+    if run_id is None:
+        raise WorkItemNotFound("generation work item does not exist")
+    await _serialize_run_build_on_sqlite(session, run_id=run_id)
+    item = await session.scalar(
+        select(GenerationWorkItemModel)
+        .where(
+            GenerationWorkItemModel.id == work_item_id,
+            GenerationWorkItemModel.run_id == run_id,
+            _active_leaf_clause(),
+        )
+        .with_for_update(skip_locked=True)
+        .execution_options(populate_existing=True)
+    )
+    if item is None:
+        raise WorkItemUnavailable("work item is locked or is not an active leaf")
+    run = await _lock_run_for_item(
+        session,
+        run_id=run_id,
+        allow_failed_terminal=True,
+        allow_failed_recoverable=True,
+    )
+    if run.owner_user_id != owner_user_id:
+        raise RunNotFound("generation run is unavailable to this owner")
+    if item.status != "failed_terminal" or item.error_code != expected_error_code:
+        raise InvalidWorkItemTransition(
+            "only a failed_terminal work item with the expected error code can be requeued"
+        )
+    prior_attempt = item.attempt
+    prior_token = item.lease_token or 0
+    async with session.begin_nested():
+        result = await _execute_fenced_update(
+            session,
+            update(GenerationWorkItemModel)
+            .where(
+                GenerationWorkItemModel.id == item.id,
+                GenerationWorkItemModel.run_id == run_id,
+                GenerationWorkItemModel.status == "failed_terminal",
+                GenerationWorkItemModel.error_code == expected_error_code,
+                GenerationWorkItemModel.attempt == prior_attempt,
+                _active_leaf_clause(),
+            )
+            .values(
+                status="queued",
+                lease_owner=None,
+                lease_token=prior_token + 1,
+                lease_expires_at=None,
+                error_code=None,
+                error_class=None,
+                error_summary=None,
+                recovery_action=None,
+                output_json=None,
+                output_hash=None,
+                completed_at=None,
+                updated_at=current_time,
+            )
+            .execution_options(synchronize_session=False),
+        )
+        if result.rowcount != 1:
+            raise InvalidWorkItemTransition("work item changed before it could be requeued")
+        if run.status == "failed_terminal":
+            await session.execute(
+                update(GenerationRunModel)
+                .where(
+                    GenerationRunModel.id == run_id,
+                    GenerationRunModel.status == "failed_terminal",
+                )
+                .values(completed_at=None, updated_at=current_time)
+                .execution_options(synchronize_session=False)
+            )
+        await session.flush()
+        await session.refresh(item)
+        await session.refresh(run)
+        await _refresh_run_lifecycle(session, run=run, now=current_time)
+        await append_event(
+            session,
+            run_id=run_id,
+            work_item_id=item.id,
+            event_type="work_item_resolution_queued",
+            safe_payload={
+                "previous_error_code": expected_error_code,
+                "attempt": item.attempt,
+            },
+        )
+    await session.refresh(item)
+    return item
+
+
 async def reconcile_expired_work_item(
     session: AsyncSession,
     *,

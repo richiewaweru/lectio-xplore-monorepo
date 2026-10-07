@@ -23,6 +23,7 @@ from document.shared_lesson.composer import (
     validate_composition_plan,
 )
 from document.shared_lesson.continuity import ContinuityIssue, ExpectedNodeShape
+from document.shared_lesson.quality_flags import QualityFlag
 from document.shared_lesson.document_semantic import DocumentSemanticValidator
 from document.shared_lesson.media import (
     BoundFigureMediaOutcome,
@@ -416,6 +417,7 @@ async def dispatch_shared_document_qa(
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
     media_results: Sequence[BoundFigureMediaOutcome] = (),
     writer_warnings: Mapping[str, Sequence[tuple[str, str]]] | None = None,
+    boundary_quality_flags: Sequence[QualityFlag] = (),
     semantic_validator: DocumentSemanticValidator | None = None,
     worker_id: str = "shared-document-qa-dispatcher",
     max_attempts: int = 3,
@@ -560,6 +562,7 @@ async def dispatch_shared_document_qa(
                     semantic_validator=semantic_validator,
                     synthetic_issues=synthetic_issues,
                     advisory_issues=advisory_issues,
+                    boundary_quality_flags=tuple(boundary_quality_flags),
                 )
             )
             await execution_session.commit()

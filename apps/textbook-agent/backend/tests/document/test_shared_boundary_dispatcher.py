@@ -471,7 +471,7 @@ async def test_dispatch_admits_writer_repair_and_replacement_boundary_then_passe
 
 
 @pytest.mark.asyncio
-async def test_dispatch_fails_boundary_terminally_when_replacement_needs_second_repair(
+async def test_dispatch_completes_boundary_with_advisories_when_replacement_needs_second_repair(
     db_session, db_session_factory, monkeypatch
 ):
     owner, run_id, source = await _seed_ready_composer_run(db_session)
@@ -496,8 +496,9 @@ async def test_dispatch_fails_boundary_terminally_when_replacement_needs_second_
     assert repair.calls == 1
 
     # The replacement boundary now needs a second changed repair; the bounded
-    # writer-repair budget is exhausted and must fail terminally rather than
-    # admit a second writer replacement.
+    # writer-repair budget is exhausted, so it completes in place on its
+    # current sections with advisories rather than admit a second writer
+    # replacement or fail the run.
     second = await boundary_dispatcher.dispatch_shared_document_boundaries(
         db_session_factory,
         run_id=run_id,
@@ -505,7 +506,7 @@ async def test_dispatch_fails_boundary_terminally_when_replacement_needs_second_
         semantic_validator=_once_issue_then_pass(),
         repair_engine=repair,
     )
-    assert second.state == "pending_repair", second
+    assert second.state == "passed", second
     assert repair.calls == 2
 
     boundary_rows = list(
@@ -520,10 +521,14 @@ async def test_dispatch_fails_boundary_terminally_when_replacement_needs_second_
             )
         ).all()
     )
-    terminal = [row for row in boundary_rows if row.status == "failed_terminal"]
-    assert len(terminal) == 1
-    assert terminal[0].error_code == "boundary_repair_exhausted"
-    assert terminal[0].replaces_work_item_id is not None
+    assert not [row for row in boundary_rows if row.status == "failed_terminal"]
+    completed = [
+        row for row in boundary_rows if row.status == "ready" and row.replaces_work_item_id
+    ]
+    assert len(completed) == 1
+    assert completed[0].output_json["status"] == "pass"
+    assert completed[0].output_json["advisories"], completed[0].output_json
+    assert completed[0].output_json["advisories"][0]["issue_code"] == "boundary_test_issue"
 
     writer_rows = list(
         (
@@ -546,9 +551,9 @@ async def test_dispatch_fails_boundary_terminally_when_replacement_needs_second_
         .where(GenerationRunModel.id == run_id)
         .execution_options(populate_existing=True)
     )
-    assert run is not None and run.status == "failed_terminal"
+    assert run is not None and run.status != "failed_terminal"
 
     third = await boundary_dispatcher.dispatch_shared_document_boundaries(
         db_session_factory, run_id=run_id, owner_user_id=owner, semantic_validator=_pass
     )
-    assert third.state == "blocked", third
+    assert third.state == "passed", third

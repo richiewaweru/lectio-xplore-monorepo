@@ -36,8 +36,10 @@ from document.shared_lesson.boundary_runtime import (
     BOUNDARY_STAGE,
     BoundaryWorkOrder,
     accepted_section_output_hash,
+    boundary_advisory_input_hash,
+    is_boundary_advisory_item,
 )
-from document.shared_lesson.continuity import ExpectedNodeShape
+from document.shared_lesson.continuity import ContinuityIssue, ExpectedNodeShape
 from document.shared_lesson.handoff import SharedLessonHandoffEvidence
 from document.shared_lesson.media import (
     BoundFigureMediaOutcome,
@@ -639,8 +641,13 @@ def _verify_boundary_coverage(
         expected_composition_identity = _boundary_item_composition_identity(
             previous_identity, next_identity
         )
+        expected_input_hashes = {content_hash(expected_work.model_dump(mode="json"))}
+        if is_boundary_advisory_item(item):
+            # An advisory successor is bound to the ORIGINAL (still current)
+            # work order through a distinct input identity.
+            expected_input_hashes = {boundary_advisory_input_hash(expected_work)}
         if (
-            item.input_hash != content_hash(expected_work.model_dump(mode="json"))
+            item.input_hash not in expected_input_hashes
             or item.definition_hash != definition_hash
             or item.composition_identity != expected_composition_identity
         ):
@@ -658,9 +665,17 @@ def _verify_boundary_coverage(
             "next_section",
             "semantic_calls",
         }
-        if set(raw) != expected_output_keys or raw.get("kind") != "shared_lesson_boundary_result":
+        if (
+            set(raw) - {"advisories"} != expected_output_keys
+            or raw.get("kind") != "shared_lesson_boundary_result"
+        ):
             raise SharedLessonFinalizationError("boundary output violates its closed schema")
         try:
+            if "advisories" in raw:
+                if not isinstance(raw["advisories"], list):
+                    raise TypeError("boundary advisories must be a list")
+                for advisory in raw["advisories"]:
+                    ContinuityIssue.model_validate(advisory)
             observed_work = BoundaryWorkOrder.model_validate(raw["work"])
             result = BoundaryValidationResult.model_validate(
                 {key: raw[key] for key in expected_output_keys if key not in {"kind", "work"}}
