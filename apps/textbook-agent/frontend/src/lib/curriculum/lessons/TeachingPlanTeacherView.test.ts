@@ -29,6 +29,7 @@ const plan: TeachingPlanView = {
 					brief: 'Show the bed.',
 					evidence: 'ok',
 					evidence_refs: ['evidence-ref-5'],
+					departure_reason: 'departure-reason-text',
 					visual: { purpose: 'Garden bed with sides labelled' },
 					learner_action: {
 						action: 'enter-number',
@@ -88,13 +89,14 @@ describe('TeachingPlanTeacherView', () => {
 		const { container } = mount();
 		for (const hidden of [
 			'slot-orient-9', 'must-establish-text', 'avoid-repeating-text', 'entry-state-text',
-			'block-id-77', 'evidence-ref-5', 'hash-secret-1'
+			'block-id-77', 'evidence-ref-5', 'hash-secret-1', 'departure-reason-text'
 		]) {
 			expect(container.textContent).not.toContain(hidden);
 		}
 		await fireEvent.click(screen.getByRole('button', { name: 'Inspect full plan' }));
 		expect(container.textContent).toContain('must-establish-text');
 		expect(container.textContent).toContain('evidence-ref-5');
+		expect(container.textContent).toContain('departure-reason-text');
 		expect(container.textContent).toContain('hash-secret-1');
 		await fireEvent.click(screen.getByRole('button', { name: 'Hide full plan' }));
 		expect(container.textContent).not.toContain('hash-secret-1');
