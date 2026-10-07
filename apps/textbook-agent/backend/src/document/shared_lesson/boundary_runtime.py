@@ -34,6 +34,7 @@ from document.shared_lesson.boundary import (
     validate_and_repair_boundary,
 )
 from document.shared_lesson.models import SharedSection
+from document.shared_lesson.qa import NARRATIVE_CONTINUITY_ISSUE_CODES
 from document.shared_lesson.runtime import (
     TeachingPlanSource,
     rollback_for_failure_record,
@@ -1233,8 +1234,26 @@ async def execute_boundary_work_item(
     # second writer repair: complete this boundary in place on its CURRENT
     # (already once-repaired) sections and carry the remaining findings as
     # teacher-visible advisories.
-    if bool(changed_sections) and item.replaces_work_item_id is not None:
-        exhausted_advisories = _advisory_issues_from_result(result)
+    # The validator reports findings on BOTH sections as
+    # ``boundary_repair_ambiguous`` and never attempts a repair, so no repair
+    # proof exists for the advisory successor path.  When every finding is a
+    # narrative continuity code, accept in place with the originals kept.
+    ambiguous_narrative = (
+        not result.passed
+        and not changed_sections
+        and result.failure_code == "boundary_repair_ambiguous"
+        and bool(result.initial_issues)
+        and all(
+            issue.issue_code in NARRATIVE_CONTINUITY_ISSUE_CODES
+            for issue in result.initial_issues
+        )
+    )
+    if ambiguous_narrative or (bool(changed_sections) and item.replaces_work_item_id is not None):
+        exhausted_advisories = (
+            unique_boundary_issues(result.initial_issues)
+            if ambiguous_narrative
+            else _advisory_issues_from_result(result)
+        )
         accepted_result = BoundaryValidationResult(
             status="pass",
             previous_section=job.previous_section,

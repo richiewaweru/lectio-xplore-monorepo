@@ -472,6 +472,7 @@ async def run_post_section_pipeline(
                 compositions=compositions,
                 required_media_by_section=required_media,
                 media_results=media_results,
+                boundary_quality_flags=_boundary_quality_flags(active_items, sections),
                 semantic_validator=qa_semantic_validator,
                 worker_id=f"{worker_id}:qa",
             )

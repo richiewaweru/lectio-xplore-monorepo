@@ -948,3 +948,133 @@ async def test_finalizer_commits_document_and_run_together(monkeypatch) -> None:
 
 async def _locked(run, item):
     return run, (item,)
+
+
+# ---------------------------------------------------------------------------
+# Boundary advisories: in-place completion and advisory successor leaves.
+# ---------------------------------------------------------------------------
+
+
+def _advisory_payload() -> list[dict]:
+    return [
+        {
+            "issue_code": "boundary_repetition",
+            "affected_section_id": "s2",
+            "affected_node_ids": [],
+            "explanation": "The opening repeats earlier wording.",
+            "required_correction": "Rephrase the opening.",
+        }
+    ]
+
+
+def _clone_item(item, **overrides):
+    values = {
+        "id": item.id,
+        "run_id": item.run_id,
+        "item_key": item.item_key,
+        "stage": item.stage,
+        "status": item.status,
+        "input_hash": item.input_hash,
+        "definition_hash": item.definition_hash,
+        "composition_identity": item.composition_identity,
+        "output_json": item.output_json,
+        "replaces_work_item_id": getattr(item, "replaces_work_item_id", None),
+    }
+    values.update(overrides)
+    values["output_hash"] = content_hash(values["output_json"])
+    return GenerationWorkItemModel(**values)
+
+
+def _with_advisories(item, advisories, **overrides):
+    output = dict(item.output_json)
+    output["advisories"] = advisories
+    return _clone_item(item, output_json=output, **overrides)
+
+
+def _advisory_successor(item, *, input_hash=None, key=":advisory:abc"):
+    from document.shared_lesson.boundary_runtime import boundary_advisory_input_hash
+
+    work = BoundaryWorkOrder.model_validate(item.output_json["work"])
+    predecessor = _clone_item(item, status="failed_recoverable", output_json={"x": 1})
+    successor = _with_advisories(
+        item,
+        _advisory_payload(),
+        id="boundary-advisory",
+        item_key=f"{item.item_key}{key}",
+        input_hash=input_hash or boundary_advisory_input_hash(work),
+        replaces_work_item_id=predecessor.id,
+    )
+    return predecessor, successor
+
+
+def test_boundary_gate_accepts_in_place_advisory_completion() -> None:
+    source, document, verified_inputs, item = _boundary_fixture()
+    advised = _with_advisories(item, _advisory_payload())
+    _verify_boundary_coverage(
+        source=source,
+        document=document,
+        verified_inputs=verified_inputs,
+        active_items=(advised,),
+    )
+
+
+def test_boundary_gate_accepts_advisory_successor_with_distinct_input_hash() -> None:
+    source, document, verified_inputs, item = _boundary_fixture()
+    predecessor, successor = _advisory_successor(item)
+    _verify_boundary_coverage(
+        source=source,
+        document=document,
+        verified_inputs=verified_inputs,
+        active_items=(successor,),
+        all_items=(predecessor, successor),
+    )
+
+
+def test_boundary_gate_rejects_advisory_successor_with_stale_binding() -> None:
+    from document.shared_lesson.boundary_runtime import boundary_advisory_input_hash
+
+    source, document, verified_inputs, item = _boundary_fixture()
+    predecessor, successor = _advisory_successor(item, input_hash="e" * 64)
+    with pytest.raises(SharedLessonFinalizationError, match="stale input binding"):
+        _verify_boundary_coverage(
+            source=source,
+            document=document,
+            verified_inputs=verified_inputs,
+            active_items=(successor,),
+            all_items=(predecessor, successor),
+        )
+    # A plain (non-advisory) leaf may not borrow the advisory input identity.
+    work = BoundaryWorkOrder.model_validate(item.output_json["work"])
+    borrowed = _clone_item(item, input_hash=boundary_advisory_input_hash(work))
+    with pytest.raises(SharedLessonFinalizationError, match="stale input binding"):
+        _verify_boundary_coverage(
+            source=source,
+            document=document,
+            verified_inputs=verified_inputs,
+            active_items=(borrowed,),
+        )
+
+
+@pytest.mark.parametrize(
+    "advisories",
+    ["not-a-list", [{"issue_code": "x"}], [{**_advisory_payload()[0], "extra": 1}]],
+)
+def test_boundary_gate_rejects_tampered_advisories_payload(advisories) -> None:
+    source, document, verified_inputs, item = _boundary_fixture()
+    tampered = _with_advisories(item, advisories)
+    with pytest.raises(SharedLessonFinalizationError, match="closed schema"):
+        _verify_boundary_coverage(
+            source=source,
+            document=document,
+            verified_inputs=verified_inputs,
+            active_items=(tampered,),
+        )
+    output = dict(item.output_json)
+    output["unexpected"] = True
+    with pytest.raises(SharedLessonFinalizationError, match="closed schema"):
+        _verify_boundary_coverage(
+            source=source,
+            document=document,
+            verified_inputs=verified_inputs,
+            active_items=(_clone_item(item, output_json=output),),
+        )

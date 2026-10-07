@@ -497,3 +497,127 @@ async def test_advisory_admission_blocks_when_writer_output_changed(
     )
     boundaries = await _rows(db_session, run_id, "continuity_validation")
     assert len(boundaries) == 1 and boundaries[0].status == "failed_recoverable"
+
+
+# ---------------------------------------------------------------------------
+# Real validator: findings on both sections complete in place with advisories.
+# ---------------------------------------------------------------------------
+
+
+def _both_sides_deterministic(monkeypatch):
+    """Deterministic narrative issues on BOTH sections (real validate_and_repair_boundary)."""
+    from document.shared_lesson import boundary as boundary_module
+
+    monkeypatch.setattr(
+        boundary_module,
+        "validate_section_boundary",
+        lambda **_kwargs: (
+            _issue("explain", "boundary_repetition"),
+            _issue("orient", "boundary_repetition"),
+        ),
+    )
+
+
+@pytest.mark.asyncio
+async def test_real_validator_issues_on_both_sections_complete_with_advisories(
+    db_session, db_session_factory, monkeypatch
+):
+    owner, run_id, _source, admissions = await _setup(db_session, monkeypatch)
+    _both_sides_deterministic(monkeypatch)
+    repair = _ChangingRepair()
+    result = await _dispatch(db_session_factory, owner, run_id, repair_engine=repair)
+    assert result.state == "passed", result
+    assert repair.calls == 0  # no repair, no further provider calls
+    boundaries = await _rows(db_session, run_id, "continuity_validation")
+    assert len(boundaries) == 1 and boundaries[0].status == "ready"
+    output = boundaries[0].output_json
+    assert output["status"] == "pass" and output["semantic_calls"] == 0
+    assert {i["affected_section_id"] for i in output["advisories"]} == {"orient", "explain"}
+    assert await _events(db_session, run_id, "boundary_advisory_accepted")
+    writers = await _rows(db_session, run_id, "section_writing")
+    assert len(writers) == len(admissions)
+    sections = {
+        "orient": SimpleNamespace(id="orient", title="Orient Title", position=0),
+        "explain": SimpleNamespace(id="explain", title="Explain Title", position=1),
+    }
+    flags = _boundary_quality_flags(boundaries, sections)
+    assert len(flags) == 1 and flags[0].source == "boundary_check"
+    assert "repeat earlier wording" in flags[0].message
+
+
+@pytest.mark.asyncio
+async def test_non_narrative_ambiguous_failure_keeps_blocking(
+    db_session, db_session_factory, monkeypatch
+):
+    from document.shared_lesson import boundary as boundary_module
+
+    owner, run_id, _source, _admissions = await _setup(db_session, monkeypatch)
+    monkeypatch.setattr(
+        boundary_module,
+        "validate_section_boundary",
+        lambda **_kwargs: (
+            _issue("explain", "section_structure_broken"),
+            _issue("orient", "boundary_repetition"),
+        ),
+    )
+    result = await _dispatch(db_session_factory, owner, run_id)
+    assert result.state == "pending_repair", result
+    boundaries = await _rows(db_session, run_id, "continuity_validation")
+    assert boundaries[0].status == "failed_recoverable"
+    assert boundaries[0].error_code == "boundary_repair_ambiguous"
+
+
+# ---------------------------------------------------------------------------
+# End to end through the real post-section pipeline entry point.
+# ---------------------------------------------------------------------------
+
+
+def _patch_pipeline_source(monkeypatch, source):
+    from document.shared_lesson import post_section_pipeline as pipeline
+
+    async def load(**_kwargs):
+        return source
+
+    monkeypatch.setattr(pipeline, "load_current_approved_teaching_plan_source", load)
+
+
+async def _run_pipeline(factory, owner, run_id):
+    from document.shared_lesson.post_section_pipeline import run_post_section_pipeline
+
+    return await run_post_section_pipeline(
+        factory,
+        run_id=run_id,
+        owner_user_id=owner,
+        path_lesson_id="composer-admission-lesson",
+        preparation_generation_id="boundary-test-preparation",
+        boundary_semantic_validator=_pass,
+        boundary_repair_engine=_ChangingRepair(),
+        media_executor=SimpleNamespace(),
+        qa_semantic_validator=_pass,
+        worker_id="e2e-post-section",
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("scenario", ["same_section_two_issues", "both_sections"])
+async def test_pipeline_gets_past_boundaries_from_multi_issue_state(
+    db_session, db_session_factory, monkeypatch, scenario
+):
+    owner, run_id, source, _admissions = await _setup(db_session, monkeypatch)
+    _patch_pipeline_source(monkeypatch, source)
+    if scenario == "same_section_two_issues":
+        _install_fake_validation(
+            monkeypatch,
+            issues=(_issue("explain"), _issue("explain", "boundary_repetition")),
+            change={"explain"},
+        )
+    else:
+        _both_sides_deterministic(monkeypatch)
+
+    outcomes = [await _run_pipeline(db_session_factory, owner, run_id) for _ in range(3)]
+    # The seeded harness has no preparation generation, so the media stage is as far
+    # as it can go; reaching it proves the boundary stage no longer stalls the run.
+    assert outcomes[-1].stage == "media", outcomes
+    boundaries = await _rows(db_session, run_id, "continuity_validation")
+    assert any(row.status == "ready" for row in boundaries)
+    assert not [row for row in boundaries if row.status == "failed_terminal"]

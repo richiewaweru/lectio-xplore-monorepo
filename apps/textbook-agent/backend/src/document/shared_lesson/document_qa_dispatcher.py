@@ -792,6 +792,7 @@ async def dispatch_reviewed_document_qa(
     compositions: Mapping[str, SectionCompositionPlan] | Sequence[SectionCompositionPlan],
     required_media_by_section: Mapping[str, Sequence[str]] | None = None,
     media_results: Sequence[BoundFigureMediaOutcome] = (),
+    boundary_quality_flags: Sequence[QualityFlag] = (),
     semantic_validator: DocumentSemanticValidator | None = None,
     worker_id: str = "shared-document-qa-dispatcher",
 ) -> SharedDocumentQADispatchResult:
@@ -845,6 +846,7 @@ async def dispatch_reviewed_document_qa(
                     document=document,
                     deterministic_qa=deterministic_qa,
                     semantic_validator=semantic_validator,
+                    boundary_quality_flags=tuple(boundary_quality_flags),
                 )
             )
             await execution_session.commit()

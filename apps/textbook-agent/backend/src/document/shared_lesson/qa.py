@@ -35,6 +35,10 @@ _SEMANTIC_CONTINUITY_ISSUE_CODES = frozenset(
 )
 
 
+#: Public alias: narrative boundary/continuity codes that are advisory, never hard.
+NARRATIVE_CONTINUITY_ISSUE_CODES = _SEMANTIC_CONTINUITY_ISSUE_CODES
+
+
 #: Explicit hard/advisory classification of every deterministic document QA
 #: issue code. "hard" means the document is structurally broken (missing or
 #: mismatched nodes, lineage, hash, contract, media): it can never be READY.
