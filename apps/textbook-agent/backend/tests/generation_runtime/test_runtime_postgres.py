@@ -57,7 +57,7 @@ from infra.generation_runtime import (
 )
 
 POSTGRES_URL = "postgresql+asyncpg://textbook:textbook@127.0.0.1:5432/textbook_agent"
-APPLIED_RUNTIME_HEAD = "20261006_0050"
+APPLIED_RUNTIME_HEAD = "20261007_0051"
 
 
 @pytest.fixture
