@@ -47,8 +47,7 @@
 	} from '$lib/curriculum/lessons/plan-status';
 	import StructuralPlanPreview from '$lib/curriculum/lessons/StructuralPlanPreview.svelte';
 	import StructuralPlanActions from '$lib/curriculum/lessons/StructuralPlanActions.svelte';
-	import BackboneSummary from '$lib/curriculum/lessons/BackboneSummary.svelte';
-	import TeachingPlanReview from '$lib/curriculum/lessons/TeachingPlanReview.svelte';
+	import TeachingPlanTeacherView from '$lib/curriculum/lessons/TeachingPlanTeacherView.svelte';
 	import TeachingPlanDraft from '$lib/curriculum/lessons/TeachingPlanDraft.svelte';
 	import TeachingPlanFlags from '$lib/curriculum/lessons/TeachingPlanFlags.svelte';
 	import {
@@ -573,15 +572,14 @@
 		<section class="stage">
 			<p class="eyebrow">Teaching plan</p>
 			<TeachingPlanFlags flags={lessonApproach?.teaching_flags ?? []} />
-			{#if backbone}
-				<BackboneSummary {backbone} />
-			{/if}
 			<Card padding="md">
 				{#if lessonApproach?.teaching_plan}
-					<TeachingPlanReview
+					<TeachingPlanTeacherView
 						plan={lessonApproach.teaching_plan}
 						review={teachingReview ?? undefined}
 						identity={lessonApproach.teaching_plan_identity ?? undefined}
+						misconceptions={lessonApproach.misconceptions ?? []}
+						{backbone}
 					/>
 				{:else}
 					<p>The Teaching Plan details are not available yet. Approval is disabled until the content can be verified.</p>
@@ -612,10 +610,12 @@
 			<Card padding="lg">
 				<h3>Teaching plan approved</h3>
 				{#if lessonApproach?.teaching_plan && isVerifiedApprovedTeachingPlan(lessonApproach)}
-					<TeachingPlanReview
+					<TeachingPlanTeacherView
 						plan={lessonApproach.teaching_plan}
 						review={teachingReview ?? undefined}
 						identity={lessonApproach.teaching_plan_identity ?? undefined}
+						misconceptions={lessonApproach.misconceptions ?? []}
+						{backbone}
 					/>
 				{/if}
 			</Card>

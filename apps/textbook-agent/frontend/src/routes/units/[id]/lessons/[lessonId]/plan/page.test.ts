@@ -159,6 +159,29 @@ describe('Units Teaching Plan review', () => {
 		expect(screen.getByRole('button', { name: 'Approve plan' })).toBeTruthy();
 	});
 
+	it('shows the teacher view with resolved misconceptions and keeps request-changes working', async () => {
+		mocks.getLessonApproach.mockResolvedValue({
+			...pending,
+			teaching_plan: {
+				...pending.teaching_plan,
+				misconception_focus_ids: ['m1', 'gone'],
+				sections: [{
+					slot_id: 'orient', display_title: 'Look at a leaf', specific_purpose: 'Notice the droplets.',
+					blocks: [{ id: 'b1', intent: 'orient', brief: 'Observe.', evidence: 'ok' }]
+				}]
+			},
+			misconceptions: [{ id: 'm1', description: 'Plants drink only through roots.', risk: 'high' }]
+		});
+		mocks.rejectLessonApproach.mockResolvedValue({ status: 'teaching_rejected' });
+		render(PlanPage, { context: new Map([['lessonWorkspace', workspaceContext()]]) });
+		expect(await screen.findByText('Plants drink only through roots.', { exact: false })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Look at a leaf' })).toBeTruthy();
+		expect(screen.queryByText('orient')).toBeNull();
+		await fireEvent.click(screen.getByRole('button', { name: 'Request changes' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
+		await waitFor(() => expect(mocks.rejectLessonApproach).toHaveBeenCalled());
+	});
+
 	function withPrep(prep: Record<string, unknown>) {
 		const ctx = workspaceContext();
 		ctx.preparation.workspace.preparation = {

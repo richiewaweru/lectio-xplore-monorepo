@@ -19,24 +19,26 @@
 		</div>
 		<p class="arc">{spine.arc}</p>
 		<ol class="sections">
-			{#each spine.sections as section (section.slot_id)}
+			{#each spine.sections as section, index (section.slot_id)}
 				{@const ready = draft.sections[section.slot_id]}
-				<li class="section" data-ready={ready ? 'true' : 'false'}>
-					<p class="title">{section.display_title}</p>
-					{#if section.specific_purpose}<p class="purpose">{section.specific_purpose}</p>{/if}
-					{#if ready}
-						<ul class="blocks">
-							{#each ready.blocks as block, index (index)}
-								<li class="block">
-									<span class="intent">{block.intent}</span>
-									<span class="brief">{block.brief}</span>
-									{#if block.has_visual}<span class="figure">figure</span>{/if}
-								</li>
-							{/each}
-						</ul>
-					{:else}
-						<p class="pending">Writing this section…</p>
-					{/if}
+				<li class="card" data-ready={ready ? 'true' : 'false'}>
+					<span class="num" aria-hidden="true">{index + 1}</span>
+					<div class="body">
+						<h4>{section.display_title?.trim() || section.specific_purpose?.trim() || `Section ${index + 1}`}</h4>
+						{#if section.specific_purpose?.trim()}<p class="purpose">{section.specific_purpose}</p>{/if}
+						{#if ready}
+							<ul class="blocks">
+								{#each ready.blocks as block, blockIndex (blockIndex)}
+									<li class="block">
+										<span class="brief">{block.brief}</span>
+										{#if block.has_visual}<span class="figure">figure</span>{/if}
+									</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="pending">Writing this section…</p>
+						{/if}
+					</div>
 				</li>
 			{/each}
 		</ol>
@@ -60,6 +62,11 @@
 		font-size: 1.15rem;
 		font-weight: 600;
 	}
+	h4 {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+	}
 	p {
 		margin: 0;
 		color: var(--ink-2);
@@ -74,25 +81,37 @@
 		padding: 0;
 		list-style: none;
 	}
-	.section {
+	.card {
+		display: flex;
+		gap: 0.75rem;
 		border: 1px solid var(--rule);
 		border-radius: var(--radius-md);
 		background: var(--surface);
 		padding: 0.75rem;
 	}
-	.section[data-ready='false'] {
+	.card[data-ready='false'] {
 		opacity: 0.75;
 	}
-	.title {
-		color: var(--ink-1, inherit);
+	.num {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		border-radius: 999px;
+		border: 1px solid var(--rule);
+		color: var(--ink-2);
+		font-size: 0.85rem;
 		font-weight: 600;
+	}
+	.body {
+		display: grid;
+		gap: 0.35rem;
+		min-width: 0;
 	}
 	.purpose,
 	.pending {
 		color: var(--ink-3);
-	}
-	.blocks {
-		margin-top: 0.5rem;
 	}
 	.block {
 		display: flex;
@@ -101,9 +120,6 @@
 		gap: 0.25rem 0.5rem;
 		font-size: 0.85rem;
 		color: var(--ink-2);
-	}
-	.intent {
-		font-weight: 600;
 	}
 	.figure {
 		border: 1px solid var(--rule);
