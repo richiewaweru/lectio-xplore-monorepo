@@ -148,7 +148,10 @@ export function lessonArtifactUi(
 		// needs_review never advertises a retry action: the backend has no retry
 		// endpoint for a pending human review, and offering one would be retry spam.
 		retryable: state !== 'needs_review' && canonicalState === 'failed_recoverable' && workspace.error?.retryable === true && !workspace.stale && !workspace.legacy_ambiguous,
-		regenerable: derived.action === 'regenerate' && Boolean(workspace.realization_id) && !workspace.legacy_ambiguous && !workspace.stale,
+		// The realization's own recovery can say "retry" while the failed document
+		// run is not retryable (error.recovery_action "regenerate"). The retry
+		// endpoint then starts a new revision, so offer Regenerate instead of nothing.
+		regenerable: (derived.action === 'regenerate' || (canonicalState === 'failed_recoverable' && workspace.error?.recovery_action === 'regenerate' && workspace.error?.retryable !== true)) && Boolean(workspace.realization_id) && !workspace.legacy_ambiguous && !workspace.stale,
 		runId: derived.runId,
 		recoveryAction: state === 'needs_review' ? null : derived.recoveryAction,
 		legacyAmbiguous: Boolean(workspace.legacy_ambiguous),

@@ -459,7 +459,7 @@
 	}
 
 	async function retryArtifact(artifact: typeof learnArtifact) {
-		if (!ctx.statusFresh || !path || !lesson || !artifact.realizationId || !artifact.retryable) return;
+		if (!ctx.statusFresh || !path || !lesson || !artifact.realizationId || !(artifact.retryable || artifact.regenerable)) return;
 		busy = artifact.path;
 		error = null;
 		try {
@@ -655,6 +655,7 @@
 								{#if artifact.openHref}<a class="link" href={artifact.openHref}>Open {artifactTitle(artifact.path)}</a>{/if}
 								<a class="link" href={lessonWorkspaceHref(unitId, lessonId, artifact.path)}>Issues</a>
 								{#if artifact.realizationId && artifact.retryable && ctx.statusFresh && path && lesson}<Button variant="secondary" busy={busy === artifact.path} onclick={() => void retryArtifact(artifact)}>Retry</Button>{/if}
+								{#if artifact.realizationId && artifact.regenerable && !artifact.retryable && ctx.statusFresh && path && lesson}<Button variant="secondary" busy={busy === artifact.path} onclick={() => void retryArtifact(artifact)}>Regenerate</Button>{/if}
 								{#if artifact.recoveryAction === 'reprepare'}<a class="link" href={lessonWorkspaceHref(unitId, lessonId, 'plan')}>Reprepare and review</a>{/if}
 							</div>
 						{/if}
