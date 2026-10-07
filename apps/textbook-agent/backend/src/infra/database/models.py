@@ -1170,6 +1170,35 @@ class SharedLessonDocumentModel(Base):
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
 
+class LessonIssueDismissalModel(Base):
+    """A teacher's "Mark as fine" decision for one advisory on one lesson output.
+
+    Scoped to the lesson (not the user) and to ``scope_key`` -- the realization
+    ``output_id`` plus the shared-document run id -- so regenerating the output
+    or the document yields fresh, undismissed advisories.
+    """
+
+    __tablename__ = "lesson_issue_dismissals"
+    __table_args__ = (
+        UniqueConstraint(
+            "path_lesson_id",
+            "path",
+            "issue_id",
+            "scope_key",
+            name="uq_lesson_issue_dismissals_scope",
+        ),
+        Index("ix_lesson_issue_dismissals_lesson_path", "path_lesson_id", "path"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    path_lesson_id = Column(String, ForeignKey("path_lessons.id"), nullable=False)
+    path = Column(String, nullable=False)  # learn | print
+    issue_id = Column(String, nullable=False)
+    scope_key = Column(String, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
 # --- Generic generation runtime (Shared Document overhaul Phase 1A) ---
 
 

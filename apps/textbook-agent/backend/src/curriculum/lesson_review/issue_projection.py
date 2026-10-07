@@ -3,13 +3,21 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from contracts.lesson_document import validate_learn_document
 from contracts.lectio_page import validate_document as validate_print_document
+from curriculum.lesson_review.issue_copy import (
+    BLOCKING_COPY,
+    COHERENCE_COPY,
+    FIGURE_FALLBACK_COPY,
+    FLAG_COPY,
+    IssueCopy,
+    IssueGroup,
+)
 
 ArtifactPath = Literal["learn", "print"]
 IssuePath = Literal["learn", "print", "shared"]
@@ -40,12 +48,34 @@ class LessonIssue(BaseModel):
     repairable: bool = False
     repair_action: str | None = None
     source: str = Field(min_length=1)
+    #: Teacher-facing grouping: blocking -> needs_look -> info.
+    group: IssueGroup = "blocking"
+    #: Section the item is about (deep-link target and teacher-visible title).
+    #: ``section_title`` is ``None`` for whole-lesson items.
+    section_id: str | None = None
+    section_title: str | None = None
+    previous_section_title: str | None = None
+    #: What the teacher can do about it, in plain language.
+    suggestion: str | None = None
+    #: Raw internal wording, shown only behind a "details" disclosure.
+    details: str | None = None
+    #: Only ``needs_look`` items can be marked as fine.
+    dismissible: bool = False
+    dismissed: bool = False
 
 
 class LessonIssueCounts(BaseModel):
     info: int = 0
     warning: int = 0
     error: int = 0
+    blocking: int = 0
+    needs_look: int = 0
+    #: Informational items (group ``info``); not part of ``attention``.
+    informational: int = 0
+    #: Items marked as fine; excluded from every other count except severity.
+    dismissed: int = 0
+    #: Unresolved blocking + needs_look: what the teacher should look at.
+    attention: int = 0
 
 
 class LessonIssuesResponse(BaseModel):
@@ -119,6 +149,18 @@ def _target(issue: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _group_rank(group: IssueGroup) -> int:
+    return {"blocking": 0, "needs_look": 1, "info": 2}[group]
+
+
+def _blocking_copy(code: str, severity: IssueSeverity) -> IssueCopy | None:
+    """Copy for the always-teacher-meaningful codes; a planned figure that is
+    only an advisory placeholder (``warning``) moves to ``needs_look``."""
+    if code == "REQUIRED_FIGURE_MISSING" and severity != "error":
+        return FIGURE_FALLBACK_COPY
+    return BLOCKING_COPY.get(code)
+
+
 def _as_issue(
     *,
     path: IssuePath,
@@ -127,11 +169,26 @@ def _as_issue(
     default_category: Any = None,
     default_code: str = "LESSON_ISSUE",
     default_severity: Any = "warning",
+    allowed: Mapping[str, IssueCopy] | None = None,
 ) -> LessonIssue | None:
-    message = _text(raw.get("message")) or _text(raw.get("error_summary"))
-    if not message:
+    """Normalize one raw item. ``allowed`` is an explicit allow-list: a code that
+    is not in it is excluded, so new internal codes stay hidden. ``None`` means
+    the blocking set (``REALIZATION_FAILED`` and friends)."""
+    raw_message = _text(raw.get("message")) or _text(raw.get("error_summary"))
+    if not raw_message:
         return None
     code = _text(raw.get("code")) or _text(raw.get("category")) or default_code
+    severity = _severity(raw.get("severity", default_severity))
+    copy = _blocking_copy(code, severity) if allowed is None else allowed.get(code)
+    if copy is None:
+        return None
+    group: IssueGroup = copy.group
+    if group == "blocking":
+        severity = "error"
+    elif severity == "info":
+        group = "info"
+    elif severity == "error":
+        severity = "warning"
     target_id = _target(raw)
     repair_action = (
         _text(raw.get("repair_action"))
@@ -148,14 +205,18 @@ def _as_issue(
     return LessonIssue(
         id=_stable_id(path, code, target_id),
         path=path,
-        severity=_severity(raw.get("severity", default_severity)),
+        severity=severity,
         category=_category(code, raw.get("category", default_category)),
         code=code,
-        message=message,
+        message=copy.message or raw_message,
         target_id=target_id,
         repairable=repairable,
         repair_action=repair_action or ("retry" if repairable else None),
         source=source,
+        group=group,
+        suggestion=copy.suggestion,
+        details=raw_message if copy.message else None,
+        dismissible=group == "needs_look",
     )
 
 
@@ -185,6 +246,7 @@ def _iter_report_issues(state: Mapping[str, Any], path: ArtifactPath) -> Iterabl
                 raw=raw,
                 source="coherence_review",
                 default_category="coherence",
+                allowed=COHERENCE_COPY,
             )
             if issue:
                 yield issue
@@ -288,6 +350,7 @@ def _plan_visual_issues(
     plan_visual_blocks: Sequence[tuple[str, bool, str | None]],
     *,
     realization_ready: bool = False,
+    figure_nodes_out: dict[str, set[str]] | None = None,
 ) -> Iterable[LessonIssue]:
     """The teaching plan is the sole authority for figures: every planned visual
     needs a figure node bound to its block, and that figure must not have failed."""
@@ -340,6 +403,15 @@ def _plan_visual_issues(
             default_category="figure",
         )
         if issue:
+            if figure_nodes_out is not None:
+                figure_nodes_out[block_id] = {
+                    node_id
+                    for node_id in (
+                        figure_node_id,
+                        *(_text(node.get("id")) for node in figures),
+                    )
+                    if node_id
+                }
             yield issue
 
 
@@ -411,6 +483,93 @@ def _document_contract_issues(
                 yield issue
 
 
+class _SectionIndex:
+    """Section titles and node -> section lookups from the shared document."""
+
+    def __init__(self, sections: Sequence[Mapping[str, Any]]) -> None:
+        self.titles: dict[str, str] = {}
+        self.node_section: dict[str, str] = {}
+        for section in sections:
+            if not isinstance(section, Mapping):
+                continue
+            section_id = _text(section.get("id"))
+            if not section_id:
+                continue
+            title = _text(section.get("title"))
+            if title:
+                self.titles[section_id] = title
+            for node in section.get("nodes") or []:
+                node_id = _text(node.get("id")) if isinstance(node, Mapping) else ""
+                if node_id:
+                    self.node_section[node_id] = section_id
+
+    def section_for_nodes(self, node_ids: Iterable[str]) -> str | None:
+        for node_id in node_ids:
+            if node_id in self.node_section:
+                return self.node_section[node_id]
+        return None
+
+
+def _with_section(
+    issue: LessonIssue,
+    index: _SectionIndex,
+    *,
+    section_id: str | None,
+    section_title: str | None = None,
+    previous_section_title: str | None = None,
+) -> LessonIssue:
+    if section_id is None:
+        return issue
+    return issue.model_copy(
+        update={
+            "section_id": section_id,
+            "section_title": section_title or index.titles.get(section_id),
+            "previous_section_title": previous_section_title,
+        }
+    )
+
+
+def _flag_issue(
+    *,
+    path: ArtifactPath,
+    flag: Mapping[str, Any],
+    index: _SectionIndex,
+) -> LessonIssue | None:
+    """Project one persisted QualityFlag; codes outside ``FLAG_COPY`` are dropped."""
+    code = _text(flag.get("code"))
+    copy = FLAG_COPY.get(code)
+    message = _text(flag.get("message"))
+    section_id = _text(flag.get("section_id"))
+    if copy is None or not message or not section_id:
+        return None
+    node_ids = tuple(_text(node) for node in flag.get("node_ids") or () if _text(node))
+    previous_id = _text(flag.get("previous_section_id"))
+    # The id only keys dismissals and de-duplication; it is never shown.
+    target = "|".join(part for part in (section_id, previous_id, *node_ids) if part)
+    issue = LessonIssue(
+        id=_stable_id(path, code, target),
+        path=path,
+        severity="warning",
+        category="figure" if code == "figure_media_unavailable" else "document",
+        code=code,
+        message=copy.message or message,
+        target_id=target,
+        repairable=False,
+        source=_text(flag.get("source")) or "document_qa",
+        group=copy.group,
+        suggestion=copy.suggestion,
+        details=message if copy.message else None,
+        dismissible=copy.group == "needs_look",
+    )
+    return _with_section(
+        issue,
+        index,
+        section_id=section_id,
+        section_title=_text(flag.get("next_section_title")) or None,
+        previous_section_title=_text(flag.get("previous_section_title")) or None,
+    )
+
+
 def collect_lesson_issues(
     *,
     path: ArtifactPath,
@@ -419,9 +578,20 @@ def collect_lesson_issues(
     documents: Sequence[Mapping[str, Any]] = (),
     booklet_issues: Sequence[Any] = (),
     generation_errors: Sequence[str] = (),
+    quality_flags: Sequence[Mapping[str, Any]] = (),
+    shared_sections: Sequence[Mapping[str, Any]] = (),
+    dismissed_issue_ids: Collection[str] = (),
 ) -> LessonIssuesResponse:
-    """Collect and deterministically normalize all known issues for one path."""
+    """Collect and deterministically normalize all known issues for one path.
+
+    Pure: the caller loads the persisted document-QA ``quality_flags``, the
+    shared document's ``shared_sections`` (id / title / nodes) and the
+    ``dismissed_issue_ids`` for the lesson output and passes them in. Only
+    allow-listed teacher-facing codes are projected.
+    """
     found: dict[tuple[str, str, str], LessonIssue] = {}
+    index = _SectionIndex(shared_sections)
+    figure_nodes: dict[str, set[str]] = {}
 
     def add(issue: LessonIssue | None) -> None:
         if issue is None:
@@ -465,11 +635,17 @@ def collect_lesson_issues(
     if realization and documents:
         ready = _text(realization.get("status")).lower() in _READY_REALIZATION_STATUSES
         for issue in _plan_visual_issues(
-            path, documents, _plan_visual_blocks(states), realization_ready=ready
+            path,
+            documents,
+            _plan_visual_blocks(states),
+            realization_ready=ready,
+            figure_nodes_out=figure_nodes,
         ):
             add(issue)
     for issue in _document_contract_issues(path, documents):
         add(issue)
+    # Legacy booklet layout issues carry free-form codes and none is on the
+    # teacher-facing allow-list, so they are excluded (allow-list, not deny-list).
     for raw in booklet_issues:
         if isinstance(raw, Mapping):
             add(
@@ -478,15 +654,7 @@ def collect_lesson_issues(
                     raw=raw,
                     source="print_document",
                     default_category="document",
-                )
-            )
-        elif isinstance(raw, str) and raw.strip():
-            add(
-                _as_issue(
-                    path=path,
-                    raw={"message": raw},
-                    source="print_document",
-                    default_category="document",
+                    allowed={},
                 )
             )
     for message in generation_errors:
@@ -499,14 +667,53 @@ def collect_lesson_issues(
             )
         )
 
+    # Document-QA / boundary advisories. A figure fallback already reported by the
+    # plan-visual check for the same figure is not shown twice.
+    covered_figures = {
+        node_id
+        for issue in found.values()
+        if issue.code == "REQUIRED_FIGURE_MISSING" and issue.group == "needs_look"
+        for node_id in figure_nodes.get(issue.target_id or "", ())
+    }
+    for flag in quality_flags:
+        if not isinstance(flag, Mapping):
+            continue
+        if _text(flag.get("code")) == "figure_media_unavailable" and covered_figures.intersection(
+            _text(node) for node in flag.get("node_ids") or ()
+        ):
+            continue
+        add(_flag_issue(path=path, flag=flag, index=index))
+
+    resolved: list[LessonIssue] = []
+    for issue in found.values():
+        if issue.section_id is None and issue.code == "REQUIRED_FIGURE_MISSING":
+            nodes = figure_nodes.get(issue.target_id or "", set()) | {issue.target_id or ""}
+            issue = _with_section(issue, index, section_id=index.section_for_nodes(sorted(nodes)))
+        if issue.dismissible and issue.id in dismissed_issue_ids:
+            issue = issue.model_copy(update={"dismissed": True})
+        resolved.append(issue)
+
     issues = sorted(
-        found.values(),
-        key=lambda item: (item.severity, item.category, item.code, item.target_id or ""),
+        resolved,
+        key=lambda item: (
+            _group_rank(item.group),
+            item.category,
+            item.code,
+            item.target_id or "",
+        ),
     )
+    open_issues = [issue for issue in issues if not issue.dismissed]
+    blocking = sum(issue.group == "blocking" for issue in open_issues)
+    needs_look = sum(issue.group == "needs_look" for issue in open_issues)
     counts = LessonIssueCounts(
         info=sum(issue.severity == "info" for issue in issues),
         warning=sum(issue.severity == "warning" for issue in issues),
         error=sum(issue.severity == "error" for issue in issues),
+        blocking=blocking,
+        needs_look=needs_look,
+        informational=sum(issue.group == "info" for issue in open_issues),
+        dismissed=len(issues) - len(open_issues),
+        attention=blocking + needs_look,
     )
     return LessonIssuesResponse(path=path, issues=issues, counts=counts)
 

@@ -108,6 +108,8 @@ export interface QualityFlag {
 	next_section_id?: string;
 	previous_section_title?: string;
 	next_section_title?: string;
+	/** Resolved section title from the shared document; preferred over the raw id. */
+	section_title?: string;
 	internal_issue_codes?: string[];
 }
 

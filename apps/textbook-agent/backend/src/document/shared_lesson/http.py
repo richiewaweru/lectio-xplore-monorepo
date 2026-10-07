@@ -18,6 +18,7 @@ from document.shared_lesson.models import (
     build_shared_lesson_document,
 )
 from document.shared_lesson.qa_runtime import load_run_quality_flags
+from document.shared_lesson.section_index import load_run_sections
 from document.shared_lesson.repository import (
     SharedLessonDocumentRepositoryError,
     load_shared_lesson_document,
@@ -356,10 +357,22 @@ async def get_shared_document_quality_flags(
         if run_id
         else ()
     )
-    return {
-        "run_id": run_id,
-        "flags": [flag.model_dump(mode="json") for flag in flags],
+    titles = {
+        section["id"]: section["title"]
+        for section in await load_run_sections(
+            session, run_id=run_id, owner_user_id=current_user.id
+        )
+        if section["title"]
     }
+    payloads = []
+    for flag in flags:
+        payload = flag.model_dump(mode="json")
+        # Teacher-visible title so the editor never has to show a raw section id.
+        title = flag.next_section_title or titles.get(flag.section_id)
+        if title:
+            payload["section_title"] = title
+        payloads.append(payload)
+    return {"run_id": run_id, "flags": payloads}
 
 
 @router.get("/runs/{run_id}/review-draft")

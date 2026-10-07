@@ -10,6 +10,7 @@
 	import LectioPageDocumentView from '$lib/print/components/studio/LectioPageDocumentView.svelte';
 	import PrintDocumentEditor from '$lib/print/components/studio/PrintDocumentEditor.svelte';
 	import { extractLectioDocumentV2 } from '$lib/print/studio/document-version';
+	import { focusSectionWhenReady } from '$lib/curriculum/lessons/section-focus';
 	import { forceEagerImages, waitForPrintImages, type PrintImageWaitResult } from '$lib/print/studio/print-readiness';
 	import type { V3GenerationDetail } from '$lib/types/v3';
 	import type { LectioDocument } from '@lectio/page/contract';
@@ -21,6 +22,16 @@
 		page.url.searchParams.get('edition') === 'student' ? 'student' : 'teacher'
 	);
 	const debugPrint = $derived(page.url.searchParams.get('debugPrint') === 'true');
+	const focusSectionId = $derived(page.url.searchParams.get('section'));
+	let focusedSectionId: string | null = null;
+
+	// "Go to section" from the Issues tab: scroll to and highlight the section once rendered.
+	$effect(() => {
+		const target = focusSectionId;
+		if (!target || !dataReady || !pageDocumentV2 || focusedSectionId === target) return;
+		focusedSectionId = target;
+		void focusSectionWhenReady(target);
+	});
 	const showPrintDiagnostics = $derived(debugPrint);
 
 	function hasRetryableVisualQuality(value: unknown): boolean {

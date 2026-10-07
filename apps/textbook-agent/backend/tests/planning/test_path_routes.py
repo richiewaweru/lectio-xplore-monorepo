@@ -87,6 +87,8 @@ def test_phase5_unit_and_path_routes_are_registered() -> None:
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}:regenerate", "POST"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/status", "GET"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/issues", "GET"),
+        ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/issues/dismissals", "POST"),
+        ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/issues/dismissals", "DELETE"),
         ("/api/v1/units/{unit_id}/schedule", "GET"),
         ("/api/v1/units/{unit_id}/schedule", "PUT"),
         ("/api/v1/units/{unit_id}/schedule:suggest", "POST"),
@@ -258,6 +260,18 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
         }
 
 
+_EMPTY_COUNTS = {
+    "info": 0,
+    "warning": 0,
+    "error": 0,
+    "blocking": 0,
+    "needs_look": 0,
+    "informational": 0,
+    "dismissed": 0,
+    "attention": 0,
+}
+
+
 async def test_lesson_issues_projection_is_path_filtered_and_owned(db_session_factory) -> None:
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
@@ -297,12 +311,12 @@ async def test_lesson_issues_projection_is_path_filtered_and_owned(db_session_fa
     assert learn.json() == {
         "path": "learn",
         "issues": [],
-        "counts": {"info": 0, "warning": 0, "error": 0},
+        "counts": _EMPTY_COUNTS,
     }
     assert printed.json() == {
         "path": "print",
         "issues": [],
-        "counts": {"info": 0, "warning": 0, "error": 0},
+        "counts": _EMPTY_COUNTS,
     }
     assert missing.status_code == 404
 

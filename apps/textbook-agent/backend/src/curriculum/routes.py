@@ -6,6 +6,7 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,7 +58,7 @@ from curriculum.agents import (
 )
 from curriculum.figure_progress import active_leaves, plan_visual_figures
 from curriculum.lesson_progress import ProgressItem, project_artifact_progress
-from curriculum.lesson_review import collect_lesson_issues
+from curriculum.issue_service import build_lesson_issues, set_issue_dismissed
 from document.shared_lesson.run_failure import summarize_failed_leaves
 from curriculum.models import (
     ConstructorReadbackRequest,
@@ -1631,67 +1632,73 @@ async def get_path_lesson_issues(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
-    """Return one canonical, path-filtered issue projection for the workspace."""
+    """Return one canonical, path-filtered, teacher-facing issue projection."""
     try:
         _unit, _version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
-        realization = await resolve_by_path(
-            session, path_lesson_id=lesson.id, path=path
+        response, _scope_key = await build_lesson_issues(
+            session, lesson=lesson, path=path, owner_id=current_user.id
         )
-        preparation = (
-            await session.get(GenerationModel, lesson.pack_id) if lesson.pack_id else None
+        return response.model_dump(mode="json")
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
+        _raise_http(exc)
+
+
+class IssueDismissalBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: Literal["learn", "print"]
+    issue_id: str = Field(min_length=1, max_length=64)
+
+
+@router.post("/{unit_id}/path/lessons/{lesson_id}/issues/dismissals")
+async def post_path_lesson_issue_dismissal(
+    unit_id: str,
+    lesson_id: str,
+    body: IssueDismissalBody,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    """Mark one needs-a-look advisory as fine for this lesson output."""
+    try:
+        _unit, _version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
-        output = (
-            await session.get(GenerationModel, realization.output_id)
-            if realization is not None and realization.output_id
-            else None
+        response = await set_issue_dismissed(
+            session,
+            lesson=lesson,
+            path=body.path,
+            owner_id=current_user.id,
+            issue_id=body.issue_id,
+            dismissed=True,
         )
-        states = [
-            state
-            for state in (
-                preparation.chunked_state_json if preparation is not None else None,
-                output.chunked_state_json if output is not None else None,
-                preparation.report_json if preparation is not None else None,
-                output.report_json if output is not None else None,
-            )
-            if isinstance(state, dict)
-        ]
-        documents = [
-            document
-            for document in (
-                preparation.document_json if preparation is not None else None,
-                output.document_json if output is not None else None,
-            )
-            if isinstance(document, dict)
-        ]
-        booklet_issues: list[object] = []
-        for document in documents:
-            raw_issues = document.get("booklet_issues")
-            if isinstance(raw_issues, list):
-                booklet_issues.extend(raw_issues)
-            nested = document.get("document")
-            if isinstance(nested, dict) and isinstance(nested.get("booklet_issues"), list):
-                booklet_issues.extend(nested["booklet_issues"])
-        errors = [
-            error
-            for error in (
-                output.error if output is not None else None,
-                preparation.error if preparation is not None else None,
-            )
-            if isinstance(error, str) and error.strip()
-        ]
-        response = collect_lesson_issues(
+        return response.model_dump(mode="json")
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
+        _raise_http(exc)
+
+
+@router.delete("/{unit_id}/path/lessons/{lesson_id}/issues/dismissals")
+async def delete_path_lesson_issue_dismissal(
+    unit_id: str,
+    lesson_id: str,
+    path: Literal["learn", "print"] = Query(...),
+    issue_id: str = Query(..., min_length=1, max_length=64),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    """Restore a previously dismissed advisory."""
+    try:
+        _unit, _version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        response = await set_issue_dismissed(
+            session,
+            lesson=lesson,
             path=path,
-            realization=(
-                to_identity(realization).model_dump(mode="json")
-                if realization is not None
-                else None
-            ),
-            states=states,
-            documents=documents,
-            booklet_issues=booklet_issues,
-            generation_errors=errors,
+            owner_id=current_user.id,
+            issue_id=issue_id,
+            dismissed=False,
         )
         return response.model_dump(mode="json")
     except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP

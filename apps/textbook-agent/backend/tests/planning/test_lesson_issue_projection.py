@@ -1,7 +1,10 @@
 from curriculum.lesson_review.issue_projection import collect_lesson_issues
 
 
-def test_collects_coherence_realization_and_print_issues_with_deduplication() -> None:
+def test_collects_allow_listed_coherence_realization_issues_with_deduplication() -> None:
+    # Deliberate change: the projection is now an allow-list. Raw coherence codes
+    # that are not teacher-facing (FIGURE_MISSING here) and free-form legacy
+    # booklet codes (PAGINATION) are excluded instead of surfaced verbatim.
     response = collect_lesson_issues(
         path="print",
         realization={
@@ -15,7 +18,8 @@ def test_collects_coherence_realization_and_print_issues_with_deduplication() ->
                     "coherence_reports": {
                         "print": {
                             "issues": [
-                                {"code": "FIGURE_MISSING", "message": "missing figure", "severity": "blocking", "figure_id": "fig-1"},
+                                {"code": "SLOPE_DRIFT", "message": "slope drifted", "severity": "blocking", "figure_id": "fig-1"},
+                                {"code": "SLOPE_DRIFT", "message": "slope drifted", "severity": "blocking", "figure_id": "fig-1"},
                                 {"code": "FIGURE_MISSING", "message": "missing figure", "severity": "blocking", "figure_id": "fig-1"},
                             ]
                         }
@@ -26,10 +30,15 @@ def test_collects_coherence_realization_and_print_issues_with_deduplication() ->
         booklet_issues=[{"code": "PAGINATION", "message": "page overflow", "severity": "major"}],
     )
 
-    assert len(response.issues) == 3
-    assert response.counts.error == 2
+    assert [issue.code for issue in response.issues] == ["REALIZATION_FAILED", "SLOPE_DRIFT"]
+    assert [issue.group for issue in response.issues] == ["blocking", "needs_look"]
+    assert response.counts.error == 1
     assert response.counts.warning == 1
-    assert {issue.source for issue in response.issues} == {"coherence_review", "realization_status", "print_document"}
+    assert response.counts.attention == 2
+    assert {issue.source for issue in response.issues} == {"coherence_review", "realization_status"}
+    failed = response.issues[0]
+    assert failed.message == "This lesson didn't finish building."
+    assert failed.details == "writer failed"
 
 
 def test_collects_required_missing_figure_and_explicit_empty_state() -> None:
@@ -43,7 +52,16 @@ def test_collects_required_missing_figure_and_explicit_empty_state() -> None:
 
     empty = collect_lesson_issues(path="learn")
     assert empty.issues == []
-    assert empty.counts.model_dump() == {"info": 0, "warning": 0, "error": 0}
+    assert empty.counts.model_dump() == {
+        "info": 0,
+        "warning": 0,
+        "error": 0,
+        "blocking": 0,
+        "needs_look": 0,
+        "informational": 0,
+        "dismissed": 0,
+        "attention": 0,
+    }
 
 
 def test_collects_learn_document_and_interaction_contract_failures() -> None:
@@ -128,7 +146,9 @@ def test_learn_figure_without_image_is_an_issue_only_when_ready() -> None:
     document = {"nodes": [{"kind": "figure", "id": "f1", "teaching_block_id": "explain-b1", "asset_id": None}]}
     issues = _figure_issues([document])
     assert [issue.target_id for issue in issues] == ["explain-b1"]
-    assert issues[0].message == "The planned figure has no image yet."
+    # Teacher copy replaces the raw message; the original stays behind "details".
+    assert issues[0].message == "A figure this lesson needs could not be created."
+    assert issues[0].details == "The planned figure has no image yet."
     assert issues[0].severity == "error"
 
     pending = collect_lesson_issues(
@@ -185,7 +205,7 @@ def test_print_shaped_figure_block_matches_by_node_id_and_needs_image() -> None:
         ]
     }
     issues = _figure_issues([without_image], states=[state])
-    assert [i.message for i in issues] == ["The planned figure has no image yet."]
+    assert [i.details for i in issues] == ["The planned figure has no image yet."]
 
 
 def test_plan_visual_with_failed_figure_is_an_issue() -> None:
@@ -229,7 +249,9 @@ def test_unavailable_learn_figure_is_an_advisory_warning_with_its_reason() -> No
     issues = _figure_issues([document])
     assert [i.target_id for i in issues] == ["explain-b1"]
     assert issues[0].severity == "warning"
-    assert "The figure service was unavailable for this figure." in issues[0].message
+    assert issues[0].group == "needs_look"
+    assert issues[0].dismissible is True
+    assert "The figure service was unavailable for this figure." in (issues[0].details or "")
 
 
 def test_unavailable_print_figure_is_an_advisory_warning() -> None:
