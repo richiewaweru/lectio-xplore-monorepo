@@ -433,6 +433,33 @@ export function getLessonIssues(
 	);
 }
 
+export function dismissLessonIssue(
+	unitId: string,
+	lessonId: string,
+	path: 'learn' | 'print',
+	issueId: string
+): Promise<LessonIssuesResponse> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lessonId)}/issues/dismissals`,
+		'Could not mark this as fine.',
+		{ method: 'POST', headers: jsonHeaders, body: JSON.stringify({ path, issue_id: issueId }) }
+	);
+}
+
+export function restoreLessonIssue(
+	unitId: string,
+	lessonId: string,
+	path: 'learn' | 'print',
+	issueId: string
+): Promise<LessonIssuesResponse> {
+	const query = new URLSearchParams({ path, issue_id: issueId });
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lessonId)}/issues/dismissals?${query}`,
+		'Could not restore this item.',
+		{ method: 'DELETE' }
+	);
+}
+
 export function retryLessonRealization(
 	unitId: string,
 	path: UnitPath,

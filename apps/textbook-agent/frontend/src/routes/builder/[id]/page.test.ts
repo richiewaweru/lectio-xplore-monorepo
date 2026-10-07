@@ -75,6 +75,19 @@ describe('builder lesson route', () => {
 		});
 	});
 
+	it('passes ?section= to the editor so it can open and highlight that section', async () => {
+		const original = pageState.url;
+		pageState.url = new URL('http://localhost/builder/lesson-123?section=sec-2');
+		try {
+			loadBuilderLessonWithFallback.mockResolvedValue({ document: learnDoc(), source: 'server' });
+			render(BuilderLessonPage);
+			const editor = await waitFor(() => screen.getByTestId('mock-document-editor'));
+			expect(editor.getAttribute('data-focus-section')).toBe('sec-2');
+		} finally {
+			pageState.url = original;
+		}
+	});
+
 	it('shows retired message for LessonDocument v1', async () => {
 		loadBuilderLessonWithFallback.mockResolvedValue({
 			document: {

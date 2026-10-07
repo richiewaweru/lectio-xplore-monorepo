@@ -7,7 +7,7 @@
 	import { apiFetch } from '$lib/api/client';
 	import { ensureOk } from '$lib/api/errors';
 	import { getLessonIssues, retryLessonRealization, generateLearnRealization } from '$lib/api/units';
-	import type { LessonIssue, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
+	import type { LessonIssue, LessonIssueCounts, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Button, Dialog, InlineError, EmptyState, Badge, Tabs } from '$lib/ui';
 	import { lessonArtifactUi, lessonWorkspaceHref, resolveBuilderLessonId, preparationIsApprovedAndFresh } from '$lib/curriculum/lessons/lesson-context';
 	import { createSerializedPoll, LESSON_STATUS_POLL_MS, LESSON_STATUS_POLL_OPTIONS } from '$lib/curriculum/lessons/serialized-poll';
@@ -36,6 +36,7 @@
 	let loading = $state(true);
 	let busy = $state<string | null>(null);
 	let issues = $state<LessonIssue[]>([]);
+	let issueCounts = $state<LessonIssueCounts | null>(null);
 	let release = $state<LearnReleaseRecord | null>(null);
 	let assignOpen = $state(false);
 	let classes = $state<Array<{ id: string; name: string }>>([]);
@@ -51,9 +52,12 @@
 
 	async function loadIssues(): Promise<void> {
 		try {
-			issues = (await getLessonIssues(ctx.unitId, ctx.lessonId, 'learn')).issues;
+			const response = await getLessonIssues(ctx.unitId, ctx.lessonId, 'learn');
+			issues = response.issues;
+			issueCounts = response.counts;
 		} catch (err) {
-			issues = [{ id: 'issues-load-failed', path: 'learn', severity: 'error', category: 'document', code: 'ISSUES_LOAD_FAILED', message: err instanceof Error ? err.message : 'Could not load Learn issues.', repairable: false, source: 'workspace' }];
+			issueCounts = null;
+			issues = [{ id: 'issues-load-failed', path: 'learn', severity: 'error', category: 'document', code: 'ISSUES_LOAD_FAILED', message: 'The issues for this lesson could not be loaded.', details: err instanceof Error ? err.message : 'Could not load Learn issues.', repairable: false, source: 'workspace', group: 'blocking' }];
 		}
 	}
 
@@ -264,7 +268,7 @@
 	{#if loading}
 		<p class="muted">Loading Learn lesson…</p>
 	{:else if activeTab === 'issues'}
-		<LessonIssuesPanel {issues} onRetry={retryLearn} allowRetry={ctx.statusFresh && (artifact.retryable || artifact.regenerable)} />
+		<LessonIssuesPanel {issues} counts={issueCounts} unitId={ctx.unitId} lessonId={ctx.lessonId} path="learn" editBaseHref={builderLessonId && document ? `/builder/${encodeURIComponent(builderLessonId)}` : null} onRetry={retryLearn} allowRetry={ctx.statusFresh && (artifact.retryable || artifact.regenerable)} />
 	{:else if artifact.state === 'not_created'}
 		<EmptyState title="Learn not created" description="Create an interactive Learn lesson from the approved teaching plan.">
 			{#snippet actions()}<Button disabled={!ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)} busy={busy === 'create'} onclick={() => void createLearn()}>{busy === 'create' ? 'Creating…' : 'Create Learn'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}

@@ -247,7 +247,7 @@
 	{#if mode === 'edit'}
 		<div class="fields" data-testid="print-edit-fields">
 			{#each draft.sections as section, sectionIndex}
-				<section class="section">
+				<section class="section" data-section-id={section.id}>
 					<h3>{section.title || section.id}</h3>
 					{#each section.blocks as block, blockIndex}
 						{@const content = block.content as unknown as Record<string, unknown>}

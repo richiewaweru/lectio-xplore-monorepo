@@ -14,6 +14,7 @@
 	let loadError = $state<{ status: number; title: string; detail: string } | null>(null);
 
 	const id = $derived(page.params.id);
+	const focusSectionId = $derived(page.url.searchParams.get('section'));
 
 	onMount(() => {
 		if (!browser) return;
@@ -69,6 +70,7 @@
 			<DocumentEditor
 				document={result.document as LearnDocument}
 				lessonId={id}
+				{focusSectionId}
 				previewHref={id ? `/learn/lessons/${id}` : null}
 			/>
 		</main>

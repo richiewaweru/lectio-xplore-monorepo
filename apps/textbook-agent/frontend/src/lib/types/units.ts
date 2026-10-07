@@ -377,23 +377,51 @@ export type LessonIssueCategory =
 	| 'contract'
 	| 'other';
 
+export type LessonIssueGroup = 'blocking' | 'needs_look' | 'info';
+
 export interface LessonIssue {
 	id: string;
 	path: ArtifactPath | 'shared';
 	severity: LessonIssueSeverity;
 	category: LessonIssueCategory;
+	/** Internal code: shown only behind the "Details" disclosure. */
 	code: string;
+	/** Plain-language sentence for the teacher. */
 	message: string;
 	target_id?: string | null;
 	repairable: boolean;
 	repair_action?: string | null;
 	source: string;
+	group: LessonIssueGroup;
+	/** Section the item is about; used for the "Go to section" deep link. */
+	section_id?: string | null;
+	section_title?: string | null;
+	previous_section_title?: string | null;
+	/** What the teacher can do about it. */
+	suggestion?: string | null;
+	/** Raw internal wording; shown only behind "Details". */
+	details?: string | null;
+	/** Only needs_look items can be marked as fine. */
+	dismissible?: boolean;
+	dismissed?: boolean;
+}
+
+export interface LessonIssueCounts {
+	info: number;
+	warning: number;
+	error: number;
+	blocking: number;
+	needs_look: number;
+	informational: number;
+	dismissed: number;
+	/** Unresolved blocking + needs_look. */
+	attention: number;
 }
 
 export interface LessonIssuesResponse {
 	path: ArtifactPath;
 	issues: LessonIssue[];
-	counts: { info: number; warning: number; error: number };
+	counts: LessonIssueCounts;
 }
 
 export interface SkeletonSlotPreview {

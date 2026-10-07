@@ -12,6 +12,21 @@ describe('native print edition contract', () => {
 		expect(source).not.toContain('<LectioPageDocumentView document={pageDocumentV2} edition="teacher" />');
 	});
 
+	it('honours ?section= by scrolling to and highlighting the section once rendered', () => {
+		expect(source).toContain("page.url.searchParams.get('section')");
+		expect(source).toContain('focusSectionWhenReady(target)');
+		const editor = readFileSync(
+			join(process.cwd(), 'src/lib/print/components/studio/PrintDocumentEditor.svelte'),
+			'utf8'
+		);
+		expect(editor).toContain('data-section-id={section.id}');
+		const view = readFileSync(
+			join(process.cwd(), 'src/lib/print/components/studio/LectioPageDocumentView.svelte'),
+			'utf8'
+		);
+		expect(view).toContain('dataset.sectionId');
+	});
+
 	it('blocks native print while required visuals are pending or flagged', () => {
 		expect(source).toContain('fetchNativeGenerationDetail(generationId, headers)');
 		expect(source).toContain('apiFetch(');

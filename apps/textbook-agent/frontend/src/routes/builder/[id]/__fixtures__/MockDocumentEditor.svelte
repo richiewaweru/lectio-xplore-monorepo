@@ -4,9 +4,10 @@
 		lessonId?: string | null;
 		previewHref?: string | null;
 		onDocumentChange?: (doc: unknown) => void;
+		focusSectionId?: string | null;
 	}
 
-	let { document }: Props = $props();
+	let { document, focusSectionId = null }: Props = $props();
 </script>
 
-<div data-testid="mock-document-editor">{document.title}</div>
+<div data-testid="mock-document-editor" data-focus-section={focusSectionId ?? ''}>{document.title}</div>

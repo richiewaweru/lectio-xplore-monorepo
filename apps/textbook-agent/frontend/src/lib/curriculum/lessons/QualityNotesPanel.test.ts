@@ -33,6 +33,17 @@ describe('QualityNotesPanel', () => {
 		expect(getQualityFlags).toHaveBeenCalledWith({ editableLessonId: 'lesson-1' });
 	});
 
+	it('shows the resolved section title instead of the raw section id', async () => {
+		vi.mocked(getQualityFlags).mockResolvedValue({
+			run_id: 'run-1',
+			flags: [{ ...flag, section_title: 'Worked example' }]
+		});
+		render(QualityNotesPanel, { props: { editableLessonId: 'lesson-1' } });
+		await waitFor(() => expect(screen.getByTestId('quality-notes')).toBeTruthy());
+		expect(screen.getByText('Section: Worked example')).toBeTruthy();
+		expect(screen.queryByText(/section-2/)).toBeNull();
+	});
+
 	it('loads by generation id for the print editor', async () => {
 		vi.mocked(getQualityFlags).mockResolvedValue({ run_id: 'run-1', flags: [flag] });
 		render(QualityNotesPanel, { props: { generationId: 'gen-1' } });

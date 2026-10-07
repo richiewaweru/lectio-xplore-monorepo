@@ -6,7 +6,7 @@ import { getContext, onDestroy, onMount } from 'svelte';
 	import { apiFetch } from '$lib/api/client';
 	import { generatePrintRealization, getLessonIssues, retryLessonRealization } from '$lib/api/units';
 	import type { LectioDocument } from '@lectio/page/contract';
-	import type { LessonIssue, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
+	import type { LessonIssue, LessonIssueCounts, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Button, Dialog, InlineError, EmptyState, Tabs } from '$lib/ui';
 	import LessonProgressPanel from '$lib/curriculum/lessons/LessonProgressPanel.svelte';
 	import { autoRetryText } from '$lib/curriculum/lessons/lesson-progress';
@@ -31,6 +31,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	let generationId = $state<string | null>(null);
 	let pageDocumentV2 = $state<LectioDocument | null>(null);
 	let issues = $state<LessonIssue[]>([]);
+	let issueCounts = $state<LessonIssueCounts | null>(null);
 	let error = $state<string | null>(null);
 	let loading = $state(true);
 	let busy = $state<string | null>(null);
@@ -80,9 +81,12 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 
 	async function loadIssues(): Promise<void> {
 		try {
-			issues = (await getLessonIssues(ctx.unitId, ctx.lessonId, 'print')).issues;
+			const response = await getLessonIssues(ctx.unitId, ctx.lessonId, 'print');
+			issues = response.issues;
+			issueCounts = response.counts;
 		} catch (err) {
-			issues = [{ id: 'issues-load-failed', path: 'print', severity: 'error', category: 'document', code: 'ISSUES_LOAD_FAILED', message: err instanceof Error ? err.message : 'Could not load Print issues.', repairable: false, source: 'workspace' }];
+			issueCounts = null;
+			issues = [{ id: 'issues-load-failed', path: 'print', severity: 'error', category: 'document', code: 'ISSUES_LOAD_FAILED', message: 'The issues for this lesson could not be loaded.', details: err instanceof Error ? err.message : 'Could not load Print issues.', repairable: false, source: 'workspace', group: 'blocking' }];
 		}
 	}
 
@@ -172,7 +176,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	{#if loading}
 		<p class="muted">Loading Print…</p>
 	{:else if activeTab === 'issues'}
-		<LessonIssuesPanel {issues} onRetry={retryPrint} allowRetry={ctx.statusFresh && (artifact.retryable || artifact.regenerable)} />
+		<LessonIssuesPanel {issues} counts={issueCounts} unitId={ctx.unitId} lessonId={ctx.lessonId} path="print" editBaseHref={generationId && pageDocumentV2 ? `/studio/print/${encodeURIComponent(generationId)}` : null} onRetry={retryPrint} allowRetry={ctx.statusFresh && (artifact.retryable || artifact.regenerable)} />
 	{:else if artifact.state === 'not_created'}
 		<EmptyState title="Print not created" description="Create a printable booklet from the approved teaching plan.">{#snippet actions()}<Button disabled={!ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)} busy={busy === 'create'} onclick={() => void createPrint()}>{busy === 'create' ? 'Creating…' : 'Create Print'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>
 	{:else if artifact.state === 'preparing'}

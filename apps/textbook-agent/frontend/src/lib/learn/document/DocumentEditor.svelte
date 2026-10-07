@@ -11,6 +11,8 @@
 	import type { AddableKind } from './document-state';
 	import { createLearnDocumentStore } from './document-state.svelte';
 	import DocumentCanvas from './DocumentCanvas.svelte';
+	import { onMount, tick } from 'svelte';
+	import { focusSectionWhenReady } from '$lib/curriculum/lessons/section-focus';
 	import {
 		getBuilderLesson,
 		updateBuilderLesson
@@ -33,6 +35,8 @@
 		previewHref?: string | null;
 		onDocumentChange?: (doc: LearnDocument) => void;
 		hideChromeActions?: boolean;
+		/** Section to open and highlight on mount (the Issues tab's "Go to section" link). */
+		focusSectionId?: string | null;
 	}
 
 	let {
@@ -40,7 +44,8 @@
 		lessonId = null,
 		previewHref = null,
 		onDocumentChange = undefined,
-		hideChromeActions = false
+		hideChromeActions = false,
+		focusSectionId = null
 	}: Props = $props();
 
 	const store = createLearnDocumentStore();
@@ -50,6 +55,13 @@
 	let saving = $state(false);
 	let addKind = $state<AddableKind>('paragraph');
 	let activeSectionId = $state<string>('all');
+
+	onMount(() => {
+		const target = focusSectionId;
+		if (!target || !store.document?.sections?.some((section) => section.id === target)) return;
+		activeSectionId = target;
+		void tick().then(() => focusSectionWhenReady(target));
+	});
 
 	$effect(() => {
 		if (store.document) onDocumentChange?.(store.document);
@@ -210,7 +222,7 @@
 					</nav>
 				{/if}
 
-				<div class="canvas-wrap">
+				<div class="canvas-wrap" data-section-id={activeSectionId === 'all' ? undefined : activeSectionId}>
 					<DocumentCanvas
 						document={viewDocument ?? doc}
 						selectedNodeId={selectedId}
