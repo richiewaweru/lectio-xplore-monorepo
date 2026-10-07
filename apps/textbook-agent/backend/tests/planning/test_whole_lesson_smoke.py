@@ -17,7 +17,8 @@ from print.generation.whole_lesson.packet import (
     ScopeEntry,
     SlotRecord,
 )
-from print.generation.whole_lesson.prompt_render import render_teaching_prompt
+from application.unit_lesson.staged_teaching_planner import render_staged_prompt
+
 from print.generation.whole_lesson.teaching_plan import (
     AnchorUsageEntry,
     TeachingPlan,
@@ -26,6 +27,11 @@ from print.generation.whole_lesson.teaching_plan import (
 )
 from print.generation.whole_lesson.validation import validate_teaching_plan
 from resource_specs.loader import load_all_specs
+
+
+def render_teaching_prompt(packet, guidance, **_kwargs):
+    """The teaching prompt a section call runs under (the only teaching prompt)."""
+    return render_staged_prompt(packet, guidance, kind="section")
 
 
 def _packet() -> ImmutableLessonPacket:

@@ -32,7 +32,6 @@ V2_MERGE_CRITIC = "v2_merge_critic"
 V2_COMPONENT_SELECTOR = "v2_component_selector"
 V2_PATH_STRUCTURAL_PLANNER = "v2_path_structural_planner"
 V2_PATH_CHAT_EDITOR = "v2_path_chat_editor"
-V2_LESSON_APPROACH_PLANNER = "v2_lesson_approach_planner"
 TEACHING_SPINE_PLANNER = "teaching_spine_planner"
 TEACHING_SECTION_PLANNER = "teaching_section_planner"
 V3_CONSTRUCTOR = "v3_constructor"
@@ -76,7 +75,6 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V2_COMPONENT_SELECTOR: ModelSlot.STANDARD,
     V2_PATH_STRUCTURAL_PLANNER: ModelSlot.STANDARD,
     V2_PATH_CHAT_EDITOR: ModelSlot.STANDARD,
-    V2_LESSON_APPROACH_PLANNER: ModelSlot.STANDARD,
     TEACHING_SPINE_PLANNER: ModelSlot.STANDARD,
     TEACHING_SECTION_PLANNER: ModelSlot.STANDARD,
     V3_CONSTRUCTOR: ModelSlot.FAST,
@@ -150,7 +148,6 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     # "low", not "medium": a 2026-09-30 A/B on one lesson (3-5 runs each)
     # passed 3/5 at low, 1/3 at medium (36k+ thinking tokens, truncated JSON,
     # 3-10 min calls), and 0/3 with thinking off (structural rule failures).
-    V2_LESSON_APPROACH_PLANNER: "low",
     # Staged planner calls share the single planner's reasoning setting.
     TEACHING_SPINE_PLANNER: "low",
     TEACHING_SECTION_PLANNER: "low",
@@ -389,7 +386,6 @@ __all__ = [
     "TEACHING_SECTION_PLANNER",
     "TEACHING_SPINE_PLANNER",
     "V2_COMPONENT_SELECTOR",
-    "V2_LESSON_APPROACH_PLANNER",
     "V2_MERGE_CRITIC",
     "V2_PATH_CHAT_EDITOR",
     "V2_PATH_PLANNER",

@@ -170,6 +170,7 @@ def _backbone() -> LessonBackbone:
 class _Calls:
     def __init__(self) -> None:
         self.events: list[str] = []
+        self.stage_events: list[str] = []
         self.fail: dict[str, BaseException] = {}
         self.item_backbones: list[LessonBackbone | None] = []
 
@@ -227,6 +228,36 @@ class _Calls:
         await repo.save_lesson_legality({"resource_id": "lesson", "catalogue_hash": "fixture"})
         await repo.save_teaching_plan(plan=plan, validation={}, qc=[])
         return {"teaching_plan": plan}
+
+    # Staged stage runners (the only planner): cheap fakes around the same plan stub.
+    # They log to ``stage_events``; ``events`` keeps the single "teaching_plan" entry
+    # of the finish stage so tests that read ``events`` are unchanged.
+
+    async def spine_runner(self, session, generation_id, *, require_items=True, **_):  # noqa: ANN001
+        self.stage_events.append("spine")
+        exc = self.fail.get("teaching_spine")
+        if exc is not None:
+            raise exc
+        slots = [s["slot_id"] for s in _teaching_plan()["sections"]]
+        return {"spine": {"sections": [{"slot_id": slot} for slot in slots]}}
+
+    async def section_runner(self, session, generation_id, *, spine_json, slot_id, **_):  # noqa: ANN001
+        self.stage_events.append(f"section:{slot_id}")
+        exc = self.fail.get(f"teaching_section:{slot_id}")
+        if exc is not None:
+            raise exc
+        return {"slot_id": slot_id, "blocks": [], "unresolved": False}
+
+    async def finish_runner(self, session, generation_id, *, spine_json, section_jsons, **_):  # noqa: ANN001
+        self.stage_events.append("finish")
+        return await self.teaching_runner(session, generation_id)
+
+    def staged_runners(self) -> dict[str, Any]:
+        return {
+            "spine": self.spine_runner,
+            "section": self.section_runner,
+            "finish": self.finish_runner,
+        }
 
 
 def _teaching_plan() -> dict[str, Any]:
@@ -297,6 +328,7 @@ async def _seed(db_session: AsyncSession, *, user_id: str, cards: tuple[str, ...
 
 
 def _worker(factory, calls: _Calls, worker_id: str = "prep-w1", **kwargs) -> PreparationWorker:
+    kwargs.setdefault("staged_runners", calls.staged_runners())
     return PreparationWorker(
         factory,
         worker_id=worker_id,
@@ -533,8 +565,19 @@ async def test_worker_runs_backbone_then_items_then_teaching_plan_and_finalizes_
     assert (await _workspace(db_session_factory, prep_id)).state == "planning"
     assert (await _workspace(db_session_factory, prep_id)).progress.items_ready == 1
 
-    assert await _tick(worker, db_session_factory) is True  # card 2 (+ admits teaching_plan)
+    assert await _tick(worker, db_session_factory) is True  # card 2 (+ admits teaching_spine)
     assert calls.events == ["backbone", f"items:{user_id}-c1", f"items:{user_id}-c2"]
+    async with db_session_factory() as session:
+        item = await session.scalar(
+            select(GenerationWorkItemModel).where(GenerationWorkItemModel.item_key == "teaching_spine")
+        )
+        assert item is not None and item.status == "queued"
+
+    assert await _tick(worker, db_session_factory) is True  # spine (+ admits one item per section)
+    section_count = len(_teaching_plan()["sections"])
+    for _ in range(section_count):
+        assert await _tick(worker, db_session_factory) is True  # one section each
+    assert calls.stage_events[0] == "spine" and len(calls.stage_events) == 1 + section_count
     async with db_session_factory() as session:
         item = await session.scalar(
             select(GenerationWorkItemModel).where(GenerationWorkItemModel.item_key == "teaching_plan")

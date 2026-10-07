@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 from tests.planning.legality_fixtures import make_snapshot as _make_snapshot
 from tests.planning.legality_fixtures import packet as _packet
@@ -24,9 +22,6 @@ from infra.authoring.model_policy import (
     TEACHING_PLAN_SEMANTIC_REVIEWER,
     get_v3_slot,
 )
-from application.unit_lesson import teaching_planner as teaching_agent
-from application.unit_lesson.teaching_planner import run_lesson_approach_planner
-from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 
 
 @pytest.fixture(autouse=True)
@@ -150,129 +145,6 @@ def test_semantic_reviewer_runs_with_deepseek_thinking_enabled() -> None:
     assert V3_NODE_REASONING[TEACHING_PLAN_SEMANTIC_REVIEWER] == "medium"
 
 
-async def _run_with_reviewer(monkeypatch, *, reviews, task: bool = False):
-    packet = _packet()
-    legality = _make_snapshot()
-    draft = _draft(task=task)
-    planner_calls = []
-    reviewer_calls = []
-
-    async def _planner_call(**kwargs):
-        planner_calls.append(kwargs)
-        return draft, draft.model_dump_json()
-
-    async def _review(**kwargs):
-        reviewer_calls.append(kwargs)
-        response = reviews.pop(0)
-        if isinstance(response, Exception):
-            raise response
-        return response
-
-    monkeypatch.setattr(teaching_agent, "_call_teaching_model", _planner_call)
-    monkeypatch.setattr(teaching_agent, "review_teaching_plan_draft", _review)
-    result = await run_lesson_approach_planner(packet, legality=legality, require_items=False)
-    return result, planner_calls, reviewer_calls
-
-
-@pytest.mark.asyncio
-async def test_semantic_reviewer_clean_pass_binds_exact_plan_hash(monkeypatch) -> None:
-    draft = _draft()
-    plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
-    clean = TeachingPlanSemanticReviewResult(
-        content_hash=teaching_plan_content_hash(plan), findings=[]
-    )
-    result, planner_calls, reviewer_calls = await _run_with_reviewer(monkeypatch, reviews=[clean])
-
-    assert len(planner_calls) == len(reviewer_calls) == 1
-    assert result.semantic_review.clean is True
-    assert result.semantic_review.content_hash == teaching_plan_content_hash(result.plan)
-    assert any(
-        item.get("code") == "TEACHING_PLAN_SEMANTIC_REVIEW_PASS"
-        and item.get("content_hash") == result.semantic_review.content_hash
-        for item in result.qc
-    )
-
-
-@pytest.mark.parametrize(
-    ("code", "section_ids", "block_ids", "task"),
-    [
-        ("progression_gap", ["orient", "explain"], [], False),
-        ("adjacent_exit_entry", ["orient", "explain"], [], False),
-        ("target_coverage_gap", ["explain"], [], False),
-        ("duplicate_section_responsibility", ["orient", "explain"], [], False),
-        ("task_evidence_gap", ["explain"], ["explain-b1"], True),
-        ("assessment_item_reused", ["explain"], ["explain-b1"], False),
-        ("misconception_unresolved", ["explain"], ["explain-b1"], False),
-        ("factual_inaccuracy", ["explain"], ["explain-b1"], False),
-        ("factual_inaccuracy", ["explain"], [], False),
-    ],
-)
-@pytest.mark.asyncio
-async def test_blocking_semantic_finding_repairs_once_then_accepts_clean_v2(
-    monkeypatch, code, section_ids, block_ids, task
-) -> None:
-    finding = _finding(code, section_ids, block_ids)
-    candidate_hash = teaching_plan_content_hash(
-        materialize_teaching_plan(_draft(task=task), slot_ids=["orient", "explain"])
-    )
-    clean = TeachingPlanSemanticReviewResult(
-        content_hash=candidate_hash,
-        findings=[],
-    )
-    result, planner_calls, reviewer_calls = await _run_with_reviewer(
-        monkeypatch,
-        reviews=[
-            TeachingPlanSemanticReviewResult(
-                content_hash=candidate_hash,
-                findings=[finding],
-            ),
-            clean,
-        ],
-        task=task,
-    )
-
-    assert len(planner_calls) == len(reviewer_calls) == 2
-    assert result.plan.contract_version == 2
-    assert result.semantic_review.clean is True
-    assert code.upper() in str(planner_calls[1]["user_payload"]["repair"]["validation_errors"])
-
-
-@pytest.mark.asyncio
-async def test_semantic_findings_after_second_candidate_reject_plan(monkeypatch) -> None:
-    finding = _finding("target_coverage_gap", ["explain"])
-    candidate_hash = teaching_plan_content_hash(
-        materialize_teaching_plan(_draft(), slot_ids=["orient", "explain"])
-    )
-    repeated = TeachingPlanSemanticReviewResult(
-        content_hash=candidate_hash,
-        findings=[finding],
-    )
-    packet = _packet()
-    draft = _draft()
-    planner_calls = 0
-    reviewer_calls = 0
-
-    async def _planner_call(**_kwargs):
-        nonlocal planner_calls
-        planner_calls += 1
-        return draft, draft.model_dump_json()
-
-    async def _review(**_kwargs):
-        nonlocal reviewer_calls
-        reviewer_calls += 1
-        return repeated
-
-    with (
-        patch.object(teaching_agent, "_call_teaching_model", new=_planner_call),
-        patch.object(teaching_agent, "review_teaching_plan_draft", new=_review),
-        pytest.raises(TeachingPlanOutputInvalidError, match="SEMANTIC_TARGET_COVERAGE_GAP"),
-    ):
-        await run_lesson_approach_planner(
-            packet, legality=_make_snapshot(), require_items=False
-        )
-    assert planner_calls == reviewer_calls == 2
-
-
 @pytest.mark.asyncio
 async def test_reviewer_rejects_unbound_section_finding(monkeypatch) -> None:
     draft = _draft()
@@ -389,43 +261,6 @@ async def test_reviewer_provider_failure_is_terminal_and_never_returns_plan(monk
 
 
 @pytest.mark.asyncio
-async def test_planner_stops_after_reviewer_provider_failure(monkeypatch) -> None:
-    draft = _draft()
-    planner_calls = 0
-
-    async def _planner_call(**_kwargs):
-        nonlocal planner_calls
-        planner_calls += 1
-        return draft, draft.model_dump_json()
-
-    async def _failed_structured(**_kwargs):
-        raise PermissionError("reviewer credential unavailable")
-
-    monkeypatch.setattr(teaching_agent, "_call_teaching_model", _planner_call)
-    monkeypatch.setattr(semantic_review, "_run_structured", _failed_structured)
-    with pytest.raises(TeachingPlanSemanticReviewError) as raised:
-        await run_lesson_approach_planner(
-            _packet(), legality=_make_snapshot(), require_items=False
-        )
-    assert raised.value.code == "TEACHING_SEMANTIC_REVIEW_FAILED"
-    assert planner_calls == 1
-
-
-@pytest.mark.asyncio
-async def test_planner_rejects_review_hash_mismatch(monkeypatch) -> None:
-    candidate_hash = teaching_plan_content_hash(
-        materialize_teaching_plan(_draft(), slot_ids=["orient", "explain"])
-    )
-    mismatched = TeachingPlanSemanticReviewResult(
-        content_hash=("0" * 64 if candidate_hash != "0" * 64 else "1" * 64),
-        findings=[],
-    )
-    with pytest.raises(TeachingPlanSemanticReviewError) as raised:
-        await _run_with_reviewer(monkeypatch, reviews=[mismatched])
-    assert raised.value.code == "TEACHING_SEMANTIC_REVIEW_INVALID"
-
-
-@pytest.mark.asyncio
 async def test_invalid_reviewer_code_is_not_treated_as_clean(monkeypatch) -> None:
     draft = _draft()
     plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
@@ -452,42 +287,6 @@ async def test_invalid_reviewer_code_is_not_treated_as_clean(monkeypatch) -> Non
             lesson_context={},
         )
     assert raised.value.code == "TEACHING_SEMANTIC_REVIEW_INVALID"
-
-
-@pytest.mark.asyncio
-async def test_reviewer_receives_frozen_approved_item_stems(monkeypatch) -> None:
-    from print.generation.whole_lesson.packet import ApprovedItemRef
-
-    packet = _packet().model_copy(
-        update={
-            "approved_items": [
-                ApprovedItemRef(id="mcq-1", card_id="card", stem="Solve for x: 7x = 56", options=[])
-            ]
-        }
-    )
-    legality = _make_snapshot()
-    draft = _draft()
-    reviewer_calls = []
-
-    async def _planner_call(**_kwargs):
-        return draft, draft.model_dump_json()
-
-    async def _review(**kwargs):
-        reviewer_calls.append(kwargs)
-        plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
-        return TeachingPlanSemanticReviewResult(
-            content_hash=teaching_plan_content_hash(plan), findings=[]
-        )
-
-    with (
-        patch.object(teaching_agent, "_call_teaching_model", new=_planner_call),
-        patch.object(teaching_agent, "review_teaching_plan_draft", new=_review),
-    ):
-        await run_lesson_approach_planner(packet, legality=legality, require_items=False)
-
-    assert len(reviewer_calls) == 1
-    approved_items = reviewer_calls[0]["lesson_context"]["approved_items"]
-    assert approved_items == [{"id": "mcq-1", "stem": "Solve for x: 7x = 56"}]
 
 
 def test_frozen_assessment_reuse_flags_verbatim_stem_leak() -> None:

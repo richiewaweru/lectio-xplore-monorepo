@@ -19,7 +19,6 @@ from curriculum.approved_items import (
 from curriculum.backbone.persistence import load_backbone
 from curriculum.teaching_plan.revisions import teaching_plan_review_identity
 from curriculum.teaching_plan.service import (
-    bind_shared_teaching_runner,
     bind_staged_teaching_runner,
     plan_shared_teaching,
 )
@@ -45,11 +44,9 @@ from application.unit_lesson.staged_teaching_planner import (
     spine_result_from_json,
     spine_result_to_json,
 )
-from application.unit_lesson.teaching_planner import run_lesson_approach_planner
 from curriculum.planning.persistence import load_chunked_state
 
 # Composition root: bind the application-owned planner without curriculum importing it.
-bind_shared_teaching_runner(run_lesson_approach_planner)
 bind_staged_teaching_runner(run_staged_teaching_planner)
 
 

@@ -284,28 +284,20 @@ async def test_advisory_gate_flags_every_lesson_finding(monkeypatch) -> None:
     assert any(f["code"] == "progression_gap" for f in result.flags)
 
 
-# ------------------------------------------------------------------ mode switch
+# ------------------------------------------------------------------ entrypoint
 
 
-async def test_plan_shared_teaching_picks_runner_by_mode(monkeypatch) -> None:
+async def test_plan_shared_teaching_always_uses_the_staged_runner(monkeypatch) -> None:
     seen: list[str] = []
-
-    async def single(packet, **kw):
-        seen.append("single")
-        return "S"
 
     async def staged(packet, **kw):
         seen.append("staged")
         return "T"
 
-    monkeypatch.setattr(service, "_shared_teaching_runner", single)
     monkeypatch.setattr(service, "_staged_teaching_runner", staged)
-
-    assert settings.teaching_planner_mode == "single"
-    assert await service.plan_shared_teaching(object()) == "S"
-    monkeypatch.setattr(settings, "teaching_planner_mode", "staged")
     assert await service.plan_shared_teaching(object()) == "T"
-    assert seen == ["single", "staged"]
+    assert seen == ["staged"]
+    assert not hasattr(service, "bind_shared_teaching_runner")
 
     monkeypatch.setattr(service, "_staged_teaching_runner", None)
     with pytest.raises(RuntimeError, match="no staged teaching planner is bound"):

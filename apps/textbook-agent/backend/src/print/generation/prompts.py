@@ -5,8 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from curriculum.prompts import (
-    lesson_approach_planner_prompt,
-    lesson_approach_planner_v1_prompt,
     page_writer_common_prompt,
 )
 from curriculum.prompts import (
@@ -46,8 +44,6 @@ def prompt_text(name: str) -> str:
     return _curriculum_prompt_text(name)
 
 __all__ = [
-    "lesson_approach_planner_prompt",
-    "lesson_approach_planner_v1_prompt",
     "page_writer_common_prompt",
     "prompt_text",
 ]

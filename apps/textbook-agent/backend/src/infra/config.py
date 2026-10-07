@@ -186,20 +186,14 @@ class Settings(BaseSettings):
         default="advisory",
         validation_alias=AliasChoices("TEACHING_PLAN_QUALITY_GATE"),
     )
-    # "single": one planner call (default). "staged": spine + parallel section
-    # calls + whole-lesson review; same TeachingPlan output.
-    teaching_planner_mode: Literal["single", "staged"] = Field(
-        default="single",
-        validation_alias=AliasChoices("TEACHING_PLANNER_MODE"),
-    )
-    # Staged planner only. False (default): sections are not semantically reviewed
+    # False (default): sections are not semantically reviewed
     # one by one; the whole-lesson review reports every code and routes blocking
     # findings to the named sections. True: also review each section on its own.
     staged_section_review: bool = Field(
         default=False,
         validation_alias=AliasChoices("STAGED_SECTION_REVIEW"),
     )
-    # Staged planner only. False (default) skips the whole-lesson semantic review and
+    # False (default) skips the whole-lesson semantic review and
     # its fix round (code validators and the final gate still run): on local lessons
     # the review took 240 s+ or timed out in roughly half the runs. True turns it on.
     staged_lesson_review: bool = Field(

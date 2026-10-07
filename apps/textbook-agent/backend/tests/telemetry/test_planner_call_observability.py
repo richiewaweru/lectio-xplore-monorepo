@@ -16,8 +16,6 @@ from tests.planning.test_teaching_plan_semantic_review import (
     _packet,
 )
 
-from application.unit_lesson import teaching_planner as teaching_agent
-from application.unit_lesson.teaching_planner import run_lesson_approach_planner
 from curriculum import agents
 from curriculum.teaching_plan import semantic_review
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
@@ -92,34 +90,6 @@ async def test_review_teaching_plan_draft_forwards_generation_id(monkeypatch) ->
         generation_id=GENERATION_ID,
     )
     assert seen[0]["generation_id"] == GENERATION_ID
-
-
-@pytest.mark.asyncio
-async def test_lesson_planner_passes_generation_id_to_reviewer(monkeypatch) -> None:
-    draft = _draft()
-    plan = materialize_teaching_plan(draft, slot_ids=["orient", "explain"])
-    clean = TeachingPlanSemanticReviewResult(
-        content_hash=teaching_plan_content_hash(plan), findings=[]
-    )
-    reviewer_calls: list[dict[str, Any]] = []
-
-    async def _planner_call(**_kwargs):
-        return draft, draft.model_dump_json()
-
-    async def _review(**kwargs):
-        reviewer_calls.append(kwargs)
-        return clean
-
-    monkeypatch.setattr(teaching_agent, "_call_teaching_model", _planner_call)
-    monkeypatch.setattr(teaching_agent, "review_teaching_plan_draft", _review)
-
-    await run_lesson_approach_planner(
-        _packet(),
-        legality=_make_snapshot(),
-        require_items=False,
-        generation_id=GENERATION_ID,
-    )
-    assert reviewer_calls[0]["generation_id"] == GENERATION_ID
 
 
 class _Repo:

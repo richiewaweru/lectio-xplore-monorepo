@@ -1599,7 +1599,7 @@ async def run_staged_teaching_planner(
 ) -> TeachingPlanResult:
     """Spine -> parallel sections -> assembly -> whole-lesson review -> final gate.
 
-    Same signature and result type as ``run_lesson_approach_planner``. Sections that
+    Sections that
     exhaust their retries ship flagged (flag, don't fail); blocking whole-lesson
     findings get one bounded fix round on the named sections only.
     """

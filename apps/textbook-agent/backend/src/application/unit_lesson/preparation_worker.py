@@ -58,7 +58,6 @@ from application.unit_lesson.preparation_runs import (
     load_current_source,
     run_source,
 )
-from infra.config import settings
 from curriculum.planning.persistence import load_chunked_state, persist_chunked_state
 from infra.database.models import GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
@@ -463,35 +462,18 @@ class PreparationWorker:
         # exact identity and definition they were admitted under.
         version = DEFINITION_VERSION if backbone is not None else LEGACY_DEFINITION_VERSION
         spine = next((i for i in active if i.item_key == TEACHING_SPINE_KEY), None)
-        # The mode is decided once: a Run with a spine stays staged whatever the
-        # setting says now (a single-mode teaching_plan already returned above).
-        if spine is not None or settings.teaching_planner_mode == "staged":
-            return await self._admit_staged_teaching(
-                session,
-                run=run,
-                active=active,
-                spine=spine,
-                identity=identity,
-                version=version,
-            )
-        try:
-            admission = await add_work_item(
-                session,
-                WorkItemAdmission(
-                    run_id=run.id,
-                    item_key=TEACHING_ITEM_KEY,
-                    stage=TEACHING_ITEM_STAGE,
-                    input_hash=content_hash(identity),
-                    definition_hash=content_hash(
-                        {"definition": "preparation-teaching-plan", "version": version}
-                    ),
-                ),
-            )
-            await session.commit()
-        except (WorkItemConflict, InvalidRunTransition):
-            await session.rollback()
-            return False
-        return bool(admission.created)
+        # Staged is the only planner. A Run created before the single planner was
+        # removed may already hold a bare ``teaching_plan`` item (no spine): the
+        # early return above leaves it alone and ``_run_teaching`` plans it in one
+        # in-process staged pass instead.
+        return await self._admit_staged_teaching(
+            session,
+            run=run,
+            active=active,
+            spine=spine,
+            identity=identity,
+            version=version,
+        )
 
     async def _admit_staged_teaching(
         self,
@@ -1018,6 +1000,10 @@ class PreparationWorker:
         owner_id = str(run.owner_user_id)
         generation_id = str(run.source_artifact_id)
         source = run_source(run)
+        # No spine on this Run: it was created while the single-call planner existed
+        # and holds a bare ``teaching_plan`` item. The default runner plans it in one
+        # in-process staged pass (spine, parallel sections, finish), so the Run
+        # completes; a failure is recorded like any other and ``regenerate`` restarts.
         runner = self._teaching_runner or _default_teaching_runner()
         spine_json, section_jsons = await self._staged_outputs(session, run_id)
         if spine_json is not None:

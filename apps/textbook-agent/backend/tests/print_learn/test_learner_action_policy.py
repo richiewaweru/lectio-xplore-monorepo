@@ -5,7 +5,8 @@ from pydantic import ValidationError
 from tests.planning.test_prompt_no_object_leak import _packet as _prompt_packet
 
 from print.generation.catalogue_projections import project_teaching_guidance
-from print.generation.whole_lesson.prompt_render import render_teaching_prompt
+from application.unit_lesson.staged_teaching_planner import render_staged_prompt
+
 from application.unit_lesson.teaching_planner import (
     _missing_check_practice_action_errors,
     _task_source_contract_errors,
@@ -17,6 +18,11 @@ from print.generation.whole_lesson.teaching_plan import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
+
+
+def render_teaching_prompt(packet, guidance, **_kwargs):
+    """The teaching prompt a section call runs under (the only teaching prompt)."""
+    return render_staged_prompt(packet, guidance, kind="section")
 
 
 def _block(**kwargs: object) -> TeachingPlanBlock:

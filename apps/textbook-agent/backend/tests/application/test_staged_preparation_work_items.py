@@ -86,7 +86,6 @@ class StagedCalls:
 
 @pytest.fixture
 def staged_mode(monkeypatch):
-    monkeypatch.setattr(settings, "teaching_planner_mode", "staged")
     monkeypatch.setattr(settings, "teaching_plan_quality_gate", "blocking")
 
 
@@ -175,61 +174,68 @@ async def _events(factory, generation_id: str) -> list[dict[str, Any]]:
     return list(state.get("events") or [])
 
 
-async def test_staged_plan_definition_and_inputs_differ_from_single(
+async def test_fresh_run_is_always_staged_without_any_setting(
     db_session: AsyncSession, db_session_factory, monkeypatch
 ) -> None:
-    """The mode is baked into the teaching_plan hashes."""
-    monkeypatch.setattr(settings, "teaching_planner_mode", "single")
-    single_def = content_hash({"definition": "preparation-teaching-plan", "version": "preparation-v2"})
-    user_id = "p8-single"
-    _lesson, prep_id = await _seed(db_session, user_id=user_id)
-    await _admit(db_session, prep_id, user_id)
-    calls = _Calls()
-    worker = _worker(db_session_factory, calls)
-    await _drain(worker, db_session_factory)
-    keys = await _keys(db_session_factory)
-    assert set(keys) == {"backbone", f"items:{user_id}-c1", "teaching_plan"}
-    assert keys["teaching_plan"].definition_hash == single_def
-    progress = (await _workspace(db_session_factory, prep_id)).progress
-    assert (progress.teaching_spine, progress.teaching_sections_total) == ("not_started", 0)
-    async with db_session_factory() as session:
-        assert (await load_teaching_draft(session, generation_id=prep_id))["status"] == "none"
-
-    monkeypatch.setattr(settings, "teaching_planner_mode", "staged")
+    """Staged is the only planner: no mode setting, the spine is admitted first."""
+    assert not hasattr(settings, "teaching_planner_mode")
     monkeypatch.setattr(settings, "teaching_plan_quality_gate", "blocking")
     Harness(monkeypatch)
-    user2 = "p8-staged-hash"
-    _lesson2, prep2 = await _seed(db_session, user_id=user2)
-    await _admit(db_session, prep2, user2)
-    staged = StagedCalls()
-    worker2 = _worker(db_session_factory, _Calls(), worker_id="w2", staged_runners=staged.runners())
-    await _drain(worker2, db_session_factory)
-    async with db_session_factory() as session:
-        item = await session.scalar(
-            select(GenerationWorkItemModel).where(
-                GenerationWorkItemModel.item_key == "teaching_plan",
-                GenerationWorkItemModel.definition_hash != single_def,
-            )
-        )
-    assert item is not None and item.status == "ready"
-
-
-async def test_run_stays_staged_when_setting_flips_after_the_spine(
-    db_session: AsyncSession, db_session_factory, staged_mode, monkeypatch
-) -> None:
-    Harness(monkeypatch)
-    user_id = "p8-sticky"
+    user_id = "p8-only-staged"
     _lesson, prep_id = await _seed(db_session, user_id=user_id)
     await _admit(db_session, prep_id, user_id)
     staged = StagedCalls()
     worker = _worker(db_session_factory, _Calls(), staged_runners=staged.runners())
-    for _ in range(3):  # backbone, card, spine
-        await _tick(worker, db_session_factory)
-    assert staged.events == ["spine"]
-    monkeypatch.setattr(settings, "teaching_planner_mode", "single")
     await _drain(worker, db_session_factory)
-    assert staged.events[-1] == "finish"
+    keys = await _keys(db_session_factory)
+    assert "teaching_spine" in keys and keys["teaching_plan"].status == "ready"
+    assert staged.events[0] == "spine" and staged.events[-1] == "finish"
+
+
+async def test_in_flight_single_mode_run_with_bare_teaching_plan_item_still_completes(
+    db_session: AsyncSession, db_session_factory, monkeypatch
+) -> None:
+    """A Run created while the single planner existed holds a bare teaching_plan item.
+
+    The worker must not admit a spine next to it, and must run it through the
+    in-process teaching runner (which plans staged), so the Run finishes.
+    """
+    from application.unit_lesson.preparation_runs import TEACHING_ITEM_STAGE
+    from infra.generation_runtime import WorkItemAdmission, add_work_item
+
+    user_id = "p8-legacy-single"
+    _lesson, prep_id = await _seed(db_session, user_id=user_id)
+    await _admit(db_session, prep_id, user_id)
+    calls = _Calls()
+    staged = StagedCalls()
+    worker = _worker(db_session_factory, calls, staged_runners=staged.runners())
+    assert await _tick(worker, db_session_factory)  # backbone; admits the card
+    run = await _run(db_session_factory, prep_id)
+    async with db_session_factory() as session:
+        await add_work_item(
+            session,
+            WorkItemAdmission(
+                run_id=run.id,
+                item_key="teaching_plan",
+                stage=TEACHING_ITEM_STAGE,
+                input_hash=content_hash({"legacy": "single"}),
+                definition_hash=content_hash(
+                    {"definition": "preparation-teaching-plan", "version": "preparation-v2"}
+                ),
+            ),
+        )
+        await session.commit()
+    await _drain(worker, db_session_factory)
+    keys = await _keys(db_session_factory)
+    assert set(keys) == {"backbone", f"items:{user_id}-c1", "teaching_plan"}
+    assert keys["teaching_plan"].status == "ready"
+    assert calls.events.count("teaching_plan") == 1  # the in-process runner ran it
+    assert staged.events == []  # no stage items were admitted next to it
     assert (await _run(db_session_factory, prep_id)).status == "ready"
+    progress = (await _workspace(db_session_factory, prep_id)).progress
+    assert (progress.teaching_spine, progress.teaching_sections_total) == ("not_started", 0)
+    async with db_session_factory() as session:
+        assert (await load_teaching_draft(session, generation_id=prep_id))["status"] == "none"
 
 
 async def test_stage_json_round_trip_and_finish_matches_in_process(monkeypatch) -> None:
@@ -262,7 +268,7 @@ async def test_stage_json_round_trip_and_finish_matches_in_process(monkeypatch) 
     )
 
 
-def test_progress_dto_defaults_keep_single_mode_shape() -> None:
+def test_progress_dto_defaults_are_not_started() -> None:
     dto = PreparationProgressDTO()
     assert dto.teaching_spine == "not_started"
     assert (dto.teaching_sections_total, dto.teaching_sections_ready) == (0, 0)
@@ -322,7 +328,7 @@ async def test_default_staged_runners_persist_events_and_the_draft_revision(
     user_id = "p8-real"
     _lesson, prep_id = await _seed(db_session, user_id=user_id)
     await _admit(db_session, prep_id, user_id)
-    worker = _worker(db_session_factory, _Calls())  # default staged runners
+    worker = _worker(db_session_factory, _Calls(), staged_runners=None)  # real stage runners
     await _drain(worker, db_session_factory, max_ticks=24)
 
     run = await _run(db_session_factory, prep_id)

@@ -1,11 +1,14 @@
-"""Compare the single-call and staged teaching planners on local lessons.
+"""Compare staged teaching planner settings on local lessons.
 
 For each ``--generation-id`` this script builds the lesson packet and legality
 snapshot from the local database (the same way ``run_and_persist_teaching_plan``
-does), then runs ``run_lesson_approach_planner`` (single) and
-``run_staged_teaching_planner`` (staged) directly and writes both plans plus a
+does), then runs ``run_staged_teaching_planner`` directly and writes the plans plus a
 comparison report: wall-clock per mode and per LLM call, attempts, flags,
 validation issues, block ids carrying ``visual``, and a section-by-section diff.
+
+Two modes: ``staged`` (the current settings, so lesson review is off unless
+``STAGED_LESSON_REVIEW`` is set) and ``staged-lessonreview`` (forces
+``staged_lesson_review=True`` for that run only).
 
 It writes NOTHING to the database: no repo writes, no commit (the session is
 rolled back), and the planners run with ``generation_id=None`` so no
@@ -17,13 +20,13 @@ Run locally::
     cd apps/textbook-agent/backend
     uv run python scripts/compare_teaching_planners.py --generation-id <id>
     uv run python scripts/compare_teaching_planners.py \
-        --generation-id <id1> --generation-id <id2> --modes single,staged --repeat 2
-    # staged-nolessonreview = staged with staged_lesson_review=False for that run only:
+        --generation-id <id1> --generation-id <id2> --repeat 2
+    # staged-lessonreview = staged with staged_lesson_review=True for that run only:
     uv run python scripts/compare_teaching_planners.py \
-        --generation-id <id> --modes staged,staged-nolessonreview
+        --generation-id <id> --modes staged,staged-lessonreview
 
-Output lands in ``backend/outputs/planner-compare/<id>/`` (``single.json``,
-``staged.json``, ``report.md``) plus ``summary.md`` one level up. That folder is
+Output lands in ``backend/outputs/planner-compare/<id>/`` (``staged.json``,
+``staged-lessonreview.json``, ``report.md``) plus ``summary.md`` one level up. That folder is
 gitignored. The outputs contain real lesson content and generation ids: never
 commit them (the repo is public).
 """
@@ -45,18 +48,16 @@ if str(BACKEND_DIR / "src") not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR / "src"))
 
 DEFAULT_OUT = BACKEND_DIR / "outputs" / "planner-compare"
-NOLESSONREVIEW = "staged-nolessonreview"
-MODES = ("single", "staged", NOLESSONREVIEW)
-DEFAULT_MODES = ("single", "staged")
+LESSONREVIEW = "staged-lessonreview"
+MODES = ("staged", LESSONREVIEW)
+DEFAULT_MODES = ("staged",)
 MODE_LABELS = {
-    "single": "single",
     "staged": "staged",
-    NOLESSONREVIEW: "staged (no lesson review)",
+    LESSONREVIEW: "staged (lesson review forced on)",
 }
 
 # Modules that bind ``run_llm`` by name; patched while a planner runs.
 _RUN_LLM_MODULES = (
-    "application.unit_lesson.teaching_planner",
     "application.unit_lesson.staged_teaching_planner",
     "curriculum.agents",
 )
@@ -195,12 +196,9 @@ def _summarize_attempts(attempts: list[Any]) -> list[dict[str, Any]]:
 
 async def run_mode(mode: str, packet: Any, legality: Any, generation_id: str) -> dict[str, Any]:
     """Run one planner and return a JSON-able result dict (errors are captured)."""
-    if mode == "single":
-        from application.unit_lesson.teaching_planner import run_lesson_approach_planner as run
-    elif mode in ("staged", NOLESSONREVIEW):
-        from application.unit_lesson.staged_teaching_planner import run_staged_teaching_planner as run
-    else:
+    if mode not in MODES:
         raise ValueError(f"unknown mode {mode!r}")
+    from application.unit_lesson.staged_teaching_planner import run_staged_teaching_planner as run
 
     out: dict[str, Any] = {
         "mode": mode,
@@ -218,12 +216,12 @@ async def run_mode(mode: str, packet: Any, legality: Any, generation_id: str) ->
     }
     recorder = LlmRecorder()
     started = time.perf_counter()
-    # staged-nolessonreview flips the setting for this run only and restores it.
+    # staged-lessonreview flips the setting for this run only and restores it.
     from core.config import settings
 
     saved_lesson_review = settings.staged_lesson_review
-    if mode == NOLESSONREVIEW:
-        settings.staged_lesson_review = False
+    if mode == LESSONREVIEW:
+        settings.staged_lesson_review = True
     with recorder:
         try:
             result = await run(
@@ -325,25 +323,27 @@ def _trimmed_section_json(section: dict[str, Any] | None, limit: int = 160) -> l
     return json.dumps(trim(section), indent=2, sort_keys=True).splitlines()
 
 
-def section_diff(single: dict[str, Any] | None, staged: dict[str, Any] | None) -> list[dict[str, Any]]:
+def section_diff(
+    staged: dict[str, Any] | None, lessonreview: dict[str, Any] | None
+) -> list[dict[str, Any]]:
     """Per-slot side-by-side summary plus a trimmed unified diff of section JSON."""
-    by_slot_single = {s.get("slot_id"): s for s in _sections(single)}
     by_slot_staged = {s.get("slot_id"): s for s in _sections(staged)}
+    by_slot_review = {s.get("slot_id"): s for s in _sections(lessonreview)}
     order: list[str] = []
-    for source in (_sections(single), _sections(staged)):
+    for source in (_sections(staged), _sections(lessonreview)):
         for section in source:
             slot = section.get("slot_id")
             if slot not in order:
                 order.append(slot)
     rows = []
     for slot in order:
-        a, b = by_slot_single.get(slot), by_slot_staged.get(slot)
+        a, b = by_slot_staged.get(slot), by_slot_review.get(slot)
         diff = list(
             difflib.unified_diff(
                 _trimmed_section_json(a),
                 _trimmed_section_json(b),
-                fromfile=f"single/{slot}",
-                tofile=f"staged/{slot}",
+                fromfile=f"staged/{slot}",
+                tofile=f"staged-lessonreview/{slot}",
                 lineterm="",
                 n=1,
             )
@@ -351,8 +351,8 @@ def section_diff(single: dict[str, Any] | None, staged: dict[str, Any] | None) -
         rows.append(
             {
                 "slot_id": slot,
-                "single": _section_summary(a),
-                "staged": _section_summary(b),
+                "staged": _section_summary(a),
+                "lessonreview": _section_summary(b),
                 "diff": diff,
             }
         )
@@ -443,24 +443,21 @@ def _mode_section(result: dict[str, Any] | None, label: str) -> list[str]:
 
 
 def build_report(
-    single: dict[str, Any] | None,
     staged: dict[str, Any] | None,
-    nolessonreview: dict[str, Any] | None = None,
+    lessonreview: dict[str, Any] | None = None,
 ) -> str:
-    """Markdown comparison report for one generation (pure; no I/O).
+    """Markdown report for one generation (pure; no I/O).
 
-    ``nolessonreview`` is the optional ``staged-nolessonreview`` run (staged with the
-    whole-lesson review skipped); it gets its own wall-clock row and section.
+    ``lessonreview`` is the optional ``staged-lessonreview`` run (staged with the
+    whole-lesson review forced on); it gets its own wall-clock row and section, and
+    a section diff against the plain staged run.
     """
-    gen = (single or staged or nolessonreview or {}).get("generation_id", "?")
+    gen = (staged or lessonreview or {}).get("generation_id", "?")
     lines = [f"# Planner comparison: {gen}", ""]
     lines += ["## Wall-clock", "", "| mode | status | wall_s | llm calls |", "|---|---|---|---|"]
-    for label, r in (
-        (MODE_LABELS["single"], single),
-        (MODE_LABELS["staged"], staged),
-        (MODE_LABELS[NOLESSONREVIEW], nolessonreview),
-    ):
-        if r is None and label == MODE_LABELS[NOLESSONREVIEW]:
+    for key, r in (("staged", staged), (LESSONREVIEW, lessonreview)):
+        label = MODE_LABELS[key]
+        if r is None and key == LESSONREVIEW:
             continue
         if r is None:
             lines.append(f"| {label} | not run | - | - |")
@@ -470,18 +467,21 @@ def build_report(
                 f"| {len(r.get('llm_calls') or [])} |"
             )
     lines.append("")
-    lines += _mode_section(single, "Single")
     lines += _mode_section(staged, "Staged")
-    if nolessonreview is not None:
-        lines += _mode_section(nolessonreview, MODE_LABELS[NOLESSONREVIEW].capitalize())
+    if lessonreview is not None:
+        lines += _mode_section(lessonreview, MODE_LABELS[LESSONREVIEW].capitalize())
 
-    rows = section_diff(single, staged or nolessonreview)
     lines += ["## Section-by-section diff", ""]
-    if not rows:
-        lines += ["No plan to compare (neither mode produced a plan).", ""]
+    if staged is None or lessonreview is None:
+        lines += ["Only one mode ran; nothing to diff.", ""]
+        rows: list[dict[str, Any]] = []
+    else:
+        rows = section_diff(staged, lessonreview)
+        if not rows:
+            lines += ["No plan to compare (neither mode produced a plan).", ""]
     for row in rows:
         lines += [f"### Slot `{row['slot_id']}`", ""]
-        lines += ["| field | single | staged |", "|---|---|---|"]
+        lines += ["| field | staged | staged-lessonreview |", "|---|---|---|"]
         for field, key in (
             ("display_title", "display_title"),
             ("blocks", "block_count"),
@@ -495,7 +495,7 @@ def build_report(
                     value = ", ".join(str(v) for v in value) or "-"
                 return _escape(_fmt(value))
 
-            lines.append(f"| {field} | {cell(row['single'])} | {cell(row['staged'])} |")
+            lines.append(f"| {field} | {cell(row['staged'])} | {cell(row['lessonreview'])} |")
         lines.append("")
         if row["diff"]:
             lines += ["```diff", *row["diff"], "```", ""]
@@ -503,7 +503,7 @@ def build_report(
 
 
 def build_summary(entries: list[dict[str, Any]]) -> str:
-    """Cross-generation summary table from ``{generation_id, single, staged}`` entries."""
+    """Cross-generation summary table from ``{generation_id, <mode>: [runs]}`` entries."""
     lines = [
         "# Planner comparison summary",
         "",
@@ -552,7 +552,7 @@ async def compare_generation(
             _write_json(gen_dir / f"{mode}{suffix}.json", result)
     first = {m: (runs[m][0] if runs[m] else None) for m in MODES}
     (gen_dir / "report.md").write_text(
-        build_report(first["single"], first["staged"], first[NOLESSONREVIEW]),
+        build_report(first["staged"], first[LESSONREVIEW]),
         encoding="utf-8",
     )
     return {"generation_id": generation_id, **runs}
@@ -581,9 +581,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--generation-id", action="append", required=True, dest="generation_ids")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    parser.add_argument("--modes", default="single,staged",
-        help="comma list of: single, staged, staged-nolessonreview "
-        "(staged with the whole-lesson review skipped, for cost-vs-value runs)",
+    parser.add_argument("--modes", default="staged",
+        help="comma list of: staged (current settings), staged-lessonreview "
+        "(staged with the whole-lesson review forced on, for cost-vs-value runs)",
     )
     parser.add_argument("--repeat", type=int, default=1)
     args = parser.parse_args(argv)

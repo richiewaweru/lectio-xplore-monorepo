@@ -9,20 +9,9 @@ from pathlib import Path
 import pytest
 
 from application.unit_lesson import staged_teaching_planner as stp
-from application.unit_lesson import teaching_planner as tp
 from curriculum.teaching_plan import semantic_review
-from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
-from curriculum.teaching_plan.models import TeachingPlanDraftBlock, materialize_teaching_plan
-from curriculum.teaching_plan.semantic_review import (
-    TeachingPlanSemanticReviewDraft,
-    TeachingPlanSemanticReviewResult,
-)
-from curriculum.teaching_plan.staged import (
-    assemble_teaching_plan_draft,
-    materialize_teaching_spine,
-)
+from curriculum.teaching_plan.semantic_review import TeachingPlanSemanticReviewDraft
 from infra.config import settings
-from tests.planning.legality_fixtures import make_snapshot
 from tests.planning.test_staged_assembly import SLOTS, _snapshot
 from tests.planning.test_staged_sections import _good
 from tests.planning.test_staged_spine import _draft_dict, _packet
@@ -45,14 +34,6 @@ def _blocking_gate(monkeypatch):
     monkeypatch.setattr(settings, "teaching_plan_quality_gate", "blocking")
 
 
-def _single_draft():
-    spine = materialize_teaching_spine(
-        _draft_dict(), slot_ids=SLOTS, item_backbone_refs=_packet().item_backbone_refs
-    )
-    blocks = {s: [TeachingPlanDraftBlock.model_validate(b.model_dump()) for b in _good(s).blocks] for s in SLOTS}
-    return assemble_teaching_plan_draft(spine, blocks)
-
-
 def _install_fakes(monkeypatch):
     async def spine(*, system_prompt, user_payload, trace_id, generation_id, attempt_start=1):
         draft = _draft_dict()
@@ -71,18 +52,11 @@ def _install_fakes(monkeypatch):
 
     seen: dict = {}
 
-    async def single_call(**kwargs):
+    async def spine_seen(**kwargs):
         seen.update(kwargs)
-        draft = _single_draft()
-        return draft, draft.model_dump_json()
+        return await spine(**kwargs)
 
-    async def single_review(*, draft, plan, **kwargs):
-        return TeachingPlanSemanticReviewResult(
-            content_hash=teaching_plan_content_hash(plan), findings=[]
-        )
-
-    monkeypatch.setattr(tp, "_call_teaching_model", single_call)
-    monkeypatch.setattr(tp, "review_teaching_plan_draft", single_review)
+    monkeypatch.setattr(stp, "_call_spine_model", spine_seen)
     return seen
 
 
@@ -96,30 +70,28 @@ async def test_run_compare_writes_files_and_report(monkeypatch, tmp_path) -> Non
     entries = await CMP.run_compare(["gen-fake-1"], tmp_path, loader=_fake_loader)
 
     gen_dir = tmp_path / "gen-fake-1"
-    for name in ("single.json", "staged.json", "report.md"):
+    for name in ("staged.json", "report.md"):
         assert (gen_dir / name).is_file()
+    assert not (gen_dir / "single.json").exists()
     assert (tmp_path / "summary.md").is_file()
     assert seen["generation_id"] is None
-    assert seen["trace_id"].startswith("planner-compare:gen-fake-1:single")
+    assert seen["trace_id"].startswith("planner-compare:gen-fake-1:staged")
 
     staged = json.loads((gen_dir / "staged.json").read_text())
     assert staged["ok"] is True
     assert set(staged) >= {"plan", "validation", "qc", "flags", "stage_timings", "attempts", "llm_calls"}
     assert [s["slot_id"] for s in staged["plan"]["sections"]] == SLOTS
     assert entries[0]["staged"][0]["ok"]
-    assert json.loads((gen_dir / "single.json").read_text())["ok"] is True
 
     report = (gen_dir / "report.md").read_text()
     for heading in (
         "## Wall-clock",
-        "## Single",
         "## Staged",
         "### LLM calls",
         "### Flags by code",
         "### Validation issues",
         "### Blocks with `visual`",
         "## Section-by-section diff",
-        "### Slot `check`",
     ):
         assert heading in report
     assert "gen-fake-1" in (tmp_path / "summary.md").read_text()
@@ -136,16 +108,15 @@ async def test_failure_is_recorded_not_raised(monkeypatch, tmp_path) -> None:
     await CMP.run_compare(["g2"], tmp_path, modes=("staged",), loader=_fake_loader)
     staged = json.loads((tmp_path / "g2" / "staged.json").read_text())
     assert staged["ok"] is False and staged["error"]["type"]
-    assert not (tmp_path / "g2" / "single.json").exists()
     assert "FAILED" in (tmp_path / "g2" / "report.md").read_text()
 
 
 @pytest.mark.asyncio
 async def test_repeat_writes_extra_runs(monkeypatch, tmp_path) -> None:
     _install_fakes(monkeypatch)
-    await CMP.run_compare(["g3"], tmp_path, modes=("single",), repeat=2, loader=_fake_loader)
-    assert (tmp_path / "g3" / "single.json").is_file()
-    assert (tmp_path / "g3" / "single-r2.json").is_file()
+    await CMP.run_compare(["g3"], tmp_path, modes=("staged",), repeat=2, loader=_fake_loader)
+    assert (tmp_path / "g3" / "staged.json").is_file()
+    assert (tmp_path / "g3" / "staged-r2.json").is_file()
 
 
 class _ReadOnlySession:
@@ -213,13 +184,13 @@ async def test_recorder_wraps_and_restores_run_llm(monkeypatch) -> None:
             raise ValueError("nope")
         return Result()
 
-    monkeypatch.setattr(tp, "run_llm", fake_run_llm)
+    monkeypatch.setattr(stp, "run_llm", fake_run_llm)
     with CMP.LlmRecorder() as rec:
-        assert tp.run_llm is not fake_run_llm
-        await tp.run_llm(caller="good", node="n", trace_id="t", attempt_start=2)
+        assert stp.run_llm is not fake_run_llm
+        await stp.run_llm(caller="good", node="n", trace_id="t", attempt_start=2)
         with pytest.raises(ValueError):
-            await tp.run_llm(caller="bad", trace_id="t")
-    assert tp.run_llm is fake_run_llm
+            await stp.run_llm(caller="bad", trace_id="t")
+    assert stp.run_llm is fake_run_llm
     assert rec.records[0]["total_tokens"] == 15 and rec.records[0]["attempt"] == 2
     assert rec.records[1]["error"].startswith("ValueError")
 
@@ -236,7 +207,7 @@ def _blk(bid, intent, qids=(), visual=None):
 
 
 def test_section_diff_and_report_pure() -> None:
-    single = _plan(
+    base = _plan(
         [
             {"slot_id": "orient", "display_title": "Start", "blocks": [_blk("orient-b1", "orient")]},
             {
@@ -246,7 +217,7 @@ def test_section_diff_and_report_pure() -> None:
             },
         ]
     )
-    staged = _plan(
+    reviewed = _plan(
         [
             {"slot_id": "orient", "display_title": "Start", "blocks": [_blk("orient-b1", "orient")]},
             {
@@ -259,21 +230,23 @@ def test_section_diff_and_report_pure() -> None:
             },
         ]
     )
-    rows = CMP.section_diff(single, staged)
+    rows = CMP.section_diff(base, reviewed)
     assert [r["slot_id"] for r in rows] == ["orient", "check"]
     assert rows[0]["diff"] == []
     check = rows[1]
-    assert check["single"]["block_count"] == 1 and check["staged"]["block_count"] == 2
-    assert check["staged"]["source_question_ids"] == ["q1", "q2"]
-    assert check["staged"]["visual_block_ids"] == ["check-b1"]
-    assert check["single"]["visual_block_ids"] == []
+    assert check["staged"]["block_count"] == 1 and check["lessonreview"]["block_count"] == 2
+    assert check["lessonreview"]["source_question_ids"] == ["q1", "q2"]
+    assert check["lessonreview"]["visual_block_ids"] == ["check-b1"]
+    assert check["staged"]["visual_block_ids"] == []
     assert any(line.startswith("+") and "check-b2" in line for line in check["diff"])
-    assert CMP.visual_blocks(staged) == [
+    assert CMP.visual_blocks(reviewed) == [
         {"slot_id": "check", "block_id": "check-b1", "figure_ref": "fig-a"}
     ]
 
-    report = CMP.build_report(single, None)
-    assert "Not run." in report and "## Section-by-section diff" in report
+    report = CMP.build_report(base, None)
+    assert "nothing to diff" in report and "## Section-by-section diff" in report
+    both = CMP.build_report(base, reviewed)
+    assert "### Slot `check`" in both and "staged-lessonreview" in both
     assert CMP.section_diff(None, None) == []
 
 
@@ -283,7 +256,7 @@ def test_default_out_is_gitignored_location() -> None:
 
 
 @pytest.mark.asyncio
-async def test_nolessonreview_mode_skips_review_and_restores_setting(monkeypatch, tmp_path) -> None:
+async def test_lessonreview_mode_forces_review_and_restores_setting(monkeypatch, tmp_path) -> None:
     calls: list[str] = []
 
     async def review(**kwargs):
@@ -292,47 +265,49 @@ async def test_nolessonreview_mode_skips_review_and_restores_setting(monkeypatch
 
     _install_fakes(monkeypatch)
     monkeypatch.setattr(semantic_review, "_run_structured", review)
-    monkeypatch.setattr(settings, "staged_lesson_review", True)
+    monkeypatch.setattr(settings, "staged_lesson_review", False)
     monkeypatch.setattr(settings, "staged_section_review", False)
 
     entries = await CMP.run_compare(
-        ["gen-nlr"], tmp_path, modes=("staged", "staged-nolessonreview"), loader=_fake_loader
+        ["gen-lr"], tmp_path, modes=("staged", "staged-lessonreview"), loader=_fake_loader
     )
-    # Setting restored; the plain staged run reviewed once, the no-review run never.
-    assert settings.staged_lesson_review is True
+    # Setting restored; the plain staged run (review off) never reviewed, the forced run once.
+    assert settings.staged_lesson_review is False
     assert calls == ["teaching_lesson_reviewer"]
-    gen_dir = tmp_path / "gen-nlr"
-    assert (gen_dir / "staged-nolessonreview.json").is_file()
-    nolr = json.loads((gen_dir / "staged-nolessonreview.json").read_text())
-    assert nolr["ok"] is True and nolr["mode"] == "staged-nolessonreview"
-    assert nolr["stage_timings"]["lesson_review"]["state"] == "skipped"
-    assert entries[0]["staged-nolessonreview"][0]["ok"]
+    gen_dir = tmp_path / "gen-lr"
+    plain = json.loads((gen_dir / "staged.json").read_text())
+    assert plain["stage_timings"]["lesson_review"]["state"] == "skipped"
+    forced = json.loads((gen_dir / "staged-lessonreview.json").read_text())
+    assert forced["ok"] is True and forced["mode"] == "staged-lessonreview"
+    assert forced["stage_timings"]["lesson_review"]["state"] != "skipped"
+    assert entries[0]["staged-lessonreview"][0]["ok"]
 
     report = (gen_dir / "report.md").read_text()
-    assert "staged (no lesson review)" in report
-    assert "## Staged (no lesson review)" in report
+    assert "staged (lesson review forced on)" in report
+    assert "## Staged (lesson review forced on)" in report
+    assert "### Slot `check`" in report
     summary = (tmp_path / "summary.md").read_text()
-    assert "staged (no lesson review)" in summary
+    assert "staged (lesson review forced on)" in summary
 
 
 @pytest.mark.asyncio
-async def test_nolessonreview_restores_setting_on_failure(monkeypatch, tmp_path) -> None:
+async def test_lessonreview_restores_setting_on_failure(monkeypatch, tmp_path) -> None:
     _install_fakes(monkeypatch)
 
     async def boom(**kwargs):
         raise RuntimeError("model down")
 
     monkeypatch.setattr(stp, "_call_spine_model", boom)
-    monkeypatch.setattr(settings, "staged_lesson_review", True)
-    await CMP.run_compare(["g"], tmp_path, modes=("staged-nolessonreview",), loader=_fake_loader)
-    assert settings.staged_lesson_review is True
+    monkeypatch.setattr(settings, "staged_lesson_review", False)
+    await CMP.run_compare(["g"], tmp_path, modes=("staged-lessonreview",), loader=_fake_loader)
+    assert settings.staged_lesson_review is False
 
 
-def test_parse_args_accepts_nolessonreview_mode() -> None:
-    args = CMP.parse_args(
-        ["--generation-id", "x", "--modes", "single,staged,staged-nolessonreview"]
-    )
-    assert args.modes == ("single", "staged", "staged-nolessonreview")
+def test_parse_args_modes() -> None:
+    args = CMP.parse_args(["--generation-id", "x", "--modes", "staged,staged-lessonreview"])
+    assert args.modes == ("staged", "staged-lessonreview")
+    with pytest.raises(SystemExit):
+        CMP.parse_args(["--generation-id", "x", "--modes", "single"])
     with pytest.raises(SystemExit):
         CMP.parse_args(["--generation-id", "x", "--modes", "bogus"])
-    assert CMP.parse_args(["--generation-id", "x"]).modes == ("single", "staged")
+    assert CMP.parse_args(["--generation-id", "x"]).modes == ("staged",)

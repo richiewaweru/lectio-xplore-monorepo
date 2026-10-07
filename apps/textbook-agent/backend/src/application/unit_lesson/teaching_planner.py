@@ -1,76 +1,38 @@
-"""Application-owned STANDARD-tier teaching approach planner.
+"""Application-owned teaching plan result types and shared plan checks.
 
-Composes curriculum planning contracts with Print packet/legality/validation
-helpers. Bound into curriculum via bind_shared_teaching_runner (see
-teaching_plan_service).
+The staged planner (``staged_teaching_planner``) is the only teaching planner. This
+module keeps what it shares: the result dataclasses, the deterministic repairs
+(sources outside structural slots, incompatible assessment sources, evidence refs,
+anchor grounding, figure visuals) and the learner-action / task-source / frozen-reuse
+validators, each in a whole-plan and a per-section form.
 """
 
 from __future__ import annotations
 
-import json
 import re
-import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from core.llm.runner import RetryPolicy, run_llm
-from pydantic_ai import Agent
-
-from core.config import settings
 from curriculum.approved_items import approved_item_kind
-from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
+from curriculum.backbone.models import BackboneFigure
 from curriculum.teaching_plan.compatibility import (
     allowed_actions_for_source_item,
     response_bearing_action,
 )
-from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
-from curriculum.backbone.models import BackboneFigure
 from curriculum.teaching_plan.models import (
-    TeachingPlanDraftV2,
     TeachingPlanSection,
     VisualSpec,
 )
-from curriculum.teaching_plan.semantic_review import (
-    ADVISORY_ONLY_SEMANTIC_CODES,
-    TeachingPlanSemanticReviewError,
-    TeachingPlanSemanticReviewResult,
-    review_teaching_plan_draft,
-)
-from infra.authoring.model_policy import (
-    V2_LESSON_APPROACH_PLANNER,
-    get_v3_model_settings,
-    get_v3_slot,
-)
-from infra.authoring.structured_provider import NO_OUTPUT_RETRY, prepare_structured_agent
-from print.generation.catalogue_projections import (
-    TeachingGuidanceProjection,
-    project_teaching_guidance,
-)
-from print.generation.whole_lesson.legality import (
-    LessonLegalitySnapshot,
-    build_lesson_legality_snapshot,
-    project_slot_intent_policy,
-    snapshot_as_teaching_sets,
-)
+from curriculum.teaching_plan.semantic_review import TeachingPlanSemanticReviewResult
+from print.generation.catalogue_projections import TeachingGuidanceProjection
+from print.generation.whole_lesson.legality import LessonLegalitySnapshot
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
-from print.generation.whole_lesson.prompt_render import render_teaching_prompt
-from print.generation.whole_lesson.teaching_errors import (
-    TeachingPlanOutputInvalidError,
-    is_recognized_teaching_output_error,
-)
-from print.generation.whole_lesson.teaching_plan import (
-    TeachingPlan,
-    materialize_teaching_plan,
-)
+from print.generation.whole_lesson.teaching_plan import TeachingPlan
 from print.generation.whole_lesson.validation import (
     ValidationReport,
-    advisory_issue_flags,
-    advisory_teaching_qc,
     allowed_teaching_evidence_refs,
     anchor_terms,
-    apply_advisory_gate,
     plan_quality_flag,
-    validate_teaching_plan,
 )
 from print.resources.selection import _form_cards
 
@@ -100,11 +62,11 @@ class TeachingPlanResult:
     permitted_intents: set[str]
     excluded_intents: set[str]
     legality: LessonLegalitySnapshot
-    # None when the staged planner skipped or could not run the lesson review.
+    # None when the lesson review is off (the default) or could not run.
     semantic_review: TeachingPlanSemanticReviewResult | None
     # Advisory quality flags (advisory gate only). Never part of the hashed plan.
     flags: list[dict[str, Any]] = field(default_factory=list)
-    # Per-stage latencies/attempt counts (staged planner only; empty for single).
+    # Per-stage latencies and attempt counts.
     stage_timings: dict[str, Any] = field(default_factory=dict)
 
 
@@ -934,386 +896,3 @@ def _assessment_source_policy(
         ],
         "allowed_evidence_refs": sorted(allowed_teaching_evidence_refs(packet)),
     }
-
-
-async def _call_teaching_model(
-    *,
-    prompt: str,
-    user_payload: dict[str, Any],
-    trace_id: str,
-    generation_id: str | None,
-    attempt_start: int = 1,
-) -> tuple[TeachingPlanDraftV2, str]:
-    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
-        node_name=V2_LESSON_APPROACH_PLANNER,
-        output_type=TeachingPlanDraftV2,
-    )
-    slot = get_v3_slot(V2_LESSON_APPROACH_PLANNER)
-    system_prompt, _, _user = prompt.partition("\n\n## USER INPUT\n\n")
-    agent = Agent(
-        model=model,
-        output_type=provider_output,
-        system_prompt=system_prompt or prompt,
-        retries=NO_OUTPUT_RETRY,
-    )
-    result = await run_llm(
-        trace_id=trace_id,
-        caller="v2_lesson_approach_planner",
-        generation_id=generation_id,
-        agent=agent,
-        user_prompt=json.dumps(user_payload, indent=2, sort_keys=True),
-        model=model,
-        slot=slot,
-        spec=spec,
-        node=V2_LESSON_APPROACH_PLANNER,
-        model_settings=get_v3_model_settings(V2_LESSON_APPROACH_PLANNER),
-        retry_policy=RetryPolicy(
-            max_attempts=1,
-            call_timeout_seconds=float(settings.page_lesson_plan_timeout_seconds),
-        ),
-        attempt_start=attempt_start,
-        structured_context=structured_context,
-    )
-    raw = result.output
-    raw_text = (
-        raw.model_dump_json()
-        if hasattr(raw, "model_dump_json")
-        else json.dumps(raw, default=str)
-    )
-    if isinstance(raw, TeachingPlanDraftV2):
-        return raw, raw_text
-    if hasattr(raw, "model_dump"):
-        return TeachingPlanDraftV2.model_validate(raw.model_dump()), raw_text
-    return TeachingPlanDraftV2.model_validate(raw), raw_text
-
-
-async def run_lesson_approach_planner(
-    packet: ImmutableLessonPacket,
-    *,
-    legality: LessonLegalitySnapshot | None = None,
-    trace_id: str | None = None,
-    generation_id: str | None = None,
-    require_items: bool = True,
-) -> TeachingPlanResult:
-    if require_items and not packet.approved_items:
-        from curriculum.approved_items import ItemPoolEmptyError
-
-        raise ItemPoolEmptyError(card_id="unknown", pack_id=None)
-
-    snapshot = legality or build_lesson_legality_snapshot(packet)
-    permitted, excluded, typical_by_slot = snapshot_as_teaching_sets(snapshot)
-    teaching_guidance = project_teaching_guidance(
-        permitted_intent_ids=permitted,
-        excluded_intents={key: "excluded" for key in excluded},
-    )
-    slot_intent_policy = project_slot_intent_policy(snapshot)
-    assessment_source_policy = _assessment_source_policy(packet, snapshot)
-    prompt = render_teaching_prompt(packet, teaching_guidance, resource_id=packet.resource_id)
-    user_payload = {
-        "fixed_input": packet.planner_payload(),
-        "teaching_guidance": teaching_guidance.to_dict(),
-        "slot_intent_policy": slot_intent_policy["slot_intent_policy"],
-        "assessment_source_policy": assessment_source_policy,
-        # The approved checks' stems, surfaced on their own so the planner
-        # picks its running case and examples outside them up front instead
-        # of relying on the reviewer's assessment_item_reused repair.
-        "reserved_assessment_scenarios": [
-            item.stem for item in packet.approved_items if item.stem.strip()
-        ],
-        "legality_catalogue_hash": slot_intent_policy["catalogue_hash"],
-    }
-    attempts: list[TeachingPlanAttempt] = []
-    last_error: str | None = None
-    plan: TeachingPlan | None = None
-    validation = ValidationReport(ok=False, issues=[])
-    raw_response = ""
-    previous_output: object | None = None
-    repair_errors: list[str] = []
-    last_exception: Exception | None = None
-    output_invalid_details: list[str] = []
-    tid = trace_id or str(uuid.uuid4())
-
-    for attempt in (1, 2):
-        last_exception = None
-        try:
-            call_payload = user_payload
-            if attempt == 2 and repair_errors:
-                call_payload = {
-                    **user_payload,
-                    "repair": {
-                        "instruction": (
-                            "Return the complete corrected version 2 TeachingPlan JSON, "
-                            "including learner_title and every plan/section continuity "
-                            "field. Preserve code-owned slot and block identity. "
-                            "Change only fields required to satisfy these errors. "
-                            "Use only intents listed under slot_intent_policy for each slot. "
-                            "Treat assessment_source_policy as a closed contract: copy "
-                            "approved_item_id and evidence_ref strings verbatim; never "
-                            "construct or concatenate IDs. Bind sources only inside "
-                            "required_assessment_slots when that list is non-empty. Every "
-                            "bound source must have a learner_action whose action appears "
-                            "in that source's allowed_actions. For every response-bearing "
-                            "learner_action, use task_mode='formative' and leave "
-                            "source_question_ids empty when it is an unbound in-lesson "
-                            "task; use task_mode='assessment' only when it binds an "
-                            "approved source_question_id. Use task_mode='none' only "
-                            "for passive, non-response actions. Do not invent approved "
-                            "source IDs or turn a valid formative task into an assessment. "
-                            "Keep optional guided or independent practice passive when no "
-                            "structurally planned approved source belongs there. Remove "
-                            "forbidden terminology and use only allowed_evidence_refs. "
-                            "When a validation error is VISUAL_SPEC_INVALID, fix that "
-                            "block's `visual` object: purpose must say what the learner "
-                            "must notice, must_show must list at least one exact stage, "
-                            "part or relationship taken from the objective or "
-                            "must_establish, and every labels_required entry must appear "
-                            "verbatim inside a must_show entry, the lesson objective or a "
-                            "must_establish statement. If the block does not truly need a "
-                            "figure, omit `visual` instead. "
-                            "When a validation error is FIGURE_REF_MISSING, the "
-                            "named block owns approved questions that rely on a "
-                            "backbone figure: set that block's `visual.figure_ref` to "
-                            "the backbone figure id and copy mode, purpose, "
-                            "must_show and labels_required from that figure; if a "
-                            "block owns questions on two different figures, move one "
-                            "question to another block. When a validation error is "
-                            "FIGURE_REF_UNKNOWN, set `visual.figure_ref` to an id from "
-                            "the backbone figures or remove it."
-                        ),
-                        "previous_output": previous_output,
-                        "validation_errors": repair_errors,
-                        "slot_intent_policy": slot_intent_policy["slot_intent_policy"],
-                        "legality_catalogue_hash": slot_intent_policy["catalogue_hash"],
-                        "assessment_source_policy": assessment_source_policy,
-                    },
-                }
-            draft, raw_response = await _call_teaching_model(
-                prompt=prompt,
-                user_payload=call_payload,
-                trace_id=f"{tid}:attempt{attempt}",
-                generation_id=generation_id,
-                attempt_start=attempt,
-            )
-            # Keep the active cutover fail-closed even if a provider adapter or
-            # test double returns a legacy v1 object instead of enforcing the
-            # requested structured schema itself.
-            draft = TeachingPlanDraftV2.model_validate(
-                draft.model_dump(mode="json")
-                if hasattr(draft, "model_dump")
-                else draft
-            )
-            previous_output = draft.model_dump(mode="json")
-            try:
-                plan = materialize_teaching_plan(
-                    draft,
-                    slot_ids=[slot.slot_id for slot in packet.slots],
-                )
-            except ValueError as exc:
-                last_error = "validation_failed"
-                repair_errors = [str(exc)]
-                output_invalid_details = repair_errors
-                attempts.append(
-                    TeachingPlanAttempt(
-                        prompt=prompt,
-                        raw_response=raw_response,
-                        plan=None,
-                        validation=ValidationReport(ok=False, issues=[]),
-                        qc=[],
-                        attempt=attempt,
-                        error=str(exc),
-                    )
-                )
-                continue
-
-            # Deterministic normalization happens before semantic errors are
-            # collected, so repaired state does not carry stale pre-repair errors.
-            _repair_briefs_missing_anchor_grounding(plan, packet)
-            _repair_sources_outside_structural_slots(plan, packet)
-            _repair_incompatible_assessment_sources(plan, packet)
-            ownership_errors = _repair_missing_assessment_sources(
-                plan,
-                packet,
-                set(assessment_source_policy["eligible_intents"]),
-            )
-            _repair_missing_figure_visuals(plan, packet)
-            _repair_invalid_evidence_refs(plan, packet)
-
-            # Now validate the normalized plan. These errors describe the state
-            # the second LLM attempt actually needs to change.
-            ownership_errors.extend(_unknown_learner_action_errors(plan))
-            ownership_errors.extend(_task_source_contract_errors(plan))
-            ownership_errors.extend(_action_source_compatibility_errors(plan, packet))
-            advisory_gate = settings.teaching_plan_quality_gate == "advisory"
-            flags: list[dict[str, Any]] = []
-            if advisory_gate:
-                flags.extend(_frozen_assessment_reuse_flags(plan, packet))
-            else:
-                ownership_errors.extend(_frozen_assessment_reuse_errors(plan, packet))
-
-            validation = validate_teaching_plan(
-                plan,
-                packet,
-                permitted_intents=permitted,
-                excluded_intents=excluded,
-                typical_by_slot=typical_by_slot,
-                assessment_intents=set(
-                    assessment_source_policy["eligible_intents"]
-                ),
-            )
-            qc_findings = advisory_teaching_qc(plan)
-            if advisory_gate:
-                flags.extend(advisory_issue_flags(plan, validation, qc_findings))
-                validation = apply_advisory_gate(validation)
-            semantic_review: TeachingPlanSemanticReviewResult | None = None
-            if validation.ok and not ownership_errors:
-                semantic_review = await review_teaching_plan_draft(
-                    draft=draft,
-                    plan=plan,
-                    lesson_context={
-                        **packet.planner_payload(),
-                        # The reviewer must see the frozen assessment stems it
-                        # is checking worked examples and practice blocks
-                        # against; `planner_payload()` alone only carries IDs.
-                        "approved_items": [
-                            {"id": item.id, "stem": item.stem}
-                            for item in packet.approved_items
-                        ],
-                    },
-                    trace_id=f"{tid}:semantic-review:attempt{attempt}",
-                    generation_id=generation_id,
-                )
-                if semantic_review.content_hash != teaching_plan_content_hash(plan):
-                    raise TeachingPlanSemanticReviewError(
-                        "TEACHING_SEMANTIC_REVIEW_INVALID",
-                        "Teaching Plan semantic review is not bound to this candidate",
-                    )
-                # Advisory-only reviewer codes never block, even in the strict gate.
-                flagged_findings = [
-                    finding
-                    for finding in semantic_review.findings
-                    if advisory_gate or finding.code in ADVISORY_ONLY_SEMANTIC_CODES
-                ]
-                flags.extend(
-                    plan_quality_flag(
-                        code=finding.code,
-                        source="reviewer",
-                        message=finding.message,
-                        section_ids=finding.section_ids,
-                        block_ids=finding.block_ids,
-                        repair_instruction=finding.repair_instruction,
-                    )
-                    for finding in flagged_findings
-                )
-                ownership_errors.extend(
-                    (
-                        f"SEMANTIC_{finding.code.upper()} "
-                        f"sections={finding.section_ids} blocks={finding.block_ids}: "
-                        f"{finding.repair_instruction}"
-                    )
-                    for finding in semantic_review.findings
-                    if finding not in flagged_findings
-                )
-            qc = [finding.to_dict() for finding in qc_findings]
-            attempts.append(
-                TeachingPlanAttempt(
-                    prompt=prompt,
-                    raw_response=raw_response,
-                    plan=plan,
-                    validation=validation,
-                    qc=qc,
-                    attempt=attempt,
-                    semantic_review=semantic_review,
-                )
-            )
-            if validation.ok and not ownership_errors and semantic_review is not None:
-                qc.append(
-                    {
-                        "code": "TEACHING_PLAN_SEMANTIC_REVIEW_PASS",
-                        "content_hash": semantic_review.content_hash,
-                    }
-                )
-                return TeachingPlanResult(
-                    plan=plan,
-                    validation=validation,
-                    qc=qc,
-                    prompt=prompt,
-                    raw_response=raw_response,
-                    teaching_guidance=teaching_guidance,
-                    attempts=attempts,
-                    typical_by_slot=typical_by_slot,
-                    permitted_intents=permitted,
-                    excluded_intents=excluded,
-                    legality=snapshot,
-                    semantic_review=semantic_review,
-                    flags=flags,
-                )
-            last_error = "validation_failed"
-            # Only gating issues drive repair; in the advisory gate the
-            # non-blocking quality findings are flags, not repair work.
-            repair_errors = [
-                f"{issue.code}: {issue.message}"
-                for issue in validation.issues
-                if not advisory_gate or issue.blocking
-            ] + ownership_errors
-            output_invalid_details = repair_errors
-        except Exception as exc:
-            if isinstance(exc, TeachingPlanSemanticReviewError):
-                raise
-            last_exception = exc
-            last_error = str(exc)
-            attempts.append(
-                TeachingPlanAttempt(
-                    prompt=prompt,
-                    raw_response=raw_response,
-                    plan=plan,
-                    validation=validation,
-                    qc=[],
-                    attempt=attempt,
-                    error=last_error,
-                )
-            )
-            if is_transport_error(exc):
-                # Provider/backoff retry — do not invent contract repair context.
-                repair_errors = []
-            elif is_recognized_teaching_output_error(exc):
-                repair_errors = structured_output_errors(exc)
-                output_invalid_details = repair_errors
-            else:
-                # Only teaching-output noncompliance owns the recoverable contract.
-                # Generic provider behavior and programming/input failures remain terminal.
-                from pydantic_ai.exceptions import UnexpectedModelBehavior
-
-                if isinstance(exc, UnexpectedModelBehavior):
-                    raise
-                repair_errors = structured_output_errors(exc)
-                if previous_output is None and raw_response:
-                    try:
-                        previous_output = json.loads(raw_response)
-                    except Exception:  # noqa: BLE001
-                        previous_output = raw_response
-            continue
-
-    if last_exception is not None and is_transport_error(last_exception):
-        last_exception.add_note(
-            "lesson approach planner exhausted "
-            f"{len(attempts)} provider attempts"
-        )
-        raise last_exception
-
-    if last_error == "validation_failed" or (
-        last_exception is not None
-        and is_recognized_teaching_output_error(last_exception)
-    ):
-        raise TeachingPlanOutputInvalidError(
-            attempt_count=len(attempts),
-            details=output_invalid_details,
-        ) from last_exception
-
-    raise RuntimeError(
-        f"lesson approach planner failed after {len(attempts)} attempts: {last_error}"
-        + (
-            f" issues={validation.to_dict()['issues']}"
-            if last_error == "validation_failed" and validation.issues
-            else ""
-        )
-    )

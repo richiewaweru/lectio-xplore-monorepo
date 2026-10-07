@@ -17,7 +17,6 @@ from curriculum.teaching_plan.staged import (
 from infra.authoring.model_policy import (
     TEACHING_SECTION_PLANNER,
     TEACHING_SPINE_PLANNER,
-    V2_LESSON_APPROACH_PLANNER,
     get_v3_slot,
 )
 from print.generation.whole_lesson.prompt_render import assert_no_page_object_ids
@@ -172,7 +171,8 @@ def test_prompts_manifest_and_no_object_leak() -> None:
         assert entry is not None and entry.editable is False
 
 
-def test_model_policy_nodes_match_lesson_approach_slot() -> None:
-    base = get_v3_slot(V2_LESSON_APPROACH_PLANNER)
-    assert get_v3_slot(TEACHING_SPINE_PLANNER) == base
-    assert get_v3_slot(TEACHING_SECTION_PLANNER) == base
+def test_model_policy_spine_and_section_share_the_standard_slot() -> None:
+    from core.llm import ModelSlot
+
+    assert get_v3_slot(TEACHING_SPINE_PLANNER) == ModelSlot.STANDARD
+    assert get_v3_slot(TEACHING_SECTION_PLANNER) == ModelSlot.STANDARD
