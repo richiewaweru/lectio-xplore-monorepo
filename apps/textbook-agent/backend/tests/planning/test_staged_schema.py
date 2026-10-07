@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from core.prompts.loader import get_manifest_entry
+from core.prompts.loader import closeout_prompt_hashes, get_manifest_entry
 from curriculum.backbone.models import ANCHOR_ID
 from curriculum.prompts import teaching_section_prompt, teaching_spine_prompt
 from curriculum.teaching_plan.models import TeachingPlanDraftBlock, materialize_teaching_plan
@@ -169,6 +169,7 @@ def test_prompts_manifest_and_no_object_leak() -> None:
     for prompt_id in ("teaching-spine", "teaching-section"):
         entry = get_manifest_entry(prompt_id)
         assert entry is not None and entry.editable is False
+        assert prompt_id in closeout_prompt_hashes()
 
 
 def test_model_policy_spine_and_section_share_the_standard_slot() -> None:

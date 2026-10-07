@@ -92,6 +92,8 @@ CLOSEOUT_PROMPT_IDS = (
     "document-semantic-qa",
     "whole-lesson-coherence-reviewer",
     "teaching-plan-semantic-reviewer",
+    "teaching-spine",
+    "teaching-section",
     "targeted-lesson-repair",
 )
 
