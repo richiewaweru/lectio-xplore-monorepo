@@ -1,6 +1,61 @@
 # Staged teaching planner
 
-Status: planned. Nothing built yet. Branch `feat/staged-teaching-planner`, off `main` at 858c2165.
+Status: **staged is the only teaching planner** (phase 9). The single-call planner and its
+`teaching_planner_mode` flag are gone. The whole-lesson review is **off by default**, behind
+`staged_lesson_review` (env `STAGED_LESSON_REVIEW`); the per-section review is also off, behind
+`staged_section_review` (env `STAGED_SECTION_REVIEW`). Branch `feat/staged-teaching-planner`,
+PR #18, off `main` at 858c2165. The sections below describe the design and are kept for history; where
+they mention the single planner or `teaching_planner_mode`, phase 9 supersedes them.
+
+## Phase 9 outcome
+
+### Comparison results
+
+Four local lessons, DeepSeek `deepseek-flash`, one run each:
+
+| Mode | Result |
+|---|---|
+| Single planner | 153-241 s when it worked; failed 2 of 4 because its semantic reviewer timed out at 240 s |
+| Staged, whole-lesson review on | The review timed out (240 s) in 2 of 4 and took 306 s in another; the plan was flagged and continued, so 335-678 s end to end |
+| Staged, no lesson review | 87-137 s, 4 of 4 ok, every section resolved on the first attempt, figures attached |
+
+One staged run also failed because the spine's state-chain heuristic rejected `entry_state` three
+times. That check is now a repair (below).
+
+Decision: staged only, lesson review off by default.
+
+### Spine state chain is a repair, not an error
+
+The word-coverage check between a section's `entry_state` and the previous section's
+`exit_state` (the first section against `starting_state` plus `prior_established`) no longer
+fails the spine. `repair_spine_state_chain` appends each uncovered `entry_state` statement to the
+previous section's `exit_state` (to the spine's `starting_state` for the first section) and
+records a `spine_state_chain` entry in the spine result's `repairs`. All other spine checks
+(section count, item placement, misconception assignment, figure ids, block budget) are still
+errors that trigger a retry.
+
+### Approval guard
+
+A plan with a section that has no blocks (an unresolved section, flag
+`TEACHING_SECTION_UNRESOLVED`) cannot be approved. `TeachingRevisionStore.approve` raises
+`TeachingPlanHasEmptySectionsError` (a `TeachingRevisionConflictError`); both approve paths
+(`path=learn` and `path=print`) return HTTP 409 with `code: TEACHING_PLAN_HAS_EMPTY_SECTIONS`,
+`section_ids`, a plain-language `message` and `recovery_action: edit_plan`. The plan page already
+shows the structured `message` from a 409. Recording a revised plan that has blocks in every
+section (`edit_teaching_plan` / `record_draft`) makes it approvable again. There is no HTTP route
+for editing blocks yet, so today the teacher's way out is to regenerate the plan.
+
+### In-flight single-mode runs
+
+A preparation Run created before this change may hold a bare `teaching_plan` work item with no
+`teaching_spine`. The worker leaves it alone (it does not admit a spine next to it) and runs it
+through the in-process teaching runner, which now plans with the staged planner
+(`run_staged_teaching_planner`). A failure is recorded like any other failure and `regenerate`
+restarts the Run as a normal staged Run.
+
+### Follow-up
+
+Background lesson review (advisory flags arriving after the plan is ready) if teachers miss it.
 
 ## Why
 
@@ -61,15 +116,13 @@ The output is the same `TeachingPlan` model as today, built by the same
 `materialize_teaching_plan`. Approval, the content hash, `continuity.py`, the composer, the
 writers and media can't tell which planner built it.
 
-## Flag
+## Settings (history: the original flag)
 
-`teaching_planner_mode: Literal["single", "staged"] = "single"` in
-`backend/src/infra/config.py`, next to `teaching_plan_quality_gate`. The teaching-plan work
-item picks `run_lesson_approach_planner` (single) or the new `run_staged_teaching_planner`
-(staged). That's the only switch. Both must return the same `TeachingPlanResult`.
-
-Exit plan: compare on fixture lessons, switch the default to `staged`, then delete the single
-path and its now-unused repair helpers in one PR once it has run cleanly for an agreed period.
+This section originally described `teaching_planner_mode` (`single` | `staged`, default
+`single`) with an exit plan to delete the single path. Phase 9 did that: the setting and
+`run_lesson_approach_planner` are removed. What remains in `backend/src/infra/config.py`:
+`staged_lesson_review` (default `False`), `staged_section_review` (default `False`) and the
+existing `teaching_plan_quality_gate`.
 
 ## 3a. Spine call
 
@@ -221,7 +274,7 @@ semantic reviewer prompt about reusing the anchor versus approved items.
 | 6 | Review split: per-section review + whole-lesson check + routing fixes to a section. | No |
 | 7 | **Build** a local comparison script, `backend/scripts/compare_teaching_planners.py`: given generation ids, it builds each packet with `build_packet_for_generation` from the local DB, runs both modes, and writes both plans plus a report (wall-clock per call, attempts, flags, validation issues, block ids with `visual`, a section-by-section diff) to `outputs/planner-compare/`. It writes nothing to the DB. **Running it happens locally**; the cloud session only builds it and tests it against a fake model. No real lesson data is committed (the repo is public). | No |
 | 8 | Streaming: `teaching_spine` and `teaching_section:{slot}` work items with progress; plan page shows the spine first, then sections as they land, marked "draft" until the whole-lesson check passes. | Runtime + frontend |
-| 9 | Flip default; delete the single path after the agreed period. | Yes, deletion |
+| 9 | **Done.** Staged is the only planner; single path, its setting, model-policy node, prompt and tests removed; lesson review off by default. See Phase 9 outcome. | Yes, deletion |
 
 **Cloud scope:** the cloud session builds phases 0-8 end to end, with the flag defaulting to
 `single`, so nothing changes until someone switches it. Unit tests use fake models only; no API
@@ -241,7 +294,7 @@ Phases 3-6 run inside the existing `teaching_plan` work item (parallelism via
 - Unit: section that exhausts retries ships flagged, plan still materializes.
 - Integration: staged plan through composer -> figure nodes -> `_plan_figure_spec` resolves
   every `visual` block.
-- Existing planner tests stay green with `teaching_planner_mode="single"`.
+- Tests that only exercised the single planner were deleted in phase 9; shared validator and repair tests stay.
 
 ## Open questions
 
