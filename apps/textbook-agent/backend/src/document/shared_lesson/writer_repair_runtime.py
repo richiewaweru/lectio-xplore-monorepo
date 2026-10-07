@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 from sqlalchemy import select
 
 from curriculum.teaching_plan.models import TeachingPlanSection
@@ -91,10 +91,26 @@ class WriterRepairWorkOrder(BaseModel):
     boundary_work_item_id: str = Field(min_length=1)
     accepted_section_output_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     issue: ContinuityIssue
+    # Further same-section issues that triggered the same targeted repair.
+    # Omitted from every dump while empty so single-issue identity hashes,
+    # item keys and checkpoint payloads persisted before this field existed
+    # stay byte-identical.
+    additional_issues: tuple[ContinuityIssue, ...] = ()
     previous_section: SharedSection
     next_section: SharedSection
     replacement: SectionWriteResult
     definition: Literal["shared-section-boundary-targeted-repair:v1"] = WRITER_REPAIR_DEFINITION
+
+    @model_serializer(mode="wrap")
+    def _omit_empty_additional_issues(self, handler: Any) -> Any:
+        data = handler(self)
+        if isinstance(data, dict) and not data.get("additional_issues"):
+            data.pop("additional_issues", None)
+        return data
+
+    @property
+    def issues(self) -> tuple[ContinuityIssue, ...]:
+        return (self.issue, *self.additional_issues)
 
     @staticmethod
     def _hash_payload(value: Any) -> str:
@@ -334,7 +350,8 @@ async def admit_writer_repair_work_item(
     writer_request: SectionWriterRequest,
     boundary_result: BoundaryValidationResult,
     boundary_work_item_id: str,
-    issue: ContinuityIssue,
+    issue: ContinuityIssue | None = None,
+    issues: tuple[ContinuityIssue, ...] | None = None,
     previous_section: SharedSection,
     next_section: SharedSection,
     max_attempts: int = 3,
@@ -358,11 +375,22 @@ async def admit_writer_repair_work_item(
         raise WriterRepairRuntimeError("only a passing repaired boundary can be admitted")
     if not boundary_result.repair_attempted:
         raise WriterRepairRuntimeError("boundary result does not prove a targeted repair")
-    if len(boundary_result.initial_issues) != 1 or boundary_result.initial_issues[0] != issue:
+    if issues is None:
+        if issue is None:
+            raise WriterRepairRuntimeError("a typed boundary issue is required for repair")
+        issues = (issue,)
+    else:
+        issues = tuple(issues)
+        if not issues or (issue is not None and issue != issues[0]):
+            raise WriterRepairRuntimeError(
+                "boundary issues are not the exact typed issues that triggered repair"
+            )
+    issue = issues[0]
+    if tuple(boundary_result.initial_issues) != issues:
         raise WriterRepairRuntimeError(
             "boundary issue is not the exact typed issue that triggered repair"
         )
-    if issue.affected_section_id != accepted_section.id:
+    if any(item.affected_section_id != accepted_section.id for item in issues):
         raise WriterRepairRuntimeError("boundary issue does not target the accepted writer section")
     target_original = (
         previous_section if issue.affected_section_id == previous_section.id else next_section
@@ -434,6 +462,7 @@ async def admit_writer_repair_work_item(
         boundary_work_item_id=boundary_work_item_id,
         accepted_section_output_hash=accepted_section_output_hash(accepted_section),
         issue=issue,
+        additional_issues=tuple(issues[1:]),
         previous_section=previous_section,
         next_section=next_section,
         replacement=replacement,

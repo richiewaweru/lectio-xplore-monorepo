@@ -465,13 +465,14 @@ async def _attach_progress(
                 "code": failure.error_code,
                 "message": failure.safe_summary,
                 "failure_class": failure.error_class,
-                "retryable": failure.retryable and shared.status == "failed_recoverable",
+                "retryable": failure.retryable
+                and (shared.status == "failed_recoverable" or failure.boundary_recoverable),
                 "stage": failure.stage,
                 "work_item_id": failure.work_item_id,
                 "attempt": failure.attempt,
                 "max_attempts": failure.max_attempts,
                 "recovery_action": failure.recovery_action
-                if shared.status == "failed_recoverable"
+                if shared.status == "failed_recoverable" or failure.boundary_recoverable
                 else "regenerate",
                 "auto_retrying": failure.auto_retrying
                 and shared.status == "failed_recoverable",

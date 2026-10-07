@@ -24,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
 
 from curriculum.teaching_plan.models import TeachingPlanSection
+from document.shared_lesson.continuity import ContinuityIssue
 from document.shared_lesson.boundary import (
     _WriterBoundaryRepairEngine,
     BoundaryRepairEngine,
@@ -33,6 +34,7 @@ from document.shared_lesson.boundary import (
     validate_and_repair_boundary,
 )
 from document.shared_lesson.models import SharedSection
+from document.shared_lesson.qa import NARRATIVE_CONTINUITY_ISSUE_CODES
 from document.shared_lesson.runtime import (
     TeachingPlanSource,
     rollback_for_failure_record,
@@ -66,6 +68,8 @@ from infra.generation_runtime import (
 BOUNDARY_STAGE = "continuity_validation"
 BOUNDARY_DEFINITION = "shared-boundary-runtime:v1"
 MAX_CONCURRENT_BOUNDARIES = 4
+BOUNDARY_ADVISORY_MARKER = ":advisory:"
+BOUNDARY_PENDING_REPLACEMENT_CODE = "boundary_repair_pending_writer_replacement"
 BOUNDARY_VALIDATION_LEASE_FRACTION = 0.8
 _BOUNDARY_VALIDATION_SEMAPHORES: weakref.WeakKeyDictionary[
     asyncio.AbstractEventLoop, asyncio.Semaphore
@@ -450,6 +454,62 @@ async def admit_boundary_work_item(
     return await add_work_item(session, _item_request(run_id, work, max_attempts=max_attempts))
 
 
+def _verified_repair_proof(
+    predecessor: GenerationWorkItemModel,
+    identity: SourceIdentity,
+) -> tuple[BoundaryWorkOrder, BoundaryValidationResult]:
+    """Validate a failed boundary's durable ``shared_lesson_boundary_repair_result``.
+
+    Returns the original frozen work order and the validated repair result.
+    Any identity, hash, shape or source mismatch raises ``BoundarySourceConflict``.
+    """
+    try:
+        checkpoint = RuntimeCheckpoint.model_validate(predecessor.checkpoint_json)
+    except (TypeError, ValueError) as exc:
+        raise BoundarySourceConflict(
+            "boundary repair proof violates the runtime checkpoint contract"
+        ) from exc
+    if content_hash(checkpoint.payload) != checkpoint.payload_hash:
+        raise BoundarySourceConflict("boundary repair proof hash is invalid")
+    payload = checkpoint.payload
+    if (
+        not isinstance(payload, Mapping)
+        or payload.get("kind") != "shared_lesson_boundary_repair_result"
+    ):
+        raise BoundarySourceConflict("boundary predecessor checkpoint is not a repair proof")
+    try:
+        original_work = BoundaryWorkOrder.model_validate(payload["work"])
+        repair_result = BoundaryValidationResult.model_validate(payload["result"])
+    except (TypeError, ValueError) as exc:
+        raise BoundarySourceConflict(
+            "boundary repair proof has an invalid work or result shape"
+        ) from exc
+    if (
+        checkpoint.compatibility.source_revision != identity.source_revision
+        or checkpoint.compatibility.source_hash != identity.source_hash
+        or checkpoint.compatibility.input_hash
+        != content_hash(original_work.model_dump(mode="json"))
+        or checkpoint.compatibility.definition_hash
+        != hashlib.sha256(BOUNDARY_DEFINITION.encode("utf-8")).hexdigest()
+        or checkpoint.compatibility.composition_identity
+        != _composition_identity(
+            original_work.previous_composition_identity,
+            original_work.next_composition_identity,
+        )
+        or predecessor.input_hash != checkpoint.compatibility.input_hash
+        or predecessor.definition_hash != checkpoint.compatibility.definition_hash
+        or predecessor.composition_identity != checkpoint.compatibility.composition_identity
+    ):
+        raise BoundarySourceConflict("boundary repair proof identity is stale")
+    if (
+        original_work.source_plan_id,
+        original_work.source_plan_revision,
+        original_work.source_plan_hash,
+    ) != (identity.source_artifact_id, identity.source_revision, identity.source_hash):
+        raise BoundarySourceConflict("boundary repair proof source differs from the approved plan")
+    return original_work, repair_result
+
+
 async def admit_boundary_replacement_work_item(
     session: Any,
     *,
@@ -498,50 +558,7 @@ async def admit_boundary_replacement_work_item(
         source=identity,
         lock=True,
     )
-    try:
-        checkpoint = RuntimeCheckpoint.model_validate(predecessor.checkpoint_json)
-    except (TypeError, ValueError) as exc:
-        raise BoundarySourceConflict(
-            "boundary repair proof violates the runtime checkpoint contract"
-        ) from exc
-    if content_hash(checkpoint.payload) != checkpoint.payload_hash:
-        raise BoundarySourceConflict("boundary repair proof hash is invalid")
-    payload = checkpoint.payload
-    if (
-        not isinstance(payload, Mapping)
-        or payload.get("kind") != "shared_lesson_boundary_repair_result"
-    ):
-        raise BoundarySourceConflict("boundary predecessor checkpoint is not a repair proof")
-    try:
-        original_work = BoundaryWorkOrder.model_validate(payload["work"])
-        repair_result = BoundaryValidationResult.model_validate(payload["result"])
-    except (TypeError, ValueError) as exc:
-        raise BoundarySourceConflict(
-            "boundary repair proof has an invalid work or result shape"
-        ) from exc
-    if (
-        checkpoint.compatibility.source_revision != identity.source_revision
-        or checkpoint.compatibility.source_hash != identity.source_hash
-        or checkpoint.compatibility.input_hash
-        != content_hash(original_work.model_dump(mode="json"))
-        or checkpoint.compatibility.definition_hash
-        != hashlib.sha256(BOUNDARY_DEFINITION.encode("utf-8")).hexdigest()
-        or checkpoint.compatibility.composition_identity
-        != _composition_identity(
-            original_work.previous_composition_identity,
-            original_work.next_composition_identity,
-        )
-        or predecessor.input_hash != checkpoint.compatibility.input_hash
-        or predecessor.definition_hash != checkpoint.compatibility.definition_hash
-        or predecessor.composition_identity != checkpoint.compatibility.composition_identity
-    ):
-        raise BoundarySourceConflict("boundary repair proof identity is stale")
-    if (
-        original_work.source_plan_id,
-        original_work.source_plan_revision,
-        original_work.source_plan_hash,
-    ) != (identity.source_artifact_id, identity.source_revision, identity.source_hash):
-        raise BoundarySourceConflict("boundary repair proof source differs from the approved plan")
+    original_work, repair_result = _verified_repair_proof(predecessor, identity)
     if not repair_result.passed or not repair_result.repair_attempted:
         raise BoundarySourceConflict(
             "boundary repair proof does not contain a passing targeted repair"
@@ -626,6 +643,134 @@ async def admit_boundary_replacement_work_item(
     )
 
 
+def boundary_advisory_input_hash(work: BoundaryWorkOrder) -> str:
+    """Input identity of an advisory successor bound to its *original* work order.
+
+    It must differ from the failed predecessor's ``input_hash`` (a replacement
+    must bind a changed identity) while still binding exactly the original pair.
+    """
+    return content_hash(
+        {"kind": "shared_lesson_boundary_advisory", "work": work.model_dump(mode="json")}
+    )
+
+
+def is_boundary_advisory_item(item: GenerationWorkItemModel) -> bool:
+    return getattr(item, "replaces_work_item_id", None) is not None and (
+        BOUNDARY_ADVISORY_MARKER in str(getattr(item, "item_key", ""))
+    )
+
+
+def unique_boundary_issues(*groups: Sequence[ContinuityIssue]) -> tuple[ContinuityIssue, ...]:
+    seen: list[ContinuityIssue] = []
+    for group in groups:
+        for issue in group:
+            if issue not in seen:
+                seen.append(issue)
+    return tuple(seen)
+
+
+def _advisory_issues_from_result(result: BoundaryValidationResult) -> tuple[ContinuityIssue, ...]:
+    return unique_boundary_issues(result.initial_issues, result.issues)
+
+
+async def admit_boundary_advisory_successor(
+    session: Any,
+    *,
+    predecessor_work_item_id: str,
+    owner_user_id: str,
+    source: TeachingPlanSource,
+    previous_section: SharedSection,
+    next_section: SharedSection,
+    previous_composition_identity: str,
+    next_composition_identity: str,
+    max_attempts: int = 3,
+) -> GenerationWorkItemModel:
+    """Admit a deterministic advisory successor for an unrepairable boundary.
+
+    The failed predecessor must durably prove a targeted-repair result for the
+    ORIGINAL pair, and both current active writer outputs must still equal that
+    original pair.  The successor is bound to the original work order and
+    completes without any provider call, carrying the proven issues as
+    teacher-visible advisories.  Any source/identity mismatch raises
+    ``BoundarySourceConflict`` so the boundary stays blocked.
+    """
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be positive")
+    identity = _identity(source)
+    _plan_pair(source, previous_section, next_section)
+    if not previous_composition_identity.strip() or not next_composition_identity.strip():
+        raise BoundarySourceConflict("boundary composition identities must be non-empty")
+    predecessor = await session.scalar(
+        select(GenerationWorkItemModel).where(
+            GenerationWorkItemModel.id == predecessor_work_item_id,
+            GenerationWorkItemModel.stage == BOUNDARY_STAGE,
+        )
+    )
+    if predecessor is None or predecessor.status != "failed_recoverable":
+        raise BoundarySourceConflict("boundary predecessor is not a recoverable historical item")
+    successor = await session.scalar(
+        select(GenerationWorkItemModel.id).where(
+            GenerationWorkItemModel.replaces_work_item_id == predecessor_work_item_id
+        )
+    )
+    if successor is not None:
+        raise BoundarySourceConflict("boundary predecessor already has a successor")
+    if predecessor.checkpoint_json is None:
+        raise BoundarySourceConflict("boundary predecessor has no durable repair proof")
+    await _verify_run_source(
+        session,
+        run_id=predecessor.run_id,
+        owner_user_id=owner_user_id,
+        source=identity,
+        lock=True,
+    )
+    original_work, _proof = _verified_repair_proof(predecessor, identity)
+    await _verify_active_writer_outputs(
+        session,
+        run_id=predecessor.run_id,
+        previous_section=previous_section,
+        next_section=next_section,
+        previous_composition_identity=previous_composition_identity,
+        next_composition_identity=next_composition_identity,
+        lock=True,
+    )
+    current_work = _work_order(
+        identity,
+        previous_section,
+        next_section,
+        previous_composition_identity=previous_composition_identity,
+        next_composition_identity=next_composition_identity,
+    )
+    if current_work.model_dump(mode="json") != original_work.model_dump(mode="json"):
+        raise BoundarySourceConflict(
+            "current active writer outputs differ from the original boundary pair"
+        )
+    input_hash = boundary_advisory_input_hash(original_work)
+    replacement = WorkItemAdmission(
+        run_id=predecessor.run_id,
+        item_key=(
+            f"boundary:{previous_section.id}->{next_section.id}"
+            f"{BOUNDARY_ADVISORY_MARKER}{input_hash[:24]}"
+        ),
+        stage=BOUNDARY_STAGE,
+        input_hash=input_hash,
+        definition_hash=hashlib.sha256(BOUNDARY_DEFINITION.encode("utf-8")).hexdigest(),
+        composition_identity=_composition_identity(
+            previous_composition_identity, next_composition_identity
+        ),
+        max_attempts=max_attempts,
+    )
+    return await replace_work_item(
+        session,
+        WorkItemReplacement(
+            predecessor_work_item_id=predecessor_work_item_id,
+            owner_user_id=owner_user_id,
+            source=identity,
+            replacement=replacement,
+        ),
+    )
+
+
 def _checkpoint_compatibility(
     *, source: SourceIdentity, item: GenerationWorkItemModel
 ) -> RuntimeCheckpointCompatibility:
@@ -648,6 +793,30 @@ def _validate_checkpoint_payload(payload: Any, work: BoundaryWorkOrder) -> None:
         raise BoundaryCheckpointError("boundary checkpoint has an unsupported shape")
     if payload.get("work") != work.model_dump(mode="json"):
         raise BoundaryCheckpointError("boundary checkpoint is stale or conflicting")
+
+
+def _is_repair_result_payload(payload: Any) -> bool:
+    return (
+        isinstance(payload, Mapping) and payload.get("kind") == "shared_lesson_boundary_repair_result"
+    )
+
+
+def _repair_proof_from_checkpoint(
+    payload: Any, work: BoundaryWorkOrder
+) -> BoundaryValidationResult:
+    """Read the repair-result proof a prior attempt of THIS exact work item left.
+
+    The checkpoint hash and compatibility were already verified by
+    ``load_compatible_checkpoint``; this only binds the payload to ``work``.
+    """
+    if not _is_repair_result_payload(payload):
+        raise BoundaryCheckpointError("boundary checkpoint has an unsupported shape")
+    if payload.get("work") != work.model_dump(mode="json"):
+        raise BoundaryCheckpointError("boundary checkpoint is stale or conflicting")
+    try:
+        return BoundaryValidationResult.model_validate(payload["result"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise BoundaryCheckpointError("boundary repair proof has an invalid result shape") from exc
 
 
 def _validate_item_binding(item: GenerationWorkItemModel, work: BoundaryWorkOrder) -> None:
@@ -800,29 +969,42 @@ async def execute_boundary_work_item(
     validation_deadline = loop.time() + (
         job.lease_seconds * BOUNDARY_VALIDATION_LEASE_FRACTION
     )
+    compatibility = _checkpoint_compatibility(source=identity, item=item)
+    # ``advisories`` is not ``None`` only for an advisory successor admitted by
+    # ``admit_boundary_advisory_successor``; it completes with no provider call.
+    advisories: tuple[ContinuityIssue, ...] | None = None
+    # ``proof_result`` is set when a manual retry re-ran a leaf that already
+    # durably proved a targeted repair (see below).
+    proof_result: BoundaryValidationResult | None = None
     try:
-        _validate_item_binding(item, work)
-        compatibility = _checkpoint_compatibility(source=identity, item=item)
-        checkpoint = await load_compatible_checkpoint(
-            job.session,
-            work_item_id=item.id,
-            worker_id=job.worker_id,
-            lease_token=item.lease_token or 0,
-            compatibility=compatibility,
-            now=now,
-        )
-        if checkpoint is None:
-            await persist_checkpoint(
+        if is_boundary_advisory_item(item):
+            advisories = await _advisory_issues_for_successor(
+                job.session, item=item, identity=identity, work=work
+            )
+        else:
+            _validate_item_binding(item, work)
+            checkpoint = await load_compatible_checkpoint(
                 job.session,
                 work_item_id=item.id,
                 worker_id=job.worker_id,
                 lease_token=item.lease_token or 0,
                 compatibility=compatibility,
-                payload=_checkpoint_payload(work),
                 now=now,
             )
-        else:
-            _validate_checkpoint_payload(checkpoint.payload, work)
+            if checkpoint is None:
+                await persist_checkpoint(
+                    job.session,
+                    work_item_id=item.id,
+                    worker_id=job.worker_id,
+                    lease_token=item.lease_token or 0,
+                    compatibility=compatibility,
+                    payload=_checkpoint_payload(work),
+                    now=now,
+                )
+            elif _is_repair_result_payload(checkpoint.payload):
+                proof_result = _repair_proof_from_checkpoint(checkpoint.payload, work)
+            else:
+                _validate_checkpoint_payload(checkpoint.payload, work)
     except LeaseLostError:
         raise
     except Exception as exc:  # noqa: BLE001 - persist unknown checkpoint failures as typed failures.
@@ -862,63 +1044,114 @@ async def execute_boundary_work_item(
             preserved_ready_siblings=True,
         )
 
+    if proof_result is not None:
+        # A manual Retry (``retry_work_items`` keeps the checkpoint) re-ran a
+        # leaf that already holds a durable targeted-repair proof.  Re-running
+        # validation would spend more provider calls and could never advance,
+        # so re-fail with the same pending-replacement code (no provider
+        # call).  REVIEW keeps the leaf failed_recoverable regardless of the
+        # attempt budget, and the dispatcher then admits the writer
+        # replacement (or the advisory fallback) exactly as for a first failure.
+        original = {
+            work.previous_section_id: work.previous_section_output_hash,
+            work.next_section_id: work.next_section_output_hash,
+        }
+        proof_changed = tuple(
+            section.id
+            for section in (proof_result.previous_section, proof_result.next_section)
+            if original.get(section.id) != accepted_section_output_hash(section)
+        )
+        failure = WorkItemFailure(
+            error_code=BOUNDARY_PENDING_REPLACEMENT_CODE,
+            error_class=ErrorClass.PROVIDER_OUTPUT,
+            safe_summary=(
+                "Boundary repair produced a changed section; admit a linked writer "
+                "replacement before retrying."
+            ),
+            recovery_action=RecoveryAction.REVIEW,
+        )
+        await fail_work_item(
+            job.session,
+            work_item_id=item.id,
+            worker_id=job.worker_id,
+            lease_token=item.lease_token or 0,
+            failure=failure,
+            now=now,
+        )
+        return BoundaryRuntimeOutcome(
+            work_item_id=item.id,
+            result=proof_result,
+            error_code=failure.error_code,
+            error_summary=failure.safe_summary,
+            pending_replacement_section_ids=proof_changed,
+            preserved_ready_siblings=True,
+        )
+
     # Make the lease and compatible checkpoint visible before any external
     # semantic-review or repair provider work begins. The final writer recheck
     # and fenced completion below still decide whether the result can commit.
     await job.session.commit()
 
-    try:
-        previous_plan, next_plan = _plan_pair(job.source, job.previous_section, job.next_section)
+    if advisories is not None:
+        result = BoundaryValidationResult(
+            status="pass",
+            previous_section=job.previous_section,
+            next_section=job.next_section,
+            semantic_calls=0,
+        )
+    else:
+        try:
+            previous_plan, next_plan = _plan_pair(job.source, job.previous_section, job.next_section)
 
-        semantic_dispatch = job.semantic_validator or default_boundary_semantic_validator
+            semantic_dispatch = job.semantic_validator or default_boundary_semantic_validator
 
-        async def bounded_semantic_validator(request: Any) -> Any:
-            return await _await_before_boundary_deadline(
-                semantic_dispatch(request), deadline=validation_deadline
+            async def bounded_semantic_validator(request: Any) -> Any:
+                return await _await_before_boundary_deadline(
+                    semantic_dispatch(request), deadline=validation_deadline
+                )
+
+            bounded_repair_engine = _DeadlineBoundedBoundaryRepair(
+                job.repair_engine or _WriterBoundaryRepairEngine(),
+                deadline=validation_deadline,
             )
-
-        bounded_repair_engine = _DeadlineBoundedBoundaryRepair(
-            job.repair_engine or _WriterBoundaryRepairEngine(),
-            deadline=validation_deadline,
-        )
-        result = await _run_boundary_validation_before_deadline(
-            lambda: validate_and_repair_boundary(
-                previous_section=job.previous_section,
-                previous_plan=previous_plan,
-                next_section=job.next_section,
-                next_plan=next_plan,
-                semantic_validator=bounded_semantic_validator,
-                repair_engine=bounded_repair_engine,
-                writer_requests=job.writer_requests,
-            ),
-            deadline=validation_deadline,
-        )
-    except LeaseLostError:
-        raise
-    except Exception as exc:  # noqa: BLE001 - persist unknown validator failures as typed failures.
-        # The claim and checkpoint above are already committed. A semantic
-        # provider or repair-provider error (e.g. UnexpectedModelBehavior)
-        # never touches the database, but clear any aborted transaction state
-        # before the typed failure persists so the fenced write is never
-        # attempted against a poisoned session.
-        rollback = getattr(job.session, "rollback", None)
-        failure_lease_token = claimed_lease_token
-        if callable(rollback):
-            await rollback()
-        failure = await _record_boundary_execution_failure(
-            job.session,
-            work_item_id=job.work_item_id,
-            worker_id=job.worker_id,
-            lease_token=failure_lease_token,
-            error=exc,
-            now=now,
-        )
-        return BoundaryRuntimeOutcome(
-            work_item_id=job.work_item_id,
-            error_code=failure.error_code,
-            error_summary=failure.safe_summary,
-            preserved_ready_siblings=True,
-        )
+            result = await _run_boundary_validation_before_deadline(
+                lambda: validate_and_repair_boundary(
+                    previous_section=job.previous_section,
+                    previous_plan=previous_plan,
+                    next_section=job.next_section,
+                    next_plan=next_plan,
+                    semantic_validator=bounded_semantic_validator,
+                    repair_engine=bounded_repair_engine,
+                    writer_requests=job.writer_requests,
+                ),
+                deadline=validation_deadline,
+            )
+        except LeaseLostError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - persist unknown validator failures as typed failures.
+            # The claim and checkpoint above are already committed. A semantic
+            # provider or repair-provider error (e.g. UnexpectedModelBehavior)
+            # never touches the database, but clear any aborted transaction state
+            # before the typed failure persists so the fenced write is never
+            # attempted against a poisoned session.
+            rollback = getattr(job.session, "rollback", None)
+            failure_lease_token = claimed_lease_token
+            if callable(rollback):
+                await rollback()
+            failure = await _record_boundary_execution_failure(
+                job.session,
+                work_item_id=job.work_item_id,
+                worker_id=job.worker_id,
+                lease_token=failure_lease_token,
+                error=exc,
+                now=now,
+            )
+            return BoundaryRuntimeOutcome(
+                work_item_id=job.work_item_id,
+                error_code=failure.error_code,
+                error_summary=failure.safe_summary,
+                preserved_ready_siblings=True,
+            )
 
     original_hashes = {
         job.previous_section.id: accepted_section_output_hash(job.previous_section),
@@ -977,6 +1210,8 @@ async def execute_boundary_work_item(
             "next_section": result.next_section.model_dump(mode="json"),
             "semantic_calls": result.semantic_calls,
         }
+        if advisories is not None:
+            output["advisories"] = [issue.model_dump(mode="json") for issue in advisories]
         await complete_work_item(
             job.session,
             work_item_id=item.id,
@@ -986,6 +1221,8 @@ async def execute_boundary_work_item(
             output_hash=content_hash(output),
             now=now,
         )
+        if advisories is not None:
+            await _append_advisory_event(job.session, item=item, work=work, issues=advisories)
         return BoundaryRuntimeOutcome(work_item_id=item.id, result=result)
 
     # A boundary work item whose own predecessor was already replaced once
@@ -993,30 +1230,73 @@ async def execute_boundary_work_item(
     # through ``admit_boundary_replacement_work_item`` -- the one linked
     # successor this module ever admits after a targeted writer repair. If
     # *that* replacement boundary still needs another changed repair, the
-    # single bounded writer-replacement budget is exhausted: fail terminally
-    # instead of reporting another recoverable "pending writer replacement",
-    # so the dispatcher never attempts a second writer repair for this
-    # boundary identity.
-    repair_exhausted = bool(changed_sections) and item.replaces_work_item_id is not None
-    pending = () if repair_exhausted else changed_sections
+    # single bounded writer-replacement budget is exhausted.  Never attempt a
+    # second writer repair: complete this boundary in place on its CURRENT
+    # (already once-repaired) sections and carry the remaining findings as
+    # teacher-visible advisories.
+    # The validator reports findings on BOTH sections as
+    # ``boundary_repair_ambiguous`` and never attempts a repair, so no repair
+    # proof exists for the advisory successor path.  When every finding is a
+    # narrative continuity code, accept in place with the originals kept.
+    ambiguous_narrative = (
+        not result.passed
+        and not changed_sections
+        and result.failure_code == "boundary_repair_ambiguous"
+        and bool(result.initial_issues)
+        and all(
+            issue.issue_code in NARRATIVE_CONTINUITY_ISSUE_CODES
+            for issue in result.initial_issues
+        )
+    )
+    if ambiguous_narrative or (bool(changed_sections) and item.replaces_work_item_id is not None):
+        exhausted_advisories = (
+            unique_boundary_issues(result.initial_issues)
+            if ambiguous_narrative
+            else _advisory_issues_from_result(result)
+        )
+        accepted_result = BoundaryValidationResult(
+            status="pass",
+            previous_section=job.previous_section,
+            next_section=job.next_section,
+            semantic_calls=result.semantic_calls,
+        )
+        output = {
+            "kind": "shared_lesson_boundary_result",
+            "status": "pass",
+            "work": work.model_dump(mode="json"),
+            "previous_section": job.previous_section.model_dump(mode="json"),
+            "next_section": job.next_section.model_dump(mode="json"),
+            "semantic_calls": result.semantic_calls,
+            "advisories": [issue.model_dump(mode="json") for issue in exhausted_advisories],
+        }
+        await complete_work_item(
+            job.session,
+            work_item_id=item.id,
+            worker_id=job.worker_id,
+            lease_token=item.lease_token or 0,
+            output_json=output,
+            output_hash=content_hash(output),
+            now=now,
+        )
+        await _append_advisory_event(
+            job.session, item=item, work=work, issues=exhausted_advisories
+        )
+        return BoundaryRuntimeOutcome(work_item_id=item.id, result=accepted_result)
+
+    pending = changed_sections
     failure = WorkItemFailure(
         error_code=(
-            "boundary_repair_exhausted"
-            if repair_exhausted
-            else "boundary_repair_pending_writer_replacement"
+            BOUNDARY_PENDING_REPLACEMENT_CODE
             if changed_sections
             else (result.failure_code or "boundary_validation_failed")
         ),
-        error_class=(ErrorClass.VALIDATION if repair_exhausted else ErrorClass.PROVIDER_OUTPUT),
+        error_class=ErrorClass.PROVIDER_OUTPUT,
         safe_summary=(
-            "Boundary repair required a second targeted writer replacement; "
-            "the bounded repair budget is exhausted and needs manual review."
-            if repair_exhausted
-            else "Boundary repair produced a changed section; admit a linked writer replacement before retrying."
+            "Boundary repair produced a changed section; admit a linked writer replacement before retrying."
             if changed_sections
             else "Boundary validation failed; retry the affected boundary after correcting its writer output."
         ),
-        recovery_action=(RecoveryAction.NONE if repair_exhausted else RecoveryAction.RETRY),
+        recovery_action=RecoveryAction.RETRY,
     )
     if changed_sections:
         # A changed targeted repair remains a recoverable boundary failure, but
@@ -1051,6 +1331,61 @@ async def execute_boundary_work_item(
         error_summary=failure.safe_summary,
         pending_replacement_section_ids=pending,
         preserved_ready_siblings=True,
+    )
+
+
+async def _advisory_issues_for_successor(
+    session: Any,
+    *,
+    item: GenerationWorkItemModel,
+    identity: SourceIdentity,
+    work: BoundaryWorkOrder,
+) -> tuple[ContinuityIssue, ...]:
+    """Re-derive an advisory successor's issues from its predecessor's proof."""
+    predecessor = await session.scalar(
+        select(GenerationWorkItemModel).where(
+            GenerationWorkItemModel.id == item.replaces_work_item_id,
+            GenerationWorkItemModel.stage == BOUNDARY_STAGE,
+        )
+    )
+    if (
+        predecessor is None
+        or predecessor.status != "failed_recoverable"
+        or predecessor.checkpoint_json is None
+    ):
+        raise BoundaryCheckpointError("boundary advisory predecessor proof is unavailable")
+    original_work, proof = _verified_repair_proof(predecessor, identity)
+    if original_work != work:
+        raise BoundaryCheckpointError("boundary advisory is not bound to the original work order")
+    if (
+        item.input_hash != boundary_advisory_input_hash(work)
+        or item.composition_identity
+        != _composition_identity(
+            work.previous_composition_identity, work.next_composition_identity
+        )
+        or item.definition_hash != hashlib.sha256(BOUNDARY_DEFINITION.encode("utf-8")).hexdigest()
+    ):
+        raise BoundaryCheckpointError("boundary advisory work item identity is stale")
+    return _advisory_issues_from_result(proof)
+
+
+async def _append_advisory_event(
+    session: Any,
+    *,
+    item: GenerationWorkItemModel,
+    work: BoundaryWorkOrder,
+    issues: Sequence[ContinuityIssue],
+) -> None:
+    await append_event(
+        session,
+        run_id=item.run_id,
+        work_item_id=item.id,
+        event_type="boundary_advisory_accepted",
+        safe_payload={
+            "previous_section_id": work.previous_section_id,
+            "next_section_id": work.next_section_id,
+            "issue_codes": sorted({issue.issue_code for issue in issues}),
+        },
     )
 
 
@@ -1158,8 +1493,14 @@ __all__ = [
     "BoundaryWorkItemJob",
     "BoundaryWorkOrder",
     "accepted_section_output_hash",
+    "BOUNDARY_ADVISORY_MARKER",
+    "BOUNDARY_PENDING_REPLACEMENT_CODE",
+    "admit_boundary_advisory_successor",
     "admit_boundary_replacement_work_item",
     "admit_boundary_work_item",
+    "boundary_advisory_input_hash",
+    "is_boundary_advisory_item",
+    "unique_boundary_issues",
     "execute_boundary_work_item",
     "execute_boundary_work_items",
 ]

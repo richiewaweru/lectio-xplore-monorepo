@@ -2,6 +2,9 @@
 
 The product retry route has two outcomes:
 
+* a terminal shared-document boundary leaf that holds a valid repair proof
+  (``boundary_checkpoint_integrity`` false positive) is requeued in place
+  (``boundary_recovery``) instead of forcing a new revision;
 * the realization's learn/print Run is ``failed_recoverable`` with retryable
   leaves -> ``retry_work_items`` reopens the same Run (bounded by the runtime
   attempt budget), and the realization projects back to ``queued``;
@@ -26,6 +29,7 @@ from application.unit_lesson.realization_projection import (
     project_realization_status,
 )
 from core.database.models import NativeRealizationModel
+from document.shared_lesson.boundary_recovery import recover_boundary_repair_leaves
 from document.shared_lesson.realization_source import (
     PendingRealizationSource,
     RealizationSourceResult,
@@ -105,7 +109,35 @@ async def _retry_shared_document_leaves(
 ) -> bool:
     """Requeue the failed leaves of a failed_recoverable shared-document Run."""
     shared_run_id = getattr(row, "shared_document_run_id", None)
-    if not shared_run_id or str(row.status or "") not in {"failed_recoverable", "failed"}:
+    if not shared_run_id:
+        return False
+    if str(row.status or "") in {"failed_terminal", "failed_recoverable", "failed"} and (
+        await recover_boundary_repair_leaves(
+            session, run_id=shared_run_id, owner_user_id=owner_user_id
+        )
+    ):
+        # A boundary leaf that terminally failed on a valid repair proof is a
+        # false positive: it was requeued in place, so the plan, sourcebook
+        # and every finished section keep their outputs.
+        recovered = await session.scalar(
+            select(GenerationRunModel)
+            .where(GenerationRunModel.id == shared_run_id)
+            .execution_options(populate_existing=True)
+        )
+        project_realization_status(
+            row,
+            doc_source=RealizationSourceResult(
+                state="pending",
+                pending=PendingRealizationSource(
+                    run_id=shared_run_id,
+                    status=str(recovered.status if recovered else "queued"),
+                    stage=str(recovered.stage if recovered else "continuity_validation"),
+                ),
+            ),
+        )
+        await session.flush()
+        return True
+    if str(row.status or "") not in {"failed_recoverable", "failed"}:
         return False
     run = await session.scalar(
         select(GenerationRunModel)

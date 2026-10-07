@@ -11,11 +11,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
 from document.shared_lesson.continuity import ContinuityIssue
 
-QualityFlagSource = Literal["semantic_qa", "deterministic_qa", "writer_warning"]
+QualityFlagSource = Literal["semantic_qa", "deterministic_qa", "writer_warning", "boundary_check"]
 
 
 class QualityFlag(BaseModel):
@@ -30,6 +30,30 @@ class QualityFlag(BaseModel):
     section_id: str = Field(min_length=1)
     node_ids: tuple[str, ...] = ()
     required_correction: str = Field(min_length=1)
+    # Optional boundary metadata. Omitted from every dump while unset so flags
+    # (and the document-QA output hash they live in) persisted before these
+    # fields existed stay byte-identical.
+    previous_section_id: str | None = None
+    next_section_id: str | None = None
+    previous_section_title: str | None = None
+    next_section_title: str | None = None
+    internal_issue_codes: tuple[str, ...] = ()
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_boundary_metadata(self, handler):
+        data = handler(self)
+        if isinstance(data, dict):
+            for key in (
+                "previous_section_id",
+                "next_section_id",
+                "previous_section_title",
+                "next_section_title",
+            ):
+                if data.get(key) is None:
+                    data.pop(key, None)
+            if not data.get("internal_issue_codes"):
+                data.pop("internal_issue_codes", None)
+        return data
 
 
 def quality_flags_from_issues(
@@ -48,4 +72,54 @@ def quality_flags_from_issues(
     )
 
 
-__all__ = ["QualityFlag", "QualityFlagSource", "quality_flags_from_issues"]
+BOUNDARY_TRANSITION_FLAG_CODE = "boundary_transition_warning"
+
+
+def boundary_transition_flag(
+    *,
+    previous_section_id: str,
+    next_section_id: str,
+    previous_title: str,
+    next_title: str,
+    issues: Sequence[ContinuityIssue],
+) -> QualityFlag:
+    """One plain-language warning for a boundary that fell back to advisory."""
+    codes = tuple(dict.fromkeys(issue.issue_code for issue in issues))
+    repeats = any("repetition" in code for code in codes)
+    bridge = any(
+        any(word in code for word in ("bridge", "prerequisite", "exit"))
+        for code in codes
+    )
+    if repeats and bridge:
+        reason = "the opening may repeat earlier wording or skip the planned bridge"
+    elif repeats:
+        reason = "the opening may repeat earlier wording"
+    elif bridge:
+        reason = "the opening may skip the planned bridge"
+    else:
+        reason = "the connection between them may be unclear"
+    return QualityFlag(
+        code=BOUNDARY_TRANSITION_FLAG_CODE,
+        source="boundary_check",
+        message=(
+            f"The move from {previous_title} into {next_title} may feel abrupt \u2014 {reason}."
+        ),
+        section_id=next_section_id,
+        required_correction=(
+            f"Read the opening of {next_title} and smooth the transition if needed."
+        ),
+        previous_section_id=previous_section_id,
+        next_section_id=next_section_id,
+        previous_section_title=previous_title,
+        next_section_title=next_title,
+        internal_issue_codes=codes,
+    )
+
+
+__all__ = [
+    "BOUNDARY_TRANSITION_FLAG_CODE",
+    "QualityFlag",
+    "QualityFlagSource",
+    "boundary_transition_flag",
+    "quality_flags_from_issues",
+]

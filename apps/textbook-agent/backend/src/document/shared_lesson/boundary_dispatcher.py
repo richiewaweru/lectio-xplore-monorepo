@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Callable, Mapping
 from contextlib import AsyncExitStack
@@ -27,7 +28,9 @@ from document.shared_lesson.boundary_runtime import (
     BOUNDARY_STAGE,
     BoundaryRuntimeOutcome,
     BoundarySourceConflict,
+    BOUNDARY_PENDING_REPLACEMENT_CODE,
     BoundaryWorkItemJob,
+    admit_boundary_advisory_successor,
     admit_boundary_replacement_work_item,
     admit_boundary_work_item,
     execute_boundary_work_items,
@@ -67,9 +70,12 @@ from infra.generation_runtime import (
     WorkItemNotFound,
     WorkItemUnavailable,
     active_work_items,
+    append_event,
     get_run_status,
 )
 from infra.generation_runtime.repository import RunNotFound
+
+LOGGER = logging.getLogger(__name__)
 
 MAX_BOUNDARY_DISPATCH_CONCURRENCY = 4
 
@@ -332,6 +338,89 @@ async def _load_writer_leaves(
     return leaves
 
 
+_RUNTIME_TRANSITION_ERRORS = (
+    RunNotFound,
+    InvalidRunTransition,
+    InvalidWorkItemTransition,
+    WorkItemNotFound,
+    WorkItemUnavailable,
+)
+
+
+async def _record_boundary_repair_skipped(
+    session_factory: Callable[[], Any],
+    *,
+    leaf: GenerationWorkItemModel,
+    previous_id: str,
+    next_id: str,
+    reason: str,
+) -> None:
+    """Make a silent skip observable: one run event with a stable reason code."""
+    LOGGER.info(
+        "boundary repair skipped run=%s boundary=%s->%s reason=%s",
+        leaf.run_id,
+        previous_id,
+        next_id,
+        reason,
+    )
+    try:
+        async with session_factory() as session:
+            await append_event(
+                session,
+                run_id=leaf.run_id,
+                work_item_id=leaf.id,
+                event_type="boundary_repair_skipped",
+                error_code=leaf.error_code,
+                safe_payload={
+                    "reason": reason,
+                    "previous_section_id": previous_id,
+                    "next_section_id": next_id,
+                },
+            )
+            await session.commit()
+    except Exception:  # noqa: BLE001 - diagnostics must never break dispatch
+        LOGGER.warning("could not record boundary_repair_skipped event", exc_info=True)
+
+
+async def _admit_boundary_advisory(
+    session_factory: Callable[[], Any],
+    *,
+    owner_user_id: str,
+    source: TeachingPlanSource,
+    leaf: GenerationWorkItemModel,
+    previous_id: str,
+    next_id: str,
+    accepted_sections: Mapping[str, SharedSection],
+    writer_identities: Mapping[str, str],
+) -> bool:
+    """Deterministic advisory fallback; never calls a provider.
+
+    A source/identity mismatch raises ``BoundarySourceConflict`` inside the
+    admission, which keeps the boundary blocked (reported via a skip event).
+    """
+    async with session_factory() as session:
+        try:
+            await admit_boundary_advisory_successor(
+                session,
+                predecessor_work_item_id=leaf.id,
+                owner_user_id=owner_user_id,
+                source=source,
+                previous_section=accepted_sections[previous_id],
+                next_section=accepted_sections[next_id],
+                previous_composition_identity=writer_identities[previous_id],
+                next_composition_identity=writer_identities[next_id],
+            )
+            await session.commit()
+            return True
+        except (BoundarySourceConflict, WorkItemConflict, *_RUNTIME_TRANSITION_ERRORS) as exc:
+            await session.rollback()
+            reason = f"advisory_admission_rejected:{type(exc).__name__}"
+    await _record_boundary_repair_skipped(
+        session_factory, leaf=leaf, previous_id=previous_id, next_id=next_id, reason=reason
+    )
+    return False
+
+
 async def _repair_pending_boundary_writers(
     session_factory: Callable[[], Any],
     *,
@@ -350,26 +439,49 @@ async def _repair_pending_boundary_writers(
 
     Bounded to at most one writer repair per boundary identity: a boundary
     leaf that is *itself* already a repair-replacement (``replaces_work_item_id
-    is not None``) can only have reached ``boundary_repair_pending_writer_replacement``
-    again through ``execute_boundary_work_item``'s own exhaustion check, which
-    instead fails such a leaf terminally as ``boundary_repair_exhausted``.  So
-    this loop only ever sees a first-time pending repair here and never
-    attempts a second one for the same boundary identity.
+    is not None``) completes in place with advisories in
+    ``execute_boundary_work_item`` instead of ever asking for a second repair.
+
+    When a targeted writer repair cannot be applied (issues in both sections,
+    admission rejected, repair changed both sections, repaired boundary did
+    not pass) the boundary falls back deterministically to an *advisory*
+    successor: the original sections are kept and the findings surface as
+    teacher-visible quality flags.  Every skip is recorded as a
+    ``boundary_repair_skipped`` event with a reason code.
 
     Every step is best-effort per boundary pair: a stale or conflicting repair
     is left exactly as ``pending_repair`` for the next dispatch call (or human
-    review) rather than raised out of this scan, matching the transactional
-    discipline the rest of this module already uses.
+    review) rather than raised out of this scan.
     """
+
+    async def skip(leaf: GenerationWorkItemModel, previous_id: str, next_id: str, reason: str):
+        await _record_boundary_repair_skipped(
+            session_factory, leaf=leaf, previous_id=previous_id, next_id=next_id, reason=reason
+        )
+
+    async def advisory(leaf: GenerationWorkItemModel, previous_id: str, next_id: str) -> None:
+        await _admit_boundary_advisory(
+            session_factory,
+            owner_user_id=owner_user_id,
+            source=source,
+            leaf=leaf,
+            previous_id=previous_id,
+            next_id=next_id,
+            accepted_sections=accepted_sections,
+            writer_identities=writer_identities,
+        )
+
     for previous_id, next_id in pairwise(section_order):
         key = f"boundary:{previous_id}->{next_id}"
         leaf = boundary_leaves.get(key)
         if (
             leaf is None
             or leaf.status != "failed_recoverable"
-            or leaf.error_code != "boundary_repair_pending_writer_replacement"
-            or leaf.checkpoint_json is None
+            or leaf.error_code != BOUNDARY_PENDING_REPLACEMENT_CODE
         ):
+            continue
+        if leaf.checkpoint_json is None:
+            await skip(leaf, previous_id, next_id, "checkpoint_missing")
             continue
         try:
             checkpoint = RuntimeCheckpoint.model_validate(leaf.checkpoint_json)
@@ -377,55 +489,78 @@ async def _repair_pending_boundary_writers(
             if not isinstance(payload, Mapping) or (
                 payload.get("kind") != "shared_lesson_boundary_repair_result"
             ):
+                await skip(leaf, previous_id, next_id, "checkpoint_not_repair_result")
                 continue
             boundary_result = BoundaryValidationResult.model_validate(payload["result"])
-        except (TypeError, ValueError):
+        except (KeyError, TypeError, ValueError):
+            await skip(leaf, previous_id, next_id, "checkpoint_unreadable")
             continue
-        if len(boundary_result.initial_issues) != 1:
+        issues = tuple(boundary_result.initial_issues)
+        if not issues:
+            await skip(leaf, previous_id, next_id, "no_initial_issues")
             continue
-        issue = boundary_result.initial_issues[0]
-        affected_section_id = issue.affected_section_id
-        if affected_section_id not in (previous_id, next_id):
+        affected_sections = {issue.affected_section_id for issue in issues}
+        if not affected_sections <= {previous_id, next_id}:
+            await skip(leaf, previous_id, next_id, "issue_section_outside_boundary")
             continue
+        if len(affected_sections) != 1 or leaf.replaces_work_item_id is not None:
+            # Findings on both sections cannot be fixed by one targeted writer
+            # repair, and a boundary that is already a repair replacement never
+            # gets a second one; keep both accepted sections and surface the
+            # findings as advisories.
+            await advisory(leaf, previous_id, next_id)
+            continue
+        affected_section_id = next(iter(affected_sections))
         accepted_section = accepted_sections.get(affected_section_id)
         writer_request = writer_requests.get(affected_section_id)
         if accepted_section is None or writer_request is None:
+            await skip(leaf, previous_id, next_id, "affected_section_unavailable")
             continue
 
         admission = None
+        admission_rejected = False
+        predecessor_missing = False
         async with session_factory() as session:
             writer_leaves = await _load_writer_leaves(session, run_id=leaf.run_id)
             predecessor = writer_leaves.get(f"write:{affected_section_id}")
             if predecessor is None:
-                continue
-            try:
-                admission = await admit_writer_repair_work_item(
-                    session,
-                    owner_user_id=owner_user_id,
-                    source=source,
-                    predecessor_work_item_id=predecessor.id,
-                    accepted_section=accepted_section,
-                    writer_request=writer_request,
-                    boundary_result=boundary_result,
-                    boundary_work_item_id=leaf.id,
-                    issue=issue,
-                    previous_section=accepted_sections[previous_id],
-                    next_section=accepted_sections[next_id],
-                )
-                await session.commit()
-            except (
-                WriterRepairRuntimeError,
-                WriterRepairSourceConflict,
-                WorkItemConflict,
-                RunNotFound,
-                InvalidRunTransition,
-                InvalidWorkItemTransition,
-                WorkItemNotFound,
-                WorkItemUnavailable,
-            ):
-                await session.rollback()
-                continue
+                predecessor_missing = True
+            else:
+                try:
+                    admission = await admit_writer_repair_work_item(
+                        session,
+                        owner_user_id=owner_user_id,
+                        source=source,
+                        predecessor_work_item_id=predecessor.id,
+                        accepted_section=accepted_section,
+                        writer_request=writer_request,
+                        boundary_result=boundary_result,
+                        boundary_work_item_id=leaf.id,
+                        issues=issues,
+                        previous_section=accepted_sections[previous_id],
+                        next_section=accepted_sections[next_id],
+                    )
+                    await session.commit()
+                except (
+                    WriterRepairRuntimeError,
+                    WriterRepairSourceConflict,
+                    WorkItemConflict,
+                    *_RUNTIME_TRANSITION_ERRORS,
+                ) as exc:
+                    await session.rollback()
+                    admission_rejected = True
+                    LOGGER.info(
+                        "writer repair admission rejected for %s: %s", key, type(exc).__name__
+                    )
+        if predecessor_missing:
+            await skip(leaf, previous_id, next_id, "writer_predecessor_missing")
+            continue
+        if admission_rejected:
+            await skip(leaf, previous_id, next_id, "writer_repair_admission_rejected")
+            await advisory(leaf, previous_id, next_id)
+            continue
         if admission is None:
+            await skip(leaf, previous_id, next_id, "writer_repair_not_admitted")
             continue
 
         outcome = None
@@ -443,13 +578,21 @@ async def _repair_pending_boundary_writers(
                 )
             except LeaseLostError:
                 await session.rollback()
-                continue
-            await session.commit()
+                outcome = None
+                lease_lost = True
+            else:
+                lease_lost = False
+                await session.commit()
+        if lease_lost:
+            await skip(leaf, previous_id, next_id, "writer_repair_lease_lost")
+            continue
         if outcome is None or outcome.result is None:
             # The repair failed its own closed-contract or source
             # revalidation; the writer replacement is now failed_recoverable
-            # (or terminal) in its own right and the boundary stays
-            # pending_repair for the next dispatch call or human review.
+            # (or terminal) in its own right and the original section can no
+            # longer be restored here, so the boundary stays pending_repair
+            # for the next dispatch call or human review.
+            await skip(leaf, previous_id, next_id, "writer_repair_execution_failed")
             continue
 
         repaired_section = outcome.result.as_shared_section(
@@ -461,6 +604,7 @@ async def _repair_pending_boundary_writers(
         else:
             new_previous, new_next = accepted_sections[previous_id], repaired_section
 
+        replacement_rejected = False
         async with session_factory() as session:
             try:
                 await admit_boundary_replacement_work_item(
@@ -474,17 +618,11 @@ async def _repair_pending_boundary_writers(
                     next_composition_identity=writer_identities[next_id],
                 )
                 await session.commit()
-            except (
-                BoundarySourceConflict,
-                WorkItemConflict,
-                RunNotFound,
-                InvalidRunTransition,
-                InvalidWorkItemTransition,
-                WorkItemNotFound,
-                WorkItemUnavailable,
-            ):
+            except (BoundarySourceConflict, WorkItemConflict, *_RUNTIME_TRANSITION_ERRORS):
                 await session.rollback()
-                continue
+                replacement_rejected = True
+        if replacement_rejected:
+            await skip(leaf, previous_id, next_id, "boundary_replacement_admission_rejected")
 
 
 async def dispatch_shared_document_boundaries(

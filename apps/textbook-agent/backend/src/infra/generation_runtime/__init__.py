@@ -58,6 +58,7 @@ from infra.generation_runtime.repository import (
     persist_checkpoint,
     reconcile_expired_work_item,
     replace_work_item,
+    requeue_failed_terminal_work_item,
     retry_work_item,
     retry_work_items,
 )
@@ -119,5 +120,6 @@ __all__ = [
     "reconcile_expired_work_item",
     "replace_work_item",
     "retry_work_item",
+    "requeue_failed_terminal_work_item",
     "retry_work_items",
 ]
