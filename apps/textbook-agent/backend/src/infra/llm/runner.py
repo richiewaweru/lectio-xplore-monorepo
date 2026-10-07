@@ -228,6 +228,16 @@ def _is_retryable(exc: BaseException) -> bool:
         return False
 
 
+def is_retryable_provider_error(exc: BaseException) -> bool:
+    """Public classifier: True when ``exc`` is a transient provider/transport failure."""
+    return _is_retryable(exc)
+
+
+def is_provider_request_rejected(exc: BaseException) -> bool:
+    """True for a provider HTTP rejection that resending cannot fix (400/401/403/404...)."""
+    return isinstance(exc, ModelHTTPError) and not _is_retryable(exc)
+
+
 async def run_llm(
     *,
     caller: str,

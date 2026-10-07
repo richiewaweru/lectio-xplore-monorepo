@@ -37,6 +37,7 @@ from infra.config import settings
 from infra.database.models import GenerationBuildModel, GenerationRunModel, GenerationWorkItemModel
 from infra.execution.checkpoints import content_hash
 from infra.execution.leases import LeaseLostError
+from infra.llm.runner import is_provider_request_rejected, is_retryable_provider_error
 from infra.generation_runtime import (
     AdmissionResult,
     CheckpointCompatibilityError,
@@ -485,7 +486,7 @@ def _validate_checkpoint_payload(
 
 def _failure_for_exception(exc: Exception) -> WorkItemFailure:
     """Classify operational failures without semantic fallback."""
-    if isinstance(exc, (TimeoutError, ConnectionError)):
+    if isinstance(exc, (TimeoutError, ConnectionError)) or is_retryable_provider_error(exc):
         return WorkItemFailure(
             error_code="document_qa_provider_transport",
             error_class=ErrorClass.PROVIDER_TRANSPORT,
@@ -513,6 +514,13 @@ def _failure_for_exception(exc: Exception) -> WorkItemFailure:
             error_class=ErrorClass.VALIDATION,
             safe_summary="Document semantic QA input or output failed validation.",
             recovery_action=RecoveryAction.RETRY,
+        )
+    if is_provider_request_rejected(exc):
+        return WorkItemFailure(
+            error_code="document_qa_provider_request_rejected",
+            error_class=ErrorClass.UNSUPPORTED_CONTRACT,
+            safe_summary="Document semantic QA provider rejected the request.",
+            recovery_action=RecoveryAction.NONE,
         )
     return WorkItemFailure(
         error_code="document_qa_failure",
