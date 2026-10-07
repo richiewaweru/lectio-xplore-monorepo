@@ -82,6 +82,7 @@ export type LessonApproachView = {
 	teaching_plan_identity?: TeachingPlanIdentityView | null;
 	teaching_qc?: Array<{ code?: string; message?: string }>;
 	teaching_flags?: TeachingPlanFlag[];
+	misconceptions?: Array<{ id: string; description: string; risk?: string }>;
 };
 
 export function hasVisibleTeachingPlan(plan: TeachingPlanView | null | undefined): boolean {

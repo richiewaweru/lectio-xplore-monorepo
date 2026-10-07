@@ -46,6 +46,31 @@ class FigureVisualCallbackRequest(BaseModel):
     block_id: str | None = None
     asset: dict[str, Any]
 
+def lesson_approach_misconceptions(lesson_packet: Any) -> list[dict[str, str]]:
+    """Teacher-facing misconceptions (id, description, risk) from the stored lesson packet."""
+    if not isinstance(lesson_packet, dict):
+        return []
+    items = lesson_packet.get("misconceptions")
+    if not isinstance(items, list):
+        return []
+    result: list[dict[str, str]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        misconception_id = str(item.get("id") or "").strip()
+        description = str(item.get("statement") or item.get("description") or "").strip()
+        if not misconception_id or not description:
+            continue
+        result.append(
+            {
+                "id": misconception_id,
+                "description": description,
+                "risk": str(item.get("risk") or "high"),
+            }
+        )
+    return result
+
+
 @native_lesson_router.get("/generations/{generation_id}/lesson-approach")
 async def get_lesson_approach(
     generation_id: str,
@@ -70,6 +95,7 @@ async def get_lesson_approach(
         "teaching_review": state.get("teaching_review"),
         "teaching_plan_identity": teaching_plan_review_identity(state),
         "lesson_packet": state.get("lesson_packet"),
+        "misconceptions": lesson_approach_misconceptions(state.get("lesson_packet")),
         "catalogue": state.get("catalogue"),
     }
 

@@ -316,6 +316,12 @@ async def test_lesson_approach_get_separates_plan_review_and_identity(
     plan = _plan()
     store = TeachingRevisionStore(state)
     store.record_draft(plan, preparation_hash="upstream-input-hash", revision=1)
+    state["lesson_packet"] = {
+        "misconceptions": [
+            {"id": "m1", "statement": "Plants drink soil.", "risk": "high"},
+            {"id": "", "statement": "dropped"},
+        ]
+    }
     generation = GenerationModel(
         id="p2-lesson-approach-get",
         user_id="p2-get-user",
@@ -348,6 +354,11 @@ async def test_lesson_approach_get_separates_plan_review_and_identity(
 
     assert response["teaching_plan"]["arc"] == plan.arc
     assert response["teaching_review"]["status"] == "pending"
+    assert response["misconceptions"] == [
+        {"id": "m1", "description": "Plants drink soil.", "risk": "high"}
+    ]
+    from application.unit_lesson.native_http import lesson_approach_misconceptions
+    assert lesson_approach_misconceptions(None) == []
     assert response["teaching_plan_identity"]["revision"] == 1
     assert response["teaching_plan_identity"]["pending_content_hash"] == teaching_plan_content_hash(
         plan
