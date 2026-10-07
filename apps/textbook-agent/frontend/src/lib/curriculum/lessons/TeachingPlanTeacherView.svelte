@@ -80,7 +80,7 @@
 				<span class="num" aria-hidden="true">{index + 1}</span>
 				<div class="body">
 					<h4>{sectionTitle(section, index)}</h4>
-					{#if section.specific_purpose?.trim()}
+					{#if section.specific_purpose?.trim() && section.display_title?.trim()}
 						<p><span class="label">What happens</span> {section.specific_purpose}</p>
 					{/if}
 					{#if actions.length}

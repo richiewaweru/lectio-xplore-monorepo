@@ -46,6 +46,7 @@ class FigureVisualCallbackRequest(BaseModel):
     block_id: str | None = None
     asset: dict[str, Any]
 
+
 def lesson_approach_misconceptions(lesson_packet: Any) -> list[dict[str, str]]:
     """Teacher-facing misconceptions (id, description, risk) from the stored lesson packet."""
     if not isinstance(lesson_packet, dict):
