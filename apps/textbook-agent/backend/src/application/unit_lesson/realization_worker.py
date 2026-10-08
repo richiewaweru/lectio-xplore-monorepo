@@ -287,10 +287,35 @@ class RealizationWorker:
                 progressed = await self._dispatch_one(session, str(realization_id)) or progressed
             except asyncio.CancelledError:
                 raise
-            except Exception:
+            except Exception as exc:
                 LOGGER.exception("Realization dispatch failed realization_id=%s", realization_id)
                 await session.rollback()
+                await self._record_dispatch_failure(session, str(realization_id), exc)
         return progressed
+
+    @staticmethod
+    async def _record_dispatch_failure(session: Any, realization_id: str, exc: BaseException) -> None:
+        """Surface a dispatch failure on the row. It stays queued and is retried."""
+        try:
+            row = await session.get(NativeRealizationModel, realization_id, populate_existing=True)
+            if (
+                row is None
+                or row.generation_run_id
+                or row.status not in {"queued", "needs_shared_review"}
+            ):
+                return
+            row.error_summary = (
+                f"REALIZATION_DISPATCH_FAILED: {type(exc).__name__} while starting this output; "
+                "retrying automatically."
+            )[:500]
+            await session.commit()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            LOGGER.exception(
+                "Could not record realization dispatch failure realization_id=%s", realization_id
+            )
+            await session.rollback()
 
     async def _owner_id(self, session: Any, path_lesson_id: str) -> str | None:
         return await session.scalar(

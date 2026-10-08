@@ -337,3 +337,17 @@ def test_unavailable_figure_is_a_settled_advisory_state():
     step = _by_key(progress)["media"]
     assert step.label == "Figures: 1 ready / 1 unavailable"
     assert step.status == "done"
+
+
+def test_shared_ready_without_print_run_says_starting_not_getting_started():
+    # Shared document READY, realization Run not admitted yet: the build step
+    # is waiting for dispatch, and the label must say so (not a blank state).
+    progress = _project([], run="ready", realize=None, path="print")
+    steps = _by_key(progress)
+    assert all(s.status == "done" for k, s in steps.items() if k != "realize")
+    assert steps["realize"].status == "pending"
+    assert steps["realize"].label == "Building the Print booklet"
+    assert progress.current_label == "Starting Print…"
+
+    learn = _project([], run="ready", realize=None, path="learn")
+    assert learn.current_label == "Starting Learn…"
