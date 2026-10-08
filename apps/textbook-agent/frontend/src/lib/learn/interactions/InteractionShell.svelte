@@ -18,6 +18,15 @@
 	import type { InteractionSubmitHandler, ServerEvaluation } from './types';
 	import InlineMarkup from '$lib/learn/document/renderers/InlineMarkup.svelte';
 
+	/** Accepts a plain string (id = label) or an object {id, label?}. */
+	function toChoice(v: unknown): { id: string; label: string } {
+		if (typeof v === 'object' && v !== null) {
+			const o = v as { id?: unknown; label?: unknown };
+			return { id: String(o.id), label: String(o.label ?? o.id) };
+		}
+		return { id: String(v), label: String(v) };
+	}
+
 	interface Props {
 		node: InteractionNode;
 		onSubmit?: InteractionSubmitHandler;
@@ -135,18 +144,12 @@
 
 	const classifyCategories = $derived(
 		Array.isArray(config.categories)
-			? (config.categories as Array<{ id: string; label?: string }>).map((c) => ({
-					id: String(c.id),
-					label: String(c.label ?? c.id)
-				}))
+			? (config.categories as unknown[]).map(toChoice)
 			: [...new Set(pairList.map((p) => p.right))].map((id) => ({ id, label: id }))
 	);
 	const classifyItems = $derived(
 		Array.isArray(config.items)
-			? (config.items as Array<{ id: string; label?: string }>).map((i) => ({
-					id: String(i.id),
-					label: String(i.label ?? i.id)
-				}))
+			? (config.items as unknown[]).map(toChoice)
 			: pairList.map((p) => ({ id: p.left, label: p.left }))
 	);
 
@@ -186,10 +189,7 @@
 
 	function sequenceItems(cfg: Record<string, unknown>) {
 		if (Array.isArray(cfg.items)) {
-			return (cfg.items as Array<{ id: string; label?: string }>).map((i) => ({
-				id: String(i.id),
-				label: String(i.label ?? i.id)
-			}));
+			return (cfg.items as unknown[]).map(toChoice);
 		}
 		if (Array.isArray(cfg.order)) {
 			return cfg.order.map((id) => ({ id: String(id), label: String(id) }));
