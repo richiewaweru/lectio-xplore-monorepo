@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	apiFetch: vi.fn(), downloadGenerationPdf: vi.fn(), getLessonIssues: vi.fn(),
-	retryLessonRealization: vi.fn(), generatePrintRealization: vi.fn()
+	retryLessonRealization: vi.fn(), generatePrintRealization: vi.fn(), goto: vi.fn()
 }));
+const pageState = vi.hoisted(() => ({ url: new URL('http://localhost/units/unit-1/lessons/lesson-1/print') }));
+
+vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
+vi.mock('$app/state', () => ({ page: pageState }));
 
 vi.mock('$lib/api/client', () => ({ apiFetch: mocks.apiFetch }));
 vi.mock('$lib/api/realizations', () => ({ downloadGenerationPdf: mocks.downloadGenerationPdf }));
@@ -36,6 +40,7 @@ describe('Unit Print workspace document and realization errors', () => {
 		for (const mock of Object.values(mocks)) mock.mockReset();
 		mocks.getLessonIssues.mockResolvedValue({ issues: [] });
 		mocks.apiFetch.mockResolvedValue({ ok: false, status: 503 });
+		pageState.url = new URL('http://localhost/units/unit-1/lessons/lesson-1/print');
 	});
 	afterEach(cleanup);
 
@@ -44,7 +49,35 @@ describe('Unit Print workspace document and realization errors', () => {
 		expect(await screen.findByText(/Print document unavailable/)).toBeTruthy();
 		expect(screen.queryByRole('button', { name: /Retry preview|Retry Print/ })).toBeNull();
 		expect(mocks.retryLessonRealization).not.toHaveBeenCalled();
-		expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toContain('/studio/print/print-o');
+		expect(screen.getByRole('tab', { name: 'Edit' }).getAttribute('href')).toContain('/studio/print/print-o');
+	});
+
+	it('shows Edit as a disabled tab with a reason until a Print output exists', async () => {
+		const notCreated = context();
+		notCreated.preparation.workspace.print = { state: 'not_created' };
+		render(PrintPage, { context: new Map([['lessonWorkspace', notCreated]]) });
+		const edit = await screen.findByRole('tab', { name: 'Edit' });
+		expect(edit.getAttribute('aria-disabled')).toBe('true');
+		expect(edit.getAttribute('title')).toBe('Available once the lesson is ready');
+		expect(edit.getAttribute('href')).toBeNull();
+		await fireEvent.click(edit);
+		expect(mocks.goto).not.toHaveBeenCalled();
+	});
+
+	it('moves to the Issues tab through the URL and renders it from ?tab=issues', async () => {
+		mocks.getLessonIssues.mockResolvedValue({
+			issues: [{ id: 'page-gap', path: 'print', severity: 'error', category: 'document', code: 'PAGE_GAP', message: 'Worksheet page is missing', details: '', repairable: false, source: 'workspace', group: 'blocking' }]
+		});
+		render(PrintPage, { context: new Map([['lessonWorkspace', context()]]) });
+		await fireEvent.click(await screen.findByRole('tab', { name: 'Issues' }));
+		expect(mocks.goto).toHaveBeenCalledWith('/units/unit-1/lessons/lesson-1/print?tab=issues', { replaceState: true, noScroll: true, keepFocus: true });
+
+		cleanup();
+		mocks.goto.mockReset();
+		pageState.url = new URL('http://localhost/units/unit-1/lessons/lesson-1/print?tab=issues');
+		render(PrintPage, { context: new Map([['lessonWorkspace', context()]]) });
+		expect(await screen.findByText('Worksheet page is missing')).toBeTruthy();
+		expect(screen.getByRole('tab', { name: 'Issues' }).getAttribute('aria-selected')).toBe('true');
 	});
 
 	it('keeps queued Print guidance on refresh and does not offer retry', async () => {

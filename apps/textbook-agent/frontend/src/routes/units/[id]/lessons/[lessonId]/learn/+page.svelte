@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { getBuilderLesson, openNativeLearnBuilderLesson } from '$lib/learn/authoring/builder/api/lesson-crud';
 	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
 	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
@@ -28,7 +30,7 @@
 	};
 
 	const ctx = getContext<Ctx>('lessonWorkspace');
-	let activeTab = $state<'preview' | 'issues'>('preview');
+	const activeTab = $derived<'preview' | 'issues'>(page.url.searchParams.get('tab') === 'issues' ? 'issues' : 'preview');
 	let document = $state<LearnDocument | null>(null);
 	let builderLessonId = $state<string | null>(null);
 	let loadError = $state<string | null>(null);
@@ -44,8 +46,13 @@
 	let assignMode = $state('rolling');
 	let assignStatus = $state<string | null>(null);
 
+	// The Preview/Issues tab lives in the URL (?tab=issues) so it survives reloads and deep links.
 	function selectTab(id: string): void {
-		if (id === 'preview' || id === 'issues') activeTab = id;
+		if (id !== 'preview' && id !== 'issues') return;
+		const url = new URL(page.url.href);
+		if (id === 'issues') url.searchParams.set('tab', 'issues');
+		else url.searchParams.delete('tab');
+		void goto(`${url.pathname}${url.search}`, { replaceState: true, noScroll: true, keepFocus: true });
 	}
 
 	const artifact = $derived(lessonArtifactUi(ctx.preparation, 'learn', loadError));
@@ -251,7 +258,7 @@
 			active={activeTab}
 			tabs={[
 				{ id: 'preview', label: 'Preview' },
-				{ id: 'edit', label: 'Edit', href: builderLessonId ? `/builder/${encodeURIComponent(builderLessonId)}` : undefined },
+				{ id: 'edit', label: 'Edit', href: builderLessonId ? `/builder/${encodeURIComponent(builderLessonId)}` : undefined, disabled: !builderLessonId, title: builderLessonId ? undefined : 'Available once the lesson is ready' },
 				{ id: 'issues', label: 'Issues' }
 			]}
 			onSelect={selectTab}
