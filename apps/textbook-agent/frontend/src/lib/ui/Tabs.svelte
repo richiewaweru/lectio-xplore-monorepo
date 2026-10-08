@@ -3,6 +3,8 @@
 		id: string;
 		label: string;
 		href?: string;
+		disabled?: boolean;
+		title?: string;
 	}
 
 	interface Props {
@@ -16,11 +18,24 @@
 
 <div class="tabs" role="tablist">
 	{#each tabs as tab}
-		{#if tab.href}
+		{#if tab.disabled}
+			<span
+				role="tab"
+				class="tab"
+				class:active={tab.id === active}
+				aria-selected={tab.id === active}
+				aria-disabled="true"
+				title={tab.title}
+			>
+				{tab.label}
+			</span>
+		{:else if tab.href}
 			<a
 				href={tab.href}
 				class="tab"
 				class:active={tab.id === active}
+				role="tab"
+				aria-selected={tab.id === active}
 				aria-current={tab.id === active ? 'page' : undefined}
 			>
 				{tab.label}
@@ -65,6 +80,11 @@
 	}
 	.tab:hover {
 		color: var(--ink);
+	}
+	.tab[aria-disabled='true'],
+	.tab[aria-disabled='true']:hover {
+		color: var(--ink-3);
+		cursor: not-allowed;
 	}
 	.tab.active {
 		color: var(--accent);

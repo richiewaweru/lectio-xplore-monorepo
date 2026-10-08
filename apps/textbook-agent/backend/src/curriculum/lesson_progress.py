@@ -211,6 +211,9 @@ def project_artifact_progress(
         label = current.label
         if current.total and current.key != "media":
             label = f"{label} ({current.done or 0}/{current.total})"
+    elif shared_run_status == "ready" and realize_run_status is None:
+        # Shared document is ready but the realization Run is not admitted yet.
+        label = "Starting Learn…" if path == "learn" else "Starting Print…"
     started = shared_started_at or realize_started_at
     return ArtifactProgressDTO(
         steps=steps,

@@ -94,3 +94,64 @@ describe('InteractionShell match-pairs', () => {
 		expect(screen.queryByTestId('feedback-correct-icon')).toBeNull();
 	});
 });
+
+const classifyNode = (categories: unknown): InteractionNode => ({
+	id: 'classify-1',
+	kind: 'interaction',
+	interaction_type: 'classify',
+	prompt: 'Sort each living thing into its group.',
+	role: 'practice',
+	config: {
+		items: ['Sunflower', 'Biscuit the hamster'],
+		categories,
+		pairs: [
+			{ left: 'Sunflower', right: 'Plant' },
+			{ left: 'Biscuit the hamster', right: 'Animal' }
+		]
+	},
+	feedback: { correct: 'All sorted.', incorrect: 'Try again.' }
+});
+
+describe('InteractionShell classify with plain string items', () => {
+	it.each([
+		['string categories', ['Plant', 'Animal']],
+		[
+			'object categories',
+			[
+				{ id: 'plant', label: 'Plant' },
+				{ id: 'animal', label: 'Animal' }
+			]
+		]
+	])('renders string items and %s without throwing', (_name, categories) => {
+		render(InteractionShell, { node: classifyNode(categories) });
+
+		expect(screen.getByRole('button', { name: 'Sunflower' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Biscuit the hamster' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Plant' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Animal' })).toBeTruthy();
+	});
+});
+
+const sequenceNode: InteractionNode = {
+	id: 'sequence-1',
+	kind: 'interaction',
+	interaction_type: 'sequence',
+	prompt: 'Put the life cycle in order.',
+	role: 'practice',
+	config: {
+		items: ['Seed', 'Sprout', 'Plant'],
+		order: ['Seed', 'Sprout', 'Plant']
+	},
+	feedback: { correct: 'Right order.', incorrect: 'Look again.' }
+};
+
+describe('InteractionShell sequence with plain string items', () => {
+	it('renders every string item', () => {
+		render(InteractionShell, { node: sequenceNode });
+
+		expect(screen.getByText('Seed')).toBeTruthy();
+		expect(screen.getByText('Sprout')).toBeTruthy();
+		expect(screen.getByText('Plant')).toBeTruthy();
+		expect(screen.getAllByRole('listitem')).toHaveLength(3);
+	});
+});

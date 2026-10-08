@@ -1,5 +1,7 @@
 <script lang="ts">
 import { getContext, onDestroy, onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/state';
 	import LectioPageDocumentView from '$lib/print/components/studio/LectioPageDocumentView.svelte';
 	import { extractLectioDocumentV2 } from '$lib/print/studio/document-version';
 	import { downloadGenerationPdf } from '$lib/api/realizations';
@@ -27,7 +29,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	};
 
 	const ctx = getContext<Ctx>('lessonWorkspace');
-	let activeTab = $state<'preview' | 'issues'>('preview');
+	const activeTab = $derived<'preview' | 'issues'>(page.url.searchParams.get('tab') === 'issues' ? 'issues' : 'preview');
 	let generationId = $state<string | null>(null);
 	let pageDocumentV2 = $state<LectioDocument | null>(null);
 	let issues = $state<LessonIssue[]>([]);
@@ -42,8 +44,13 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	let edition = $state<'teacher' | 'student'>('teacher');
 	const artifact = $derived(lessonArtifactUi(ctx.preparation, 'print', error));
 
+	// The Preview/Issues tab lives in the URL (?tab=issues) so it survives reloads and deep links.
 	function selectTab(id: string): void {
-		if (id === 'preview' || id === 'issues') activeTab = id;
+		if (id !== 'preview' && id !== 'issues') return;
+		const url = new URL(page.url.href);
+		if (id === 'issues') url.searchParams.set('tab', 'issues');
+		else url.searchParams.delete('tab');
+		void goto(`${url.pathname}${url.search}`, { replaceState: true, noScroll: true, keepFocus: true });
 	}
 
 	function printIsActive(): boolean {
@@ -164,7 +171,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 			active={activeTab}
 			tabs={[
 				{ id: 'preview', label: 'Preview' },
-				{ id: 'edit', label: 'Edit', href: generationId ? `/studio/print/${encodeURIComponent(generationId)}` : undefined },
+				{ id: 'edit', label: 'Edit', href: generationId ? `/studio/print/${encodeURIComponent(generationId)}` : undefined, disabled: !generationId, title: generationId ? undefined : 'Available once the lesson is ready' },
 				{ id: 'issues', label: 'Issues' }
 			]}
 			onSelect={selectTab}
