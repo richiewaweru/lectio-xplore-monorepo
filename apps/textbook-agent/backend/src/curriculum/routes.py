@@ -53,6 +53,7 @@ from core.database.models import (
 from core.entities.user import User
 from curriculum.agents import (
     run_constructor,
+    run_merge_critic,
     run_path_planner,
     run_plan_chat_edit,
 )
@@ -1280,6 +1281,55 @@ async def post_path_lesson_split(
             "path": await _path_payload(session, cloned),
             "source_lesson_id": copied.id,
             "part_ids": [part.id for part in parts],
+        }
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
+        await session.rollback()
+        _raise_http(exc)
+
+
+class MergeObjectiveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lesson_ids: list[str] = Field(min_length=2, max_length=2)
+
+
+@router.post("/{unit_id}/path/lessons:merge-objective")
+async def post_path_lessons_merge_objective(
+    unit_id: str,
+    body: MergeObjectiveRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        lessons = [
+            await get_path_lesson(session, version_id=version.id, lesson_id=lesson_id)
+            for lesson_id in body.lesson_ids
+        ]
+        lesson_a, lesson_b = (
+            {
+                "title": lesson.title,
+                "objective": lesson.objective,
+                "must_establish": lesson.must_establish,
+                "knowledge_type": lesson.primary_knowledge_type,
+            }
+            for lesson in lessons
+        )
+        result = await run_merge_critic(
+            lesson_a,
+            lesson_b,
+            unit_context={
+                "topic": unit.topic,
+                "subject": unit.subject,
+                "grade_level": unit.grade_level,
+                "destination_objective": unit.destination_objective,
+            },
+        )
+        return {
+            "merged_objective": result.merged_objective,
+            "verdict": result.verdict,
+            "reason": result.reason,
         }
     except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()

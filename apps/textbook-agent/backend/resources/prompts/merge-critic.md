@@ -58,6 +58,11 @@ warrant merge_suggested or teacher_decision. If you are returning keep_separate
 for nearly everything, re-read the fragment criteria above and check whether you
 are applying the "plausibly hold one and not the other" test honestly.
 
+## INPUT
+
+JSON with `unit` (topic, subject, grade_level, destination_objective), `lesson_a`
+and `lesson_b` (each: title, objective, must_establish, knowledge_type), in path order.
+
 ## OUTPUT
 
 JSON only.
@@ -65,7 +70,7 @@ JSON only.
 {
   "verdict": "keep_separate"|"merge_suggested"|"teacher_decision",
   "reason": str,                    // one sentence, cites the criterion used
-  "merged_objective": str | null,   // required if merge_suggested
+  "merged_objective": str,   // always: your best single merged objective, even if you advise keeping them separate (the teacher reviews it)
   "diagnostic_cost": str | null     // what you lose by merging, if anything
 }
 
