@@ -1,0 +1,325 @@
+[
+  {
+    "id": "sunflower-hamster-28-days",
+    "kind": "comparison",
+    "mode": "diagram",
+    "purpose": "Compare what a sunflower and a hamster took in over 28 days and how each changed in size",
+    "must_show": [
+      "Sunflower plant",
+      "Hamster",
+      "Days: 28",
+      "Food taken in (g): sunflower 0 g, hamster 560 g",
+      "Water taken in: sunflower 50 mL per day, hamster —",
+      "Light from window: sunflower 7 hours per day, hamster —",
+      "Size change: sunflower Day 0: 12 cm to Day 28: 34 cm; hamster Day 0: 95 g to Day 28: 102 g"
+    ],
+    "labels_required": [
+      "Sunflower plant",
+      "Hamster",
+      "Days: 28",
+      "Food taken in (g)",
+      "0 g",
+      "560 g",
+      "Water taken in",
+      "50 mL per day",
+      "—",
+      "Light from window (hours per day)",
+      "7 hours per day",
+      "Day 0: 12 cm",
+      "Day 28: 34 cm",
+      "Day 0: 95 g",
+      "Day 28: 102 g"
+    ],
+    "must_not_show": [],
+    "source": "hand-written (reproduces failing lesson figure)"
+  },
+  {
+    "id": "flower-parts",
+    "kind": "parts",
+    "mode": "diagram",
+    "purpose": "Let the learner name each main part of a flower and point to where it sits on the plant",
+    "must_show": [
+      "A labelled flower with Petal, Stamen, Carpel and Sepal on the flower head",
+      "A Stem holding the flower and a Leaf attached to the stem",
+      "Each label line points to exactly one part"
+    ],
+    "labels_required": [
+      "Petal",
+      "Stamen",
+      "Carpel",
+      "Sepal",
+      "Stem",
+      "Leaf"
+    ],
+    "must_not_show": [
+      "Roots or soil",
+      "Any function text written on the figure"
+    ],
+    "source": "hand-written"
+  },
+  {
+    "id": "leaf-photosynthesis-process",
+    "kind": "process",
+    "mode": "diagram",
+    "purpose": "Show how light, water and carbon dioxide come together inside a leaf to make the sugar the plant uses for growth, and that oxygen leaves the leaf as this happens.",
+    "must_show": [
+      "light reaching the leaf from the Sun",
+      "carbon dioxide in the air entering the leaf",
+      "water travelling from the roots up the stem into the leaf",
+      "water and carbon dioxide combining inside the leaf, driven by light energy, to make sugar, the plant's food",
+      "sugar leaving the leaf to be used for growth and stored elsewhere in the plant",
+      "oxygen being released from the leaf into the air as the sugar is made"
+    ],
+    "labels_required": [
+      "light",
+      "carbon dioxide",
+      "water",
+      "roots",
+      "stem",
+      "leaf",
+      "sugar",
+      "food",
+      "oxygen"
+    ],
+    "must_not_show": [
+      "soil supplying food or the material of new growth",
+      "the plant taking oxygen in for food-making",
+      "chemical formulas or equations"
+    ],
+    "source": "docs/doc36-presentation/evidence/phase5/fullrun-photosynthesis/05-teaching-plan.json"
+  },
+  {
+    "id": "frog-life-cycle",
+    "kind": "cycle",
+    "mode": "diagram",
+    "purpose": "Show the stages of a frog's life and that the adult lays eggs, which starts the cycle again",
+    "must_show": [
+      "Four stages in a closed loop with arrows: Egg, Tadpole, Young frog, Adult frog",
+      "An arrow from Adult frog back to Egg labelled Lays eggs"
+    ],
+    "labels_required": [
+      "Egg",
+      "Tadpole",
+      "Young frog",
+      "Adult frog",
+      "Lays eggs"
+    ],
+    "must_not_show": [
+      "Any stage not in the list",
+      "An arrow running backwards from Egg to Adult frog"
+    ],
+    "source": "hand-written"
+  },
+  {
+    "id": "bean-plant-height-weeks",
+    "kind": "change-over-time",
+    "mode": "diagram",
+    "purpose": "Read how tall a bean plant grew each week and see that the growth was not the same every week",
+    "must_show": [
+      "Four weeks on the horizontal axis: Week 1, Week 2, Week 3, Week 4",
+      "Plant height (cm) on the vertical axis",
+      "Week 1: 4 cm; Week 2: 9 cm; Week 3: 15 cm; Week 4: 16 cm",
+      "Vertical axis label: Height (cm)"
+    ],
+    "labels_required": [
+      "Week 1",
+      "Week 2",
+      "Week 3",
+      "Week 4",
+      "Height (cm)",
+      "4 cm",
+      "9 cm",
+      "15 cm",
+      "16 cm"
+    ],
+    "must_not_show": [
+      "Any week beyond Week 4",
+      "Any value not in the data"
+    ],
+    "source": "hand-written"
+  },
+  {
+    "id": "heart-rate-before-after-exercise",
+    "kind": "bar-data",
+    "mode": "diagram",
+    "purpose": "Compare the resting and after-exercise heart rate of two groups and see which group rose more",
+    "must_show": [
+      "Two groups: Group A and Group B",
+      "Two bars for each group: Before exercise and After exercise",
+      "Group A: before 72 bpm, after 110 bpm; Group B: before 75 bpm, after 92 bpm",
+      "Vertical axis label: Heart rate (bpm)"
+    ],
+    "labels_required": [
+      "Group A",
+      "Group B",
+      "Before exercise",
+      "After exercise",
+      "Heart rate (bpm)",
+      "72 bpm",
+      "110 bpm",
+      "75 bpm",
+      "92 bpm"
+    ],
+    "must_not_show": [
+      "Any group beyond A and B",
+      "A bar drawn to a value not in the data"
+    ],
+    "source": "hand-written"
+  },
+  {
+    "id": "filtration-setup",
+    "kind": "apparatus",
+    "mode": "image",
+    "purpose": "Show how muddy water is separated into clear water and solid waste using a filter",
+    "must_show": [
+      "A funnel fitted with filter paper held above a beaker",
+      "Muddy water being poured into the funnel",
+      "Clear water collecting in the beaker below, with solid residue left on the filter paper",
+      "Labels: Funnel, Filter paper, Beaker, Solid residue"
+    ],
+    "labels_required": [
+      "Funnel",
+      "Filter paper",
+      "Beaker",
+      "Muddy water",
+      "Clear water",
+      "Solid residue"
+    ],
+    "must_not_show": [
+      "A heat source or flame",
+      "Any second piece of apparatus"
+    ],
+    "source": "hand-written"
+  },
+  {
+    "id": "pond-food-chain-scene",
+    "kind": "scene",
+    "mode": "image",
+    "purpose": "Show which living things in a pond eat which, so the learner can trace where the energy comes from",
+    "must_show": [
+      "A pond with reeds at the edge",
+      "Algae floating in the water",
+      "A water snail eating the algae",
+      "A small fish eating the snail",
+      "A heron standing on the bank eating the fish",
+      "Labels: Water snail, Small fish, Heron"
+    ],
+    "labels_required": [
+      "Algae",
+      "Water snail",
+      "Small fish",
+      "Heron"
+    ],
+    "must_not_show": [
+      "Humans or fishing equipment",
+      "Any animal not in the food chain"
+    ],
+    "source": "hand-written"
+  },
+  {
+    "id": "number-line-minus5-to-5",
+    "kind": "number-line",
+    "mode": "diagram",
+    "purpose": "Locate negative and positive whole numbers on one line and see which of two numbers is greater",
+    "must_show": [
+      "A number line from -5 to 5 with every whole number marked",
+      "Point A at -3",
+      "Point B at 2",
+      "Point C at 5",
+      "Zero (0) marked at the centre of the line"
+    ],
+    "labels_required": [
+      "-5",
+      "-3",
+      "0",
+      "2",
+      "5",
+      "A",
+      "B",
+      "C"
+    ],
+    "must_not_show": [
+      "Any number beyond -5 or 5",
+      "Any decimal point between whole numbers"
+    ],
+    "source": "hand-written"
+  },
+  {
+    "id": "l-shaped-floor-area",
+    "kind": "geometry",
+    "mode": "diagram",
+    "purpose": "Let the learner see that the L-shaped floor is two rectangles whose labeled measurements can be read off, and that the overall width and overall height are not the sides of one rectangle.",
+    "must_show": [
+      "an L-shaped floor plan made from two rectangles",
+      "the top edge labelled 8 m",
+      "the depth of the top rectangle labelled 3 m",
+      "the overall left vertical edge labelled 7 m",
+      "the lower rectangle's width labelled 5 m",
+      "the bottom-right corner of the enclosing outline that is not part of the floor"
+    ],
+    "labels_required": [
+      "8 m",
+      "3 m",
+      "7 m",
+      "5 m"
+    ],
+    "must_not_show": [
+      "any area value or product",
+      "the lower rectangle's depth labelled as 4 m, which is to be derived later",
+      "the enclosing 8 m by 7 m rectangle drawn as if the floor filled it"
+    ],
+    "source": "docs/doc36-presentation/evidence/track-c/fullrun-area/05-teaching-plan.json"
+  },
+  {
+    "id": "penicillin-discovery-timeline",
+    "kind": "timeline",
+    "mode": "diagram",
+    "purpose": "Show the order of three stages in the discovery of penicillin, with the year of each",
+    "must_show": [
+      "A horizontal timeline with three dated stages in order",
+      "1928: Fleming notices mould killing bacteria",
+      "1941: penicillin first given to a patient",
+      "1945: Nobel Prize shared by Fleming, Florey and Chain",
+      "1941 stage labelled: First patient treated"
+    ],
+    "labels_required": [
+      "1928",
+      "1941",
+      "1945",
+      "Fleming notices mould",
+      "First patient treated",
+      "Nobel Prize"
+    ],
+    "must_not_show": [
+      "Any stage beyond the three shown",
+      "Any date not on the timeline"
+    ],
+    "source": "hand-written"
+  },
+  {
+    "id": "conductors-vs-insulators-table",
+    "kind": "mixed",
+    "mode": "diagram",
+    "purpose": "Sort three materials into conductors and insulators using a small picture of each",
+    "must_show": [
+      "A table with columns Material, Conducts electricity?, and a small picture",
+      "Row 1: Copper, Yes, picture of a copper wire",
+      "Row 2: Rubber, No, picture of a rubber glove",
+      "Row 3: Steel, Yes, picture of a steel spoon"
+    ],
+    "labels_required": [
+      "Material",
+      "Conducts electricity?",
+      "Copper",
+      "Rubber",
+      "Steel",
+      "Yes",
+      "No"
+    ],
+    "must_not_show": [
+      "Any material beyond the three rows",
+      "Any reason text in the table"
+    ],
+    "source": "hand-written"
+  }
+]

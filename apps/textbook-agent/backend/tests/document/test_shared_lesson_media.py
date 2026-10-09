@@ -821,3 +821,36 @@ def test_image_mode_order_has_no_visual_style() -> None:
     )
     image = rebuild_figure_work_order(work, _section("section-a", 0), spec=spec)
     assert image.work_order.visual.visual_style is None
+
+
+def _rebuilt_with_labels(labels: list[str]):
+    work = _work()
+    spec = VisualSpec(
+        mode="diagram",
+        purpose="Show the figure",
+        must_show=["Plant"],
+        labels_required=labels,
+        must_not_show=[],
+        required=work.required,
+    )
+    return rebuild_figure_work_order(work, _section("section-a", 0), spec=spec)
+
+
+def test_value_labelled_diagram_is_provider_labelled_not_numbered() -> None:
+    from media.generation.prompt import build_visual_prompt
+
+    order = _rebuilt_with_labels(["Sunflower plant", "Hamster", "0 g", "560 g", "Day 0: 12 cm"])
+    assert order.work_order.visual.visual_style is None
+    prompt = build_visual_prompt(order.work_order, provider_renders_labels=True)
+    assert "TEXT IN THE IMAGE" in prompt
+    assert "NUMBERED PARTS" not in prompt
+
+
+def test_parts_diagram_stays_numbered() -> None:
+    order = _rebuilt_with_labels(["Sunlight", "Leaf"])
+    assert order.work_order.visual.visual_style == "diagram_numbered"
+
+
+def test_single_numeric_label_stays_numbered() -> None:
+    order = _rebuilt_with_labels(["Stage 1", "Leaf"])
+    assert order.work_order.visual.visual_style == "diagram_numbered"

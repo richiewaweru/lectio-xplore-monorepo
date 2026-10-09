@@ -117,3 +117,40 @@ def test_non_gemini_prompt_keeps_labels_required_and_caption_constraint() -> Non
 
     assert "LABELS REQUIRED" in prompt
     assert NO_CAPTION_TEXT_CONSTRAINT in prompt
+
+
+def test_gemini_diagram_prompt_has_representation_block_and_row_placement() -> None:
+    prompt = build_visual_prompt(
+        _order("diagram", ["evaporation", "condensation"]),
+        provider_renders_labels=True,
+    )
+
+    assert "HOW TO REPRESENT IT" in prompt
+    assert "in its row or column" in prompt
+
+
+def test_numbered_diagram_prompt_has_representation_block() -> None:
+    prompt = build_visual_prompt(
+        VisualGeneratorWorkOrder(
+            work_order_id="vis-num",
+            visual=VisualPlanItem(
+                id="vis-num",
+                attaches_to="model",
+                mode="diagram",
+                visual_style="diagram_numbered",
+                purpose="show the parts of a flower",
+                must_show=["petal", "stem"],
+                labels_required=["petal", "stem"],
+            ),
+        )
+    )
+
+    assert "HOW TO REPRESENT IT" in prompt
+
+
+def test_image_mode_prompt_has_no_representation_block() -> None:
+    gemini_prompt = build_visual_prompt(_order("image", []), provider_renders_labels=True)
+    plain_prompt = build_visual_prompt(_order("image", ["sea", "cloud"]))
+
+    assert "HOW TO REPRESENT IT" not in gemini_prompt
+    assert "HOW TO REPRESENT IT" not in plain_prompt

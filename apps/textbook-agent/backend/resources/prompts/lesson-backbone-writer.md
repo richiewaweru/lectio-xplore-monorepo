@@ -26,7 +26,9 @@ Return JSON matching the supplied schema. Do not write any question text.
 2. `figures`: one entry per figure, table, diagram or chart the learner must
    actually look at. Do not invent decorative figures. For each:
    - `id`: a short unique slug such as `fig-1`.
-   - `purpose`: what the learner uses the figure for.
+   - `purpose`: what the learner uses the figure for, naming what is compared,
+     ordered, or read (e.g. 'compare what a sunflower and a hamster take in over
+     28 days and how each changes').
    - `mode`: the kind of figure. `"diagram"` for anything measured or
      structured: shapes with lengths, graphs, number lines, charts, tables,
      flows, cycles; give exact `data`. `"image"` for a realistic picture:
@@ -37,7 +39,9 @@ Return JSON matching the supplied schema. Do not write any question text.
    - `must_show`: the exact things that must be visible (shapes, values,
      relationships, positions). Required for `"image"` figures.
    - `labels_required`: every label, axis name, unit and value that must
-     appear, written exactly as it should appear.
+     appear, written exactly as it should appear. A value label must read on its
+     own: keep a value with its time or condition ('Day 28: 34 cm', not 'Day 28'
+     and '34 cm'). Never use placeholder labels such as '—'.
    - `data`: the exact values the figure plots or tabulates (same numbers as
      the anchor `data`).
    Use an empty list when the scenario needs no figure.
