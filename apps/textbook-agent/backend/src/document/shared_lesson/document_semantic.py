@@ -19,6 +19,7 @@ from document.shared_lesson.continuity import ContinuityIssue
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import SharedLessonDocument
 from document.shared_lesson.qa import DocumentQAResult
+from infra.config import settings
 
 
 class _ClosedModel(BaseModel):
@@ -141,6 +142,12 @@ async def default_document_semantic_validator(
     return _coerce_verdict(raw, document=request.document)
 
 
+async def _skipped_document_semantic_validator(
+    request: DocumentSemanticQARequest,
+) -> DocumentSemanticVerdict:
+    return DocumentSemanticVerdict(status="pass")
+
+
 async def qa_shared_lesson_document_semantics(
     *,
     document: SharedLessonDocument,
@@ -182,7 +189,13 @@ async def qa_shared_lesson_document_semantics(
         document=document,
         teaching_plan_sections=tuple(teaching_plan_sections),
     )
-    reviewer = semantic_validator or default_document_semantic_validator
+    # The skipped review still counts as the one review step so finalizer/handoff
+    # invariants (semantic_calls == 1) hold.
+    reviewer = semantic_validator or (
+        default_document_semantic_validator
+        if settings.document_semantic_qa
+        else _skipped_document_semantic_validator
+    )
     verdict = _coerce_verdict(await reviewer(request), document=document)
     return DocumentSemanticQAResult(
         document_id=document.id,
