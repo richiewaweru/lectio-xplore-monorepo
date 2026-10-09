@@ -153,7 +153,8 @@ the explanation: the block's brief still teaches the idea in words.
 A `visual` object has:
 
   mode            "diagram" (default) or "image"
-  purpose         what the learner must notice in the figure
+  purpose         what the learner must notice in the figure, naming what is
+                  compared, ordered, or read
   must_show       the exact stages, parts, or relationships the figure must
                   show, taken only from the objective and must_establish
   labels_required the exact label text the figure must carry, drawn from

@@ -19,6 +19,15 @@ NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT = (
     "For diagram_precision, render NO visible text. Depict semantics with shapes, "
     "arrows, geometry, and color only; all labels are added by the deterministic compositor."
 )
+REPRESENTATION_BLOCK = (
+    "HOW TO REPRESENT IT: PURPOSE and MUST SHOW describe what the learner must take "
+    "away, not a layout. Before drawing, decide what kind of information this is: the "
+    "parts of one thing, a sequence or process, values compared across subjects, change "
+    "over time, or a scene. Use the arrangement a good textbook uses for that kind. Group "
+    "what belongs together, align values that are compared so they can be read across, "
+    "and keep a natural reading order (left to right, top to bottom). Leave out "
+    "decoration that does not help the learner read it."
+)
 
 # Only used when the provider returns text next to the image (Gemini). The
 # reply is parsed for exactly one ``ALT:`` line; any other text is discarded.
@@ -44,7 +53,8 @@ def provider_label_block(labels: list[str]) -> str:
         "TEXT IN THE IMAGE (closed set; this is the only text allowed):\n"
         f"{quoted}\n"
         "- Write each label exactly once, spelled exactly as given, in clear print letters.\n"
-        "- Place each label next to the part, stage, or arrow it names.\n"
+        "- Place each label where a reader would look for it: on or beside the part it "
+        "names, in its row or column, beside its stage, or along its axis.\n"
         "- Write no other words: no paraphrases or synonyms of the labels, no words "
         "from PURPOSE or MUST SHOW, no title, caption, numbers, or sentences."
     )
@@ -156,6 +166,11 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
             else "- high contrast; large readable labels; grayscale-safe"
         )
     is_diagram = order.visual.mode.startswith("diagram")
+    representation_block = (
+        f"{REPRESENTATION_BLOCK}\n\n"
+        if (is_diagram and (provider_renders_labels or is_numbered))
+        else ""
+    )
     if provider_renders_labels:
         if is_diagram:
             style_requirements = (
@@ -222,7 +237,7 @@ STYLE REQUIREMENTS:
 {style_requirements}
 {text_constraint}
 
-PURPOSE: {order.visual.purpose}
+{representation_block}PURPOSE: {order.visual.purpose}
 
 MUST SHOW:
 {must_show_block}
@@ -249,6 +264,7 @@ __all__ = [
     "CLOSED_LABEL_TEXT_CONSTRAINT",
     "NO_CAPTION_TEXT_CONSTRAINT",
     "NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT",
+    "REPRESENTATION_BLOCK",
     "build_visual_prompt",
     "format_anchor_for_visual",
     "provider_label_block",

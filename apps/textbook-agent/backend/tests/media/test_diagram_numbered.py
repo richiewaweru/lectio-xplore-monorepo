@@ -83,3 +83,61 @@ def test_numbered_qc_prompt_expects_exactly_digits_and_excludes_key_band() -> No
 
 def test_numbered_qc_prompt_without_labels_expects_no_text() -> None:
     assert "no visible text at all" in _criteria_prompt(_order([]))
+
+
+async def test_gemini_executes_numbered_order_as_gemini_labelled_diagram(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    import media.generation.executor as executor
+    from media.providers.registry import ImageProviderSpec
+
+    prompts: list[str] = []
+    composed: list[bool] = []
+
+    class _Client:
+        async def generate_image(self, *, prompt: str):
+            prompts.append(prompt)
+            return SimpleNamespace(
+                bytes=_png(), mime_type="image/png", format="png", text="ALT: a flower"
+            )
+
+    class _Store:
+        async def image_exists(self, **_):
+            return False
+
+        async def store_image(self, *_, **__):
+            return "https://img.test/flower.png"
+
+        async def store_image_key(self, **_):
+            return None
+
+    def _spy(*args, **kwargs):
+        composed.append(True)
+        return compose_diagram_precision(*args, **kwargs)
+
+    monkeypatch.setattr(
+        executor,
+        "load_image_provider_spec",
+        lambda: ImageProviderSpec("gemini", "gemini-test", None, None),
+    )
+    monkeypatch.setattr(executor, "get_image_client", lambda: _Client())
+    monkeypatch.setattr(executor, "visual_qc_enabled", lambda: False)
+    monkeypatch.setattr(executor, "compose_diagram_precision", _spy)
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: _Store())
+    monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "false")
+
+    async def _emit(*_):
+        return None
+
+    order = _order()
+    blocks = await executor.execute_visual(
+        order, _emit, trace_id="t", generation_id="g"
+    )
+
+    assert len(prompts) == 1
+    assert "TEXT IN THE IMAGE" in prompts[0]
+    assert "NUMBERED PARTS" not in prompts[0]
+    assert composed == []
+    assert blocks[0].source_work_order_id == order.work_order_id
+    # The caller's order is never mutated by the Gemini downgrade.
+    assert order.visual.visual_style == "diagram_numbered"

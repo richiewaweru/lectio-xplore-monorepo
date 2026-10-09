@@ -482,6 +482,11 @@ def _plan_figure_spec(planned: Any, node: FigureNode) -> VisualSpec:
     return block.visual
 
 
+def _labels_carry_values(labels: Sequence[str]) -> bool:
+    """Value-bearing labels ("0 g", "Day 0: 12 cm") mean a data figure, not a parts diagram."""
+    return sum(1 for label in labels if any(ch.isdigit() for ch in label)) >= 2
+
+
 def _figure_order_from(
     *,
     identity: SourceIdentity,
@@ -519,7 +524,13 @@ def _figure_order_from(
         must_show=list(spec.must_show),
         labels_required=list(spec.labels_required),
         must_not_show=list(spec.must_not_show),
-        visual_style="diagram_numbered" if spec.mode == "diagram" else None,
+        # Numbered keys suit named parts; value labels are drawn by the provider so they
+        # can sit in rows/columns.
+        visual_style=(
+            "diagram_numbered"
+            if spec.mode == "diagram" and not _labels_carry_values(spec.labels_required)
+            else None
+        ),
     )
     order = VisualGeneratorWorkOrder(
         work_order_id=f"shared-media-{semantic_hash}",

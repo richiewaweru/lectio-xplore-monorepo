@@ -169,8 +169,8 @@ async def _render_frame(
 
     # Gemini renders its own labels; the deterministic compositor (and its
     # preflight) only applies to the other providers.
-    # diagram_numbered applies to every provider: the model draws digits only and
-    # code prints the words in the key band.
+    # diagram_numbered: the model draws digits only and code prints the words in
+    # the key band (execute_visual downgrades it for Gemini before this point).
     is_diagram_numbered = getattr(order.visual, "visual_style", None) == "diagram_numbered"
     is_diagram_precision = is_diagram_numbered or (
         getattr(order.visual, "visual_style", None) == "diagram_precision"
@@ -560,6 +560,12 @@ async def execute_visual(
     _ = trace_id
     gid = generation_id or str(uuid.uuid4())
     spec = load_image_provider_spec()
+    if spec.provider == "gemini" and order.visual.visual_style == "diagram_numbered":
+        # Gemini ignores digits-only instructions (writes words, duplicates or
+        # misplaces digits); it draws the closed label set itself. Execute as a
+        # Gemini-labelled diagram on a copy so the caller's order is untouched.
+        order = order.model_copy(deep=True)
+        order.visual.visual_style = None
     last_failure: VisualStageError | None = None
     provider_attempt_counter = [0]
     executor_attempt_number = 0
