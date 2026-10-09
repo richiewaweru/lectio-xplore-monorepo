@@ -4,6 +4,7 @@ import { tick } from 'svelte';
 import ParagraphNode from './ParagraphNode.svelte';
 import EquationNode from './EquationNode.svelte';
 import CalloutNode from './CalloutNode.svelte';
+import ListNode from './ListNode.svelte';
 import FigureNode from './FigureNode.svelte';
 import DocumentNodeRenderer from './DocumentNodeRenderer.svelte';
 import type { DocumentNode } from '../types';
@@ -127,5 +128,22 @@ describe('Learn document renderers', () => {
 		options[1]?.click();
 		await tick();
 		expect(options.map((button) => button.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+	});
+
+	it.each([true, false])('wraps inline runs in each list item body (ordered=%s)', (ordered) => {
+		const { container } = render(ListNode, {
+			node: { id: 'l', kind: 'list', ordered, items: ['Plain **bold** tail', 'Second **item**'] }
+		});
+		const items = [...container.querySelectorAll('li')];
+		expect(items).toHaveLength(2);
+		for (const li of items) {
+			const strayText = [...li.childNodes].filter(
+				(n) => n.nodeType === 3 && (n.textContent ?? '').trim() !== ''
+			);
+			expect(strayText).toHaveLength(0);
+			expect(li.children).toHaveLength(1);
+			expect(li.children[0]?.matches('span.item-body')).toBe(true);
+			expect(li.querySelector('span.item-body > strong')).not.toBeNull();
+		}
 	});
 });
