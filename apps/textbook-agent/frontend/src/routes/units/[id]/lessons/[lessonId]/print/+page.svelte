@@ -60,6 +60,8 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 
 	// One serialized poller per page; stops on terminal states and on destroy.
 	let pollFailures = 0;
+	// After a retry the first status read can still look failed; keep polling briefly.
+	let retryGraceUntil = 0;
 	const printPoll = createSerializedPoll(async () => {
 		try {
 			await ctx.refreshPreparation();
@@ -74,7 +76,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 			// Tolerate a few transient failures, then stop instead of polling forever.
 			if (++pollFailures >= 5) return false;
 		}
-		return printIsActive() && !pageDocumentV2;
+		return (printIsActive() || Date.now() < retryGraceUntil) && !pageDocumentV2;
 	}, LESSON_STATUS_POLL_MS, LESSON_STATUS_POLL_OPTIONS);
 
 	function stopPolling(): void {
@@ -82,7 +84,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	}
 
 	function schedulePoll(): void {
-		if (pageDocumentV2 || !printIsActive()) return;
+		if (pageDocumentV2 || !(printIsActive() || Date.now() < retryGraceUntil)) return;
 		printPoll.start();
 	}
 
@@ -118,7 +120,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 				catch (err) { error = err instanceof Error ? err.message : 'Print document is unavailable.'; }
 			}
 			await loadIssues();
-			if (!pageDocumentV2 && printIsActive()) {
+			if (!pageDocumentV2) {
 				schedulePoll();
 			}
 		} catch (err) {
@@ -143,11 +145,16 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	async function retryPrint() {
 		if (!ctx.statusFresh || !ctx.path || !ctx.lesson || !artifact.realizationId || !(artifact.retryable || artifact.regenerable)) return;
 		busy = 'retry';
+		error = null;
 		try {
 			await retryLessonRealization(ctx.unitId, ctx.path, ctx.lesson, artifact.realizationId);
+			retryGraceUntil = Date.now() + 15_000;
 			await resolve();
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Could not retry Print.';
+			// The retry may have been rejected because the run already finished; refetch
+			// and only surface the error if the document still is not available.
+			await resolve();
+			if (!pageDocumentV2) error = err instanceof Error ? err.message : 'Could not retry Print.';
 		} finally { busy = null; }
 	}
 

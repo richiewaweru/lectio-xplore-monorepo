@@ -149,4 +149,24 @@ describe('Unit Learn workspace canonical actions', () => {
 		});
 		await screen.findByText(/has changed since this Learn lesson was built/);
 	});
+
+	it('keeps polling after a retry whose first refetch still reports failed, then loads once ready', async () => {
+		const failed = { state: 'failed_recoverable', realization_id: 'learn-r', error: { retryable: true, message: 'Learn failed' } };
+		const ready = { state: 'ready', realization_id: 'learn-r', output_id: 'learn-o', open_href: '/builder/learn-o', shared_document_state: 'fresh' };
+		const ctx = context('approved', true, failed);
+		// First refetch (right after the 202) still sees the failure; later polls see ready.
+		let reads = 0;
+		ctx.refreshPreparation = vi.fn(async () => {
+			reads += 1;
+			if (reads >= 2) ctx.preparation = status('approved', ready);
+		});
+		mocks.retryLessonRealization.mockResolvedValue({});
+		mocks.getBuilderLesson.mockResolvedValue({
+			document: { version: 2, id: 'doc-1', title: 'Lesson', subject: 'science', source: 'native', nodes: [], created_at: '', updated_at: '' }
+		});
+		render(LearnPage, { context: new Map([['lessonWorkspace', ctx]]) });
+		await fireEvent.click(await screen.findByRole('button', { name: 'Retry Learn' }));
+		await waitFor(() => expect(mocks.getBuilderLesson).toHaveBeenCalledWith('learn-o'), { timeout: 6000 });
+		expect(ctx.refreshPreparation.mock.calls.length).toBeGreaterThanOrEqual(2);
+	}, 10000);
 });
