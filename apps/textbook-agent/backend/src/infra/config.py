@@ -305,6 +305,12 @@ class Settings(BaseSettings):
         default="advisory",
         validation_alias=AliasChoices("DOCUMENT_QUALITY_GATE"),
     )
+    # False (default) skips the DeepSeek document check before READY: under the
+    # advisory gate its findings were flags only. Deterministic QA still runs.
+    document_semantic_qa: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("DOCUMENT_SEMANTIC_QA"),
+    )
 
     # SharedDocument auto-retry: bounded, automatic re-dispatch of
     # failed_recoverable WorkItems whose recovery_action is "retry" and
