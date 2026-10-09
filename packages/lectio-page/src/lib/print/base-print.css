@@ -17,6 +17,8 @@
   --aside-width: 46mm;
   --aside-gap: 6mm;
   --line: 17pt;
+  --figure-max-height: 90mm;       /* figure height cap; span figures get the larger one */
+  --figure-span-max-height: 120mm;
   background: #FFFFFF;
   font-family: var(--lectio-body, "Atkinson Hyperlegible", system-ui, sans-serif);
 }
@@ -175,6 +177,13 @@ p { margin: 0 0 var(--line); }
 .lectio-figure img, .lectio-figure svg { display: block; max-width: 100%; height: auto; filter: grayscale(1); }
 .lectio-figure-frame { border: 1px solid #767676; padding: 6pt; box-sizing: border-box; }
 .lectio-figure-frame > img, .lectio-figure-frame > svg { margin: 0 auto; }
+/* Raster: cap height, keep ratio, shrink-wrap the frame. Inline SVG keeps its own
+   width (matplotlib emits width/height + viewBox) and is only height-capped, so the
+   frame stays full-width and preserveAspectRatio centres the drawing. */
+.lectio-figure-frame > img { width: auto; height: auto; max-width: 100%; max-height: var(--figure-max-height, 90mm); }
+.lectio-figure-frame > svg { max-height: var(--figure-max-height, 90mm); }
+.lectio-figure--span .lectio-figure-frame > img, .lectio-figure--span .lectio-figure-frame > svg { max-height: var(--figure-span-max-height, 120mm); }
+.lectio-figure-frame:has(> img) { width: fit-content; max-width: 100%; margin-inline: auto; }
 .lectio-caption { margin-top: 4pt; font-size: 13px; line-height: 17px; }
 .lectio-figure-number { font-weight: 700; }
 
