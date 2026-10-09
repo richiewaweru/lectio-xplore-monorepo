@@ -14,13 +14,13 @@
 {#if ordered}
 	<ol class="learn-list" data-testid="list-node" data-ordered="true">
 		{#each node.items as item, i (i)}
-			<li><InlineMarkup value={item} /></li>
+			<li><span class="item-body"><InlineMarkup value={item} /></span></li>
 		{/each}
 	</ol>
 {:else}
 	<ul class="learn-list" data-testid="list-node" data-ordered="false">
 		{#each node.items as item, i (i)}
-			<li><InlineMarkup value={item} /></li>
+			<li><span class="item-body"><InlineMarkup value={item} /></span></li>
 		{/each}
 	</ul>
 {/if}
@@ -34,6 +34,7 @@
 		line-height: 1.6;
 	}
 	.learn-list[data-ordered='false'] { list-style: disc; }
+	.item-body { min-width: 0; }
 	.learn-list li + li {
 		margin-top: 14px;
 	}

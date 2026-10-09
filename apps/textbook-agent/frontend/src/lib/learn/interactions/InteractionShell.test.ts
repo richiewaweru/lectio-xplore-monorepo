@@ -155,3 +155,50 @@ describe('InteractionShell sequence with plain string items', () => {
 		expect(screen.getAllByRole('listitem')).toHaveLength(3);
 	});
 });
+
+function expectNoBareTextRuns(buttons: HTMLElement[]) {
+	expect(buttons.length).toBeGreaterThan(0);
+	for (const button of buttons) {
+		const stray = [...button.childNodes].filter(
+			(n) => n.nodeType === 3 && (n.textContent ?? '').trim() !== ''
+		);
+		expect(stray).toHaveLength(0);
+	}
+}
+
+describe('InteractionShell inline markup inside flex buttons', () => {
+	it('wraps match-pairs labels so runs are not separate flex items', () => {
+		const { container } = render(InteractionShell, {
+			node: {
+				id: 'match-md',
+				kind: 'interaction',
+				interaction_type: 'match-pairs',
+				prompt: 'Match.',
+				role: 'practice',
+				config: {
+					pairs: [
+						{ left: 'The **mitochondria** here', right: 'H~2~O is **wet**' },
+						{ left: 'Plain **left**', right: 'x^2^ grows' }
+					]
+				}
+			} as InteractionNode
+		});
+		const options = [...container.querySelectorAll<HTMLElement>('button.option')];
+		expect(options).toHaveLength(4);
+		expectNoBareTextRuns(options);
+		expect(container.querySelector('button.option sub')).not.toBeNull();
+	});
+
+	it('wraps classify item and category labels', () => {
+		const { container } = render(InteractionShell, {
+			node: classifyNode([
+				{ id: 'plant', label: 'A **green** plant' },
+				{ id: 'animal', label: 'H~2~O animal' }
+			])
+		});
+		const chips = [...container.querySelectorAll<HTMLElement>('button.chip')];
+		expect(chips).toHaveLength(4);
+		expectNoBareTextRuns(chips);
+		expect(container.querySelector('button.chip strong')).not.toBeNull();
+	});
+});

@@ -406,7 +406,7 @@
 							disabled={submitted || disabled}
 							onclick={() => pickLeft(item.id)}
 						>
-							<InlineMarkup value={item.label} />
+							<span><InlineMarkup value={item.label} /></span>
 						</button>
 					</li>
 				{/each}
@@ -422,7 +422,7 @@
 							disabled={submitted || disabled || !selectedLeft}
 							onclick={() => pickRight(item.id)}
 						>
-							<InlineMarkup value={item.label} />
+							<span><InlineMarkup value={item.label} /></span>
 						</button>
 					</li>
 				{/each}
@@ -440,7 +440,7 @@
 						disabled={submitted || disabled}
 						onclick={() => pickLeft(item.id)}
 					>
-						<InlineMarkup value={item.label} />
+						<span><InlineMarkup value={item.label} /></span>
 					</button>
 				</li>
 			{/each}
@@ -454,7 +454,7 @@
 						disabled={submitted || disabled || !selectedLeft}
 						onclick={() => pickClassifyCategory(cat.id)}
 					>
-						<InlineMarkup value={cat.label} />
+						<span><InlineMarkup value={cat.label} /></span>
 					</button>
 				</li>
 			{/each}
