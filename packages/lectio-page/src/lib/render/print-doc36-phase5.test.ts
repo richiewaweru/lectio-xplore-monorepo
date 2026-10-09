@@ -84,3 +84,15 @@ describe('Print match-pairs', () => {
 		expect(validateStructure(bad).length).toBeGreaterThan(0);
 	});
 });
+
+describe('print figure size cap', () => {
+	it('caps figure height at 90mm (120mm for span) and applies it to images', () => {
+		expect(css).toMatch(/--figure-max-height:\s*90mm/);
+		expect(css).toMatch(/--figure-span-max-height:\s*120mm/);
+		expect(rule('.lectio-figure-frame > img')).toContain('max-height: var(--figure-max-height');
+		expect(rule('.lectio-figure--span .lectio-figure-frame > img, .lectio-figure--span .lectio-figure-frame > svg')).toContain(
+			'var(--figure-span-max-height'
+		);
+		expect(rule('.lectio-figure-frame:has(> img)')).toContain('fit-content');
+	});
+});

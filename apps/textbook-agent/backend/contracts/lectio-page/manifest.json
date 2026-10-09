@@ -4,7 +4,7 @@
   "contract_version": "1.1.0",
   "intent_catalogue_version": "1.1.0",
   "object_catalogue_version": "1.2.0",
-  "generated_at": "2026-10-05T21:25:31.025Z",
+  "generated_at": "2026-10-09T22:09:22.086Z",
   "files": [
     {
       "path": "lectio-document-v2.schema.json",
@@ -23,8 +23,8 @@
     },
     {
       "path": "base-print.css",
-      "sha256": "e258f2790a243deb0ffc8d461da6c7265197f5786cd05f724c6da63d2cded98c",
-      "bytes": 15310
+      "sha256": "e24d5f7a17870fdc05194dfa8c9e13c44dfabade23ef723172fb984299535731",
+      "bytes": 16118
     },
     {
       "path": "authoring/instructions/answer-key-system-v1.txt",
