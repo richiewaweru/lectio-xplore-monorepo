@@ -271,6 +271,17 @@ export function mergePathLessons(
 	});
 }
 
+export function suggestMergeObjective(
+	unitId: string,
+	lessonIds: string[]
+): Promise<{ merged_objective: string | null; verdict: string; reason: string }> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons:merge-objective`,
+		'Could not draft a merged objective.',
+		{ method: 'POST', headers: jsonHeaders, body: JSON.stringify({ lesson_ids: lessonIds }) }
+	);
+}
+
 export function insertFoundationLesson(
 	unitId: string,
 	path: UnitPath,

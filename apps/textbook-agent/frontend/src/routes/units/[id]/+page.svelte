@@ -15,6 +15,7 @@
 		getUnitPath,
 		listUnitResources,
 		mergePathLessons,
+		suggestMergeObjective,
 		patchPathLesson,
 		planUnitPath,
 		preparePathLesson,
@@ -88,6 +89,7 @@
 	let showShapeDebug = $state(false);
 	let shapeError = $state<string | null>(null);
 	let dismissedSuggestions = $state<string[]>([]);
+	let draftingObjective = $state(false);
 	let mergeDraft = $state<{
 		hintKey: string;
 		lessonAId: string;
@@ -197,6 +199,18 @@
 			mustEstablish: [...new Set([...lessonA.must_establish, ...lessonB.must_establish])].join('\n'),
 			knowledgeType: sameType ? lessonA.primary_knowledge_type : ''
 		};
+		const hintKey = mergeDraft.hintKey;
+		draftingObjective = true;
+		suggestMergeObjective(unitId, [lessonA.id, lessonB.id])
+			.then((result) => {
+				if (mergeDraft?.hintKey === hintKey && !mergeDraft.objective.trim() && result.merged_objective) {
+					mergeDraft.objective = result.merged_objective;
+				}
+			})
+			.catch(() => {})
+			.finally(() => {
+				draftingObjective = false;
+			});
 	}
 
 	function cancelMergeReview(): void {
@@ -576,7 +590,7 @@
 					</div>
 					<label>
 						<span>Objective</span>
-						<textarea bind:value={mergeDraft.objective} placeholder="Write one capability that genuinely covers both lessons."></textarea>
+						<textarea bind:value={mergeDraft.objective} placeholder={draftingObjective ? 'Drafting a merged objective…' : 'Write one capability that genuinely covers both lessons.'}></textarea>
 						<small>Write one capability that genuinely covers both lessons.</small>
 					</label>
 					<label><span>Must establish <small>one per line</small></span><textarea bind:value={mergeDraft.mustEstablish}></textarea></label>

@@ -17,6 +17,7 @@ from curriculum.models import (
     CanonicalPathPlan,
     ComponentSelection,
     ConstructorOutput,
+    MergeCriticResult,
     PathPlanDraft,
     PathPlannerRequest,
     PathStructuralPagePlan,
@@ -27,6 +28,7 @@ from curriculum.prompts import (
     component_selector_prompt,
     constructor_prompt,
     lesson_sourcebook_writer_prompt,
+    merge_critic_prompt,
     path_planner_prompt,
     path_structural_planner_prompt,
     plan_editor_prompt,
@@ -47,6 +49,7 @@ from infra.config import settings
 from infra.llm.runner import RetryPolicy, run_llm
 from infra.authoring.model_policy import (
     V2_COMPONENT_SELECTOR,
+    V2_MERGE_CRITIC,
     V2_PATH_CHAT_EDITOR,
     V2_PATH_PLANNER,
     V2_PATH_STRUCTURAL_PLANNER,
@@ -482,6 +485,23 @@ async def run_path_structural_planner(
 
     raise PathStructuralContextError(
         errors or ["structural planner produced no usable result"]
+    )
+
+
+async def run_merge_critic(
+    lesson_a: dict[str, Any],
+    lesson_b: dict[str, Any],
+    *,
+    unit_context: dict[str, Any],
+    trace_id: str | None = None,
+) -> MergeCriticResult:
+    return await _run_structured(
+        node=V2_MERGE_CRITIC,
+        caller="v2_merge_critic",
+        output_type=MergeCriticResult,
+        system_prompt=merge_critic_prompt(),
+        user_payload={"unit": unit_context, "lesson_a": lesson_a, "lesson_b": lesson_b},
+        trace_id=trace_id,
     )
 
 
