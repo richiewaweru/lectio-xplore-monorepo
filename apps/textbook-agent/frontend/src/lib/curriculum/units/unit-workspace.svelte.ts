@@ -35,6 +35,7 @@ import {
 	type LessonEditorDraft
 } from '$lib/curriculum/units/edit-protection';
 import type { NativePathKind } from '$lib/curriculum/units/path-generation';
+import { effectiveLessonMode } from '$lib/curriculum/units/lesson-mode';
 import {
 	emptyBusyMap,
 	isLaneBusy,
@@ -208,6 +209,7 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 
 	function selectLesson(lesson: PathLesson): void {
 		selectedId = lesson.id;
+		lessonMode = effectiveLessonMode(lesson);
 		fillEditor(lesson);
 		shape = null;
 		shapeError = null;

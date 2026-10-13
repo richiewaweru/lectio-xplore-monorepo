@@ -147,6 +147,28 @@ describe('/units/[id]', () => {
 		expect(screen.getByText('needs lesson 1')).toBeTruthy();
 	});
 
+	it('defaults the mode dropdown to the lesson mode and follows lesson selection', async () => {
+		mocks.getUnitPath.mockResolvedValue(buildPath({
+			lessons: [
+				lessonOne,
+				{ ...lessonTwo, lesson_mode: 'consolidation', lesson_mode_reason: 'Builds on lesson 1 practice.', lesson_mode_source: 'path_planner' }
+			]
+		}));
+		render(UnitPage);
+		await screen.findByDisplayValue('Plant inputs');
+		expect(screen.queryByText(/Builds on lesson 1 practice/)).toBeNull();
+		await fireEvent.click(screen.getByRole('button', { name: 'Show shape debug' }));
+		expect(((await screen.findByLabelText('Mode')) as HTMLSelectElement).value).toBe('first_exposure');
+		await fireEvent.click(screen.getByRole('button', { name: /Plant outputs/ }));
+		expect(screen.getByText('Consolidation: Builds on lesson 1 practice.')).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Show shape debug' }));
+		expect(((await screen.findByLabelText('Mode')) as HTMLSelectElement).value).toBe('consolidation');
+		await fireEvent.click(screen.getByRole('button', { name: /Plant inputs/ }));
+		expect(screen.queryByText(/Builds on lesson 1 practice/)).toBeNull();
+		await fireEvent.click(screen.getByRole('button', { name: 'Show shape debug' }));
+		expect(((await screen.findByLabelText('Mode')) as HTMLSelectElement).value).toBe('first_exposure');
+	});
+
 	it('does not show merge questions or open assumptions in the default lessons view', async () => {
 		mocks.getUnitPath.mockResolvedValue(buildPath({
 			status: 'draft',
