@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 	getBuilderLesson: vi.fn(), openNativeLearnBuilderLesson: vi.fn(),
 	publishLearnRelease: vi.fn(), listLearnReleases: vi.fn(), apiFetch: vi.fn(),
 	getLessonIssues: vi.fn(), retryLessonRealization: vi.fn(), generateLearnRealization: vi.fn(),
-	goto: vi.fn()
+	goto: vi.fn(), assignReleaseToClass: vi.fn(), listTeacherClasses: vi.fn()
 }));
 const pageState = vi.hoisted(() => ({ url: new URL('http://localhost/units/unit-1/lessons/lesson-1/learn') }));
 
@@ -14,6 +14,10 @@ vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
 vi.mock('$app/state', () => ({ page: pageState }));
 vi.mock('$lib/learn/authoring/builder/api/lesson-crud', () => ({ getBuilderLesson: mocks.getBuilderLesson, openNativeLearnBuilderLesson: mocks.openNativeLearnBuilderLesson }));
 vi.mock('$lib/learn/student/api/releases', () => ({ publishLearnRelease: mocks.publishLearnRelease, listLearnReleases: mocks.listLearnReleases }));
+vi.mock('$lib/api/topic-publish', () => {
+	class ReleaseNotLinkedError extends Error {}
+	return { assignReleaseToClass: mocks.assignReleaseToClass, listTeacherClasses: mocks.listTeacherClasses, ReleaseNotLinkedError, RELEASE_NOT_LINKED_MESSAGE: 'Not linked to a topic lesson.' };
+});
 vi.mock('$lib/api/client', () => ({ apiFetch: mocks.apiFetch }));
 vi.mock('$lib/api/errors', () => ({ ensureOk: vi.fn() }));
 vi.mock('$lib/api/units', () => ({ getLessonIssues: mocks.getLessonIssues, retryLessonRealization: mocks.retryLessonRealization, generateLearnRealization: mocks.generateLearnRealization }));
@@ -169,4 +173,43 @@ describe('Unit Learn workspace canonical actions', () => {
 		await waitFor(() => expect(mocks.getBuilderLesson).toHaveBeenCalledWith('learn-o'), { timeout: 6000 });
 		expect(ctx.refreshPreparation.mock.calls.length).toBeGreaterThanOrEqual(2);
 	}, 10000);
+
+	describe('publish picker', () => {
+		const readyLearn = { state: 'ready', realization_id: 'learn-r', output_id: 'learn-o', open_href: '/builder/learn-o', shared_document_state: 'fresh' };
+		function ctxWithPath() {
+			const c = context('approved', true, readyLearn) as Record<string, unknown>;
+			c.path = { status: 'approved', lessons: [
+				{ id: 'lesson-0', title: 'Intro', position: 0, skipped: false },
+				{ id: 'lesson-1', title: 'Plant water', position: 1, skipped: false }
+			] };
+			return c;
+		}
+		beforeEach(() => {
+			mocks.getBuilderLesson.mockResolvedValue({ document: { version: 2, id: 'doc-1', title: 'Lesson', subject: 'science', source: 'native', nodes: [], created_at: '', updated_at: '' } });
+			mocks.listTeacherClasses.mockResolvedValue([{ id: 'class-1', name: 'Demo class' }]);
+		});
+
+		it('defaults the picker to the current path lesson and publishes with its id', async () => {
+			mocks.publishLearnRelease.mockResolvedValue({ id: 'rel-1', title: 'Plant water', release_number: 1, path_lesson_id: 'lesson-1' });
+			render(LearnPage, { context: new Map([['lessonWorkspace', ctxWithPath()]]) });
+			await fireEvent.click(await screen.findByRole('button', { name: 'Publish' }));
+			expect(screen.getByText('Which topic lesson is this?')).toBeTruthy();
+			expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('lesson-1');
+			await fireEvent.click(screen.getAllByRole('button', { name: 'Publish' }).at(-1)!);
+			await waitFor(() => expect(mocks.publishLearnRelease).toHaveBeenCalledWith('learn-o', { title: 'Plant water', path_lesson_id: 'lesson-1' }));
+		});
+
+		it('skipping the link warns and publishes without path_lesson_id, then blocks assigning', async () => {
+			mocks.publishLearnRelease.mockResolvedValue({ id: 'rel-1', title: 'Plant water', release_number: 1, path_lesson_id: null });
+			render(LearnPage, { context: new Map([['lessonWorkspace', ctxWithPath()]]) });
+			await fireEvent.click(await screen.findByRole('button', { name: 'Publish' }));
+			await fireEvent.click(screen.getByLabelText(/Skip: it won't appear on a topic path/));
+			expect(screen.getByText(/will not appear on a topic path, and/)).toBeTruthy();
+			await fireEvent.click(screen.getAllByRole('button', { name: 'Publish' }).at(-1)!);
+			await waitFor(() => expect(mocks.publishLearnRelease).toHaveBeenCalledWith('learn-o', { title: 'Plant water' }));
+			const assign = await screen.findByRole('button', { name: 'Assign lesson' });
+			expect((assign as HTMLButtonElement).disabled).toBe(true);
+			expect(screen.getByText('Not linked to a topic lesson.')).toBeTruthy();
+		});
+	});
 });

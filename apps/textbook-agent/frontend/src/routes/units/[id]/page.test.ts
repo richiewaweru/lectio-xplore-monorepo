@@ -23,7 +23,11 @@ vi.mock('$app/state', () => ({
 	}
 }));
 vi.mock('$app/navigation', () => ({ goto: vi.fn(() => Promise.resolve()) }));
+const topic = vi.hoisted(() => ({
+	listTeacherClasses: vi.fn(), getPublishCandidates: vi.fn(), publishUnitToClass: vi.fn()
+}));
 vi.mock('$lib/api/units', () => mocks);
+vi.mock('$lib/api/topic-publish', () => topic);
 
 import UnitPage from './+page.svelte';
 
@@ -400,5 +404,33 @@ describe('/units/[id]', () => {
 		await fireEvent.click(await screen.findByRole('button', { name: 'Refresh status' }));
 		expect(await screen.findByRole('link', { name: 'Open Lesson' })).toBeTruthy();
 		expect(screen.getByRole('link', { name: 'Open Learn' })).toBeTruthy();
+	});
+
+	it('publishes a topic to a class: generated lessons checked, not-generated disabled, per-lesson results shown', async () => {
+		topic.listTeacherClasses.mockResolvedValue([{ id: 'class-1', name: 'Demo class' }]);
+		const cand = (id: string, position: number, title: string, generated: boolean) => ({
+			path_lesson_id: id, position, title, generated, editable_lesson_id: generated ? `e-${id}` : null,
+			release_id: null, release_number: null, has_unpublished_changes: false, assigned_to_class: false,
+			status: generated ? 'ready_to_publish' : 'not_generated'
+		});
+		topic.getPublishCandidates.mockResolvedValue({
+			unit_id: 'unit-1', unit_title: 'Photosynthesis', class_id: 'class-1',
+			lessons: [cand('lesson-1', 0, 'Plant inputs', true), cand('lesson-2', 1, 'Plant outputs', false)]
+		});
+		topic.publishUnitToClass.mockResolvedValue({
+			unit_id: 'unit-1', class_id: 'class-1',
+			results: [{ path_lesson_id: 'lesson-1', position: 0, title: 'Plant inputs', status: 'published', release_id: 'r1', release_number: 1, release_created: true, assignment_id: 'a1', assignment_created: true, message: null }]
+		});
+		render(UnitPage);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Publish topic to class' }));
+		await screen.findByText('not generated');
+		expect(topic.getPublishCandidates).toHaveBeenCalledWith('unit-1', 'class-1');
+		const boxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+		expect(boxes[0].checked).toBe(true);
+		expect(boxes[1].checked).toBe(false);
+		expect(boxes[1].disabled).toBe(true);
+		await fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+		await waitFor(() => expect(topic.publishUnitToClass).toHaveBeenCalledWith('unit-1', { class_id: 'class-1', path_lesson_ids: ['lesson-1'] }));
+		expect(await screen.findByText('Published')).toBeTruthy();
 	});
 });
