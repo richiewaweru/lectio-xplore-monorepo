@@ -798,6 +798,7 @@ def _repair_missing_figure_visuals_for_section(
                 purpose=backbone_figure.purpose,
                 must_show=must_show,
                 labels_required=labels,
+                data=backbone_figure.data or None,
             )
             changes.append(
                 {"block_id": block.id, "figure_id": fid, "action": "created_visual"}
@@ -806,6 +807,7 @@ def _repair_missing_figure_visuals_for_section(
             visual = block.visual
             visual.figure_ref = fid
             visual.mode = mode
+            visual.data = backbone_figure.data or None
             visual.must_show = list(dict.fromkeys([*visual.must_show, *must_show]))
             visual.labels_required = list(
                 dict.fromkeys([*visual.labels_required, *labels])

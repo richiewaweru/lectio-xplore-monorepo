@@ -190,7 +190,7 @@ def test_figure_copy_overwrites_drift_and_guard_passes() -> None:
     assert stp.figure_copy_errors(section, packet)
     changes = stp.copy_backbone_figures(section, packet)
     assert changes and set(changes[0]["fields"]) == {
-        "mode", "purpose", "must_show", "labels_required"}
+        "mode", "purpose", "must_show", "labels_required"}  # fig-a carries no data
     visual = section.blocks[0].visual
     assert (visual.mode, visual.purpose, visual.must_show, visual.labels_required) == (
         "diagram", "See the dimensions of the bed.", ["a rectangle"], [])
@@ -495,3 +495,21 @@ def test_advisory_gate_flags_all_reviewer_findings(monkeypatch) -> None:
     fake, results, _, _ = _run_all(monkeypatch, _all_good(), section_reviewer=reviewer)
     assert fake.calls("explain") == 1
     assert any(f["code"] == "task_evidence_gap" for f in results["explain"].flags)
+
+
+def test_figure_copy_carries_backbone_data_and_guard_flags_drift() -> None:
+    spine, packet, _ = _context()
+    data = {"days": [0, 7, 14], "height_cm": [5, 12, 22]}
+    figures = [dict(f, data=data) if f["id"] == "fig-a" else f for f in packet.backbone["figures"]]
+    packet = packet.model_copy(update={"backbone": {**packet.backbone, "figures": figures}})
+    section = stp.materialize_one_section(
+        spine, "check", list(_good("check", visual=dict(FIG_VISUAL)).blocks))
+    assert section.blocks[0].visual.data is None
+    errors = stp.figure_copy_errors(section, packet)
+    assert errors and "data" in errors[0] and "copied by code" in errors[0]
+    changes = stp.copy_backbone_figures(section, packet)
+    assert changes[0]["fields"] == ["data"]
+    assert section.blocks[0].visual.data == data
+    assert stp.figure_copy_errors(section, packet) == []
+    section.blocks[0].visual.data = {"days": [0, 7, 14], "height_cm": [5, 12, 23]}
+    assert stp.figure_copy_errors(section, packet)

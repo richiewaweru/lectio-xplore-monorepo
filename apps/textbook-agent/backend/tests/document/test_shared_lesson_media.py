@@ -59,7 +59,7 @@ def _section(section_id: str, position: int, *, caption: str | None = None) -> S
     )
 
 
-def _source() -> TeachingPlanSource:
+def _source(data: dict | None = None) -> TeachingPlanSource:
     plans = [
         TeachingPlanSection(
             slot_id="section-a",
@@ -82,6 +82,7 @@ def _source() -> TeachingPlanSource:
                         must_show=["Sun", "Leaf"],
                         labels_required=["Sunlight", "Leaf"],
                         must_not_show=["A person"],
+                        data=data,
                     ),
                 )
             ],
@@ -168,10 +169,10 @@ def _shape(section_id: str) -> tuple[ExpectedNodeShape, ...]:
     )
 
 
-def _work(section_id: str = "section-a", *, facts=None):
+def _work(section_id: str = "section-a", *, facts=None, data: dict | None = None):
     section = _section(section_id, 0 if section_id == "section-a" else 1)
     return build_figure_work_order(
-        _source(),
+        _source(data),
         section,
         figure_node_id="figure-a" if section_id == "section-a" else "figure-b",
         expected_shape=_shape(section_id),
@@ -854,3 +855,90 @@ def test_parts_diagram_stays_numbered() -> None:
 def test_single_numeric_label_stays_numbered() -> None:
     order = _rebuilt_with_labels(["Stage 1", "Leaf"])
     assert order.work_order.visual.visual_style == "diagram_numbered"
+
+
+SERIES = {"days": [0, 7, 14, 21, 28], "height_seedling_a_cm": [5, 12, 22, 35, 48], "note": "cm"}
+
+
+def test_figure_data_enters_the_order_and_the_semantic_hash_only_when_present() -> None:
+    plain = _work()
+    with_data = _work(data=SERIES)
+    changed = _work(data={**SERIES, "height_seedling_a_cm": [5, 12, 22, 35, 49]})
+
+    assert plain.work_order.visual.data is None
+    assert "data" not in plain.work_order.visual.model_dump()
+    assert all(e.key != "figure-data" for e in plain.work_order.source_of_truth)
+
+    assert with_data.work_order.visual.data == SERIES
+    entries = [e for e in with_data.work_order.source_of_truth if e.key == "figure-data"]
+    assert len(entries) == 1
+    assert entries[0].text == (
+        "days: 0, 7, 14, 21, 28\nheight_seedling_a_cm: 5, 12, 22, 35, 48\nnote: cm"
+    )
+    assert with_data.figure_semantic_hash != plain.figure_semantic_hash
+    assert changed.figure_semantic_hash != with_data.figure_semantic_hash
+
+
+def test_semantic_hash_for_a_figure_without_data_is_the_pre_data_value() -> None:
+    from document.shared_lesson.media import figure_semantic_hash
+
+    plain = _work()
+    facts = tuple(plain.work_order.source_of_truth)
+    assert not any(e.key == "figure-data" for e in facts)
+    assert plain.figure_semantic_hash == figure_semantic_hash(
+        source_plan_id=plain.source_plan_id,
+        source_plan_revision=plain.source_plan_revision,
+        source_plan_hash=plain.source_plan_hash,
+        section_output_hash=plain.section_output_hash,
+        section_id=plain.section_id,
+        figure_node_id=plain.figure_node_id,
+        caption=_section("section-a", 0).nodes[0].display.caption,
+        source_facts=facts,
+        mode=plain.work_order.visual.mode,
+        required=plain.required,
+    )
+
+
+@pytest.mark.parametrize("data", [None, SERIES])
+def test_identity_and_rebuild_round_trip_with_and_without_figure_data(data) -> None:
+    from document.shared_lesson.media_runtime import _verify_accepted_section
+
+    source = _source(data)
+    work = _work(data=data)
+    section = _section("section-a", 0)
+    document = _document(source)
+
+    # Rebuild from the frozen order alone (no spec) and against the plan spec.
+    assert rebuild_figure_work_order(work, section) == work
+    plan_spec = source.plan.sections[0].blocks[0].visual
+    assert rebuild_figure_work_order(work, section, spec=plan_spec) == work
+    _verify_accepted_section(work, section, source)
+
+    bound = bind_figure_media_to_document(bind_generated_figure(work, [_block(work)]), document)
+    assert verify_bound_figure_media(bound, document) == bound
+    assert any(e.key == "figure-data" for e in bound.source_facts) is (data is not None)
+
+
+def test_forged_figure_data_is_rejected_by_the_runtime_verifier() -> None:
+    from document.shared_lesson.media_runtime import MediaSourceConflict, _verify_accepted_section
+
+    source = _source(SERIES)
+    work = _work(data=SERIES)
+    forged = work.model_copy(
+        update={
+            "work_order": work.work_order.model_copy(
+                update={
+                    "visual": work.work_order.visual.model_copy(
+                        update={"data": {**SERIES, "days": [0, 7, 14, 21, 29]}}
+                    )
+                }
+            )
+        }
+    )
+    with pytest.raises(MediaSourceConflict):
+        _verify_accepted_section(forged, _section("section-a", 0), source)
+
+
+def test_figure_data_key_is_reserved_for_approved_facts() -> None:
+    with pytest.raises(SharedFigureMediaError, match="figure-data"):
+        _work(facts={"figure-data": "days: 1"})

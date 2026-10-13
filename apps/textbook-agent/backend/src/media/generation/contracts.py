@@ -93,6 +93,7 @@ class VisualPlanItem(BaseModel):
     consistency_locks: list[str] = Field(default_factory=list)
     print_requirements: list[str] = Field(default_factory=list)
     frames: list[VisualFrameSpec] = Field(default_factory=list)
+    data: dict[str, Any] | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def normalize_closed_labels(self) -> VisualPlanItem:

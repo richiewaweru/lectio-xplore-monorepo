@@ -331,6 +331,7 @@ def _validate_section(
 #: Key prefix of the work-order context entries (writer caption, referring
 #: sentences). Approved source-fact keys must never use it.
 FIGURE_CONTEXT_KEY_PREFIX = "context:"
+FIGURE_DATA_KEY = "figure-data"
 _MAX_REFERRING_SENTENCES = 2
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 _FIGURE_WORDS = re.compile(r"\b(?:figure|diagram|picture)\b", re.IGNORECASE)
@@ -473,6 +474,24 @@ def _context_entries(
     return tuple(entries)
 
 
+def _format_data_value(value: Any) -> str:
+    if isinstance(value, (list, tuple)):
+        return ", ".join(_format_data_value(item) for item in value)
+    return str(value)
+
+
+def _data_entries(spec: VisualSpec) -> tuple[SourceOfTruthEntry, ...]:
+    """One readable ``figure-data`` entry, only when the plan carries figure data.
+
+    Values print exactly as given. Absent data adds nothing, so the semantic
+    hash of every figure without data is unchanged.
+    """
+    if not spec.data:
+        return ()
+    lines = [f"{key}: {_format_data_value(value)}" for key, value in spec.data.items()]
+    return (SourceOfTruthEntry(key=FIGURE_DATA_KEY, text="\n".join(lines)),)
+
+
 def _plan_figure_spec(planned: Any, node: FigureNode) -> VisualSpec:
     block = next((item for item in planned.blocks if item.id == node.teaching_block_id), None)
     if block is None or block.visual is None:
@@ -503,7 +522,7 @@ def _figure_order_from(
     which the image prompt renders as metadata, never as image text).
     """
     section_output_hash = _hash_payload(section.model_dump(mode="json"))
-    entries = (*facts, *_context_entries(section, node, spec))
+    entries = (*facts, *_context_entries(section, node, spec), *_data_entries(spec))
     semantic_hash = figure_semantic_hash(
         source_plan_id=identity.source_artifact_id,
         source_plan_revision=identity.source_revision,
@@ -524,6 +543,7 @@ def _figure_order_from(
         must_show=list(spec.must_show),
         labels_required=list(spec.labels_required),
         must_not_show=list(spec.must_not_show),
+        data=spec.data or None,
         # Numbered keys suit named parts; value labels are drawn by the provider so they
         # can sit in rows/columns.
         visual_style=(
@@ -567,6 +587,10 @@ def build_figure_work_order(
     The visual contract comes from the plan block that owns the figure node.
     """
     facts = _fact_entries(approved_source_facts)
+    if any(fact.key == FIGURE_DATA_KEY for fact in facts):
+        raise SharedFigureMediaError(
+            f"approved source fact key {FIGURE_DATA_KEY!r} is reserved for figure data"
+        )
     if any(fact.key.startswith(FIGURE_CONTEXT_KEY_PREFIX) for fact in facts):
         raise SharedFigureMediaError(
             f"approved source fact keys must not start with {FIGURE_CONTEXT_KEY_PREFIX!r}"
@@ -619,11 +643,12 @@ def rebuild_figure_work_order(
             labels_required=list(frozen.labels_required),
             must_not_show=list(frozen.must_not_show),
             required=work.required,
+            data=frozen.data,
         )
     facts = tuple(
         entry
         for entry in work.work_order.source_of_truth
-        if not entry.key.startswith(FIGURE_CONTEXT_KEY_PREFIX)
+        if not entry.key.startswith(FIGURE_CONTEXT_KEY_PREFIX) and entry.key != FIGURE_DATA_KEY
     )
     identity = SourceIdentity(
         source_artifact_type="teaching_plan",

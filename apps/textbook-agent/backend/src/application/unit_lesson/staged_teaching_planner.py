@@ -752,6 +752,7 @@ def _expected_figure_visual(figure: dict[str, Any]) -> dict[str, Any] | None:
         "purpose": backbone_figure.purpose,
         "must_show": must_show,
         "labels_required": list(backbone_figure.labels_required),
+        "data": backbone_figure.data or None,
     }
 
 
@@ -800,7 +801,8 @@ def figure_copy_errors(section: TeachingPlanSection, packet: ImmutableLessonPack
             errors.append(
                 f"FIGURE_COPY_MISMATCH: block {block.id!r} visual for backbone figure "
                 f"'{visual.figure_ref}' differs from the figure in {fields}; copy mode, "
-                "purpose, must_show and labels_required exactly from the figure."
+                "purpose, must_show and labels_required exactly from the figure "
+                "(data is copied by code, not written by the model)."
             )
     return errors
 
