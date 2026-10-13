@@ -383,3 +383,68 @@ def test_prompt_includes_backbone_guidance_and_no_leaks() -> None:
     section_prompt = stp.render_staged_prompt(_packet(), None, kind="section")
     assert BACKBONE_TEACHING_GUIDANCE in section_prompt
     assert "LEARNER ACTION POLICY" in section_prompt
+
+
+# ------------------------------------------------------------------ figure quantity rule
+
+
+def _with_null_figure(purpose: str) -> TeachingSpineDraft:
+    return _mutated(
+        lambda d: d["sections"][1].update(
+            figure_plan=[{"purpose": purpose, "backbone_figure_id": None}]
+        )
+    )
+
+
+def test_null_id_figure_with_digit_is_dropped_and_recorded() -> None:
+    spine, packet = _spine(_with_null_figure("Show growth from 5 cm to 48 cm"))
+    assert _codes(stp.spine_check_errors(spine, packet)) == {"SPINE_FIGURE_QUANTITY"}
+    changes = stp.drop_quantity_figures(spine)
+    assert changes == [
+        {
+            "repair": "SPINE_FIGURE_QUANTITY",
+            "section_id": "explain",
+            "purpose": "Show growth from 5 cm to 48 cm",
+        }
+    ]
+    assert spine.sections[1].figure_plan == []
+    assert stp.spine_check_errors(spine, packet) == []
+    assert stp.drop_quantity_figures(spine) == []
+
+
+def test_null_id_figure_without_digit_or_words_passes_clean() -> None:
+    spine, packet = _spine(_with_null_figure("Label the parts of the flower"))
+    assert stp.drop_quantity_figures(spine) == []
+    assert stp.spine_quantity_word_flags(spine) == []
+    assert stp.spine_check_errors(spine, packet) == []
+    assert len(spine.sections[1].figure_plan) == 1
+
+
+def test_backbone_linked_figure_with_digit_purpose_is_kept() -> None:
+    draft = _mutated(
+        lambda d: d["sections"][2].update(
+            figure_plan=[{"purpose": "Heights at day 28", "backbone_figure_id": "fig-a"}]
+        )
+    )
+    spine, _ = _spine(draft)
+    assert stp.drop_quantity_figures(spine) == []
+
+
+def test_digit_in_spine_run_drops_entry_without_retry(monkeypatch) -> None:
+    run, payloads = _run(_packet(), monkeypatch, [_with_null_figure("Chart of 3 trials")])
+    result = run()
+    assert len(payloads) == 1 and len(result.attempts) == 1
+    assert any(r["repair"] == "SPINE_FIGURE_QUANTITY" for r in result.repairs)
+    assert result.spine.sections[1].figure_plan == []
+
+
+def test_words_only_gives_advisory_flag_and_run_succeeds(monkeypatch) -> None:
+    run, payloads = _run(_packet(), monkeypatch, [_with_null_figure("A table of the measurements")])
+    result = run()
+    assert len(payloads) == 1
+    assert [f["code"] for f in result.flags] == ["SPINE_FIGURE_QUANTITY_WORDS"]
+    assert result.flags[0]["severity"] == "warning"
+    assert result.flags[0]["section_ids"] == ["explain"]
+    assert len(result.spine.sections[1].figure_plan) == 1
+    restored = stp.spine_result_from_json(stp.spine_result_to_json(result))
+    assert restored.flags == result.flags

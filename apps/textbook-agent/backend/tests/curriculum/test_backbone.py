@@ -45,7 +45,7 @@ def _draft_payload(**overrides) -> dict:
                 "purpose": "Show the trays",
                 "must_show": ["3 trays"],
                 "labels_required": ["12 rolls"],
-                "data": {"trays": 3},
+                "data": {"trays": 3, "per_tray": 12},
             }
         ],
     }
@@ -163,7 +163,7 @@ def test_figure_without_mode_dumps_no_mode_key_and_hash_is_unchanged() -> None:
                 "purpose": "Show the trays",
                 "must_show": ["3 trays"],
                 "labels_required": ["12 rolls"],
-                "data": {"trays": 3},
+                "data": {"trays": 3, "per_tray": 12},
             }
         ],
     }

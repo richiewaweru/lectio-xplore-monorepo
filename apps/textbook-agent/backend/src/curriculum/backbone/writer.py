@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from pydantic_ai import Agent
 
 from curriculum.backbone.errors import BackboneOutputInvalidError
+from curriculum.backbone.figure_data import figure_data_errors
 from curriculum.backbone.inputs import BackboneInputs
 from curriculum.backbone.models import (
     LessonBackbone,
@@ -73,9 +74,13 @@ def _materialize(raw: Any) -> LessonBackbone:
             draft = LessonBackboneDraft.model_validate(raw.model_dump())
         else:
             draft = LessonBackboneDraft.model_validate(raw)
-        return materialize_backbone(draft)
+        backbone = materialize_backbone(draft)
     except ValidationError as exc:
         raise _BackboneContractError(_validation_messages(exc)) from exc
+    data_errors = figure_data_errors(backbone)
+    if data_errors:
+        raise _BackboneContractError(data_errors)
+    return backbone
 
 
 def build_backbone_message(
