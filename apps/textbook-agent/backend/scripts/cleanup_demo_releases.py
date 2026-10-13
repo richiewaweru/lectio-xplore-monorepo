@@ -17,12 +17,16 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import secrets
 import sys
 from pathlib import Path
 
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+# Importing the models loads app settings, which insist on a JWT secret. This script never uses it.
+os.environ.setdefault("JWT_SECRET_KEY", secrets.token_hex(32))
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
