@@ -3,14 +3,27 @@
 	import { goto } from '$app/navigation';
 	import { buildApiUrl } from '$lib/api/client';
 	import { Button, Card, InlineError } from '$lib/ui';
-	import { getStoredLearner, storeLearner, type StoredLearner } from '$lib/learn/student/api/learner-fetch';
+	import {
+		getStoredLearner,
+		learnerFetch,
+		storeLearner,
+		type StoredLearner
+	} from '$lib/learn/student/api/learner-fetch';
+	import { resumeWithCode } from '$lib/learn/student/api/resume';
 
 	let { code = '' }: { code?: string } = $props();
 
 	// Code is fixed when it arrives via the link; otherwise the student types it.
 	const linkCode = $derived(code.trim());
 	let typedCode = $state('');
-	let step = $state<'code' | 'name'>('code');
+	let step = $state<'code' | 'name' | 'done'>('code');
+	let joined = $state<{ learnerId: string; displayName: string; code: string } | null>(null);
+	let copied = $state(false);
+	let resumeCode = $state('');
+	let resumeBusy = $state(false);
+	let resumeError = $state<string | null>(null);
+	let continueBusy = $state(false);
+	let continueError = $state<string | null>(null);
 	let displayName = $state('');
 	let error = $state<string | null>(null);
 	let busy = $state(false);
@@ -35,7 +48,55 @@
 
 	async function continueAsReturning() {
 		if (!returning) return;
+		continueError = null;
+		// Same device: attach this stored learner to the class (no new identity).
+		if (linkCode) {
+			continueBusy = true;
+			try {
+				const response = await learnerFetch('/api/v1/learn/classes/join-existing', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ invite_code: linkCode })
+				});
+				if (!response.ok) {
+					const body = await response.json().catch(() => ({}));
+					throw new Error(
+						typeof body.detail === 'string' ? body.detail : 'Could not join class. Try again.'
+					);
+				}
+			} catch (err) {
+				continueError = err instanceof Error ? err.message : 'Could not join class. Try again.';
+				continueBusy = false;
+				return;
+			}
+			continueBusy = false;
+		}
 		await goto(`/learn/home/${encodeURIComponent(returning.learnerId)}`);
+	}
+
+	async function useCode(e: SubmitEvent) {
+		e.preventDefault();
+		if (!resumeCode.trim()) return;
+		resumeBusy = true;
+		resumeError = null;
+		try {
+			const learnerId = await resumeWithCode(resumeCode);
+			await goto(`/learn/home/${encodeURIComponent(learnerId)}`);
+		} catch (err) {
+			resumeError = err instanceof Error ? err.message : 'Something went wrong. Try again.';
+		} finally {
+			resumeBusy = false;
+		}
+	}
+
+	async function copyCode() {
+		if (!joined) return;
+		try {
+			await navigator.clipboard.writeText(joined.code);
+			copied = true;
+		} catch {
+			copied = false;
+		}
 	}
 
 	async function join(e: SubmitEvent) {
@@ -56,10 +117,16 @@
 				);
 			}
 			const body = await response.json();
-			// Joining always creates a new learner; a returning student joining a
-			// second class gets a fresh identity for now.
-			storeLearner({ token: body.token, learnerId: body.learner_id, displayName: body.display_name });
-			await goto(`/learn/home/${encodeURIComponent(body.learner_id)}`);
+			// Joining from the form creates a new learner. Same-device returners use
+			// join-existing instead (see continueAsReturning).
+			storeLearner({
+				token: body.token,
+				learnerId: body.learner_id,
+				displayName: body.display_name,
+				code: body.code
+			});
+			joined = { learnerId: body.learner_id, displayName: body.display_name, code: body.code ?? '' };
+			step = 'done';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not join class';
 		} finally {
@@ -71,15 +138,38 @@
 <div class="join">
 	<p class="brand">Lect<span>i</span>o</p>
 	<Card padding="lg">
+		{#if step === 'done' && joined}
+			<h1>Welcome, {joined.displayName}</h1>
+			{#if joined.code}
+				<p class="lede">Your code</p>
+				<div class="codebox">
+					<strong class="code" data-testid="learner-code">{joined.code}</strong>
+					<Button variant="secondary" type="button" onclick={copyCode}>{copied ? 'Copied' : 'Copy'}</Button>
+				</div>
+				<p class="lede">Save this. It gets your progress back on any device.</p>
+				<p class="bookmark">
+					Bookmark:
+					<a href={`${location.origin}/resume/${encodeURIComponent(joined.code)}`}>
+						{location.origin}/resume/{joined.code}
+					</a>
+				</p>
+			{/if}
+			<Button onclick={() => goto(`/learn/home/${encodeURIComponent(joined!.learnerId)}`)}>
+				Start learning →
+			</Button>
+		{:else}
 		{#if returning}
 			<div class="returning">
 				<p class="lede">
 					Welcome back{returning.displayName ? `, ${returning.displayName}` : ''}.
 				</p>
-				<Button onclick={continueAsReturning}>
+				<Button onclick={continueAsReturning} busy={continueBusy}>
 					Continue{returning.displayName ? ` as ${returning.displayName}` : ''}
 				</Button>
-				<p class="or">Or join as someone new</p>
+				{#if continueError}<InlineError message={continueError} />{/if}
+				<Button variant="secondary" type="button" onclick={() => (returning = null)}>
+					Not you? Join as someone else
+				</Button>
 			</div>
 		{/if}
 		{#if step === 'code'}
@@ -92,6 +182,17 @@
 					<input bind:value={typedCode} required placeholder="ABC123" autocomplete="off" />
 				</label>
 				<Button type="submit" disabled={!typedCode.trim()}>Continue</Button>
+			</form>
+			<p class="or">or</p>
+			<form onsubmit={useCode}>
+				<label>
+					<span>Have a code?</span>
+					<input bind:value={resumeCode} placeholder="HAPPY-TIGER-4821" autocomplete="off" />
+				</label>
+				{#if resumeError}<InlineError message={resumeError} />{/if}
+				<Button type="submit" variant="secondary" busy={resumeBusy} disabled={!resumeCode.trim()}>
+					Continue
+				</Button>
 			</form>
 		{:else}
 			<h1>Join your class</h1>
@@ -111,6 +212,7 @@
 					</Button>
 				</div>
 			</form>
+		{/if}
 		{/if}
 	</Card>
 </div>
@@ -157,6 +259,23 @@
 	}
 	.returning .lede {
 		margin: 0;
+	}
+	.codebox {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+		padding: 0.75rem 1rem;
+		border: 1px solid var(--rule);
+		border-radius: var(--radius-md);
+		font-size: 1.25rem;
+	}
+	.bookmark {
+		margin: 0 0 1.25rem;
+		font-size: 0.8125rem;
+		overflow-wrap: anywhere;
 	}
 	.or {
 		margin: 0.25rem 0 0;
