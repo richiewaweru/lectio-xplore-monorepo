@@ -9,7 +9,9 @@
 # They contain no teaching guidance; all of that lives here.
 #
 # Pipeline:
-#   1. Objective -> knowledge_type    (classified in code, not by an LLM)
+#   1. Objective -> knowledge_type    (set by the path planner; a teacher may
+#                                      correct it. Code offers only a
+#                                      deterministic preview: classify_for_preview)
 #   2. This file -> ordered slots     (deterministic; toggles are implemented
 #                                      in src/curriculum/planning/skeletons.py)
 #   3. The teaching planner fills each slot with blocks and intents
@@ -301,6 +303,15 @@ skeletons:
       Factual lessons are often too thin to stand alone. Suggest merging with
       an adjacent lesson before generating.
 
+  - id: factual.consolidation
+    knowledge_type: factual
+    lesson_mode: consolidation
+    rationale: >
+      The facts have been met but are not yet reliable. Reload them, re-impose
+      the structure that makes them retrievable, then test retrieval without help.
+    slots: [recall, organise, independent, check]
+    question_arc: [medium, cold]
+
   # --- EVALUATIVE ------------------------------------------------------------
 
   - id: evaluative.first_exposure
@@ -456,6 +467,6 @@ provenance_fields:
   - skeleton_id
   - skeleton_version
   - knowledge_type
-  - knowledge_type_source      # classified | teacher_corrected
+  - knowledge_type_source      # path_planner | teacher
   - toggles_applied            # list of toggle ids
   - deviations_applied         # list of deviation ids

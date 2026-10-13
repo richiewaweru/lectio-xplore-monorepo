@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
@@ -15,6 +16,21 @@ LessonMode = Literal[
     "first_exposure", "consolidation", "repair", "retrieval", "transfer"
 ]
 GroupProfile = Literal["support", "core", "extension"]
+
+logger = logging.getLogger(__name__)
+
+# Modes the path planner may assign; repair/retrieval stay system-driven.
+PLANNER_LESSON_MODES: tuple[str, ...] = ("first_exposure", "consolidation", "transfer")
+_ALL_LESSON_MODES: tuple[str, ...] = (*PLANNER_LESSON_MODES, "repair", "retrieval")
+
+
+def effective_lesson_mode(stored: str | None) -> str:
+    """Stored lesson mode if it is a known mode, else first_exposure."""
+    if isinstance(stored, str):
+        normalized = stored.strip().casefold()
+        if normalized in _ALL_LESSON_MODES:
+            return normalized
+    return "first_exposure"
 
 _PROFILE_SUPPORT_LEVEL = {"support": "high", "core": "medium", "extension": "low"}
 
@@ -257,11 +273,23 @@ class SkeletonCatalog:
         exact = f"{knowledge_type}.{lesson_mode}"
         fallback = f"any.{lesson_mode}"
         skeleton = self.skeletons.get(exact) or self.skeletons.get(fallback)
-        if skeleton is None:
-            raise SkeletonCatalogError(
-                f"no skeleton for knowledge_type={knowledge_type}, lesson_mode={lesson_mode}"
+        if skeleton is not None:
+            return skeleton
+        # A known knowledge type with no recipe for the requested mode degrades
+        # to its first-exposure recipe rather than failing the lesson.
+        default = self.skeletons.get(f"{knowledge_type}.first_exposure")
+        if default is not None:
+            logger.warning(
+                "no skeleton for knowledge_type=%s lesson_mode=%s; "
+                "falling back to %s.first_exposure",
+                knowledge_type,
+                lesson_mode,
+                knowledge_type,
             )
-        return skeleton
+            return default
+        raise SkeletonCatalogError(
+            f"no skeleton for knowledge_type={knowledge_type}, lesson_mode={lesson_mode}"
+        )
 
     def preview(
         self,
