@@ -92,6 +92,9 @@ export interface PathLesson {
 	skipped: boolean;
 	revision: number;
 	pack_id: string | null;
+	lesson_mode?: string | null;
+	lesson_mode_reason?: string | null;
+	lesson_mode_source?: string | null;
 }
 
 export type MergeVerdict = 'keep_separate' | 'merge_suggested' | 'teacher_decision';

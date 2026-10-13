@@ -31,6 +31,7 @@
 	import LessonResultsPanel from '$lib/curriculum/units/components/LessonResultsPanel.svelte';
 	import ResourceComposerPanel from '$lib/curriculum/units/components/ResourceComposerPanel.svelte';
 	import type { NativePathKind } from '$lib/curriculum/units/path-generation';
+	import { effectiveLessonMode, lessonModeNote } from '$lib/curriculum/units/lesson-mode';
 	import { lessonWorkspaceHref, preparationLabel, preparationUiState, badgeToneForPrep, canonicalPreparationState, preparationIsApprovedAndFresh } from '$lib/curriculum/lessons/lesson-context';
 	import { Badge } from '$lib/ui';
 	import PublishTopicDialog from '$lib/curriculum/units/components/PublishTopicDialog.svelte';
@@ -168,6 +169,7 @@
 
 	function selectLesson(lesson: PathLesson): void {
 		selectedId = lesson.id;
+		lessonMode = effectiveLessonMode(lesson);
 		fillEditor(lesson);
 		shape = null;
 		shapeError = null;
@@ -630,7 +632,7 @@
 
 				{#if selected}
 					<main class="inspector">
-						<div class="inspector-head"><div><p class="eyebrow">Lesson {selected.position + 1}</p><h2>{selected.title}</h2></div></div>
+						<div class="inspector-head"><div><p class="eyebrow">Lesson {selected.position + 1}</p><h2>{selected.title}</h2>{#if lessonModeNote(selected)}<p class="mode-note">{lessonModeNote(selected)}</p>{/if}</div></div>
 
 						<form class="editor" onsubmit={saveLesson}>
 							<label><span>Title</span><input bind:value={editTitle} required /></label>
@@ -789,6 +791,7 @@
 	.unit-head, .view-tabs, .lock-in-bar, .history-panel, .workspace, .chat-edit, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
 	.unit-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 	.back { display: inline-block; margin-bottom: 18px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
+	.mode-note { margin: 6px 0 0; color: var(--ink-3); font-size: 13px; }
 	.eyebrow { margin: 0 0 6px; color: var(--ink-3); font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
 	h1 { margin: 0; font: 500 36px/1.1 Fraunces, Georgia, serif; letter-spacing: -.03em; }
 	.unit-head p:last-child { max-width: 720px; margin: 9px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; }

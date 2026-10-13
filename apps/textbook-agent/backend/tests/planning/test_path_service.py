@@ -119,6 +119,85 @@ async def test_replan_retains_concept_ids_and_teacher_edits(db_session, owner) -
     assert replanned.teacher_edited is True
 
 
+async def test_teacher_edited_lesson_mode_survives_replan(db_session, owner) -> None:
+    plan = _plan("grade4-photosynthesis-path.json")
+    plan.lessons[0].lesson_mode = "consolidation"
+    plan.lessons[0].lesson_mode_reason = "Facts were met last week."
+    plan.lessons[1].lesson_mode = "transfer"
+    unit = await _unit(
+        db_session,
+        owner_id=owner.id,
+        fixture_name="grade4-photosynthesis-path.json",
+    )
+    first = await persist_path_plan(db_session, unit=unit, plan=plan)
+    lessons = list(
+        await db_session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == first.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    assert lessons[0].lesson_mode == "consolidation"
+    assert lessons[0].lesson_mode_reason == "Facts were met last week."
+    assert lessons[0].lesson_mode_source == "path_planner"
+    assert lessons[1].lesson_mode_source == "path_planner"
+    assert lessons[2].lesson_mode is None
+    assert lessons[2].lesson_mode_source is None
+    round_tripped = await canonical_plan_from_version(db_session, first)
+    assert round_tripped.lessons[0].lesson_mode == "consolidation"
+    assert round_tripped.lessons[2].lesson_mode is None
+
+    await patch_lesson(db_session, lesson=lessons[0], request=PathLessonPatch(lesson_mode="transfer"))
+    assert lessons[0].lesson_mode == "transfer"
+    assert lessons[0].lesson_mode_source == "teacher"
+
+    replanned_plan = _plan("grade4-photosynthesis-path.json")
+    replanned_plan.lessons[0].lesson_mode = "consolidation"
+    second = await persist_path_plan(db_session, unit=unit, plan=replanned_plan, prior_version=first)
+    replanned = list(
+        await db_session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == second.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    assert replanned[0].lesson_mode == "transfer"
+    assert replanned[0].lesson_mode_source == "teacher"
+    assert replanned[1].lesson_mode is None  # untouched lesson follows the new plan
+
+
+async def test_patch_lesson_without_mode_leaves_mode_source_alone(db_session, owner) -> None:
+    plan = _plan("grade4-photosynthesis-path.json")
+    plan.lessons[0].lesson_mode = "consolidation"
+    unit = await _unit(
+        db_session,
+        owner_id=owner.id,
+        fixture_name="grade4-photosynthesis-path.json",
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    lesson = await db_session.scalar(
+        select(PathLessonModel)
+        .where(PathLessonModel.path_version_id == version.id)
+        .order_by(PathLessonModel.position)
+    )
+    assert lesson is not None
+    await patch_lesson(db_session, lesson=lesson, request=PathLessonPatch(title="New title"))
+    assert lesson.lesson_mode == "consolidation"
+    assert lesson.lesson_mode_source == "path_planner"
+    with pytest.raises(ValueError):
+        await patch_lesson(db_session, lesson=lesson, request=PathLessonPatch(lesson_mode="bogus"))
+    _clone, mapping = await clone_path_version(
+        db_session,
+        unit=unit,
+        source=version,
+        supersede_active=version,
+        generated_by="teacher",
+    )
+    cloned_first = mapping[lesson.id]
+    assert cloned_first.lesson_mode == "consolidation"
+    assert cloned_first.lesson_mode_source == "path_planner"
+
+
 async def test_skip_reorder_split_and_merge_are_explicit_state(db_session, owner) -> None:
     plan = _plan("grade4-photosynthesis-path.json")
     unit = await _unit(

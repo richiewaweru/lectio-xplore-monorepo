@@ -36,6 +36,28 @@ def test_normal_four_lesson_plan() -> None:
     )
 
 
+def test_lesson_mode_parse_normalizes_and_never_raises() -> None:
+    draft = four_lesson_draft()
+    payload = draft.model_dump()
+    payload["lessons"][0]["lesson_mode"] = "  Consolidation "
+    payload["lessons"][0]["lesson_mode_reason"] = "  Facts met last week.  "
+    payload["lessons"][1]["lesson_mode"] = "repair"  # not planner-assignable
+    payload["lessons"][1]["lesson_mode_reason"] = "   "
+    payload["lessons"][2]["lesson_mode"] = "nonsense"
+    plan = normalize_path_plan_draft(PathPlanDraft.model_validate(payload))
+    assert plan.lessons[0].lesson_mode == "consolidation"
+    assert plan.lessons[0].lesson_mode_reason == "Facts met last week."
+    assert plan.lessons[1].lesson_mode is None
+    assert plan.lessons[1].lesson_mode_reason is None
+    assert plan.lessons[2].lesson_mode is None
+    assert plan.lessons[3].lesson_mode is None  # omitted entirely
+    assert validate_canonical_path_plan(plan) == []
+    jsonschema.validate(
+        plan.model_dump(mode="json"),
+        json.loads(SCHEMA_PATH.read_text(encoding="utf-8")),
+    )
+
+
 def test_extra_unknown_fields_ignored() -> None:
     draft = PathPlanDraft.model_validate(
         {

@@ -34,6 +34,7 @@ from curriculum.validation import (
     concept_slug_for,
 )
 from curriculum.planning.objective_ownership import hash_path_objective
+from curriculum.planning.skeletons import PLANNER_LESSON_MODES
 
 
 class PathNotFoundError(LookupError):
@@ -183,6 +184,15 @@ async def persist_path_plan(
             ),
             secondary_demand=(prior.secondary_demand if preserve_edit else None),
             knowledge_type_source="teacher" if preserve_edit else "path_planner",
+            lesson_mode=(prior.lesson_mode if preserve_edit else planned.lesson_mode),
+            lesson_mode_reason=(
+                prior.lesson_mode_reason if preserve_edit else planned.lesson_mode_reason
+            ),
+            lesson_mode_source=(
+                "teacher"
+                if preserve_edit
+                else ("path_planner" if planned.lesson_mode else None)
+            ),
             merge_warning=False,
             position=position,
             source="replan" if prior_version is not None else "path_planner",
@@ -295,6 +305,8 @@ async def canonical_plan_from_version(
                 requires=requires_by_id[lesson.id],
                 must_establish=list(lesson.must_establish or []),
                 knowledge_type=lesson.primary_knowledge_type,  # type: ignore[arg-type]
+                lesson_mode=lesson.lesson_mode,
+                lesson_mode_reason=lesson.lesson_mode_reason,
             )
             for lesson in lessons
         ],
@@ -370,6 +382,9 @@ async def clone_path_version(
             primary_knowledge_type=lesson.primary_knowledge_type,
             secondary_demand=lesson.secondary_demand,
             knowledge_type_source=lesson.knowledge_type_source,
+            lesson_mode=lesson.lesson_mode,
+            lesson_mode_reason=lesson.lesson_mode_reason,
+            lesson_mode_source=lesson.lesson_mode_source,
             merge_warning=lesson.merge_warning,
             position=lesson.position,
             source=generated_by,
@@ -420,6 +435,16 @@ async def patch_lesson(
         exclude_unset=True,
         exclude={"path_version_id", "path_revision", "lesson_revision"},
     )
+    if "lesson_mode" in changes:
+        raw_mode = changes["lesson_mode"]
+        if raw_mode is not None:
+            normalized_mode = str(raw_mode).strip().casefold()
+            if normalized_mode not in PLANNER_LESSON_MODES:
+                raise ValueError(
+                    f"lesson_mode must be one of {', '.join(PLANNER_LESSON_MODES)}"
+                )
+            changes["lesson_mode"] = normalized_mode
+        lesson.lesson_mode_source = "teacher"
     for field, value in changes.items():
         setattr(lesson, field, value)
     if "objective" in changes:
