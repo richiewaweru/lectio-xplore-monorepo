@@ -132,15 +132,19 @@ may list only ids that are in `misconception_focus_ids`.
 lessons have zero figures that the spine plans beyond the backbone's.
 
   - Add an entry only when the learner must SEE something that words carry
-    poorly: a spatial structure, a staged process, the parts of a thing, a
-    relationship between quantities, or an explicit request in the objective to
-    label, draw, or read a diagram.
+    poorly: a spatial structure, a staged process, the parts of a thing, or an
+    explicit request in the objective to label, draw, or read a diagram.
   - `purpose` says what the learner must notice in the figure.
   - When a backbone is supplied, set `backbone_figure_id` to that figure's id to
     reuse it, using only ids the backbone lists. Every approved item whose
     backbone reference names a figure needs that figure in the figure_plan of
     the section that owns the item.
   - Leave `backbone_figure_id` null for a figure that is not a backbone figure.
+  - A figure that shows quantities, measurements, or a table or graph of values
+    must reuse a backbone figure (`backbone_figure_id` set). Never plan a figure
+    that shows numbers with `backbone_figure_id` null. A figure with a null id
+    shows structure only: parts, stages, direction, labels. Its `purpose`
+    contains no digits.
   - Never plan a figure for variety or decoration.
 
 ## BLOCK BUDGET
@@ -221,7 +225,8 @@ Every later section has a meaningful bridge and transition.
      with every required assessment slot owning at least one and no section
      owning more items than planned_block_count?
   6. Is every focused misconception assigned to a section?
-  7. Does every figure_plan entry use only a backbone figure id that exists?
+  7. Does every figure_plan entry use only a backbone figure id that exists, and
+     does every entry with a null id show structure only, with no numbers?
   8. Do the planned block maximums fit the limits and sum within the lesson limit?
   9. Is every statement I wrote actually true?
  10. Do learner_title, starting_state, target_state, display_title and

@@ -44,6 +44,12 @@ Return JSON matching the supplied schema. Do not write any question text.
      and '34 cm'). Never use placeholder labels such as '—'.
    - `data`: the exact values the figure plots or tabulates (same numbers as
      the anchor `data`).
+   The backbone is the only place numbers are authored. It must contain every
+   table, chart, or measured diagram the lesson needs, each with complete
+   `data`: every series is a list, all series in a figure have the same length,
+   and every number in `labels_required` or `must_show` appears in `data`. Write
+   value labels as 'Day 28: 48 cm'. If the lesson needs to show quantities and
+   the case supports no such figure, the lesson shows none.
    Use an empty list when the scenario needs no figure.
 3. `variants`: zero, one or two variants for practice. A variant keeps the SAME
    underlying idea and structure, with changed data (different numbers,

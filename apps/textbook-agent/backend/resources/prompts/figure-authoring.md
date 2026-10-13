@@ -15,3 +15,10 @@ Requirements:
 - use only supplied objective/scope/terminology/source facts;
 - avoid explanatory text that belongs in neighboring paragraphs;
 - refer to the figure from the block's prose (for example "the diagram shows").
+
+When the block's `visual` has `data`, the prose states the key readings that make
+the figure's point: the first value, the last value, and the contrast between
+series, using the exact numbers from `data`. Never alter, round, or add a number.
+The caption is type-neutral (for example 'The figure shows the height of each
+seedling at each weekly check') and never describes a different kind of figure
+than the one drawn.

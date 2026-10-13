@@ -166,7 +166,8 @@ For each `figure_plan` entry that has a `backbone_figure_id`, put a `visual` on
 one block of this section whose `figure_ref` is exactly that id, and copy
 `mode`, `purpose`, `must_show`, and `labels_required` from that backbone figure,
 which is supplied in full. Do not alter, reorder, extend, or reword those
-fields. Every approved item whose backbone reference names a figure is owned by
+fields. The figure's `data` (its exact values) is copied by code; do not write
+`data`. Every approved item whose backbone reference names a figure is owned by
 a block that carries that figure.
 
 For each `figure_plan` entry without a `backbone_figure_id`, write the visual
@@ -174,7 +175,10 @@ freely, following the rules above: list every required stage, part, and
 direction in must_show, use only labels the objective and must_establish state
 (every `labels_required` entry must appear inside a `must_show` entry, the
 lesson objective, or a must_establish statement), and never invent labels,
-stages, or relationships.
+stages, or relationships. Such a figure shows structure only: no digits in
+`purpose`, `must_show`, or `labels_required`, and labels come only from the
+objective and must_establish. If the idea needs numbers, state them in the
+block's brief instead and add no visual.
 
 Add no visual beyond the figure_plan. Never name a page object, component,
 layout, or renderer anywhere; only the `visual` object describes a figure, and
