@@ -26,7 +26,7 @@
 		<div class="lectio-choice">
 			<span class="lectio-choice-mark" aria-hidden="true">○</span>
 			<span class="lectio-choice-letter">{option.letter}.</span>
-			<InlineView nodes={asRichText(option.text)} />
+			<span class="lectio-choice-text"><InlineView nodes={asRichText(option.text)} /></span>
 		</div>
 	{/each}
 	{#if role === 'predict'}

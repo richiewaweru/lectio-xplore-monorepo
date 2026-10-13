@@ -14,13 +14,13 @@
 	{#each content.steps as step, i}
 		<div class="lectio-step">
 			<span class="lectio-step-number">{i + 1}.</span>
-			<InlineView nodes={asRichText(step.text)} />
+			<span class="lectio-step-text"><InlineView nodes={asRichText(step.text)} /></span>
 		</div>
 	{/each}
 	<div class="lectio-step">
 		<span class="lectio-step-number">∴</span>
 		<strong>Answer:</strong>
-		<InlineView nodes={asRichText(content.answer)} />
+		<span class="lectio-step-text"><InlineView nodes={asRichText(content.answer)} /></span>
 	</div>
 	{#if content.check}
 		<p><InlineView nodes={asRichText(content.check)} /></p>

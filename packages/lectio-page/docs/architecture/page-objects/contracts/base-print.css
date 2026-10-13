@@ -121,6 +121,7 @@ p { margin: 0 0 var(--line); }
 .lectio-misconception-label { margin: -7pt -9pt 4pt; padding: 5pt 9pt; background: #EDEDED; border-bottom: 1px solid #767676; font-size: 9.5pt; letter-spacing: .08em; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .lectio-aside--spanning .lectio-misconception-row { display: grid; grid-template-columns: 30mm 1fr; gap: 5pt; padding: 4pt 0; border-top: 1px solid #767676; break-inside: avoid; }
 .lectio-aside--spanning .lectio-misconception-row:first-of-type { border-top: 0; }
+.lectio-aside--spanning .lectio-misconception-text { min-width: 0; }
 .lectio-aside--spanning .lectio-misconception-row q { font-style: italic; }
 .lectio-aside-followup { margin-top: 8pt; }
 .lectio-aside--spanning:has(.lectio-misconception-grid) .lectio-aside-followup { margin: 8pt 0 var(--line); }

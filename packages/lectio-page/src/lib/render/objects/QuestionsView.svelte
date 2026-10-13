@@ -25,7 +25,7 @@
 		{#if item.marks != null}
 			<span class="lectio-question-marks">[{item.marks}]</span>
 		{/if}
-		<InlineView nodes={asRichText(item.prompt)} />
+		<span class="lectio-task-prompt"><InlineView nodes={asRichText(item.prompt)} /></span>
 		{#if item.match}
 			<p class="lectio-match-instruction">Write the letter of the matching answer in each box.</p>
 			<div class="lectio-match">
