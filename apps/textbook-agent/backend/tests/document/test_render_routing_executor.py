@@ -29,7 +29,7 @@ def make_order(text: str = FULL_TEXT, mode: str = "diagram") -> VisualGeneratorW
             attaches_to="s1",
             mode=mode,
             purpose="Show the L-shaped room",
-            must_show=["every side length", "sides 9 m, 7 m, 3 m, 2 m, 5 m and 6 m"],
+            must_show=["every side length"],
         ),
         source_of_truth=[SourceOfTruthEntry(key="caption", text=text)],
     )
@@ -130,7 +130,10 @@ async def test_rendered_stores_svg_and_png(monkeypatch, tmp_path):
 async def test_missing_number_warns(monkeypatch, tmp_path):
     builder = FakeBuilder(l_room())
     executor, _ = _make(monkeypatch, tmp_path, builder)
-    blocks = await executor.execute_figure(make_order(text="An L-shaped room."))
+    # The sides are approved (must_show) but the caption never states them.
+    order = make_order(text="An L-shaped room.")
+    order.visual.must_show.append("sides 9 m, 7 m, 3 m, 2 m, 5 m and 6 m")
+    blocks = await executor.execute_figure(order)
     assert blocks[0].status == "ready_with_quality_warning"
     assert blocks[0].qc_reasons
 

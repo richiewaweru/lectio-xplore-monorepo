@@ -71,6 +71,27 @@ def allowed_numbers(order: VisualGeneratorWorkOrder) -> set[Decimal]:
     return allowed
 
 
+def with_derived_sides(allowed: set[Decimal]) -> set[Decimal]:
+    """``allowed`` plus every pairwise sum and absolute difference (a side found from given sides)."""
+    values = sorted(allowed)
+    out = set(allowed)
+    for i, a in enumerate(values):
+        for b in values[i + 1 :]:
+            for derived in (a + b, abs(a - b)):
+                normalised = _normalise(derived)
+                if normalised is not None:
+                    out.add(normalised)
+    return out
+
+
+def allowed_numbers_for(order: VisualGeneratorWorkOrder, family: str) -> set[Decimal]:
+    """Allowed numbers for a spec family; polygon_area may also show a derived side."""
+    allowed = allowed_numbers(order)
+    if family == "polygon_area" and not is_data_figure(order.visual.data):
+        return with_derived_sides(allowed)
+    return allowed
+
+
 def unsupported_numbers(spec_numbers: Iterable[float | int], allowed: set[Decimal]) -> list[Decimal]:
     """Spec numbers missing from ``allowed``, in first-seen order without repeats."""
     out: list[Decimal] = []
@@ -98,9 +119,11 @@ def format_number(value: Decimal) -> str:
 
 __all__ = [
     "allowed_numbers",
+    "allowed_numbers_for",
     "format_number",
     "label_numbers_outside_data",
     "numbers_in",
     "numbers_of",
     "unsupported_numbers",
+    "with_derived_sides",
 ]

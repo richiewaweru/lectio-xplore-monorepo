@@ -34,7 +34,7 @@ def make_order(text: str = FULL_TEXT) -> VisualGeneratorWorkOrder:
             id="v1",
             attaches_to="s1",
             purpose="Show the L-shaped room",
-            must_show=["every side length", "sides 9 m, 7 m, 3 m, 2 m, 5 m and 6 m"],
+            must_show=["every side length"],
         ),
         source_of_truth=[SourceOfTruthEntry(key="caption", text=text)],
     )

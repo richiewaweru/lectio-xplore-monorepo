@@ -170,3 +170,37 @@ async def test_no_builder_and_no_prebuilt_falls_back() -> None:
     from media.render.pipeline import Fallback
 
     assert isinstance(await render_figure(order_for()), Fallback)
+
+
+def test_polygon_allows_pairwise_sum_and_difference_but_other_families_do_not() -> None:
+    from media.render.number_guard import allowed_numbers_for
+
+    order = order_for(must_show=["sides 10 and 3"])
+    polygon = allowed_numbers_for(order, "polygon_area")
+    assert Decimal(7) in polygon and Decimal(13) in polygon
+    assert Decimal(19) not in polygon
+    assert Decimal(7) not in allowed_numbers_for(order, "bar_chart")
+    assert Decimal(7) not in allowed_numbers_for(order, "table")
+
+
+def test_data_figures_never_get_derived_numbers() -> None:
+    from media.render.number_guard import allowed_numbers_for
+
+    order = order_for(data={"a": [10, 3], "b": [1, 2]})
+    assert Decimal(7) not in allowed_numbers_for(order, "polygon_area")
+
+
+def test_derived_polygon_side_passes_and_unrelated_number_fails() -> None:
+    from media.render.number_guard import allowed_numbers_for
+
+    order = order_for(must_show=["sides 10 and 3"])
+    allowed = allowed_numbers_for(order, "polygon_area")
+    assert unsupported_numbers([10, 3, 7], allowed) == []
+    assert unsupported_numbers([10, 19], allowed) == [Decimal(19)]
+
+
+async def test_bar_chart_with_a_derived_value_is_rejected() -> None:
+    order = order_for(must_show=["values 10 and 3"])
+    out = await render_figure(order, builder=FakeBuilder(_bar([10, 3, 7])))
+    assert isinstance(out, Unavailable)
+    assert [e["code"] for e in out.errors] == ["number_not_in_data:7"]

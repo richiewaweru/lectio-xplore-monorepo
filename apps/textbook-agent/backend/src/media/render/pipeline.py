@@ -14,7 +14,7 @@ from media.generation.contracts import VisualGeneratorWorkOrder
 from media.render.contracts import RenderLayoutError, RenderSpec, RenderSpecError
 from media.render.export import RenderedFigure, render_spec
 from media.render.families import RENDERERS
-from media.render.number_guard import allowed_numbers, format_number, unsupported_numbers
+from media.render.number_guard import allowed_numbers_for, format_number, unsupported_numbers
 from media.render.spec_builder import SpecBuilder
 from media.render.validate import cross_check_numbers, validate_spec
 
@@ -82,10 +82,11 @@ def _spec_errors(order: VisualGeneratorWorkOrder, spec: object) -> list[RenderSp
     errors = validate_spec(spec)
     if errors:
         return errors
-    renderer = RENDERERS.get(str(getattr(spec, "family", "")))
+    family = str(getattr(spec, "family", ""))
+    renderer = RENDERERS.get(family)
     if renderer is None:
         return []
-    bad = unsupported_numbers(renderer.numbers(spec), allowed_numbers(order))
+    bad = unsupported_numbers(renderer.numbers(spec), allowed_numbers_for(order, family))
     return [
         RenderSpecError(
             f"number_not_in_data:{format_number(value)}",
