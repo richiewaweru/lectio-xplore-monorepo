@@ -34,6 +34,8 @@ class PathLessonDraft(TolerantModel):
     requires: list[str] = Field(default_factory=list)
     must_establish: list[str] = Field(default_factory=list)
     knowledge_type: str = ""
+    lesson_mode: str | None = None
+    lesson_mode_reason: str | None = None
 
 
 class PathPlanDraft(TolerantModel):
@@ -55,6 +57,8 @@ class CanonicalPathLesson(StrictModel):
     requires: list[str] = Field(default_factory=list)
     must_establish: list[str] = Field(min_length=1)
     knowledge_type: KnowledgeType
+    lesson_mode: str | None = None
+    lesson_mode_reason: str | None = None
 
 
 class CanonicalPathPlan(StrictModel):
@@ -146,6 +150,7 @@ class PathLessonPatch(StrictModel):
     must_establish: list[str] | None = None
     primary_knowledge_type: KnowledgeType | None = None
     secondary_demand: KnowledgeType | None = None
+    lesson_mode: str | None = None
 
 
 class GuardedPathLessonPatch(PathLessonPatch):

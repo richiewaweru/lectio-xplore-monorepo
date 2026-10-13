@@ -57,7 +57,12 @@
           "knowledge_type": {
             "type": "string",
             "enum": ["procedural", "conceptual", "factual", "evaluative"]
-          }
+          },
+          "lesson_mode": {
+            "type": ["string", "null"],
+            "enum": ["first_exposure", "consolidation", "transfer", null]
+          },
+          "lesson_mode_reason": { "type": ["string", "null"] }
         }
       }
     }

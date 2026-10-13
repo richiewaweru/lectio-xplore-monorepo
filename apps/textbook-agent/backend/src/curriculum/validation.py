@@ -9,6 +9,7 @@ from curriculum.models import (
     CanonicalPathScope,
     PathPlanDraft,
 )
+from curriculum.planning.skeletons import PLANNER_LESSON_MODES
 
 _KNOWLEDGE_TYPES: frozenset[str] = frozenset(
     {"procedural", "conceptual", "factual", "evaluative"}
@@ -248,6 +249,10 @@ def normalize_path_plan_draft(draft: PathPlanDraft) -> CanonicalPathPlan:
                 )
             requires.append(mapped)
 
+        raw_mode = (lesson.lesson_mode or "").strip().casefold()
+        lesson_mode = raw_mode if raw_mode in PLANNER_LESSON_MODES else None
+        lesson_mode_reason = (lesson.lesson_mode_reason or "").strip() or None
+
         lessons.append(
             CanonicalPathLesson(
                 key=new_key,
@@ -256,6 +261,8 @@ def normalize_path_plan_draft(draft: PathPlanDraft) -> CanonicalPathPlan:
                 requires=requires,
                 must_establish=must_establish,
                 knowledge_type=knowledge,  # type: ignore[arg-type]
+                lesson_mode=lesson_mode,
+                lesson_mode_reason=lesson_mode_reason,
             )
         )
 
