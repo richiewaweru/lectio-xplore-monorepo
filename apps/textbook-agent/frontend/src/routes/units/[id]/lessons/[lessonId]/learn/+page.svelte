@@ -6,8 +6,7 @@
 	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
 	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
 	import { publishLearnRelease, listLearnReleases, type LearnReleaseRecord } from '$lib/learn/student/api/releases';
-	import { apiFetch } from '$lib/api/client';
-	import { ensureOk } from '$lib/api/errors';
+	import { assignReleaseToClass, listTeacherClasses, ReleaseNotLinkedError, RELEASE_NOT_LINKED_MESSAGE } from '$lib/api/topic-publish';
 	import { getLessonIssues, retryLessonRealization, generateLearnRealization } from '$lib/api/units';
 	import type { LessonIssue, LessonIssueCounts, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Button, Dialog, InlineError, EmptyState, Badge, Tabs } from '$lib/ui';
@@ -45,6 +44,12 @@
 	let assignClassId = $state('');
 	let assignMode = $state('rolling');
 	let assignStatus = $state<string | null>(null);
+	let assignError = $state<string | null>(null);
+	let publishOpen = $state(false);
+	let skipTopicLink = $state(false);
+	let topicLessonId = $state('');
+	const topicLessons = $derived((ctx.path?.lessons ?? []).filter((l) => !l.skipped));
+	const releaseLinked = $derived(Boolean(release?.path_lesson_id));
 
 	// The Preview/Issues tab lives in the URL (?tab=issues) so it survives reloads and deep links.
 	function selectTab(id: string): void {
@@ -217,12 +222,21 @@
 		}
 	}
 
+	function openPublish() {
+		skipTopicLink = false;
+		topicLessonId = topicLessons.some((l) => l.id === ctx.lessonId) ? ctx.lessonId : (topicLessons[0]?.id ?? '');
+		publishOpen = true;
+	}
+
 	async function publish() {
 		if (!builderLessonId) return;
 		busy = 'publish';
 		error = null;
 		try {
-			release = await publishLearnRelease(builderLessonId, { title: ctx.lesson?.title, path_lesson_id: ctx.lessonId });
+			const linkId = skipTopicLink ? undefined : topicLessonId || undefined;
+			release = await publishLearnRelease(builderLessonId, { title: ctx.lesson?.title, ...(linkId ? { path_lesson_id: linkId } : {}) });
+			publishOpen = false;
+			assignError = null;
 			assignOpen = true;
 			await loadClasses();
 		} catch (err) {
@@ -233,9 +247,7 @@
 	}
 
 	async function loadClasses() {
-		const response = await apiFetch('/api/v1/learn/classes');
-		await ensureOk(response);
-		classes = await response.json();
+		classes = await listTeacherClasses();
 		if (classes[0] && !assignClassId) assignClassId = classes[0].id;
 	}
 
@@ -243,13 +255,13 @@
 		if (!release || !assignClassId) return;
 		busy = 'assign';
 		assignStatus = null;
+		assignError = null;
 		try {
-			const response = await apiFetch('/api/v1/learn/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ learn_release_id: release.id, title: release.title || ctx.lesson?.title || 'Lesson', class_ids: [assignClassId], mode: assignMode }) });
-			await ensureOk(response);
+			await assignReleaseToClass({ learn_release_id: release.id, title: release.title || ctx.lesson?.title || 'Lesson', class_id: assignClassId, mode: assignMode });
 			assignStatus = 'Assigned to class.';
 			assignOpen = false;
 		} catch (err) {
-			assignStatus = err instanceof Error ? err.message : 'Could not assign.';
+			assignError = err instanceof ReleaseNotLinkedError ? err.message : err instanceof Error ? err.message : 'Could not assign.';
 		} finally {
 			busy = null;
 		}
@@ -278,7 +290,7 @@
 		<div class="right">
 			{#if release}<Badge tone="ready">Published · Version {release.release_number}</Badge>{/if}
 			{#if assignStatus}<span class="ok">{assignStatus}</span>{/if}
-			{#if builderLessonId && release}<Button variant="secondary" size="sm" onclick={() => { assignOpen = true; void loadClasses(); }}>Assign to class</Button>{:else if builderLessonId}<Button size="sm" busy={busy === 'publish'} onclick={() => void publish()}>{busy === 'publish' ? 'Publishing…' : 'Publish'}</Button>{/if}
+			{#if builderLessonId && release}<Button variant="secondary" size="sm" onclick={() => { assignError = null; assignOpen = true; void loadClasses(); }}>Assign to class</Button>{:else if builderLessonId}<Button size="sm" busy={busy === 'publish'} onclick={openPublish}>{busy === 'publish' ? 'Publishing…' : 'Publish'}</Button>{/if}
 		</div>
 	</header>
 
@@ -312,10 +324,19 @@
 	{/if}
 </div>
 
+<Dialog bind:open={publishOpen} title="Publish lesson" description="Publishing freezes this version for students.">
+	<label class="field"><span>Which topic lesson is this?</span><select bind:value={topicLessonId} disabled={skipTopicLink}>{#each topicLessons as row}<option value={row.id}>{ctx.unit?.title ? `${ctx.unit.title} › ` : ''}{row.position + 1} {row.title}</option>{/each}</select></label>
+	<label class="check"><input type="checkbox" bind:checked={skipTopicLink} /><span>Skip: it won't appear on a topic path</span></label>
+	{#if skipTopicLink}<p class="warn" role="alert">This lesson will not appear on a topic path, and it cannot be added to a class through the topic flow.</p>{/if}
+	{#snippet footer()}<Button variant="secondary" onclick={() => (publishOpen = false)}>Cancel</Button><Button busy={busy === 'publish'} disabled={!skipTopicLink && !topicLessonId} onclick={() => void publish()}>{busy === 'publish' ? 'Publishing…' : 'Publish'}</Button>{/snippet}
+</Dialog>
+
 <Dialog bind:open={assignOpen} title="Assign lesson" description="Choose a class. Lectio uses the published version automatically.">
 	<label class="field"><span>Class</span><select bind:value={assignClassId}>{#each classes as row}<option value={row.id}>{row.name}</option>{/each}</select></label>
 	<label class="field"><span>Mode</span><select bind:value={assignMode}><option value="rolling">Rolling — late joiners get this lesson</option><option value="snapshot">Snapshot — only current students</option></select></label>
-	{#snippet footer()}<Button variant="secondary" onclick={() => (assignOpen = false)}>Cancel</Button><Button busy={busy === 'assign'} disabled={!assignClassId} onclick={() => void assign()}>{busy === 'assign' ? 'Assigning…' : 'Assign lesson'}</Button>{/snippet}
+	{#if release && !releaseLinked}<p class="warn" role="alert">{RELEASE_NOT_LINKED_MESSAGE}</p>{/if}
+	{#if assignError}<p class="warn" role="alert">{assignError}</p>{/if}
+	{#snippet footer()}<Button variant="secondary" onclick={() => (assignOpen = false)}>Cancel</Button><Button busy={busy === 'assign'} disabled={!assignClassId || !releaseLinked} onclick={() => void assign()}>{busy === 'assign' ? 'Assigning…' : 'Assign lesson'}</Button>{/snippet}
 </Dialog>
 
 <style>
@@ -327,5 +348,7 @@
 	.muted, .ok { color: var(--ink-2); }
 	.ok { color: var(--success); font-size: 0.8125rem; }
 	.field { display: grid; gap: 0.4rem; margin-bottom: var(--space-3); font-size: 0.8125rem; font-weight: 600; color: var(--ink-2); }
+	.check { display: flex; align-items: center; gap: 0.5rem; margin-bottom: var(--space-3); font-size: 0.8125rem; color: var(--ink-2); }
+	.warn { margin: 0 0 var(--space-3); color: var(--danger, #b3261e); font-size: 0.8125rem; }
 	select { font: inherit; font-weight: 400; padding: 0.55rem 0.7rem; border-radius: var(--radius-md); border: 1px solid var(--rule); background: var(--surface); color: var(--ink); }
 </style>

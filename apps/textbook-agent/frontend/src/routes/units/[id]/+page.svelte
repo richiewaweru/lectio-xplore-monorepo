@@ -33,6 +33,7 @@
 	import type { NativePathKind } from '$lib/curriculum/units/path-generation';
 	import { lessonWorkspaceHref, preparationLabel, preparationUiState, badgeToneForPrep, canonicalPreparationState, preparationIsApprovedAndFresh } from '$lib/curriculum/lessons/lesson-context';
 	import { Badge } from '$lib/ui';
+	import PublishTopicDialog from '$lib/curriculum/units/components/PublishTopicDialog.svelte';
 	import { goto } from '$app/navigation';
 	import type {
 		LessonMode,
@@ -54,6 +55,7 @@
 	let path = $state<UnitPath | null>(null);
 	let selectedId = $state<string | null>(null);
 	let loading = $state(true);
+	let publishTopicOpen = $state(false);
 	let busy = $state<string | null>(null);
 	let error = $state<string | null>(null);
 	let tabError = $state<string | null>(null);
@@ -529,6 +531,7 @@
 			<div><a href="/units" class="back">← Units</a><p class="eyebrow">{unit.subject} · {unit.grade_level}</p><h1>{unit.title}</h1><p>{unit.destination_objective}</p></div>
 			<div class="head-actions">
 				{#if path}<span class:approved={path.status === 'approved'}>{path.status === 'approved' ? 'Locked in' : 'Draft'}</span>{/if}
+				{#if unit.active_path_version_id}<button class="secondary" type="button" onclick={() => (publishTopicOpen = true)}>Publish topic to class</button>{/if}
 				<button class="secondary" type="button" disabled={busy !== null} onclick={() => planOrReplan(Boolean(path))}>{busy === 'replan' || busy === 'plan' ? 'Planning…' : path ? 'Replan the lessons' : 'Plan the lessons'}</button>
 			</div>
 		</header>
@@ -768,6 +771,8 @@
 		onclose={() => (showVersions = false)}
 	/>
 {/if}
+
+{#if unit}<PublishTopicDialog bind:open={publishTopicOpen} unitId={unit.id} unitTitle={unit.title} />{/if}
 
 {#if pendingAction}
 	<div class="confirm-backdrop" role="presentation">

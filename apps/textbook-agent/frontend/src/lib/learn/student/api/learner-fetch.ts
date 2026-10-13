@@ -3,6 +3,7 @@ import { apiFetch, buildApiUrl } from '$lib/api/client';
 export const LEARNER_SESSION_KEY = 'x-learner-session';
 export const LEARNER_ID_KEY = 'x-learner-id';
 export const LEARNER_NAME_KEY = 'x-learner-name';
+export const LEARNER_CODE_KEY = 'x-learner-code';
 
 export type StoredLearner = { learnerId: string; displayName: string; token: string };
 
@@ -25,8 +26,18 @@ export function getStoredLearner(): StoredLearner | null {
 	return { token, learnerId, displayName: readStorage(LEARNER_NAME_KEY) ?? '' };
 }
 
-export function storeLearner(input: { token: string; learnerId: string; displayName: string }): void {
+export function getStoredLearnerCode(): string | null {
+	return readStorage(LEARNER_CODE_KEY);
+}
+
+export function storeLearner(input: {
+	token: string;
+	learnerId: string;
+	displayName: string;
+	code?: string;
+}): void {
 	try {
+		if (input.code) localStorage.setItem(LEARNER_CODE_KEY, input.code);
 		localStorage.setItem(LEARNER_SESSION_KEY, input.token);
 		localStorage.setItem(LEARNER_ID_KEY, input.learnerId);
 		localStorage.setItem(LEARNER_NAME_KEY, input.displayName);

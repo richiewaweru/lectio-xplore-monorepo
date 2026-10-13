@@ -92,6 +92,33 @@ def concept_refs_from_section(section: dict[str, Any]) -> list[dict[str, Any]]:
     return bindings
 
 
+_CODE_WORDS = (
+    "MANGO", "TIGER", "RIVER", "CLOUD", "MAPLE", "ZEBRA", "LEMON", "PANDA", "ROBIN", "CORAL",
+    "FALCON", "GINGER", "HAZEL", "JUNGLE", "KIWI", "LLAMA", "MELON", "NOVA", "OTTER", "PEACH",
+    "QUILL", "RAVEN", "SUNNY", "TULIP", "UMBER", "VIOLET", "WILLOW", "YARROW", "BREEZE", "COMET",
+)
+# Unambiguous alphabet: no 0/O/1/I.
+_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def generate_learner_code() -> str:
+    """Friendly return code such as MANGO-7K4Q."""
+    word = secrets.choice(_CODE_WORDS)
+    tail = "".join(secrets.choice(_CODE_ALPHABET) for _ in range(4))
+    return f"{word}-{tail}"
+
+
+async def _unique_learner_code(session: AsyncSession) -> str:
+    for _ in range(20):
+        code = generate_learner_code()
+        taken = await session.scalar(
+            select(LearnerIdentityModel.id).where(LearnerIdentityModel.invite_code == code)
+        )
+        if taken is None:
+            return code
+    raise HTTPException(status_code=503, detail="Could not allocate a learner code")
+
+
 async def create_learner(
     session: AsyncSession,
     *,
@@ -102,7 +129,7 @@ async def create_learner(
     learner = LearnerIdentityModel(
         id=str(uuid.uuid4()),
         display_name=display_name.strip() or "Learner",
-        invite_code=invite_code or str(uuid.uuid4())[:8],
+        invite_code=invite_code or await _unique_learner_code(session),
         created_by_teacher_id=created_by_teacher_id,
         created_at=_utcnow(),
     )

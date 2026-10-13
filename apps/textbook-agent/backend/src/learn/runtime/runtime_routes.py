@@ -134,6 +134,8 @@ class CreateAssignmentBody(BaseModel):
     class_ids: list[str] | None = None
     mode: str = "rolling"
     selected_learner_ids: list[str] | None = None
+    # Topic-path flow (doc 38 3.4): refuse releases that carry no path_lesson_id.
+    require_path_lesson_id: bool = False
 
 
 class CreateSessionBody(BaseModel):
@@ -405,9 +407,13 @@ async def api_get_instance(
 
     contracts = _contracts_index(document)
     scores = score_split(list(attempts), contracts_by_interaction=contracts)
+    from learn.runtime.topic_service import build_instance_topic
+
+    topic = await build_instance_topic(session, instance)
     return {
         "id": instance.id,
         "learner_id": instance.learner_id,
+        "topic": topic,
         "learn_release_id": instance.learn_release_id,
         "assignment_id": instance.assignment_id,
         "status": instance.status,
@@ -679,6 +685,7 @@ async def api_join_class(
         "display_name": learner.display_name,
         "class_id": membership.class_id,
         "class_name": class_row.name,
+        "code": learner.invite_code,
         "token": sess.token,
         "session_id": sess.id,
     }
@@ -693,6 +700,15 @@ async def api_create_assignment(
     release = await session.get(LearnReleaseModel, body.learn_release_id)
     if release is None or release.owner_user_id != current_user.id:
         raise HTTPException(status_code=404, detail="LearnRelease not found")
+    if body.require_path_lesson_id and not release.path_lesson_id:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "RELEASE_NOT_LINKED_TO_PATH_LESSON",
+                "message": "This release is not linked to a topic lesson; "
+                "republish it with a path_lesson_id before adding it to a class.",
+            },
+        )
     assignment = await create_assignment(
         session,
         teacher_id=current_user.id,
@@ -754,7 +770,10 @@ async def api_learner_home(
             classes.append({"id": c.id, "name": c.name})
 
     due_soon = [i for i in instances if i.status == "active" and i.assignment_id]
-    in_progress = [i for i in instances if i.status == "active"]
+    due_soon_ids = {i.id for i in due_soon}
+    in_progress = [
+        i for i in instances if i.status == "active" and i.id not in due_soon_ids
+    ]
     completed = [i for i in instances if i.status == "completed"]
 
     async def _inst(i: LearningInstanceModel) -> dict[str, Any]:
