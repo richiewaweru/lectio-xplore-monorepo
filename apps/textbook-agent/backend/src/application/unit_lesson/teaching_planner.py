@@ -790,7 +790,7 @@ def _repair_missing_figure_visuals_for_section(
         must_show = list(backbone_figure.must_show)
         labels = list(backbone_figure.labels_required)
         if block.visual is None:
-            if not must_show and mode == "diagram":
+            if not must_show and mode in ("diagram", "render"):
                 must_show = [backbone_figure.purpose]
             block.visual = VisualSpec(
                 figure_ref=fid,

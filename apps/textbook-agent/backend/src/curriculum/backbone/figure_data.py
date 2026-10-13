@@ -46,6 +46,20 @@ def _numbers_in_value(value: Any) -> set[Decimal]:
     return set()
 
 
+def _is_series(value: Any) -> bool:
+    return (
+        isinstance(value, (list, tuple))
+        and len(value) >= 2
+        and all(isinstance(item, (int, float)) and not isinstance(item, bool) for item in value)
+    )
+
+
+# Mirror of the code table limits in media/render/contracts.py (TableSpec); kept as
+# literals so the backbone package imports nothing from media.
+_MAX_SERIES_ENTRIES = 12
+_MAX_SERIES_COUNT = 8
+
+
 def _fmt(number: Decimal) -> str:
     return format(number.normalize(), "f")
 
@@ -58,6 +72,27 @@ def figure_data_errors(backbone: LessonBackbone) -> list[str]:
         label_numbers: set[Decimal] = set()
         for entry in [*figure.labels_required, *figure.must_show]:
             label_numbers |= _numbers_in_text(str(entry))
+
+        data_numbers = _numbers_in_value(data)
+        for key in data:
+            # Numbers in key names ("height_day_28_cm") count as present in the data.
+            data_numbers |= _numbers_in_text(str(key))
+
+        series = {key: value for key, value in data.items() if _is_series(value)}
+        if series and figure.effective_mode != "render":
+            errors.append(
+                f"BACKBONE_FIGURE_SERIES_NEEDS_RENDER: figure {figure.id} data holds "
+                f"number series ({', '.join(series)}) but mode is "
+                f"'{figure.effective_mode}'; set mode to 'render' so code draws it"
+            )
+        if figure.effective_mode == "render":
+            longest = max((len(value) for value in series.values()), default=0)
+            if longest > _MAX_SERIES_ENTRIES or len(data) > _MAX_SERIES_COUNT:
+                errors.append(
+                    f"BACKBONE_FIGURE_SERIES_TOO_LARGE: figure {figure.id} render data is "
+                    f"too large for a code table (at most {_MAX_SERIES_ENTRIES} entries "
+                    f"per series and {_MAX_SERIES_COUNT} series); trim or split the figure"
+                )
 
         lengths = {
             key: len(value) for key, value in data.items() if isinstance(value, (list, tuple))
@@ -77,7 +112,7 @@ def figure_data_errors(backbone: LessonBackbone) -> list[str]:
                 "contain numbers but data is empty; put every number in data"
             )
             continue
-        missing = sorted(label_numbers - _numbers_in_value(data))
+        missing = sorted(label_numbers - data_numbers)
         if missing:
             listed = ", ".join(_fmt(number) for number in missing)
             errors.append(

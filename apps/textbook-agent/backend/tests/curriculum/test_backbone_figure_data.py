@@ -18,6 +18,7 @@ LESSON_1_FIG_2 = {
     "purpose": "Compare weekly heights of two seedlings.",
     "must_show": ["Height of each seedling at each weekly check"],
     "labels_required": ["Day", "Height of Seedling A (cm)", "Height of Seedling B (cm)"],
+    "mode": "render",
     "data": {
         "Day": [0, 7, 14, 21, 28],
         "Height of Seedling A (cm)": [5, 12, 22, 35, 48],
@@ -74,6 +75,64 @@ def test_decimal_comparison_and_no_numbers() -> None:
     assert figure_data_errors(_backbone(fig)) == []
     plain = {"id": "fig-3", "purpose": "A cell", "must_show": ["nucleus"], "labels_required": []}
     assert figure_data_errors(_backbone(plain)) == []
+
+
+LESSON_1_FIG_1 = {
+    "id": "fig-1",
+    "purpose": "Compare two maize seedlings.",
+    "must_show": [
+        "two maize seedlings side by side",
+        "Seedling A: tall and green in an open garden with sunlight",
+        "Seedling B: short and pale yellow in a dark store with no light",
+        "both seedlings have the same height label at Day 0",
+    ],
+    "labels_required": [
+        "Seedling A: open garden, direct sunlight",
+        "Seedling B: dark store, no light",
+        "Height Day 0: 5 cm",
+        "Height Day 0: 5 cm",
+        "Height Day 28: 48 cm",
+        "Height Day 28: 9 cm",
+        "Leaf colour: green",
+        "Leaf colour: pale yellow",
+        "Water: 50 ml per day each",
+    ],
+    "data": {
+        "water_ml_per_day_each": 50,
+        "seedling_a_leaf_colour": "green",
+        "seedling_b_leaf_colour": "pale yellow",
+        "seedling_a_height_day_0_cm": 5,
+        "seedling_b_height_day_0_cm": 5,
+        "seedling_a_height_day_28_cm": 48,
+        "seedling_b_height_day_28_cm": 9,
+    },
+    "mode": "diagram",
+}
+
+
+def test_numbers_in_key_names_count_as_present() -> None:
+    assert figure_data_errors(_backbone(LESSON_1_FIG_1)) == []
+
+
+def test_series_in_diagram_needs_render() -> None:
+    errors = figure_data_errors(_backbone(dict(LESSON_1_FIG_2, mode="diagram")))
+    assert len(errors) == 1 and errors[0].startswith("BACKBONE_FIGURE_SERIES_NEEDS_RENDER")
+    assert figure_data_errors(_backbone(dict(LESSON_1_FIG_2, mode=None))) == errors
+
+
+def test_series_too_large_for_render() -> None:
+    long = dict(LESSON_1_FIG_2, data={"Day": list(range(13)), "A": list(range(13))},
+                labels_required=["Day"])
+    assert figure_data_errors(_backbone(long))[0].startswith("BACKBONE_FIGURE_SERIES_TOO_LARGE")
+    wide = dict(LESSON_1_FIG_2, data={f"s{i}": [1, 2] for i in range(9)}, labels_required=[])
+    assert figure_data_errors(_backbone(wide))[0].startswith("BACKBONE_FIGURE_SERIES_TOO_LARGE")
+
+
+def test_render_mode_loads_and_old_hash_unchanged() -> None:
+    old = _backbone({"id": "f", "purpose": "p"})
+    assert "mode" not in old.figures[0].model_dump(mode="json")
+    assert old.figures[0].effective_mode == "diagram"
+    assert _backbone(LESSON_1_FIG_2).figures[0].effective_mode == "render"
 
 
 def _draft_json(backbone: LessonBackbone) -> dict[str, Any]:

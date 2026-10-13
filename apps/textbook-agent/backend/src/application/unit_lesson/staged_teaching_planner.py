@@ -818,7 +818,7 @@ def _expected_figure_visual(figure: dict[str, Any]) -> dict[str, Any] | None:
         return None
     mode = backbone_figure.effective_mode
     must_show = list(backbone_figure.must_show)
-    if not must_show and mode == "diagram":
+    if not must_show and mode in ("diagram", "render"):
         must_show = [backbone_figure.purpose]
     return {
         "mode": mode,
