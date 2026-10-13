@@ -13,7 +13,7 @@ Probe orders are built by calling the production ``_figure_order_from`` in
 Gemini path: ``execute_visual`` with IMAGE_PROVIDER=gemini, visual QC and the
 image cache forced off, local filesystem image store (no GCS).
 Render path: ``render_figure`` + ``LlmSpecBuilder`` (what RoutingFigureExecutor
-does when LECTIO_RENDER_FIGURES=auto); needs the V3_FIGURE_SPEC model key.
+does for a plan mode of "render"); needs the V3_FIGURE_SPEC model key.
 """
 
 from __future__ import annotations

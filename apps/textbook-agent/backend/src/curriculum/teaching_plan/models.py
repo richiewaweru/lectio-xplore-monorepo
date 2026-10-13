@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from curriculum.teaching_plan.instance_ids import normalize_slot_instance_ids
 
@@ -54,7 +55,7 @@ class LearnerActionBrief(BaseModel):
 
 # Subset of media.generation.contracts.VisualMode. Defined locally: the
 # curriculum layer must not import the media package.
-VisualSpecMode = Literal["diagram", "image"]
+VisualSpecMode = Literal["diagram", "image", "render"]
 
 
 def _clean_text_list(values: list[str]) -> list[str]:
@@ -86,6 +87,14 @@ class VisualSpec(BaseModel):
         default=None,
         exclude_if=lambda value: value is None,
         description="Backbone figure id this visual draws, when it draws one.",
+    )
+    data: SkipJsonSchema[dict[str, Any] | None] = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Exact backbone figure data (series or scalars) copied by code, never "
+            "written by the model. Absent for figures without data."
+        ),
     )
 
     @model_validator(mode="after")

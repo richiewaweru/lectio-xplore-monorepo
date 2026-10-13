@@ -1,6 +1,7 @@
 # Code-rendered figures (`media/render`)
 
-Status: on by default (`LECTIO_RENDER_FIGURES=auto`); set it to `off` as a kill switch.
+Status: `render` figures always take the code path when the backbone sets `mode` to `render`.
+There is no environment flag.
 
 ## Why
 Image models draw what looks plausible, not exact geometry. The L-shaped-floor lesson
@@ -8,16 +9,26 @@ shipped figures with rectangle B on the wrong side, a duplicate "5 m", and the a
 in the wrong corner. For figures that are really data (shapes with dimensions,
 number lines, charts, graphs, flows, cycles), code now draws them exactly.
 
-## The three figure modes
+## Figure kinds and routing
+Every figure has a `mode`. The lesson backbone (`lesson-backbone-writer.md`) decides it
+using the FIGURE KINDS card in the prompts; the teaching planner and section writer copy
+it. The card is the source of truth for the wording.
+
 | Mode | Who draws | Labels | Use for |
 |---|---|---|---|
-| render (via `diagram` + auto-routing) | Python/matplotlib from a typed spec | Placed exactly; lengths measured from geometry | Maths, charts, graphs, flows, cycles |
-| `diagram` | Image model, schematic style | Model-drawn today (see follow-ups) | Named parts: biology, apparatus |
-| `image` | Image model, illustration style | None or few | Scenes, realism |
+| `render` | Code (`media/render`), from a typed spec | Placed exactly; lengths measured from geometry | Tables of values, bar charts, graphs of a rule, number lines, shapes with given side lengths, simple step flows, cycles |
+| `diagram` | Gemini, flat labelled schematic | Closed labels: the model draws digits only and the compositor adds the key band | Real things and their named parts |
+| `image` | Gemini, realistic picture | None or few | Scenes and objects where what they look like is the point |
 
-Facts confirmed in code: `diagram` and `image` both go to image models; the label
-compositor (`media/diagram_compositor.py`) adds a key band under the image and never
-runs in the shared-lesson path (`visual_style` is not set there).
+Routing for `render`:
+- The spec builder picks a family (`table` included) or `none`.
+- Series data (a list of numbers) goes to a code table.
+- Series data too big for the table goes to a Gemini diagram with the `figure_numbers_unverified` warning (route `render_fallback_diagram_unverified`).
+- No data goes to a Gemini diagram (route `render_fallback_diagram`).
+- The render chain never fails. The backbone check (at most 12 values per series, 8 series) makes the too-big case rare.
+
+The label compositor (`media/diagram_compositor.py`) adds a key band under the image and
+never runs in the shared-lesson path (`visual_style` is not set there).
 
 ## Ownership
 - **Planner:** unchanged. It may later add `mode: "render"` / a free-form `render_type`
@@ -29,7 +40,7 @@ runs in the shared-lesson path (`visual_style` is not set there).
 ```
 VisualGeneratorWorkOrder (purpose, must_show, labels, caption + referring sentences + facts)
   -> RoutingFigureExecutor (document/shared_lesson/figure_executor_adapter.py)
-       flag off, or mode != "diagram"  -> existing image path, unchanged
+       mode != "render" (diagram, image) -> Gemini image path
   -> render_figure (media/render/pipeline.py)
        spec builder (FAST node v3_figure_spec): family | "none" + spec JSON
        validate_spec: structural maths checks
@@ -61,6 +72,7 @@ Families are kinds of drawing; the spec's data is the figure (the L-room is
 - `function_graph`: structured curves only (`linear`, `quadratic`, `polyline`), points.
 - `flow`: ≤ 8 nodes, step/decision/terminal, deterministic layered layout, back-edges.
 - `cycle`: 3–8 stages round a circle, optional centre label.
+- `table`: a grid of exact values with row and column headers.
 
 Each module exposes `validate`, `draw`, `describe` (alt text), `numbers`, `GALLERY`.
 
@@ -73,8 +85,7 @@ Each module exposes `validate`, `draw`, `describe` (alt text), `numbers`, `GALLE
   `tests/document/test_render_routing_executor.py`.
 
 ## Turning it on
-`LECTIO_RENDER_FIGURES` = `auto` (default) | `off` (kill switch: every figure takes the
-image path). Tests default it to `off` in `tests/conftest.py` and opt in explicitly.
+No flag. A `render` figure takes the code path whenever the backbone sets `mode` to `render`.
 
 End-to-end check (2026-10-06, local, Grade 6 "Area of compound shapes"):
 - 6 figures, all ready on attempt 1. 3 were code-rendered (`polygon_area`, served as
@@ -138,6 +149,6 @@ Until then, teachers use the whole-lesson Regenerate.
 - v2 render families driven by `render_family_fallback` telemetry (`circle_parts` first).
 
 ## Note for the planning chat
-Optional, small: add `"render"` to `VisualSpecMode` and a free-form `render_type: str | None`
-to `VisualSpec` (`curriculum/teaching_plan/models.py`). Never reject unknown values. Media
-treats it as a hint; until then, media auto-routes `diagram` figures.
+Done: the backbone and section prompts allow `"render"` (see Figure kinds).
+Still open: a free-form `render_type: str | None` hint on `VisualSpec`
+(`curriculum/teaching_plan/models.py`). Never reject unknown values; media treats it as a hint.

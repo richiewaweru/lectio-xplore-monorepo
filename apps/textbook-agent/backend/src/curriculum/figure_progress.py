@@ -21,6 +21,15 @@ from document.shared_lesson.composer import figure_item_for_block
 
 _MEDIA_STAGE = "media_generation"
 _FAILED = frozenset({"failed_recoverable", "failed_terminal", "cancelled"})
+# Codes only the code-render path raises: such a figure's route was "failed".
+_CODE_RENDER_FAILURE_CODES = frozenset(
+    {"figure_data_not_rendered", "render_spec_invalid", "render_layout_failed"}
+)
+
+
+def _failure_route(error_code: str | None) -> str | None:
+    """Route of a failed figure, inferred from its code (failures do not store a route)."""
+    return "failed" if error_code in _CODE_RENDER_FAILURE_CODES else None
 
 
 @dataclass(frozen=True)
@@ -134,6 +143,10 @@ def project_figures(
         identity = _identity(item)
         warnings = [str(w) for w in identity.get("warnings") or []]
         output = item.output_json if isinstance(getattr(item, "output_json", None), dict) else {}
+        if item.status == "ready":
+            for note in output.get("render_warnings") or []:
+                if str(note) not in warnings:
+                    warnings.append(str(note))
         if item.status == "ready" and output.get("status") == "unavailable":
             return FigureProgressDTO(
                 figure_id=figure_id,
@@ -147,6 +160,7 @@ def project_figures(
                 attempt=item.attempt,
                 max_attempts=item.max_attempts,
                 warnings=warnings,
+                route=_failure_route(str(output.get("error_code") or "") or None),
             )
         if item.status == "ready":
             status = "ready"
@@ -172,6 +186,9 @@ def project_figures(
             max_attempts=item.max_attempts,
             auto_retrying=failed and run_auto_retrying and is_leaf_auto_retryable(item),
             warnings=warnings,
+            route=_failure_route(item.error_code)
+            if failed
+            else (str(output.get("render_route") or "") or None),
         )
 
     for figure in planned:

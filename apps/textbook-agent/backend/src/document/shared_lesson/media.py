@@ -18,6 +18,7 @@ from document.shared_lesson.continuity import (
 from curriculum.teaching_plan.models import VisualSpec
 from document.shared_lesson.continuity import node_text
 from document.shared_lesson.figure_consistency import label_warnings, normalize_text
+from document.shared_lesson.figure_numbers import allowed_text_numbers, number_warnings
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import (
     CalloutNode,
@@ -34,6 +35,7 @@ from media.generation.contracts import (
     SourceOfTruthEntry,
     VisualGeneratorWorkOrder,
     VisualPlanItem,
+    diagram_visual_style,
     validate_visual_block,
 )
 
@@ -122,6 +124,11 @@ class ReadyFigureMediaResult(BaseModel):
     status: str = "ready"
     #: Visual QC verdict carried from the executor block (never inferred).
     qc_state: QcState = "unreviewed"
+    #: Which route drew the figure (see ``GeneratedVisualBlock.render_route``).
+    #: Omitted from the durable output while unset.
+    render_route: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    #: Advisory route notes (e.g. ``figure_numbers_unverified``); omitted while empty.
+    render_warnings: list[str] = Field(default_factory=list, exclude_if=lambda value: not value)
 
 
 class FigureMediaResult(BaseModel):
@@ -331,6 +338,7 @@ def _validate_section(
 #: Key prefix of the work-order context entries (writer caption, referring
 #: sentences). Approved source-fact keys must never use it.
 FIGURE_CONTEXT_KEY_PREFIX = "context:"
+FIGURE_DATA_KEY = "figure-data"
 _MAX_REFERRING_SENTENCES = 2
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 _FIGURE_WORDS = re.compile(r"\b(?:figure|diagram|picture)\b", re.IGNORECASE)
@@ -473,6 +481,24 @@ def _context_entries(
     return tuple(entries)
 
 
+def _format_data_value(value: Any) -> str:
+    if isinstance(value, (list, tuple)):
+        return ", ".join(_format_data_value(item) for item in value)
+    return str(value)
+
+
+def _data_entries(spec: VisualSpec) -> tuple[SourceOfTruthEntry, ...]:
+    """One readable ``figure-data`` entry, only when the plan carries figure data.
+
+    Values print exactly as given. Absent data adds nothing, so the semantic
+    hash of every figure without data is unchanged.
+    """
+    if not spec.data:
+        return ()
+    lines = [f"{key}: {_format_data_value(value)}" for key, value in spec.data.items()]
+    return (SourceOfTruthEntry(key=FIGURE_DATA_KEY, text="\n".join(lines)),)
+
+
 def _plan_figure_spec(planned: Any, node: FigureNode) -> VisualSpec:
     block = next((item for item in planned.blocks if item.id == node.teaching_block_id), None)
     if block is None or block.visual is None:
@@ -482,11 +508,6 @@ def _plan_figure_spec(planned: Any, node: FigureNode) -> VisualSpec:
     return block.visual
 
 
-def _labels_carry_values(labels: Sequence[str]) -> bool:
-    """Value-bearing labels ("0 g", "Day 0: 12 cm") mean a data figure, not a parts diagram."""
-    return sum(1 for label in labels if any(ch.isdigit() for ch in label)) >= 2
-
-
 def _figure_order_from(
     *,
     identity: SourceIdentity,
@@ -494,6 +515,7 @@ def _figure_order_from(
     node: FigureNode,
     spec: VisualSpec,
     facts: Sequence[SourceOfTruthEntry],
+    plan_text: Sequence[str] = (),
 ) -> SharedFigureWorkOrder:
     """The one place a figure's identity, work order and warnings are derived.
 
@@ -503,7 +525,7 @@ def _figure_order_from(
     which the image prompt renders as metadata, never as image text).
     """
     section_output_hash = _hash_payload(section.model_dump(mode="json"))
-    entries = (*facts, *_context_entries(section, node, spec))
+    entries = (*facts, *_context_entries(section, node, spec), *_data_entries(spec))
     semantic_hash = figure_semantic_hash(
         source_plan_id=identity.source_artifact_id,
         source_plan_revision=identity.source_revision,
@@ -524,12 +546,11 @@ def _figure_order_from(
         must_show=list(spec.must_show),
         labels_required=list(spec.labels_required),
         must_not_show=list(spec.must_not_show),
+        data=spec.data or None,
         # Numbered keys suit named parts; value labels are drawn by the provider so they
         # can sit in rows/columns.
         visual_style=(
-            "diagram_numbered"
-            if spec.mode == "diagram" and not _labels_carry_values(spec.labels_required)
-            else None
+            diagram_visual_style(spec.labels_required) if spec.mode == "diagram" else None
         ),
     )
     order = VisualGeneratorWorkOrder(
@@ -539,6 +560,23 @@ def _figure_order_from(
         visual=visual,
         source_of_truth=list(entries),
     )
+    prose = _section_prose(section)
+    warnings = label_warnings(spec.labels_required, prose, node.display.caption)
+    # Numbers the caption/prose state beyond the data, approved facts, plan text
+    # (objective, brief) and the visual's own labels. ``plan_text`` is empty on an
+    # identity-only rebuild; these warnings are advisory and never gate.
+    allowed = allowed_text_numbers(
+        data=spec.data,
+        approved_fact_texts=[fact.text for fact in facts],
+        objective=" ".join(plan_text),
+        brief_and_labels=[*spec.must_show, *spec.labels_required, spec.purpose],
+    )
+    warnings = [
+        *warnings,
+        *number_warnings(
+            caption=node.display.caption, section_text=prose, data=spec.data, allowed=allowed
+        ),
+    ]
     return SharedFigureWorkOrder(
         source_plan_id=identity.source_artifact_id,
         source_plan_revision=identity.source_revision,
@@ -549,7 +587,7 @@ def _figure_order_from(
         figure_semantic_hash=semantic_hash,
         required=spec.required,
         work_order=order,
-        warnings=label_warnings(spec.labels_required, _section_prose(section), node.display.caption),
+        warnings=warnings,
     )
 
 
@@ -567,6 +605,10 @@ def build_figure_work_order(
     The visual contract comes from the plan block that owns the figure node.
     """
     facts = _fact_entries(approved_source_facts)
+    if any(fact.key == FIGURE_DATA_KEY for fact in facts):
+        raise SharedFigureMediaError(
+            f"approved source fact key {FIGURE_DATA_KEY!r} is reserved for figure data"
+        )
     if any(fact.key.startswith(FIGURE_CONTEXT_KEY_PREFIX) for fact in facts):
         raise SharedFigureMediaError(
             f"approved source fact keys must not start with {FIGURE_CONTEXT_KEY_PREFIX!r}"
@@ -589,7 +631,17 @@ def build_figure_work_order(
         )
     _identity, planned = _planned_section(source, section)
     spec = _plan_figure_spec(planned, node)
-    return _figure_order_from(identity=identity, section=section, node=node, spec=spec, facts=facts)
+    block = next((item for item in planned.blocks if item.id == node.teaching_block_id), None)
+    plan_text = [
+        source.plan.arc,
+        *(source.plan.starting_state or []),
+        *(source.plan.target_state or []),
+        planned.specific_purpose,
+        *((block.intent, block.brief) if block is not None else ()),
+    ]
+    return _figure_order_from(
+        identity=identity, section=section, node=node, spec=spec, facts=facts, plan_text=plan_text
+    )
 
 
 def rebuild_figure_work_order(
@@ -610,7 +662,7 @@ def rebuild_figure_work_order(
         raise SharedFigureMediaError("accepted section does not contain the frozen FigureNode")
     if spec is None:
         frozen = work.work_order.visual
-        if frozen.mode not in ("diagram", "image"):
+        if frozen.mode not in ("diagram", "image", "render"):
             raise SharedFigureMediaError("figure work order mode is unsupported")
         spec = VisualSpec(
             mode=frozen.mode,
@@ -619,11 +671,12 @@ def rebuild_figure_work_order(
             labels_required=list(frozen.labels_required),
             must_not_show=list(frozen.must_not_show),
             required=work.required,
+            data=frozen.data,
         )
     facts = tuple(
         entry
         for entry in work.work_order.source_of_truth
-        if not entry.key.startswith(FIGURE_CONTEXT_KEY_PREFIX)
+        if not entry.key.startswith(FIGURE_CONTEXT_KEY_PREFIX) and entry.key != FIGURE_DATA_KEY
     )
     identity = SourceIdentity(
         source_artifact_type="teaching_plan",
@@ -688,6 +741,8 @@ def bind_generated_figure(
         source_facts=tuple(work.work_order.source_of_truth),
         status=block.status,
         qc_state=block.qc_state,
+        render_route=block.render_route,
+        render_warnings=list(block.render_warnings),
     )
 
 

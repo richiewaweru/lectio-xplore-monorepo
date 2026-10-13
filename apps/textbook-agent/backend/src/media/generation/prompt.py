@@ -56,7 +56,8 @@ def provider_label_block(labels: list[str]) -> str:
         "- Place each label where a reader would look for it: on or beside the part it "
         "names, in its row or column, beside its stage, or along its axis.\n"
         "- Write no other words: no paraphrases or synonyms of the labels, no words "
-        "from PURPOSE or MUST SHOW, no title, caption, numbers, or sentences."
+        "from PURPOSE or MUST SHOW, no title, caption, or sentences.\n"
+        "- Use only the numbers in the label list. Add no other number, scale or axis value."
     )
 
 
@@ -222,7 +223,8 @@ PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never re
         text_constraint = "" if is_precision or is_numbered else NO_CAPTION_TEXT_CONSTRAINT
         labels_block = numbered_label_block(list(normalize_labels(order.visual.labels_required))) if is_numbered else (
             "LABELS REQUIRED (draw each label exactly as written, spelled identically, "
-            "and no other text): " + ", ".join(order.visual.labels_required)
+            "and no other text; use only the numbers in the label list and add no other "
+            "number, scale or axis value): " + ", ".join(order.visual.labels_required)
             if not is_precision and order.visual.labels_required
             else ""
         )

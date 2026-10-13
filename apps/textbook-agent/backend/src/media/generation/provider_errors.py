@@ -93,6 +93,8 @@ def safe_summary_for_code(code: str | None) -> str:
         return "Figure drawing failed: the figure description could not be made consistent."
     if code == "render_layout_failed":
         return "Figure drawing failed: the labels could not be fitted legibly."
+    if code == "figure_data_not_rendered":
+        return "Figure could not be drawn from its data. Retry the figure."
     return "Figure generation failed: the image provider reported an error."
 
 

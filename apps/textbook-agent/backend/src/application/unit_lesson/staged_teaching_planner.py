@@ -254,6 +254,16 @@ async def _call_spine_model(
 # --------------------------------------------------------------------------- checks
 
 
+_DIGIT = re.compile(r"\d")
+_QUANTITY_WORDS = re.compile(
+    r"\b(?:table|graph|chart|plot|axis|values)\b", re.IGNORECASE
+)
+
+
+def _has_digit(text: str) -> bool:
+    return bool(_DIGIT.search(text or ""))
+
+
 def _backbone_figures(packet: ImmutableLessonPacket) -> dict[str, dict[str, Any]]:
     figures = (packet.backbone or {}).get("figures") or []
     return {str(f["id"]): f for f in figures if isinstance(f, dict) and f.get("id")}
@@ -361,6 +371,16 @@ def spine_check_errors(spine: TeachingSpine, packet: ImmutableLessonPacket) -> l
                     "use a valid id or null."
                 )
 
+    for section in sections:
+        for plan in section.figure_plan:
+            if plan.backbone_figure_id is None and _has_digit(plan.purpose):
+                errors.append(
+                    f"SPINE_FIGURE_QUANTITY: section {section.slot_id} plans a figure with "
+                    f"no backbone_figure_id whose purpose contains a number "
+                    f"({plan.purpose!r}); figures that show numbers must reuse a backbone "
+                    "figure, otherwise describe structure only."
+                )
+
     # Block budget.
     limits = packet.limits
     slot_by_id = {s.slot_id: s for s in slots}
@@ -452,6 +472,53 @@ def repair_spine_figure_plan(
     return changes
 
 
+def drop_quantity_figures(spine: TeachingSpine) -> list[dict[str, Any]]:
+    """Drop null-id figure_plan entries whose purpose carries a number.
+
+    A figure with numbers must come from the backbone, which owns the data. The spine
+    cannot invent data, so the entry is removed and the repair recorded.
+    """
+    changes: list[dict[str, Any]] = []
+    for section in spine.sections:
+        kept: list[SpineFigurePlan] = []
+        for plan in section.figure_plan:
+            if plan.backbone_figure_id is None and _has_digit(plan.purpose):
+                changes.append(
+                    {
+                        "repair": "SPINE_FIGURE_QUANTITY",
+                        "section_id": section.slot_id,
+                        "purpose": plan.purpose,
+                    }
+                )
+                continue
+            kept.append(plan)
+        if len(kept) != len(section.figure_plan):
+            section.figure_plan[:] = kept
+    return changes
+
+
+def spine_quantity_word_flags(spine: TeachingSpine) -> list[dict[str, Any]]:
+    """Advisory flags for null-id figures whose purpose names a table, graph or values."""
+    flags: list[dict[str, Any]] = []
+    for section in spine.sections:
+        for plan in section.figure_plan:
+            if plan.backbone_figure_id is None and _QUANTITY_WORDS.search(plan.purpose or ""):
+                flags.append(
+                    plan_quality_flag(
+                        code="SPINE_FIGURE_QUANTITY_WORDS",
+                        source="validator",
+                        message=(
+                            f"Section {section.slot_id} plans a figure without a backbone "
+                            f"figure whose purpose mentions a table, graph or values: "
+                            f"{plan.purpose!r}. Figures showing quantities should come "
+                            "from the backbone."
+                        ),
+                        section_ids=[section.slot_id],
+                    )
+                )
+    return flags
+
+
 # --------------------------------------------------------------------------- orchestration
 
 
@@ -470,6 +537,7 @@ class SpineResult:
     draft: TeachingSpineDraft
     attempts: list[SpineAttempt]
     repairs: list[dict[str, Any]]
+    flags: list[dict[str, Any]] = field(default_factory=list)
 
 
 async def plan_teaching_spine(
@@ -554,12 +622,17 @@ async def plan_teaching_spine(
                 repairs = [
                     *repair_spine_state_chain(spine, packet),
                     *repair_spine_figure_plan(spine, packet),
+                    *drop_quantity_figures(spine),
                 ]
                 errors = spine_check_errors(spine, packet)
                 if not errors:
                     record.latency_s = time.perf_counter() - started
                     return SpineResult(
-                        spine=spine, draft=draft, attempts=attempts, repairs=repairs
+                        spine=spine,
+                        draft=draft,
+                        attempts=attempts,
+                        repairs=repairs,
+                        flags=spine_quantity_word_flags(spine),
                     )
             record.errors = errors
             record.error = "validation_failed"
@@ -745,13 +818,14 @@ def _expected_figure_visual(figure: dict[str, Any]) -> dict[str, Any] | None:
         return None
     mode = backbone_figure.effective_mode
     must_show = list(backbone_figure.must_show)
-    if not must_show and mode == "diagram":
+    if not must_show and mode in ("diagram", "render"):
         must_show = [backbone_figure.purpose]
     return {
         "mode": mode,
         "purpose": backbone_figure.purpose,
         "must_show": must_show,
         "labels_required": list(backbone_figure.labels_required),
+        "data": backbone_figure.data or None,
     }
 
 
@@ -800,7 +874,8 @@ def figure_copy_errors(section: TeachingPlanSection, packet: ImmutableLessonPack
             errors.append(
                 f"FIGURE_COPY_MISMATCH: block {block.id!r} visual for backbone figure "
                 f"'{visual.figure_ref}' differs from the figure in {fields}; copy mode, "
-                "purpose, must_show and labels_required exactly from the figure."
+                "purpose, must_show and labels_required exactly from the figure "
+                "(data is copied by code, not written by the model)."
             )
     return errors
 
@@ -824,6 +899,25 @@ def materialize_one_section(
     solo_spine = spine.model_copy(update={"sections": [solo]})
     draft = assemble_teaching_plan_draft(solo_spine, {slot_id: list(blocks)})
     return materialize_teaching_plan(draft, slot_ids=[slot_id]).sections[0]
+
+
+def drop_quantity_visuals(section: TeachingPlanSection) -> list[dict[str, Any]]:
+    """Remove visuals with no backbone figure that carry numbers in their text.
+
+    Runs after the backbone link/copy repairs, so a visual that ties to a backbone
+    figure is never touched. A null-id figure_plan entry imposes no block requirement,
+    so dropping the visual cannot trigger FIGURE_PLAN_MISSING.
+    """
+    changes: list[dict[str, Any]] = []
+    for block in section.blocks:
+        visual = block.visual
+        if visual is None or visual.figure_ref:
+            continue
+        texts = [visual.purpose, *visual.must_show, *visual.labels_required]
+        if any(_has_digit(text) for text in texts):
+            block.visual = None
+            changes.append({"repair": "SECTION_FIGURE_QUANTITY", "block_id": block.id})
+    return changes
 
 
 def section_check_errors(
@@ -851,6 +945,7 @@ def section_check_errors(
         for change in _repair_missing_figure_visuals_for_section(section, packet)
     ]
     repairs.extend(copy_backbone_figures(section, packet))
+    repairs.extend(drop_quantity_visuals(section))
 
     errors: list[str] = []
     flags: list[dict[str, Any]] = []
@@ -1504,6 +1599,7 @@ def spine_result_to_json(result: SpineResult) -> dict[str, Any]:
         "draft": result.draft.model_dump(mode="json"),
         "attempts": _serialize_attempts(result.attempts),
         "repairs": list(result.repairs),
+        "flags": list(result.flags),
     }
 
 
@@ -1513,6 +1609,7 @@ def spine_result_from_json(data: dict[str, Any]) -> SpineResult:
         draft=TeachingSpineDraft.model_validate(data["draft"]),
         attempts=[SpineAttempt(**a) for a in data.get("attempts", [])],
         repairs=list(data.get("repairs", [])),
+        flags=list(data.get("flags", [])),
     )
 
 
@@ -1797,7 +1894,7 @@ async def finish_staged_plan(
     ownership_errors.extend(_unknown_learner_action_errors(plan))
     ownership_errors.extend(_task_source_contract_errors(plan))
     ownership_errors.extend(_action_source_compatibility_errors(plan, packet))
-    flags: list[dict[str, Any]] = []
+    flags: list[dict[str, Any]] = list(spine_result.flags)
     for result in sections.values():
         flags.extend(result.flags)
     flags.extend(review_flags)

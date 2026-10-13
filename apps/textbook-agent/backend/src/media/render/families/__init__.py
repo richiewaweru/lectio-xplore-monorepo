@@ -14,7 +14,15 @@ from typing import Any
 from matplotlib.figure import Figure
 
 from media.render.contracts import RenderSpecError
-from media.render.families import bar_chart, cycle, flow, function_graph, number_line, polygon
+from media.render.families import (
+    bar_chart,
+    cycle,
+    flow,
+    function_graph,
+    number_line,
+    polygon,
+    table,
+)
 
 
 @dataclass(frozen=True)
@@ -41,6 +49,7 @@ RENDERERS: dict[str, FamilyRenderer] = {
     "function_graph": _module_renderer(function_graph),
     "flow": _module_renderer(flow),
     "cycle": _module_renderer(cycle),
+    "table": _module_renderer(table),
 }
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from application.unit_lesson.staged_teaching_planner import copy_backbone_figures
 from application.unit_lesson.teaching_planner import _repair_missing_figure_visuals
 from curriculum.teaching_plan.models import LearnerActionBrief, VisualSpec
 from print.generation.whole_lesson.packet import (
@@ -262,3 +263,75 @@ def test_plan_without_backbone_is_unaffected() -> None:
     assert _check_visual(plan) is None
     codes = _codes(plan, packet)
     assert "FIGURE_REF_MISSING" not in codes and "FIGURE_REF_UNKNOWN" not in codes
+
+
+# ---- figure data (doc 37)
+
+
+def test_plan_hash_unchanged_when_visual_has_no_data() -> None:
+    from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+
+    visual = VisualSpec(
+        figure_ref="fig-a",
+        mode="diagram",
+        purpose="See the bed.",
+        must_show=["a rectangle"],
+        labels_required=["9 m", "4 m"],
+    )
+    assert "data" not in visual.model_dump()
+    # Computed before VisualSpec gained ``data``: stored plans keep their identity.
+    assert (
+        teaching_plan_content_hash(_plan(["q1"], visual))
+        == "4d2b41e62b5d8c412bd58c297d6a41c132dd76f6f7e1f84c5f727b6ce745223b"
+    )
+    with_data = visual.model_copy(update={"data": {"days": [0, 7]}})
+    assert "data" in with_data.model_dump()
+    assert teaching_plan_content_hash(_plan(["q1"], with_data)) != teaching_plan_content_hash(
+        _plan(["q1"], visual)
+    )
+
+
+def test_visual_data_is_not_in_the_model_written_schema() -> None:
+    import json
+
+    from curriculum.teaching_plan.staged import TeachingSectionDraft
+
+    assert "data" not in VisualSpec.model_json_schema()["properties"]
+    assert '"data"' not in json.dumps(TeachingSectionDraft.model_json_schema())
+
+
+def test_repair_create_and_link_branches_carry_backbone_data() -> None:
+    plan, packet = _plan(["q1"]), _packet()
+    _repair_missing_figure_visuals(plan, packet)
+    assert _check_visual(plan).data == BACKBONE["figures"][0]["data"]
+
+    existing = VisualSpec(purpose="Notice the sides.", must_show=["the area shaded"])
+    plan = _plan(["q1"], existing)
+    _repair_missing_figure_visuals(plan, packet)
+    assert _check_visual(plan).data == BACKBONE["figures"][0]["data"]
+
+    plan = _plan(["q1"])
+    _repair_missing_figure_visuals(plan, _packet({"q1": {"target": "anchor-1", "figure_id": "fig-b"}}))
+    visual = _check_visual(plan)
+    assert visual.data is None and "data" not in visual.model_dump()
+
+
+def test_render_figure_copies_mode_and_data_into_the_visual() -> None:
+    figure = {
+        "id": "fig-r",
+        "purpose": "Compare the heights.",
+        "must_show": ["a table of heights"],
+        "labels_required": ["Day", "Height (cm)"],
+        "mode": "render",
+        "data": {"Day": [0, 7], "Height (cm)": [5, 12]},
+    }
+    packet = _packet().model_copy(update={"backbone": {"figures": [figure]}})
+    plan = _plan(["q1"], VisualSpec(figure_ref="fig-r", mode="diagram", purpose="stale", must_show=["stale"]))
+    section = next(s for s in plan.sections if s.slot_id == "check")
+    changes = copy_backbone_figures(section, packet)
+    assert changes and changes[0]["figure_id"] == "fig-r" and "mode" in changes[0]["fields"]
+    visual = next(b.visual for b in section.blocks if b.visual is not None)
+    assert visual.mode == "render"
+    assert visual.data == figure["data"]
+    assert visual.labels_required == figure["labels_required"]
+    assert copy_backbone_figures(section, packet) == []

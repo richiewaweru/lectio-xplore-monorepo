@@ -4,7 +4,6 @@ from __future__ import annotations
 from document.shared_lesson.figure_executor_adapter import (
     RoutingFigureExecutor,
     SharedFigureExecutorAdapter,
-    render_figures_mode,
 )
 from media.generation.contracts import (
     GeneratedVisualBlock,
@@ -21,7 +20,7 @@ RUN_ID = "ec975a04-7adc-42b4-959b-79068ece697d"
 FULL_TEXT = "The room is 9 m by 7 m with a 3 m by 2 m notch; sides 5 m and 6 m."
 
 
-def make_order(text: str = FULL_TEXT, mode: str = "diagram") -> VisualGeneratorWorkOrder:
+def make_order(text: str = FULL_TEXT, mode: str = "render") -> VisualGeneratorWorkOrder:
     return VisualGeneratorWorkOrder(
         work_order_id="wo-1",
         visual=VisualPlanItem(
@@ -59,8 +58,7 @@ class FakeBuilder:
         return self.built
 
 
-def _make(monkeypatch, tmp_path, builder, mode="auto"):
-    monkeypatch.setenv("LECTIO_RENDER_FIGURES", mode)
+def _make(monkeypatch, tmp_path, builder):
     store = LocalImageStore(tmp_path, "https://img.example.test")
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
     delegate = SharedFigureExecutorAdapter(run_id=RUN_ID)
@@ -83,23 +81,12 @@ def _make(monkeypatch, tmp_path, builder, mode="auto"):
     return executor, delegated
 
 
-def test_mode_parsing(monkeypatch):
-    monkeypatch.delenv("LECTIO_RENDER_FIGURES", raising=False)
-    assert render_figures_mode() == "auto"
-    monkeypatch.setenv("LECTIO_RENDER_FIGURES", "AUTO")
-    assert render_figures_mode() == "auto"
-    monkeypatch.setenv("LECTIO_RENDER_FIGURES", "off")
-    assert render_figures_mode() == "off"
-    monkeypatch.setenv("LECTIO_RENDER_FIGURES", "false")
-    assert render_figures_mode() == "off"
-
-
-async def test_flag_off_delegates(monkeypatch, tmp_path):
+async def test_diagram_mode_delegates_without_the_builder(monkeypatch, tmp_path):
     builder = FakeBuilder(l_room())
-    executor, delegated = _make(monkeypatch, tmp_path, builder, mode="off")
-    blocks = await executor.execute_figure(make_order())
+    executor, delegated = _make(monkeypatch, tmp_path, builder)
+    blocks = await executor.execute_figure(make_order(mode="diagram"))
     assert len(delegated) == 1 and builder.build_calls == 0
-    assert blocks[0].image_url.endswith("x.png")
+    assert blocks[0].render_route == "diagram"
 
 
 async def test_image_mode_delegates(monkeypatch, tmp_path):
@@ -122,7 +109,8 @@ async def test_rendered_stores_svg_and_png(monkeypatch, tmp_path):
     assert (tmp_path / f"{stem}.svg").read_bytes().lstrip().startswith((b"<?xml", b"<svg"))
     assert (tmp_path / f"{stem}.png").read_bytes().startswith(b"\x89PNG")
     assert block.status == "ready" and block.qc_reasons == []
-    assert block.mode == "diagram"
+    assert block.mode == "render"
+    assert block.render_route == "llm_family:polygon_area"
     assert block.provider_text == f"ALT: {block.alt_text}"
     assert validate_visual_block(block, order) == []
 
@@ -130,24 +118,25 @@ async def test_rendered_stores_svg_and_png(monkeypatch, tmp_path):
 async def test_missing_number_warns(monkeypatch, tmp_path):
     builder = FakeBuilder(l_room())
     executor, _ = _make(monkeypatch, tmp_path, builder)
-    blocks = await executor.execute_figure(make_order(text="An L-shaped room."))
+    # The sides are approved (must_show) but the caption never states them.
+    order = make_order(text="An L-shaped room.")
+    order.visual.must_show.append("sides 9 m, 7 m, 3 m, 2 m, 5 m and 6 m")
+    blocks = await executor.execute_figure(order)
     assert blocks[0].status == "ready_with_quality_warning"
     assert blocks[0].qc_reasons
 
 
-async def test_fallback_delegates(monkeypatch, tmp_path):
+async def test_no_family_without_data_falls_back_to_a_diagram(monkeypatch, tmp_path):
     builder = FakeBuilder(RenderSpecResult(family="none", reason="no fit"))
     executor, delegated = _make(monkeypatch, tmp_path, builder)
-    await executor.execute_figure(make_order())
-    assert len(delegated) == 1
+    blocks = await executor.execute_figure(make_order())
+    assert len(delegated) == 1 and delegated[0].visual.mode == "diagram"
+    assert blocks[0].render_route == "render_fallback_diagram"
 
 
-async def test_unavailable_fails_block(monkeypatch, tmp_path):
+async def test_invalid_spec_without_data_falls_back_to_a_diagram(monkeypatch, tmp_path):
     builder = FakeBuilder(bad_room())
     executor, delegated = _make(monkeypatch, tmp_path, builder)
     blocks = await executor.execute_figure(make_order())
-    assert not delegated
-    assert blocks[0].status == "failed"
-    assert blocks[0].error_code == "render_spec_invalid"
-    assert blocks[0].error_message
-    assert blocks[0].image_url is None
+    assert len(delegated) == 1 and delegated[0].visual.mode == "diagram"
+    assert blocks[0].render_route == "render_fallback_diagram"

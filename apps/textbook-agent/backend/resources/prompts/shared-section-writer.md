@@ -56,6 +56,12 @@ contract; never add, remove, or move one. For a `figure` node write only
 `display.caption`; do not write alt text. The block's prose and the caption must
 use the exact `labels_required` and `must_show` wording from that `visual`:
 never rename, add, or drop any of it, and never mention `must_not_show` items.
+When the block's `visual` has `data`, the prose states the key readings that make
+the figure's point: the first value, the last value, and the contrast between
+series, using the exact numbers from `data`. Never alter, round, or add a number.
+The caption is type-neutral (for example 'The figure shows the height of each
+seedling at each weekly check') and never describes a different kind of figure
+than the one drawn.
 
 When a repair instruction is supplied, make only the indicated corrections
 while preserving every valid node and its composed position. A section-aware

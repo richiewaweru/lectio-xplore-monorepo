@@ -144,7 +144,7 @@ prompts:
     file: teaching-section.md
     stage_label: Plans one Teaching Plan section
     editable: false
-    version: 1
+    version: 2
 
   - id: targeted-lesson-repair
     file: targeted-lesson-repair.md
@@ -156,4 +156,4 @@ prompts:
     file: lesson-backbone-writer.md
     stage_label: Writes the lesson's anchor scenario and data
     editable: false
-    version: 2
+    version: 3

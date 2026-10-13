@@ -34,14 +34,16 @@ class BackboneFigure(BaseModel):
     must_show: list[str] = Field(default_factory=list)
     labels_required: list[str] = Field(default_factory=list)
     data: dict[str, Any] = Field(default_factory=dict)
-    # None means "diagram" (code-rendered). Excluded from dumps when None so the
+    # "render" = drawn by code (tables, charts, graphs, shapes with lengths, flows);
+    # "diagram" = labelled schematic of real things; "image" = realistic picture.
+    # None means "diagram". Excluded from dumps when None so the
     # canonical hash of backbones stored before this field existed is unchanged.
-    mode: Literal["diagram", "image"] | None = Field(
+    mode: Literal["render", "diagram", "image"] | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
 
     @property
-    def effective_mode(self) -> Literal["diagram", "image"]:
+    def effective_mode(self) -> Literal["render", "diagram", "image"]:
         return self.mode or "diagram"
 
     @model_validator(mode="after")

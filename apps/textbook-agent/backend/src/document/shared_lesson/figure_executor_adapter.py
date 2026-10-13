@@ -3,15 +3,21 @@
 from __future__ import annotations
 
 import logging
-import os
+import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from media.generation.contracts import GeneratedVisualBlock, VisualGeneratorWorkOrder
+from media.generation.contracts import (
+    GeneratedVisualBlock,
+    VisualGeneratorWorkOrder,
+    diagram_visual_style,
+)
 from media.generation.executor import VisualStageError, execute_visual
-from media.render.pipeline import Fallback, Rendered, Unavailable, render_figure
+from media.render.data_spec import is_data_figure, readable_key, spec_from_data
+from media.render.number_guard import format_number, label_numbers_outside_data
+from media.render.pipeline import Rendered, Unavailable, render_figure
 from media.render.spec_builder import LlmSpecBuilder, SpecBuilder
 
 logger = logging.getLogger(__name__)
@@ -58,13 +64,6 @@ class SharedFigureExecutorAdapter:
         )
 
 
-def render_figures_mode() -> str:
-    """``LECTIO_RENDER_FIGURES``: "auto" (default) or "off" (the kill switch)."""
-
-    raw = (os.environ.get("LECTIO_RENDER_FIGURES") or "auto").strip().lower()
-    return "off" if raw in {"off", "0", "false", "no"} else "auto"
-
-
 SpecBuilderFactory = Callable[[str, str], SpecBuilder]
 
 
@@ -80,46 +79,150 @@ def _summarize_errors(errors: list[dict[str, str]], limit: int = 3) -> str:
     return "; ".join(parts)[:500] or "render spec invalid"
 
 
+DATA_NOT_RENDERED = "figure_data_not_rendered"
+NUMBERS_UNVERIFIED = "figure_numbers_unverified"
+
+
+def _plain(value: object) -> str:
+    return str(value)
+
+
+def data_value_labels(labels: list[str], data: dict | None) -> list[str]:
+    """``labels`` plus one closed label per data point when no label carries a data value.
+
+    The first series is read as the x axis when there are two or more ("Day 7: 12");
+    a single series is numbered by position.
+    """
+    labels = list(labels)
+    series = {
+        key: values
+        for key, values in (data or {}).items()
+        if isinstance(values, list) and len(values) >= 2 and all(_is_num(v) for v in values)
+    }
+    if not series:
+        return labels
+    values_text = {_plain(v) for values in series.values() for v in values}
+    seen = {tok for label in labels for tok in re.findall(r"-?\d+(?:\.\d+)?", label)}
+    if seen & values_text:
+        return labels
+    keys = list(series)
+    added: list[str] = []
+    if len(keys) == 1:
+        name = readable_key(keys[0])
+        added = [f"{name} {i + 1}: {_plain(v)}" for i, v in enumerate(series[keys[0]])]
+    else:
+        x_name = readable_key(keys[0])
+        for key in keys[1:]:
+            prefix = "" if len(keys) == 2 else f"{readable_key(key)}, "
+            for x, y in zip(series[keys[0]], series[key], strict=False):
+                added.append(f"{prefix}{x_name} {_plain(x)}: {_plain(y)}")
+    return [*labels, *added]
+
+
+def _is_num(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _log_route(order: VisualGeneratorWorkOrder, route: str, reason: str) -> None:
+    logger.info(
+        "figure_route",
+        extra={
+            "event": "figure_route",
+            "figure_id": order.visual.id,
+            "section_id": order.visual.attaches_to or None,
+            "work_order_id": order.work_order_id,
+            "route": route,
+            "reason": reason,
+            "data_present": bool(order.visual.data),
+        },
+    )
+
+
+def _failed_block(
+    order: VisualGeneratorWorkOrder, code: str, message: str
+) -> list[GeneratedVisualBlock]:
+    return [
+        GeneratedVisualBlock(
+            visual_id=order.visual.id,
+            attaches_to=order.visual.attaches_to,
+            mode=order.visual.mode,
+            caption=order.visual.purpose,
+            source_work_order_id=order.work_order_id,
+            component_id=order.visual.component_id,
+            status="failed",
+            error_code=code,
+            error_message=message,
+            render_route="failed",
+        )
+    ]
+
+
 @dataclass(frozen=True)
 class RoutingFigureExecutor:
-    """Code-render exact ``diagram`` figures; delegate everything else.
+    """Route a figure on its plan ``mode``: ``render``, ``diagram`` or ``image``.
 
-    A figure whose family was chosen but stayed invalid fails (never falls
-    back to an image model). "No family fits" falls back to the delegate.
+    * ``diagram`` and ``image``: straight to the image-model delegate (routes
+      ``diagram`` / ``image``); the spec builder is never called.
+    * ``render``: drawn by code. (1) the LLM spec builder picks the family
+      (``llm_family:<name>``); (2) if it fails, returns none or is invalid and the
+      figure has series data that forms a table, a code table is drawn
+      (``render_table_fallback``); (3) otherwise the delegate draws it as a
+      ``diagram`` order: ``render_fallback_diagram`` without series data, and
+      ``render_fallback_diagram_unverified`` (with a ``figure_numbers_unverified``
+      warning, the data values added as closed labels) with series data.
+    * Series data on a non-render mode (old plans) is routed as ``render``.
     """
 
     delegate: SharedFigureExecutorAdapter
     builder_factory: SpecBuilderFactory = _default_builder_factory
 
-    async def execute_figure(self, order: VisualGeneratorWorkOrder) -> list[GeneratedVisualBlock]:
-        if render_figures_mode() != "auto" or order.visual.mode != "diagram":
-            return await self.delegate.execute_figure(order)
-        if not isinstance(order, VisualGeneratorWorkOrder):
-            raise TypeError("SharedDocument media requires a VisualGeneratorWorkOrder")
+    async def _delegate(
+        self,
+        order: VisualGeneratorWorkOrder,
+        route: str,
+        reason: str,
+        *,
+        as_diagram: bool = False,
+        warnings: tuple[str, ...] = (),
+    ) -> list[GeneratedVisualBlock]:
+        _log_route(order, route, reason)
+        send = order
+        if as_diagram:
+            visual = order.visual
+            labels = data_value_labels(visual.labels_required, visual.data)
+            send = order.model_copy(
+                update={
+                    "visual": visual.model_copy(
+                        update={
+                            "mode": "diagram",
+                            "labels_required": labels,
+                            "visual_style": diagram_visual_style(labels),
+                        }
+                    )
+                }
+            )
+        blocks = await self.delegate.execute_figure(send)
+        # Blocks keep the plan's mode so the media result matches the frozen order.
+        return [
+            block.model_copy(
+                update={
+                    "render_route": route,
+                    "mode": order.visual.mode,
+                    "render_warnings": [*block.render_warnings, *warnings],
+                }
+            )
+            for block in blocks
+        ]
 
-        canonical_run_id = str(UUID(self.delegate.run_id))
-        generation_id = f"shared-document-{canonical_run_id}"
-        trace_id = f"shared-document:{canonical_run_id}:media:{order.work_order_id}"
-        outcome = await render_figure(order, builder=self.builder_factory(trace_id, generation_id))
-
-        if isinstance(outcome, Fallback):
-            return await self.delegate.execute_figure(order)
-        if isinstance(outcome, Unavailable):
-            return [
-                GeneratedVisualBlock(
-                    visual_id=order.visual.id,
-                    attaches_to=order.visual.attaches_to,
-                    mode=order.visual.mode,
-                    caption=order.visual.purpose,
-                    source_work_order_id=order.work_order_id,
-                    component_id=order.visual.component_id,
-                    status="failed",
-                    error_code=outcome.code,
-                    error_message=_summarize_errors(outcome.errors),
-                )
-            ]
-
-        assert isinstance(outcome, Rendered)
+    async def _stored(
+        self,
+        order: VisualGeneratorWorkOrder,
+        outcome: Rendered,
+        *,
+        generation_id: str,
+        route: str,
+        reason: str,
+    ) -> list[GeneratedVisualBlock]:
         from media.storage.image_store import get_image_store
 
         figure = outcome.figure
@@ -144,6 +247,7 @@ class RoutingFigureExecutor:
                 "warnings": len(warnings),
             },
         )
+        _log_route(order, route, reason)
         return [
             GeneratedVisualBlock(
                 visual_id=order.visual.id,
@@ -162,13 +266,84 @@ class RoutingFigureExecutor:
                 provider_text=f"ALT: {' '.join(figure.alt_text.split())}"
                 if figure.alt_text
                 else None,
+                render_route=route,
             )
         ]
+
+    def _data_failure(
+        self, order: VisualGeneratorWorkOrder, reason: str, detail: str
+    ) -> list[GeneratedVisualBlock]:
+        _log_route(order, "failed", f"{DATA_NOT_RENDERED}: {reason}")
+        return _failed_block(order, DATA_NOT_RENDERED, detail[:500] or reason)
+
+    async def execute_figure(self, order: VisualGeneratorWorkOrder) -> list[GeneratedVisualBlock]:
+        if not isinstance(order, VisualGeneratorWorkOrder):
+            raise TypeError("SharedDocument media requires a VisualGeneratorWorkOrder")
+
+        visual = order.visual
+        data = visual.data
+        data_figure = is_data_figure(data)
+        canonical_run_id = str(UUID(self.delegate.run_id))
+        generation_id = f"shared-document-{canonical_run_id}"
+        trace_id = f"shared-document:{canonical_run_id}:media:{order.work_order_id}"
+
+        if not data_figure and visual.mode in {"diagram", "image"}:
+            return await self._delegate(order, visual.mode, f"mode_{visual.mode}")
+
+        # Render path (mode "render", or series data whatever the mode).
+        if data_figure:
+            outside = label_numbers_outside_data(order)
+            if outside:
+                shown = ", ".join(format_number(n) for n in outside[:5])
+                return self._data_failure(
+                    order,
+                    f"label_number_not_in_data:{shown}",
+                    f"labels or must_show carry numbers not in the figure data: {shown}",
+                )
+
+        outcome = await render_figure(order, builder=self.builder_factory(trace_id, generation_id))
+        if isinstance(outcome, Rendered):
+            return await self._stored(
+                order,
+                outcome,
+                generation_id=generation_id,
+                route=f"llm_family:{outcome.figure.family}",
+                reason="spec_builder",
+            )
+        if isinstance(outcome, Unavailable):
+            reason = f"builder_unavailable: {outcome.code}"
+        else:
+            reason = outcome.reason
+
+        if data_figure:
+            spec = spec_from_data(data, visual.labels_required, visual.must_show)
+            if spec is not None:
+                table = await render_figure(order, prebuilt=spec)
+                if isinstance(table, Rendered):
+                    return await self._stored(
+                        order,
+                        table,
+                        generation_id=generation_id,
+                        route="render_table_fallback",
+                        reason=reason,
+                    )
+                if isinstance(table, Unavailable):
+                    reason = f"{reason}; table_rejected: {table.code}"
+            else:
+                reason = f"{reason}; data_not_a_series_table"
+            return await self._delegate(
+                order,
+                "render_fallback_diagram_unverified",
+                reason,
+                as_diagram=True,
+                warnings=(NUMBERS_UNVERIFIED,),
+            )
+
+        return await self._delegate(order, "render_fallback_diagram", reason, as_diagram=True)
 
 
 __all__ = [
     "EmitEvent",
     "RoutingFigureExecutor",
     "SharedFigureExecutorAdapter",
-    "render_figures_mode",
 ]

@@ -150,9 +150,16 @@ The default for everything else is no visual: omit `visual` or set it to null.
 At most one visual per block. A visual is never decorative and never replaces
 the explanation: the block's brief still teaches the idea in words.
 
+FIGURE KINDS. Every figure has a `mode`:
+- render: drawn exactly and to scale: tables of values, bar charts, graphs of a rule (y = 2x + 1), number lines, shapes with given side lengths, simple step flows, and cycles. It cannot draw real objects such as plants, apparatus or organs.
+- diagram: a flat, labelled schematic of real things and their named parts. It may carry value labels as text (for example 'Height Day 28: 48 cm'), but it is not to scale: its numbers are words on the picture, not measurements to read off.
+- image: a realistic scene or object where what it looks like is the point. Little or no text.
+Choose in this order: if the learner must read exact values, lengths or positions from the figure, use render. If the learner must see real things and their named parts, use diagram. If only the look matters, use image. A figure whose data holds a series of values (a list of numbers) is always render.
+Examples: a table of seedling heights at each weekly check is render; two labelled seedlings side by side, one green and tall in the sun, one pale and short in the dark, with their heights written as labels, is diagram.
+
 A `visual` object has:
 
-  mode            "diagram" (default) or "image"
+  mode            "render", "diagram" (default) or "image"
   purpose         what the learner must notice in the figure, naming what is
                   compared, ordered, or read
   must_show       the exact stages, parts, or relationships the figure must
@@ -166,15 +173,20 @@ For each `figure_plan` entry that has a `backbone_figure_id`, put a `visual` on
 one block of this section whose `figure_ref` is exactly that id, and copy
 `mode`, `purpose`, `must_show`, and `labels_required` from that backbone figure,
 which is supplied in full. Do not alter, reorder, extend, or reword those
-fields. Every approved item whose backbone reference names a figure is owned by
+fields. The figure's `data` (its exact values) is copied by code; do not write
+`data`. Every approved item whose backbone reference names a figure is owned by
 a block that carries that figure.
 
 For each `figure_plan` entry without a `backbone_figure_id`, write the visual
-freely, following the rules above: list every required stage, part, and
+freely, following the rules above and choosing `mode` with the FIGURE KINDS card
+below (structure-only flows and cycles are usually `render`): list every required stage, part, and
 direction in must_show, use only labels the objective and must_establish state
 (every `labels_required` entry must appear inside a `must_show` entry, the
 lesson objective, or a must_establish statement), and never invent labels,
-stages, or relationships.
+stages, or relationships. Such a figure shows structure only: no digits in
+`purpose`, `must_show`, or `labels_required`, and labels come only from the
+objective and must_establish. If the idea needs numbers, state them in the
+block's brief instead and add no visual.
 
 Add no visual beyond the figure_plan. Never name a page object, component,
 layout, or renderer anywhere; only the `visual` object describes a figure, and
@@ -233,7 +245,7 @@ JSON only. No preamble, no code fences, no commentary.
       } | null,
       "visual": {
         "figure_ref": str | null,
-        "mode": "diagram" | "image",
+        "mode": "render" | "diagram" | "image",
         "purpose": str,
         "must_show": [str],
         "labels_required": [str],

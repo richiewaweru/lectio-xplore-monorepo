@@ -190,7 +190,7 @@ def test_figure_copy_overwrites_drift_and_guard_passes() -> None:
     assert stp.figure_copy_errors(section, packet)
     changes = stp.copy_backbone_figures(section, packet)
     assert changes and set(changes[0]["fields"]) == {
-        "mode", "purpose", "must_show", "labels_required"}
+        "mode", "purpose", "must_show", "labels_required"}  # fig-a carries no data
     visual = section.blocks[0].visual
     assert (visual.mode, visual.purpose, visual.must_show, visual.labels_required) == (
         "diagram", "See the dimensions of the bed.", ["a rectangle"], [])
@@ -495,3 +495,58 @@ def test_advisory_gate_flags_all_reviewer_findings(monkeypatch) -> None:
     fake, results, _, _ = _run_all(monkeypatch, _all_good(), section_reviewer=reviewer)
     assert fake.calls("explain") == 1
     assert any(f["code"] == "task_evidence_gap" for f in results["explain"].flags)
+
+
+def test_figure_copy_carries_backbone_data_and_guard_flags_drift() -> None:
+    spine, packet, _ = _context()
+    data = {"days": [0, 7, 14], "height_cm": [5, 12, 22]}
+    figures = [dict(f, data=data) if f["id"] == "fig-a" else f for f in packet.backbone["figures"]]
+    packet = packet.model_copy(update={"backbone": {**packet.backbone, "figures": figures}})
+    section = stp.materialize_one_section(
+        spine, "check", list(_good("check", visual=dict(FIG_VISUAL)).blocks))
+    assert section.blocks[0].visual.data is None
+    errors = stp.figure_copy_errors(section, packet)
+    assert errors and "data" in errors[0] and "copied by code" in errors[0]
+    changes = stp.copy_backbone_figures(section, packet)
+    assert changes[0]["fields"] == ["data"]
+    assert section.blocks[0].visual.data == data
+    assert stp.figure_copy_errors(section, packet) == []
+    section.blocks[0].visual.data = {"days": [0, 7, 14], "height_cm": [5, 12, 23]}
+    assert stp.figure_copy_errors(section, packet)
+
+
+def test_null_id_visual_with_digit_is_dropped_without_plan_missing_loop() -> None:
+    spine, packet, proj = _context()
+    spine_section = next(s for s in spine.sections if s.slot_id == "explain")
+    spine_section.figure_plan.append(
+        stp.SpineFigurePlan(purpose="Show the growth", backbone_figure_id=None)
+    )
+    quantity = {
+        "mode": "diagram",
+        "purpose": "Bar chart of 5 cm and 48 cm",
+        "must_show": ["two bars"],
+        "labels_required": ["Day 28"],
+    }
+    blocks = [_block("explain-cause", visual=quantity), _block("explain-cause")]
+    section = stp.materialize_one_section(
+        spine, "explain", [TeachingPlanDraftBlock.model_validate(b) for b in blocks]
+    )
+    assert section.blocks[0].visual is not None
+    errors, _, repairs = stp.section_check_errors(spine, "explain", section, packet, proj)
+    assert section.blocks[0].visual is None
+    assert [r for r in repairs if r["repair"] == "SECTION_FIGURE_QUANTITY"] == [
+        {"repair": "SECTION_FIGURE_QUANTITY", "block_id": section.blocks[0].id}
+    ]
+    assert "FIGURE_PLAN_MISSING" not in _codes(errors)
+
+
+def test_backbone_linked_visual_with_numbers_is_untouched() -> None:
+    spine, packet, proj = _context()
+    visual = dict(FIG_VISUAL, purpose="Heights 5 and 48", labels_required=["Day 28: 48 cm"])
+    section = stp.materialize_one_section(
+        spine, "check", list(_good("check", visual=visual).blocks)
+    )
+    assert stp.drop_quantity_visuals(section) == []
+    _, _, repairs = stp.section_check_errors(spine, "check", section, packet, proj)
+    assert section.blocks[0].visual is not None
+    assert not any(r["repair"] == "SECTION_FIGURE_QUANTITY" for r in repairs)
