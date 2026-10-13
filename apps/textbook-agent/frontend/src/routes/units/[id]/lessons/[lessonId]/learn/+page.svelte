@@ -142,6 +142,10 @@
 		}
 	}
 
+	// After a successful retry the first status read can still show the old failure
+	// (it may race the retry commit), so tolerate `failed` briefly instead of stopping.
+	let retryGraceUntil = 0;
+
 	const statusPoll = createSerializedPoll(async () => {
 		try {
 			await ctx.refreshPreparation();
@@ -154,6 +158,7 @@
 			await resolveAndLoad();
 			return false;
 		}
+		if (currentArtifact.state === 'failed' && Date.now() < retryGraceUntil) return true;
 		if (
 			currentArtifact.state === 'failed' ||
 			currentArtifact.state === 'needs_attention' ||
@@ -194,12 +199,19 @@
 	async function retryLearn() {
 		if (!ctx.statusFresh || !ctx.path || !ctx.lesson || !artifact.realizationId || !(artifact.retryable || artifact.regenerable)) return;
 		busy = 'retry';
+		error = null;
 		try {
 			await retryLessonRealization(ctx.unitId, ctx.path, ctx.lesson, artifact.realizationId);
+			retryGraceUntil = Date.now() + 15_000;
 			await resolveAndLoad();
-			if (lessonArtifactUi(ctx.preparation, 'learn').state === 'preparing') startStatusPoll();
+			if (lessonArtifactUi(ctx.preparation, 'learn').state !== 'ready') startStatusPoll();
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Could not retry Learn.';
+			// The retry may have been rejected because the run already finished; refetch
+			// and only surface the error if Learn is still not ready.
+			await resolveAndLoad();
+			if (lessonArtifactUi(ctx.preparation, 'learn').state !== 'ready') {
+				error = err instanceof Error ? err.message : 'Could not retry Learn.';
+			}
 		} finally {
 			busy = null;
 		}
