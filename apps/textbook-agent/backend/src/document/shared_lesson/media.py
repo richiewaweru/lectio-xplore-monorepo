@@ -18,6 +18,7 @@ from document.shared_lesson.continuity import (
 from curriculum.teaching_plan.models import VisualSpec
 from document.shared_lesson.continuity import node_text
 from document.shared_lesson.figure_consistency import label_warnings, normalize_text
+from document.shared_lesson.figure_numbers import allowed_text_numbers, number_warnings
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.models import (
     CalloutNode,
@@ -516,6 +517,7 @@ def _figure_order_from(
     node: FigureNode,
     spec: VisualSpec,
     facts: Sequence[SourceOfTruthEntry],
+    plan_text: Sequence[str] = (),
 ) -> SharedFigureWorkOrder:
     """The one place a figure's identity, work order and warnings are derived.
 
@@ -562,6 +564,23 @@ def _figure_order_from(
         visual=visual,
         source_of_truth=list(entries),
     )
+    prose = _section_prose(section)
+    warnings = label_warnings(spec.labels_required, prose, node.display.caption)
+    # Numbers the caption/prose state beyond the data, approved facts, plan text
+    # (objective, brief) and the visual's own labels. ``plan_text`` is empty on an
+    # identity-only rebuild; these warnings are advisory and never gate.
+    allowed = allowed_text_numbers(
+        data=spec.data,
+        approved_fact_texts=[fact.text for fact in facts],
+        objective=" ".join(plan_text),
+        brief_and_labels=[*spec.must_show, *spec.labels_required, spec.purpose],
+    )
+    warnings = [
+        *warnings,
+        *number_warnings(
+            caption=node.display.caption, section_text=prose, data=spec.data, allowed=allowed
+        ),
+    ]
     return SharedFigureWorkOrder(
         source_plan_id=identity.source_artifact_id,
         source_plan_revision=identity.source_revision,
@@ -572,7 +591,7 @@ def _figure_order_from(
         figure_semantic_hash=semantic_hash,
         required=spec.required,
         work_order=order,
-        warnings=label_warnings(spec.labels_required, _section_prose(section), node.display.caption),
+        warnings=warnings,
     )
 
 
@@ -616,7 +635,17 @@ def build_figure_work_order(
         )
     _identity, planned = _planned_section(source, section)
     spec = _plan_figure_spec(planned, node)
-    return _figure_order_from(identity=identity, section=section, node=node, spec=spec, facts=facts)
+    block = next((item for item in planned.blocks if item.id == node.teaching_block_id), None)
+    plan_text = [
+        source.plan.arc,
+        *(source.plan.starting_state or []),
+        *(source.plan.target_state or []),
+        planned.specific_purpose,
+        *((block.intent, block.brief) if block is not None else ()),
+    ]
+    return _figure_order_from(
+        identity=identity, section=section, node=node, spec=spec, facts=facts, plan_text=plan_text
+    )
 
 
 def rebuild_figure_work_order(

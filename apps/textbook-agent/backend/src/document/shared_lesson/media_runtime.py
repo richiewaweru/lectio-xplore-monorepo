@@ -28,6 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
 
+from document.shared_lesson.figure_numbers import without_number_warnings
 from document.shared_lesson.media import (
     ReadyFigureMediaResult,
     SharedFigureMediaError,
@@ -347,6 +348,12 @@ def _verify_accepted_section(
                 )
             }
         )
+    # Figure-number warnings are advisory and need plan text a rebuild may lack;
+    # orders admitted before they existed must still verify, so compare without them.
+    if work != expected and without_number_warnings(work.warnings) == without_number_warnings(
+        expected.warnings
+    ):
+        expected = expected.model_copy(update={"warnings": list(work.warnings)})
     if work != expected:
         raise MediaSourceConflict(
             "figure work order differs from the work order derived from the plan spec "
