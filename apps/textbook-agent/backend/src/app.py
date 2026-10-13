@@ -51,6 +51,7 @@ from learn.authoring.builder.routes import router as builder_router
 from learn.generation.units_routes import router as units_generation_router
 from learn.publishing.release_routes import router as learn_release_router
 from learn.runtime.resume_routes import router as learn_resume_router
+from learn.runtime.interest_routes import router as learn_interest_router
 from learn.publishing.topic_publish_routes import router as learn_topic_publish_router
 from learn.runtime.runtime_routes import router as learn_runtime_router
 from learn.runtime.topics_routes import router as learn_topics_router
@@ -331,6 +332,7 @@ def create_app() -> FastAPI:
     app.include_router(builder_router)
     app.include_router(learn_release_router)
     app.include_router(learn_resume_router)
+    app.include_router(learn_interest_router)
     app.include_router(learn_topic_publish_router)
     app.include_router(learn_runtime_router)
     app.include_router(learn_topics_router)

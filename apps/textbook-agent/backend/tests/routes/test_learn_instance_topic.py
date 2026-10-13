@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from tests.routes.test_learn_topics import (  # noqa: F401  (autouse fixtures + helpers)
     _client,
     _h,
@@ -26,7 +25,7 @@ async def _instance(client, joined, instance_id):
 
 @pytest.mark.asyncio
 async def test_linked_instance_has_topic_with_ready_and_pending_next(
-    _overrides, db_session_factory
+    _overrides, db_session_factory  # noqa: F811
 ):
     async with _client() as client:
         ctx = await _setup(client, _overrides, db_session_factory)  # 4 ready + 1 pending
@@ -56,7 +55,9 @@ async def test_linked_instance_has_topic_with_ready_and_pending_next(
 
 
 @pytest.mark.asyncio
-async def test_last_lesson_has_no_next_and_unlinked_has_no_topic(_overrides, db_session_factory):
+async def test_last_lesson_has_no_next_and_unlinked_has_no_topic(
+    _overrides, db_session_factory  # noqa: F811
+):
     async with _client() as client:
         ctx = await _setup(client, _overrides, db_session_factory, linked=5)
         joined = await _join(client, ctx["invite"])

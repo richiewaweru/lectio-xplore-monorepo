@@ -7,6 +7,16 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import func, select
+from tests.routes.test_learn_anonymous_learner import (  # noqa: F401  (fixtures + helpers)
+    _ATTEMPT,
+    _client,
+    _first_instance,
+    _h,
+    _join,
+    _overrides,
+    _seed,
+    _teacher_setup,
+)
 
 from infra.database.models import (
     ConceptEvidenceModel,
@@ -17,16 +27,6 @@ from infra.database.models import (
     LearningInstanceModel,
     LearnReleaseModel,
     LessonProgressModel,
-)
-from tests.routes.test_learn_anonymous_learner import (  # noqa: F401  (fixtures + helpers)
-    _ATTEMPT,
-    _client,
-    _first_instance,
-    _h,
-    _join,
-    _overrides,
-    _seed,
-    _teacher_setup,
 )
 
 _SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "cleanup_demo_releases.py"
@@ -40,7 +40,9 @@ async def _count(session, model) -> int:
 
 
 @pytest.mark.asyncio
-async def test_dry_run_writes_nothing_and_apply_deletes_in_order(_overrides, db_session_factory):
+async def test_dry_run_writes_nothing_and_apply_deletes_in_order(
+    _overrides, db_session_factory  # noqa: F811
+):
     async with _client() as client:
         ctx = await _teacher_setup(client, _overrides)
         joined = await _join(client, ctx["invite"], "Ann")
