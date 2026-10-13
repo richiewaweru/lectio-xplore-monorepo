@@ -134,6 +134,8 @@ class CreateAssignmentBody(BaseModel):
     class_ids: list[str] | None = None
     mode: str = "rolling"
     selected_learner_ids: list[str] | None = None
+    # Topic-path flow (doc 38 3.4): refuse releases that carry no path_lesson_id.
+    require_path_lesson_id: bool = False
 
 
 class CreateSessionBody(BaseModel):
@@ -693,6 +695,15 @@ async def api_create_assignment(
     release = await session.get(LearnReleaseModel, body.learn_release_id)
     if release is None or release.owner_user_id != current_user.id:
         raise HTTPException(status_code=404, detail="LearnRelease not found")
+    if body.require_path_lesson_id and not release.path_lesson_id:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "RELEASE_NOT_LINKED_TO_PATH_LESSON",
+                "message": "This release is not linked to a topic lesson; "
+                "republish it with a path_lesson_id before adding it to a class.",
+            },
+        )
     assignment = await create_assignment(
         session,
         teacher_id=current_user.id,
