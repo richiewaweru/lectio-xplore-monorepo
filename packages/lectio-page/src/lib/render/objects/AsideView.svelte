@@ -15,15 +15,15 @@
 		<div class="lectio-misconception-grid">
 			{#if content.label}<div class="lectio-misconception-label"><strong><InlineView nodes={asRichText(content.label)} /></strong></div>{/if}
 			<div class="lectio-misconception-row"><strong>The belief</strong><q><InlineView nodes={asRichText(content.belief)} /></q></div>
-			<div class="lectio-misconception-row"><strong>The evidence</strong><InlineView nodes={asRichText(content.evidence)} /></div>
-			<div class="lectio-misconception-row"><strong>So</strong><InlineView nodes={asRichText(content.conclusion)} /></div>
+			<div class="lectio-misconception-row"><strong>The evidence</strong><span class="lectio-misconception-text"><InlineView nodes={asRichText(content.evidence)} /></span></div>
+			<div class="lectio-misconception-row"><strong>So</strong><span class="lectio-misconception-text"><InlineView nodes={asRichText(content.conclusion)} /></span></div>
 		</div>
 		{#if content.aside}<p class="lectio-aside-followup"><InlineView nodes={asRichText(content.aside)} /></p>{/if}
 	{:else}
 		{#if content.variant === 'key_idea'}
 			<span class="lectio-aside-body"><InlineView nodes={asRichText(content.body)} /></span>
 		{:else}
-			<InlineView nodes={asRichText(content.body)} />
+			<span class="lectio-aside-text"><InlineView nodes={asRichText(content.body)} /></span>
 		{/if}
 		{#if content.aside}
 			<p class="lectio-aside-followup"><InlineView nodes={asRichText(content.aside)} /></p>
