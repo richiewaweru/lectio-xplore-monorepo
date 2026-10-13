@@ -679,6 +679,7 @@ async def api_join_class(
         "display_name": learner.display_name,
         "class_id": membership.class_id,
         "class_name": class_row.name,
+        "code": learner.invite_code,
         "token": sess.token,
         "session_id": sess.id,
     }
