@@ -99,6 +99,24 @@ and put only earlier lesson keys in `requires`.
   factual      recall and organise a bounded set
   evaluative   weigh options against criteria and defend a choice
 
+### Step 8 — Set lesson_mode
+
+Decide each lesson's mode from its objective and must_establish only. Use one
+of three values:
+
+  first_exposure   the lesson teaches something new
+  consolidation    the lesson uses ideas taught in earlier lessons on new
+                   cases, or combines them
+  transfer         the lesson applies everything so far to an unfamiliar
+                   situation
+
+Never emit repair or retrieval. Those depend on learner state, which you do
+not have. Use no keyword rules. Read the objective and decide what the lesson
+asks the learner to do with the material.
+
+Give lesson_mode_reason as one short sentence naming the basis, for example
+"it uses the ideas from lessons 1-4".
+
 ## PROHIBITIONS
 
 Never write lesson content.
@@ -126,7 +144,9 @@ Emit JSON only. No prose before or after.
       "objective": string,
       "requires": [],
       "must_establish": [string],
-      "knowledge_type": "procedural" | "conceptual" | "factual" | "evaluative"
+      "knowledge_type": "procedural" | "conceptual" | "factual" | "evaluative",
+      "lesson_mode": "first_exposure" | "consolidation" | "transfer",
+      "lesson_mode_reason": string
     }
   ]
 }

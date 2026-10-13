@@ -618,7 +618,7 @@ responsible for a narrow, well-posed set of judgements. Make those well.
   objective            from the approved path. immutable.
   concept_id           the capability being taught
   knowledge_type       already classified
-  lesson_mode          determined by position in the path
+  lesson_mode          set by the path planner
   slots[]              ordered, from the skeleton. count is final.
   scope_contract       must_establish, must_not_introduce, terminology
   prior_established    what earlier lessons have established
