@@ -922,3 +922,16 @@ def test_writer_prompt_tells_it_to_fill_the_key_idea_slot() -> None:
     prompt = " ".join(effective_prompt_text("shared-section-writer").split())
     assert "key_idea_slot_node_id" in prompt
     assert "25 words or fewer" in prompt
+
+
+def test_writer_prompt_carries_compare_versus_table_guidance() -> None:
+    from core.prompts import effective_prompt_text
+
+    prompt = " ".join(effective_prompt_text("shared-section-writer").split())
+    assert (
+        "Use compare only for two or three rival accounts that differ in content. "
+        "Anything compared on the same attributes, or with more than three items, is a "
+        "table with one column per thing compared. Keep table cells to about 12 words."
+        in prompt
+    )
+    assert "comparison nodes keep every card" in prompt

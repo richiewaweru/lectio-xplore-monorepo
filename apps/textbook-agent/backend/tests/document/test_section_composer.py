@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
@@ -20,6 +21,8 @@ from document.shared_lesson.composer import (
     CompositionValidationError,
     SectionCompositionDraft,
     SectionCompositionPlan,
+    _KIND_CUES,
+    _eligible_non_paragraph_kinds,
     compose_section,
     validate_and_build_composition,
     validate_composition_plan,
@@ -1063,3 +1066,58 @@ def test_removing_the_slot_from_a_new_plan_is_rejected() -> None:
             section=section,
             tasks=[],
         )
+
+
+_COMPARE_TABLE_GUIDANCE = (
+    "Use compare only for two or three rival accounts that differ in content. "
+    "Anything compared on the same attributes, or with more than three items, is a "
+    "table with one column per thing compared. Keep table cells to about 12 words."
+)
+
+
+def _eligible_kind_names(block: TeachingPlanBlock) -> set[str]:
+    return {kind for kind, _cue in _eligible_non_paragraph_kinds(block)}
+
+
+@pytest.mark.parametrize("cue", ["compare", "contrast"])
+def test_compare_and_contrast_cue_table_but_not_compare_kind(cue: str) -> None:
+    kinds = _eligible_kind_names(_block("b0", "describe", f"Please {cue} the two things."))
+    assert "table" in kinds
+    assert "compare" not in kinds
+
+
+@pytest.mark.parametrize("cue", ["rival", "option", "alternative"])
+def test_rival_option_alternative_cue_compare_kind(cue: str) -> None:
+    kinds = _eligible_kind_names(_block("b0", "describe", f"Weigh each {cue} account."))
+    assert "compare" in kinds
+
+
+def test_lesson_one_seedling_section_is_table_eligible_not_compare() -> None:
+    block = _block(
+        "b0",
+        "compare",
+        "Compare Seedling A and Seedling B condition by condition: potting soil, "
+        "water, air, warmth, starting height, light, height on day 28",
+    )
+    kinds = _eligible_kind_names(block)
+    assert "table" in kinds
+    assert "compare" not in kinds
+    # The provider call carries the system prompt separately from the payload,
+    # so assert on the effective prompt the composer sends.
+    prompt = " ".join(effective_prompt_text("section-composer").split())
+    assert _COMPARE_TABLE_GUIDANCE in prompt
+
+
+def test_composer_prompt_cue_bullets_match_code_cue_tables() -> None:
+    prompt = effective_prompt_text("section-composer")
+    flat = " ".join(prompt.split())
+
+    def bullet_cues(kind: str) -> tuple[str, ...]:
+        match = re.search(rf"- `{kind}`[^:]*: (.*?)\.(?: |$)", flat)
+        assert match is not None, kind
+        text = match.group(1)
+        return tuple(re.findall(r"`([^`]+)`", text))
+
+    for kind in ("table", "compare"):
+        assert bullet_cues(kind) == _KIND_CUES[kind], kind
+    assert flat.count(_COMPARE_TABLE_GUIDANCE) == 1

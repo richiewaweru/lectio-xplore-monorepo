@@ -36,8 +36,12 @@ always eligible. Specialized form eligibility is exact:
   `calculate`.
 - `quote` with role `interpretation`, `evidence`, or `misconception`: the
   block text contains `claim`, `quote`, `says`, or `assert`.
-- `compare` with role `comparison`: the block text contains `compare`,
-  `contrast`, `alternative`, `option`, or `rival`.
+- `compare` with role `comparison`: the block text contains `alternative`,
+  `option`, or `rival`.
+
+Use compare only for two or three rival accounts that differ in content.
+Anything compared on the same attributes, or with more than three items, is a
+table with one column per thing compared. Keep table cells to about 12 words.
 
 A `misconception` semantic role does not by itself authorize a `callout`.
 The same block's `intent`, `brief`, or `evidence` must contain one of the literal
