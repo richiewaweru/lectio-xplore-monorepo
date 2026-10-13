@@ -221,7 +221,7 @@ _KIND_CUES: dict[str, tuple[str, ...]] = {
     "list": ("sequence", "step", "stage", "set", "category", "example", "evidence", "sort"),
     "equation": ("equation", "formula", "input", "output", "process", "calculate"),
     "quote": ("claim", "quote", "says", "assert"),
-    "compare": ("compare", "contrast", "alternative", "option", "rival"),
+    "compare": ("alternative", "option", "rival"),
 }
 
 

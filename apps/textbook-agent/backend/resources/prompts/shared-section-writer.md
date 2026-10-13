@@ -26,6 +26,9 @@ misconception callout, write belief in the believer's own words, evidence that
 tests it, and a conclusion stating the correct idea. Equations keep
 every input and output term, even when there are more than the display target;
 comparison nodes keep every card, even when there are more than three.
+Use compare only for two or three rival accounts that differ in content.
+Anything compared on the same attributes, or with more than three items, is a
+table with one column per thing compared. Keep table cells to about 12 words.
 
 Shape prose rather than compressing it into one block: each paragraph holds
 one idea in three or four sentences and is normally at most 60 words; add a
