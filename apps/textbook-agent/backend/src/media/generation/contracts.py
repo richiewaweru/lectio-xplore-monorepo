@@ -10,7 +10,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-VisualMode = Literal["diagram", "diagram_series", "diagram_compare", "image", "simulation"]
+VisualMode = Literal[
+    "diagram", "diagram_series", "diagram_compare", "image", "simulation", "render"
+]
 VisualStyle = Literal["diagram_precision", "diagram_numbered", "illustration"]
 _VISUAL_STYLES = {"diagram_precision", "diagram_numbered", "illustration"}
 VisualDependency = Literal["blueprint_only", "section_text", "question_text"]
@@ -53,6 +55,8 @@ class GeneratedVisualBlock(BaseModel):
     # image_label_only | failed). Omitted from dumps while unset, so stored blocks
     # are unchanged.
     render_route: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    # Advisory notes from the route (e.g. figure_numbers_unverified). Omitted while empty.
+    render_warnings: list[str] = Field(default_factory=list, exclude_if=lambda value: not value)
 
 
 class ExecutorOutcome(BaseModel):
@@ -138,6 +142,16 @@ class VisualGeneratorWorkOrder(BaseModel):
     prior_validation_errors: list[str] = Field(default_factory=list)
 
 
+def labels_carry_values(labels: list[str] | tuple[str, ...]) -> bool:
+    """Value-bearing labels ("0 g", "Day 0: 12 cm") mean a data figure, not a parts diagram."""
+    return sum(1 for label in labels if any(ch.isdigit() for ch in label)) >= 2
+
+
+def diagram_visual_style(labels: list[str] | tuple[str, ...]) -> VisualStyle | None:
+    """Style a ``diagram`` order gets: numbered keys for named parts, none for value labels."""
+    return None if labels_carry_values(labels) else "diagram_numbered"
+
+
 def _image_url_valid(url: str) -> bool:
     u = url.strip().lower()
     return u.startswith(("http://", "https://"))
@@ -159,7 +173,7 @@ def validate_visual_block(
         errors.append("visual_id mismatch")
     if (
         block.status not in {"failed", "omitted_quality"}
-        and block.mode in {"diagram", "image", "diagram_series", "diagram_compare"}
+        and block.mode in {"diagram", "image", "diagram_series", "diagram_compare", "render"}
     ) and (not block.image_url or not _image_url_valid(block.image_url)):
         errors.append("image_url not a valid hosted URL")
     if block.mode == "simulation" and not block.html_content and not block.fallback_image_url:

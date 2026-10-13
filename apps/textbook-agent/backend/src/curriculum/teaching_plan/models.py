@@ -55,7 +55,7 @@ class LearnerActionBrief(BaseModel):
 
 # Subset of media.generation.contracts.VisualMode. Defined locally: the
 # curriculum layer must not import the media package.
-VisualSpecMode = Literal["diagram", "image"]
+VisualSpecMode = Literal["diagram", "image", "render"]
 
 
 def _clean_text_list(values: list[str]) -> list[str]:

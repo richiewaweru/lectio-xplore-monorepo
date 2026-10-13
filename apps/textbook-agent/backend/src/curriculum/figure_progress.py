@@ -143,6 +143,10 @@ def project_figures(
         identity = _identity(item)
         warnings = [str(w) for w in identity.get("warnings") or []]
         output = item.output_json if isinstance(getattr(item, "output_json", None), dict) else {}
+        if item.status == "ready":
+            for note in output.get("render_warnings") or []:
+                if str(note) not in warnings:
+                    warnings.append(str(note))
         if item.status == "ready" and output.get("status") == "unavailable":
             return FigureProgressDTO(
                 figure_id=figure_id,

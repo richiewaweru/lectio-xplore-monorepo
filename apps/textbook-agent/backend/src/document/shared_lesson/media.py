@@ -35,6 +35,7 @@ from media.generation.contracts import (
     SourceOfTruthEntry,
     VisualGeneratorWorkOrder,
     VisualPlanItem,
+    diagram_visual_style,
     validate_visual_block,
 )
 
@@ -126,6 +127,8 @@ class ReadyFigureMediaResult(BaseModel):
     #: Which route drew the figure (see ``GeneratedVisualBlock.render_route``).
     #: Omitted from the durable output while unset.
     render_route: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    #: Advisory route notes (e.g. ``figure_numbers_unverified``); omitted while empty.
+    render_warnings: list[str] = Field(default_factory=list, exclude_if=lambda value: not value)
 
 
 class FigureMediaResult(BaseModel):
@@ -505,11 +508,6 @@ def _plan_figure_spec(planned: Any, node: FigureNode) -> VisualSpec:
     return block.visual
 
 
-def _labels_carry_values(labels: Sequence[str]) -> bool:
-    """Value-bearing labels ("0 g", "Day 0: 12 cm") mean a data figure, not a parts diagram."""
-    return sum(1 for label in labels if any(ch.isdigit() for ch in label)) >= 2
-
-
 def _figure_order_from(
     *,
     identity: SourceIdentity,
@@ -552,9 +550,7 @@ def _figure_order_from(
         # Numbered keys suit named parts; value labels are drawn by the provider so they
         # can sit in rows/columns.
         visual_style=(
-            "diagram_numbered"
-            if spec.mode == "diagram" and not _labels_carry_values(spec.labels_required)
-            else None
+            diagram_visual_style(spec.labels_required) if spec.mode == "diagram" else None
         ),
     )
     order = VisualGeneratorWorkOrder(
@@ -666,7 +662,7 @@ def rebuild_figure_work_order(
         raise SharedFigureMediaError("accepted section does not contain the frozen FigureNode")
     if spec is None:
         frozen = work.work_order.visual
-        if frozen.mode not in ("diagram", "image"):
+        if frozen.mode not in ("diagram", "image", "render"):
             raise SharedFigureMediaError("figure work order mode is unsupported")
         spec = VisualSpec(
             mode=frozen.mode,
@@ -746,6 +742,7 @@ def bind_generated_figure(
         status=block.status,
         qc_state=block.qc_state,
         render_route=block.render_route,
+        render_warnings=list(block.render_warnings),
     )
 
 

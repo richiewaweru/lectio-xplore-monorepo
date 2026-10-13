@@ -1,8 +1,8 @@
 """Figure data integrity at the media boundary (doc 37, tests 1, 5, 6, 7, 12).
 
-A figure whose plan carries series data is drawn from that data in code and is
-never handed to the image model; a data figure that cannot be drawn fails with
-``figure_data_not_rendered``; scalar-only data still goes to the image path.
+The plan ``mode`` routes a figure: ``render`` is drawn by code (spec builder, then a
+code table, else it fails ``figure_data_not_rendered``); ``diagram`` and ``image`` go
+to the image model. A figure with series data never reaches the image model.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ from media.generation.contracts import (
     VisualGeneratorWorkOrder,
     VisualPlanItem,
 )
-from media.generation.prompt import build_visual_prompt
+from media.generation.prompt import REPRESENTATION_BLOCK, build_visual_prompt
 from media.render.contracts import BarChartSpec, RenderSpecResult, TableSpec
 from media.storage.image_store import LocalImageStore
 from tests.document.test_shared_lesson_media_runtime import _failed_provider_block
@@ -63,7 +63,7 @@ FIG2 = {
         "Seedling A and Seedling B height"
     ],
     "labels_required": ["Day", "Height of Seedling A (cm)", "Height of Seedling B (cm)"],
-    "mode": "diagram",
+    "mode": "diagram",  # the plan mode is forced to "render" in the tests (see _lesson_1_work_order)
     "data": {
         "days": [0, 7, 14, 21, 28],
         "height_seedling_a_cm": [5, 12, 22, 35, 48],
@@ -74,8 +74,18 @@ FIG1 = {
     "id": "fig-1",
     "purpose": "Show the two seedlings on day 0 and day 28.",
     "must_show": ["Seedling A and Seedling B at day 0 and at day 28"],
-    "labels_required": ["Seedling A", "Seedling B", "Day 0: 5 cm", "Day 28: 48 cm"],
-    "mode": "image",
+    "labels_required": [
+        "Seedling A",
+        "Seedling B",
+        "Height Day 0: 5 cm",
+        "Height Day 0: 5 cm",
+        "Height Day 28: 48 cm",
+        "Height Day 28: 9 cm",
+        "Sunlight",
+        "Dark cupboard",
+        "Height (cm)",
+    ],
+    "mode": "diagram",
     "data": {"day_0_height_cm": 5, "day_28_height_cm": 48},
 }
 EXPECTED_ROWS = [[0, 5, 5], [7, 12, 6], [14, 22, 7], [21, 35, 8], [28, 48, 9]]
@@ -106,8 +116,7 @@ class ForbiddenBuilder(SpyBuilder):
         raise AssertionError("the LLM spec builder must not be called for this figure")
 
 
-def _executor(monkeypatch, tmp_path, builder, *, mode: str = "auto"):
-    monkeypatch.setenv("LECTIO_RENDER_FIGURES", mode)
+def _executor(monkeypatch, tmp_path, builder):
     store = LocalImageStore(tmp_path, "https://img.example.test")
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
     delegate = SharedFigureExecutorAdapter(run_id=RUN_ID)
@@ -144,7 +153,7 @@ def _routes(caplog) -> list:
     return [r for r in caplog.records if r.getMessage() == "figure_route"]
 
 
-def _data_order(data, *, labels=None, must_show=None, mode="diagram") -> VisualGeneratorWorkOrder:
+def _data_order(data, *, labels=None, must_show=None, mode="render") -> VisualGeneratorWorkOrder:
     return VisualGeneratorWorkOrder(
         work_order_id="wo-data",
         visual=VisualPlanItem(
@@ -162,7 +171,7 @@ def _data_order(data, *, labels=None, must_show=None, mode="diagram") -> VisualG
 # ---- test 1: the Lesson 1 regression, through the real copy and order paths
 
 
-def _lesson_1_work_order(figure: dict, *, visual_mode: str):
+def _lesson_1_work_order(figure: dict, *, visual_mode: str, plan_mode: str | None = None):
     """Backbone figure -> copy into block explain-b1 -> the real media work order."""
     packet = _packet().model_copy(update={"backbone": {"figures": [figure]}})
     block = TeachingPlanBlock(
@@ -193,6 +202,9 @@ def _lesson_1_work_order(figure: dict, *, visual_mode: str):
     changes = copy_backbone_figures(section, packet)
     assert changes and changes[0]["figure_id"] == figure["id"]
     assert section.blocks[0].visual.data == (figure["data"] or None)
+    if plan_mode is not None:
+        # Until the backbone carries "render", the plan mode is set after the copy.
+        section.blocks[0].visual.mode = plan_mode
 
     plan = TeachingPlan(
         arc="Plant growth",
@@ -247,49 +259,142 @@ def _lesson_1_work_order(figure: dict, *, visual_mode: str):
     )
 
 
-async def test_lesson_1_fig_2_is_drawn_as_the_backbone_table(monkeypatch, tmp_path, caplog) -> None:
-    work = _lesson_1_work_order(FIG2, visual_mode="diagram")
+def _fig2_table_result() -> RenderSpecResult:
+    return RenderSpecResult(
+        family="table",
+        spec=TableSpec(columns=FIG2["labels_required"], rows=EXPECTED_ROWS),
+    )
+
+
+async def test_lesson_1_fig_2_render_builder_table(monkeypatch, tmp_path, caplog) -> None:
+    work = _lesson_1_work_order(FIG2, visual_mode="diagram", plan_mode="render")
     order = work.work_order
+    assert order.visual.mode == "render" and order.visual.visual_style is None
     assert order.visual.data == FIG2["data"]
 
-    executor, delegated, outcomes = _executor(monkeypatch, tmp_path, ForbiddenBuilder())
+    builder = SpyBuilder(_fig2_table_result())
+    executor, delegated, outcomes = _executor(monkeypatch, tmp_path, builder)
     with caplog.at_level(logging.INFO, logger=ADAPTER_LOGGER):
         blocks = await executor.execute_figure(order)
 
-    assert delegated == []
-    assert len(outcomes) == 1
+    assert delegated == [] and builder.build_calls == 1
     spec = outcomes[0].spec
     assert isinstance(spec, TableSpec)
     assert spec.columns == FIG2["labels_required"]
     assert spec.rows == EXPECTED_ROWS
     block = blocks[0]
     assert block.status in {"ready", "ready_with_quality_warning"}
-    assert block.render_route == "data_table"
+    assert block.mode == "render"
+    assert block.render_route == "llm_family:table"
     assert block.image_url.endswith(".svg")
-    # The ready media result keeps the route for the progress view.
-    assert bind_generated_figure(work, blocks).render_route == "data_table"
-
+    assert bind_generated_figure(work, blocks).render_route == "llm_family:table"
     (event,) = _routes(caplog)
     assert (event.figure_id, event.route, event.data_present) == (
         order.visual.id,
-        "data_table",
+        "llm_family:table",
         True,
     )
 
 
-async def test_data_table_ignores_the_render_flag_and_the_mode(monkeypatch, tmp_path) -> None:
-    # An old plan may have mode "image"; the data still decides the route.
-    work = _lesson_1_work_order(FIG2, visual_mode="image")
-    executor, delegated, outcomes = _executor(
-        monkeypatch, tmp_path, ForbiddenBuilder(), mode="off"
-    )
+async def test_lesson_1_fig_2_builder_none_falls_back_to_the_code_table(
+    monkeypatch, tmp_path, caplog
+) -> None:
+    work = _lesson_1_work_order(FIG2, visual_mode="diagram", plan_mode="render")
+    builder = SpyBuilder(RenderSpecResult(family="none", reason="no fit"))
+    executor, delegated, outcomes = _executor(monkeypatch, tmp_path, builder)
+    with caplog.at_level(logging.INFO, logger=ADAPTER_LOGGER):
+        blocks = await executor.execute_figure(work.work_order)
+
+    assert delegated == [] and builder.build_calls == 1
+    spec = outcomes[-1].spec
+    assert isinstance(spec, TableSpec)
+    assert spec.columns == FIG2["labels_required"]
+    assert spec.rows == EXPECTED_ROWS
+    assert blocks[0].render_route == "render_table_fallback"
+    assert blocks[0].image_url.endswith(".svg")
+    assert _routes(caplog)[0].route == "render_table_fallback"
+
+
+@pytest.mark.parametrize("old_mode", ["diagram", "image"])
+async def test_old_series_data_with_a_non_render_mode_never_reaches_the_image_model(
+    monkeypatch, tmp_path, old_mode
+) -> None:
+    work = _lesson_1_work_order(FIG2, visual_mode="diagram", plan_mode=old_mode)
+    builder = SpyBuilder(RenderSpecResult(family="none", reason="no fit"))
+    executor, delegated, outcomes = _executor(monkeypatch, tmp_path, builder)
     blocks = await executor.execute_figure(work.work_order)
     assert delegated == []
-    assert isinstance(outcomes[0].spec, TableSpec)
-    assert blocks[0].render_route == "data_table"
+    assert isinstance(outcomes[-1].spec, TableSpec)
+    assert blocks[0].render_route == "render_table_fallback"
+    assert blocks[0].mode == old_mode
 
 
-# ---- test 5: a data figure that cannot be drawn fails and never reaches the image model
+async def test_render_with_oversize_series_tries_the_builder_then_an_unverified_diagram(
+    monkeypatch, tmp_path, caplog
+) -> None:
+    data = {"x": list(range(13)), "y": list(range(100, 113))}  # 13 rows: too big for a table
+    order = _data_order(data, mode="render", labels=["x axis", "y axis"])
+    builder = SpyBuilder(RenderSpecResult(family="none", reason="no fit"))
+    executor, delegated, _ = _executor(monkeypatch, tmp_path, builder)
+    with caplog.at_level(logging.INFO, logger=ADAPTER_LOGGER):
+        blocks = await executor.execute_figure(order)
+    assert builder.build_calls == 1 and len(delegated) == 1
+    sent = delegated[0].visual
+    assert sent.mode == "diagram" and order.visual.mode == "render"
+    # Existing labels are kept; one closed label per data point is added.
+    assert sent.labels_required[:2] == ["x axis", "y axis"]
+    assert len(sent.labels_required) == 2 + 13
+    assert "X 7: 107" in sent.labels_required
+    assert sent.visual_style is None
+    prompt = build_visual_prompt(delegated[0], provider_renders_labels=True)
+    assert "Use only the numbers in the label list" in prompt
+    assert blocks[0].render_route == "render_fallback_diagram_unverified"
+    assert blocks[0].render_warnings == ["figure_numbers_unverified"]
+    assert blocks[0].mode == "render"
+    event = _routes(caplog)[0]
+    assert event.route == "render_fallback_diagram_unverified"
+    assert "data_not_a_series_table" in event.reason
+
+
+async def test_render_without_data_and_no_builder_spec_falls_back_to_a_diagram(
+    monkeypatch, tmp_path, caplog
+) -> None:
+    order = VisualGeneratorWorkOrder(
+        work_order_id="wo-nodata",
+        visual=VisualPlanItem(
+            id="v1",
+            attaches_to="s1",
+            mode="render",
+            purpose="The water cycle",
+            labels_required=["Evaporation", "Condensation"],
+        ),
+    )
+    builder = SpyBuilder(RenderSpecResult(family="none", reason="no fit"))
+    executor, delegated, _ = _executor(monkeypatch, tmp_path, builder)
+    with caplog.at_level(logging.INFO, logger=ADAPTER_LOGGER):
+        blocks = await executor.execute_figure(order)
+    assert builder.build_calls == 1 and len(delegated) == 1
+    sent = delegated[0]
+    assert sent.visual.mode == "diagram"
+    assert sent.visual.visual_style == "diagram_numbered"
+    assert order.visual.mode == "render"  # the frozen order is untouched
+    assert blocks[0].render_route == "render_fallback_diagram"
+    assert blocks[0].mode == "render"
+    assert _routes(caplog)[0].route == "render_fallback_diagram"
+
+
+async def test_image_mode_goes_straight_to_the_delegate(monkeypatch, tmp_path) -> None:
+    order = VisualGeneratorWorkOrder(
+        work_order_id="wo-img",
+        visual=VisualPlanItem(id="v1", attaches_to="s1", mode="image", purpose="A leaf"),
+    )
+    executor, delegated, _ = _executor(monkeypatch, tmp_path, ForbiddenBuilder())
+    blocks = await executor.execute_figure(order)
+    assert len(delegated) == 1 and delegated[0].visual.mode == "image"
+    assert blocks[0].render_route == "image"
+
+
+# ---- test 5: series data the builder and the table cannot draw ships as an unverified diagram
 
 
 @pytest.mark.parametrize(
@@ -300,7 +405,7 @@ async def test_data_table_ignores_the_render_flag_and_the_mode(monkeypatch, tmp_
     ],
     ids=["no-family", "builder-raises"],
 )
-async def test_data_figure_without_a_spec_fails_and_never_delegates(
+async def test_data_figure_without_a_spec_ships_an_unverified_diagram(
     monkeypatch, tmp_path, caplog, builder
 ) -> None:
     # Unequal series: not a clean table, so only the LLM builder could draw it.
@@ -309,17 +414,14 @@ async def test_data_figure_without_a_spec_fails_and_never_delegates(
     with caplog.at_level(logging.INFO, logger=ADAPTER_LOGGER):
         blocks = await executor.execute_figure(order)
 
-    assert delegated == []
-    assert builder.build_calls == 1
+    assert builder.build_calls == 1 and len(delegated) == 1
+    assert delegated[0].visual.mode == "diagram"
     block = blocks[0]
-    assert block.status == "failed"
-    assert block.error_code == "figure_data_not_rendered"
-    assert block.error_message
-    assert block.image_url is None
-    assert block.render_route == "failed"
+    assert block.status == "ready"
+    assert block.render_route == "render_fallback_diagram_unverified"
+    assert block.render_warnings == ["figure_numbers_unverified"]
     (event,) = _routes(caplog)
-    assert event.route == "failed" and event.data_present is True
-    assert "figure_data_not_rendered" in event.reason
+    assert event.route == "render_fallback_diagram_unverified" and event.data_present is True
 
 
 async def test_labels_with_numbers_outside_the_data_fail_before_any_drawing(
@@ -357,42 +459,44 @@ async def test_llm_spec_with_invented_values_is_rejected(monkeypatch, tmp_path) 
     executor, delegated, outcomes = _executor(monkeypatch, tmp_path, builder)
     blocks = await executor.execute_figure(order)
 
-    assert delegated == []
     assert outcomes[0].code == "render_spec_invalid"
     assert [e["code"] for e in outcomes[0].errors] == [
         "number_not_in_data:19",
         "number_not_in_data:25",
     ]
     assert builder.repair_calls == 2
-    assert blocks[0].status == "failed"
-    assert blocks[0].error_code == "figure_data_not_rendered"
-    assert "number_not_in_data:19" in blocks[0].error_message
+    assert len(delegated) == 1
+    assert blocks[0].render_route == "render_fallback_diagram_unverified"
+    assert blocks[0].render_warnings == ["figure_numbers_unverified"]
 
 
 # ---- test 7: scalar-only data is a labelled picture for the image model
 
 
-async def test_scalar_only_figure_goes_to_the_image_path(monkeypatch, tmp_path, caplog) -> None:
-    work = _lesson_1_work_order(FIG1, visual_mode="image")
+async def test_lesson_1_fig_1_scalar_diagram_goes_to_the_delegate(
+    monkeypatch, tmp_path, caplog
+) -> None:
+    work = _lesson_1_work_order(FIG1, visual_mode="diagram")
     order = work.work_order
     assert order.visual.data == FIG1["data"]
+    assert order.visual.mode == "diagram"
 
     executor, delegated, outcomes = _executor(monkeypatch, tmp_path, ForbiddenBuilder())
     with caplog.at_level(logging.INFO, logger=ADAPTER_LOGGER):
         blocks = await executor.execute_figure(order)
 
     assert len(delegated) == 1 and outcomes == []
-    assert blocks[0].render_route == "image_label_only"
+    assert delegated[0].visual.labels_required == FIG1["labels_required"]
+    assert len(delegated[0].visual.labels_required) == 9
+    assert blocks[0].render_route == "diagram"
     (event,) = _routes(caplog)
-    assert (event.route, event.data_present) == ("image_label_only", True)
+    assert (event.route, event.data_present) == ("diagram", True)
 
-    prompt = build_visual_prompt(order, provider_renders_labels=True)
+    prompt = build_visual_prompt(delegated[0], provider_renders_labels=True)
     assert "Use only the numbers in the label list. Add no other number, scale or axis value." in prompt
-    assert '- "Day 28: 48 cm"' in prompt
+    assert REPRESENTATION_BLOCK in prompt
+    assert '- "Height Day 28: 48 cm"' in prompt
     assert "no title, caption, or sentences." in prompt
-
-    plain = build_visual_prompt(order, provider_renders_labels=False)
-    assert "use only the numbers in the label list" in plain
 
 
 async def test_figure_without_data_keeps_the_old_routes(monkeypatch, tmp_path, caplog) -> None:
@@ -500,3 +604,29 @@ def test_progress_route_of_a_ready_figure_comes_from_its_output() -> None:
     item.output_json = {"status": "ready"}
     (figure,) = project_figures([], [item])
     assert figure.route is None
+
+
+def test_render_warnings_reach_the_figure_progress_record() -> None:
+    from types import SimpleNamespace
+
+    item = SimpleNamespace(
+        id="i1",
+        item_key="media:fig",
+        stage="media_generation",
+        status="ready",
+        composition_identity='{"figure_node_id": "fig", "warnings": ["label_x"]}',
+        output_json={
+            "status": "ready",
+            "render_route": "render_fallback_diagram_unverified",
+            "render_warnings": ["figure_numbers_unverified"],
+        },
+        attempt=1,
+        max_attempts=3,
+        error_code=None,
+        error_summary=None,
+        recovery_action=None,
+        replaces_work_item_id=None,
+    )
+    (figure,) = project_figures([], [item])
+    assert figure.warnings == ["label_x", "figure_numbers_unverified"]
+    assert figure.route == "render_fallback_diagram_unverified"
