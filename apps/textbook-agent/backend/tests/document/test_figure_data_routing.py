@@ -63,7 +63,7 @@ FIG2 = {
         "Seedling A and Seedling B height"
     ],
     "labels_required": ["Day", "Height of Seedling A (cm)", "Height of Seedling B (cm)"],
-    "mode": "diagram",  # the plan mode is forced to "render" in the tests (see _lesson_1_work_order)
+    "mode": "render",
     "data": {
         "days": [0, 7, 14, 21, 28],
         "height_seedling_a_cm": [5, 12, 22, 35, 48],
@@ -202,8 +202,9 @@ def _lesson_1_work_order(figure: dict, *, visual_mode: str, plan_mode: str | Non
     changes = copy_backbone_figures(section, packet)
     assert changes and changes[0]["figure_id"] == figure["id"]
     assert section.blocks[0].visual.data == (figure["data"] or None)
+    assert section.blocks[0].visual.mode == figure["mode"]
     if plan_mode is not None:
-        # Until the backbone carries "render", the plan mode is set after the copy.
+        # Legacy plans: a stored non-render mode on a series figure (see the old-mode test).
         section.blocks[0].visual.mode = plan_mode
 
     plan = TeachingPlan(
@@ -267,7 +268,7 @@ def _fig2_table_result() -> RenderSpecResult:
 
 
 async def test_lesson_1_fig_2_render_builder_table(monkeypatch, tmp_path, caplog) -> None:
-    work = _lesson_1_work_order(FIG2, visual_mode="diagram", plan_mode="render")
+    work = _lesson_1_work_order(FIG2, visual_mode="diagram")
     order = work.work_order
     assert order.visual.mode == "render" and order.visual.visual_style is None
     assert order.visual.data == FIG2["data"]
@@ -299,7 +300,7 @@ async def test_lesson_1_fig_2_render_builder_table(monkeypatch, tmp_path, caplog
 async def test_lesson_1_fig_2_builder_none_falls_back_to_the_code_table(
     monkeypatch, tmp_path, caplog
 ) -> None:
-    work = _lesson_1_work_order(FIG2, visual_mode="diagram", plan_mode="render")
+    work = _lesson_1_work_order(FIG2, visual_mode="diagram")
     builder = SpyBuilder(RenderSpecResult(family="none", reason="no fit"))
     executor, delegated, outcomes = _executor(monkeypatch, tmp_path, builder)
     with caplog.at_level(logging.INFO, logger=ADAPTER_LOGGER):

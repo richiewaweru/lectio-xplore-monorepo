@@ -178,3 +178,15 @@ def test_writer_retry_receives_messages_then_raises(monkeypatch: pytest.MonkeyPa
     assert "validation_errors" not in prompts[0]
     assert "BACKBONE_FIGURE_LABEL_NUMBER" in prompts[1] and "fig-2" in prompts[1]
     assert any("BACKBONE_FIGURE_LABEL_NUMBER" in d for d in info.value.details)
+
+
+def test_lesson_1_backbone_fig_1_diagram_and_fig_2_render_passes() -> None:
+    backbone = _backbone(LESSON_1_FIG_1, LESSON_1_FIG_2)
+    assert [f.effective_mode for f in backbone.figures] == ["diagram", "render"]
+    assert figure_data_errors(backbone) == []
+
+
+def test_lesson_1_backbone_fails_series_needs_render_when_fig_2_is_diagram() -> None:
+    errors = figure_data_errors(_backbone(LESSON_1_FIG_1, dict(LESSON_1_FIG_2, mode="diagram")))
+    assert len(errors) == 1
+    assert errors[0].startswith("BACKBONE_FIGURE_SERIES_NEEDS_RENDER") and "fig-2" in errors[0]

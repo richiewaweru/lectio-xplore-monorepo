@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from application.unit_lesson.staged_teaching_planner import copy_backbone_figures
 from application.unit_lesson.teaching_planner import _repair_missing_figure_visuals
 from curriculum.teaching_plan.models import LearnerActionBrief, VisualSpec
 from print.generation.whole_lesson.packet import (
@@ -313,3 +314,24 @@ def test_repair_create_and_link_branches_carry_backbone_data() -> None:
     _repair_missing_figure_visuals(plan, _packet({"q1": {"target": "anchor-1", "figure_id": "fig-b"}}))
     visual = _check_visual(plan)
     assert visual.data is None and "data" not in visual.model_dump()
+
+
+def test_render_figure_copies_mode_and_data_into_the_visual() -> None:
+    figure = {
+        "id": "fig-r",
+        "purpose": "Compare the heights.",
+        "must_show": ["a table of heights"],
+        "labels_required": ["Day", "Height (cm)"],
+        "mode": "render",
+        "data": {"Day": [0, 7], "Height (cm)": [5, 12]},
+    }
+    packet = _packet().model_copy(update={"backbone": {"figures": [figure]}})
+    plan = _plan(["q1"], VisualSpec(figure_ref="fig-r", mode="diagram", purpose="stale", must_show=["stale"]))
+    section = next(s for s in plan.sections if s.slot_id == "check")
+    changes = copy_backbone_figures(section, packet)
+    assert changes and changes[0]["figure_id"] == "fig-r" and "mode" in changes[0]["fields"]
+    visual = next(b.visual for b in section.blocks if b.visual is not None)
+    assert visual.mode == "render"
+    assert visual.data == figure["data"]
+    assert visual.labels_required == figure["labels_required"]
+    assert copy_backbone_figures(section, packet) == []
