@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import DocumentCanvas from '$lib/learn/document/DocumentCanvas.svelte';
 	import InlineMarkup from '$lib/learn/document/renderers/InlineMarkup.svelte';
 	import type { InteractionAttemptState, LearnDocument, LearnSection } from '$lib/learn/document/types';
 	import type { AttemptSubmitHandler, ServerEvaluation } from '$lib/learn/interactions/types';
 	import type { StoredAttempt } from './api/attempts';
 	import SectionHeader from './SectionHeader.svelte';
+	import type { NextLessonInfo } from './instance-topic';
 
 	interface Props {
 		document: LearnDocument;
@@ -14,6 +16,15 @@
 		attemptsByInteraction?: Map<string, InteractionAttemptState | StoredAttempt>;
 		preview?: boolean;
 		onSubmitAttempt?: AttemptSubmitHandler;
+		/** Section ids already completed (learner view): resume after the last one. */
+		initialCompletedSectionIds?: string[];
+		initialCurrentSectionId?: string | null;
+		/** The lesson that follows this one on the topic path (null/undefined: none). */
+		nextLesson?: NextLessonInfo | null;
+		/** Called by "Finish lesson" on the last section when there is no next lesson. */
+		onFinish?: () => void | Promise<void>;
+		/** Fired when the learner follows the "next lesson is ready" link (completes this lesson). */
+		onLeaveForNextLesson?: () => void | Promise<void>;
 	}
 
 	let {
@@ -23,7 +34,12 @@
 		onSectionChange = undefined,
 		attemptsByInteraction = new Map(),
 		preview = false,
-		onSubmitAttempt = undefined
+		onSubmitAttempt = undefined,
+		initialCompletedSectionIds = [],
+		initialCurrentSectionId = null,
+		nextLesson = null,
+		onFinish = undefined,
+		onLeaveForNextLesson = undefined
 	}: Props = $props();
 
 	const attemptStates = $derived.by(() => {
@@ -46,8 +62,31 @@
 		return map;
 	});
 
-	let activeSectionId = $state<string>('all');
 	const sections = $derived(document.sections ?? []);
+
+	// Learners see one section at a time; teacher preview keeps the "All sections" view.
+	function startIndex(): number {
+		const list = document.sections ?? [];
+		if (list.length === 0) return 0;
+		const done = new Set(initialCompletedSectionIds);
+		let lastDone = -1;
+		list.forEach((section, i) => {
+			if (done.has(section.id)) lastDone = i;
+		});
+		if (lastDone >= 0) return Math.min(lastDone + 1, list.length - 1);
+		const current = list.findIndex((section) => section.id === initialCurrentSectionId);
+		return current >= 0 ? current : 0;
+	}
+
+	let activeSectionId = $state<string>(
+		untrack(() => (preview ? 'all' : (document.sections?.[startIndex()]?.id ?? 'all')))
+	);
+	let reachedIndex = $state(untrack(() => (preview ? 0 : startIndex())));
+	let finishing = $state(false);
+	let rootEl = $state<HTMLElement | null>(null);
+
+	const activeIndex = $derived(sections.findIndex((section) => section.id === activeSectionId));
+	const isLast = $derived(activeIndex >= 0 && activeIndex === sections.length - 1);
 
 	function sectionDocument(section: LearnSection): LearnDocument {
 		const allowed = new Set(section.node_ids ?? []);
@@ -65,6 +104,40 @@
 	function selectSection(sectionId: string) {
 		activeSectionId = sectionId;
 		void onSectionChange?.(sectionId);
+	}
+
+	function scrollToTop() {
+		if (typeof rootEl?.scrollIntoView === 'function') rootEl.scrollIntoView({ block: 'start' });
+	}
+
+	function jumpTo(index: number) {
+		if (index < 0 || index > reachedIndex) return;
+		activeSectionId = sections[index].id;
+		scrollToTop();
+	}
+
+	function goPrevious() {
+		jumpTo(activeIndex - 1);
+	}
+
+	function goNext() {
+		if (activeIndex < 0 || activeIndex >= sections.length - 1) return;
+		void onSectionChange?.(sections[activeIndex].id); // leaving a section marks it visited
+		const next = activeIndex + 1;
+		reachedIndex = Math.max(reachedIndex, next);
+		activeSectionId = sections[next].id;
+		scrollToTop();
+	}
+
+	async function finish() {
+		if (finishing || activeIndex < 0) return;
+		finishing = true;
+		try {
+			await onSectionChange?.(sections[activeIndex].id);
+			await onFinish?.();
+		} finally {
+			finishing = false;
+		}
 	}
 
 	function renderSection(section: LearnSection, index: number) {
@@ -86,16 +159,18 @@
 	}
 </script>
 
-<div class="ordered-document-list" data-testid="ordered-document-list" data-preview={preview ? 'true' : 'false'}>
+<div class="ordered-document-list" bind:this={rootEl} data-testid="ordered-document-list" data-preview={preview ? 'true' : 'false'}>
 	{#if sections.length > 0}
 		<nav class="lesson-map" data-testid="runtime-section-tabs" aria-label="Lesson sections">
-			<button type="button" class="all-sections" class:active={activeSectionId === 'all'} onclick={() => selectSection('all')}>
-				All sections
-			</button>
+			{#if preview}
+				<button type="button" class="all-sections" class:active={activeSectionId === 'all'} onclick={() => selectSection('all')}>
+					All sections
+				</button>
+			{/if}
 			<ol>
 				{#each sections as section, index}
 					<li>
-						<button type="button" class:active={activeSectionId === section.id} aria-current={activeSectionId === section.id ? 'page' : undefined} onclick={() => selectSection(section.id)}>
+						<button type="button" class:active={activeSectionId === section.id} class:ahead={!preview && index > reachedIndex} disabled={!preview && index > reachedIndex} aria-current={activeSectionId === section.id ? 'page' : undefined} onclick={() => (preview ? selectSection(section.id) : jumpTo(index))}>
 							<span class="map-number">{index + 1}</span>
 							<span><InlineMarkup value={section.title ?? `Part ${index + 1}`} /></span>
 						</button>
@@ -129,6 +204,24 @@
 						<DocumentCanvas document={renderSection(selected, selectedIndex)} {interactionOffset} {figureOffset} attemptsByInteraction={attemptStates} onSubmitInteraction={preview || !onSubmitAttempt ? undefined : onSubmitInteraction} />
 					</div>
 				</section>
+				{#if !preview}
+					<nav class="section-nav" data-testid="section-nav" aria-label="Section navigation">
+						{#if selectedIndex > 0}
+							<button type="button" class="nav-button prev" data-testid="section-prev" onclick={goPrevious}>&larr; Previous</button>
+						{:else}
+							<span></span>
+						{/if}
+						{#if !isLast}
+							<button type="button" class="nav-button next" data-testid="section-next" onclick={goNext}>Next &rarr;</button>
+						{:else if nextLesson?.state === 'ready' && nextLesson.instance_id}
+							<a class="nav-button next lesson-card" data-testid="next-lesson-ready" href={`/learn/instances/${nextLesson.instance_id}`} onclick={() => void onLeaveForNextLesson?.()}>{nextLesson.number ? `Lesson ${nextLesson.number}` : 'Next lesson'} is ready &rarr;</a>
+						{:else if nextLesson?.state === 'pending'}
+							<p class="lesson-card pending" data-testid="next-lesson-pending">{nextLesson.number ? `Lesson ${nextLesson.number}` : 'The next lesson'} is being prepared</p>
+						{:else}
+							<button type="button" class="nav-button next" data-testid="finish-lesson" disabled={finishing} onclick={() => void finish()}>{finishing ? 'Finishing…' : 'Finish lesson'}</button>
+						{/if}
+					</nav>
+				{/if}
 			{/if}
 		{/if}
 	{:else}
@@ -150,6 +243,12 @@
 	.lesson-map li button > span:last-child { min-width: 0; overflow-wrap: break-word; line-height: 1.3; }
 	.map-number { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sand, #f3eee3); color: var(--ink, #1c2321); font-weight: 700; }
 	.lesson-map li button.active .map-number { background: var(--ink, #1c2321); color: var(--surface, #fff); }
+	.lesson-map li button:disabled { cursor: not-allowed; opacity: 0.5; }
+	.section-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+	.nav-button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 20px; border: 1px solid var(--ink, #1c2321); border-radius: 999px; background: var(--surface, #fff); color: var(--ink, #1c2321); font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+	.nav-button.next { background: var(--ink, #1c2321); color: var(--surface, #fff); margin-left: auto; }
+	.nav-button:disabled { opacity: 0.6; cursor: wait; }
+	.lesson-card.pending { margin: 0 0 0 auto; padding: 10px 4px; color: var(--muted, #5b6460); font-weight: 700; }
 	.lesson-sections { display: grid; gap: 72px; }
 	.lesson-section { display: grid; gap: 22px; min-width: 0; scroll-margin-top: 20px; }
 	.section-content { min-width: 0; }

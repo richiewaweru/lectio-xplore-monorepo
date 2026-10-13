@@ -4,6 +4,7 @@
 	import type { AttemptSubmitHandler } from '$lib/learn/interactions/types';
 	import type { StoredAttempt } from './api/attempts';
 	import InlineMarkup from '$lib/learn/document/renderers/InlineMarkup.svelte';
+	import type { NextLessonInfo } from './instance-topic';
 
 	interface Props {
 		document: LearnDocument;
@@ -13,6 +14,11 @@
 		preview?: boolean;
 		attemptsByInteraction?: Map<string, StoredAttempt>;
 		onSubmitAttempt?: AttemptSubmitHandler;
+		initialCompletedSectionIds?: string[];
+		initialCurrentSectionId?: string | null;
+		nextLesson?: NextLessonInfo | null;
+		onFinish?: () => void | Promise<void>;
+		onLeaveForNextLesson?: () => void | Promise<void>;
 	}
 
 	let {
@@ -20,7 +26,12 @@
 		preview = false,
 		attemptsByInteraction = new Map(),
 		onSubmitAttempt = undefined,
-		onSectionChange = undefined
+		onSectionChange = undefined,
+		initialCompletedSectionIds = [],
+		initialCurrentSectionId = null,
+		nextLesson = null,
+		onFinish = undefined,
+		onLeaveForNextLesson = undefined
 	}: Props = $props();
 
 	const isV2 = $derived(isLearnDocument(document));
@@ -46,6 +57,11 @@
 				{preview}
 				{attemptsByInteraction}
 				{onSubmitAttempt}
+				{initialCompletedSectionIds}
+				{initialCurrentSectionId}
+				{nextLesson}
+				{onFinish}
+				{onLeaveForNextLesson}
 				onSectionChange={preview ? undefined : onSectionChange}
 			/>
 		</main>

@@ -399,3 +399,48 @@ async def build_topics_payload(
     base["topics"] = topics
     base["other_lessons"] = other
     return base
+
+
+async def build_instance_topic(
+    session: AsyncSession, instance: LearningInstanceModel
+) -> dict[str, Any] | None:
+    """Topic context for one learner instance: ``None`` for unlinked releases.
+
+    Reuses ``build_topics_payload`` so the lesson state rule is not duplicated.
+    ``next_lesson`` is the lesson at the next position of the topic path, with state
+    ``ready`` (openable, ``instance_id`` set), ``pending`` (not released yet) or ``None``.
+    """
+    release = await session.get(LearnReleaseModel, instance.learn_release_id)
+    if release is None or not release.path_lesson_id:
+        return None
+    learner = await session.get(LearnerIdentityModel, instance.learner_id)
+    if learner is None:
+        return None
+    payload = await build_topics_payload(session, learner)
+    for topic in payload["topics"]:
+        lessons = topic["lessons"]
+        index = next(
+            (i for i, row in enumerate(lessons) if row["path_lesson_id"] == release.path_lesson_id),
+            None,
+        )
+        if index is None:
+            continue
+        nxt = lessons[index + 1] if index + 1 < len(lessons) else None
+        next_lesson: dict[str, Any] = {"state": None, "title": None, "instance_id": None}
+        if nxt is not None:
+            if nxt["state"] == "pending" or not nxt["instance_id"]:
+                next_lesson = {"state": "pending", "title": nxt["title"], "instance_id": None}
+            else:
+                next_lesson = {
+                    "state": "ready",
+                    "title": nxt["title"],
+                    "instance_id": nxt["instance_id"],
+                }
+        return {
+            "unit_id": topic["unit_id"],
+            "title": topic["title"],
+            "lesson_position": index + 1,
+            "lessons_total": topic["lessons_total"],
+            "next_lesson": next_lesson,
+        }
+    return None
