@@ -8,6 +8,7 @@ import pytest
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
+from tests.routes.test_learn_runtime import OTHER, TEACHER, _doc
 
 from app import app
 from core.database.models import (
@@ -22,7 +23,6 @@ from infra.auth.middleware import get_current_user, get_optional_user
 from infra.database.session import get_async_session
 from learn.runtime.runtime_models import LearningInstanceModel
 from learn.runtime.topic_service import LessonInput, compute_topic_lessons, is_touched
-from tests.routes.test_learn_runtime import OTHER, TEACHER, _doc
 
 # ---------------------------------------------------------------------------
 # Pure state rule

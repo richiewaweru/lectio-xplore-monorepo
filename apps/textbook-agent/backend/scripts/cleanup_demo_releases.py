@@ -33,21 +33,21 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from infra.database.models import (  # noqa: E402
+from infra.database.models import (
     ConceptEvidenceModel,
     ConceptStateModel,
     LearnAssignmentModel,
     LearnAssignmentRecipientModel,
     LearnAssignmentTargetModel,
-    LearnReleaseModel,
     LearnerAttemptModel,
     LearningInstanceModel,
+    LearnReleaseModel,
     LessonProgressModel,
 )
 
 R = LearnReleaseModel
 A = LearnAssignmentModel
-I = LearningInstanceModel  # noqa: E741
+I = LearningInstanceModel
 
 
 def _release_ids():

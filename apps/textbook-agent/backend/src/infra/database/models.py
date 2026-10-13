@@ -1486,3 +1486,22 @@ event.listen(GenerationEventModel, "before_update", _immutable_generation_event)
 event.listen(GenerationEventModel, "before_delete", _immutable_generation_event)
 event.listen(SharedLessonDocumentModel, "before_update", _reject_shared_lesson_document_update)
 event.listen(SharedLessonDocumentModel, "before_delete", _reject_shared_lesson_document_delete)
+
+
+class InterestMessageModel(Base):
+    """A visitor's "tell me what you're curious about" note from the demo.
+
+    No foreign keys: the learner may be deleted later and the note should survive.
+    """
+
+    __tablename__ = "interest_messages"
+    __table_args__ = (Index("ix_interest_messages_created_at", "created_at"),)
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    learner_id = Column(String, nullable=True)
+    display_name = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    message = Column(Text, nullable=False)
+    source = Column(String, nullable=False, default="home")  # home | topic
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
