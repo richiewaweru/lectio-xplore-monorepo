@@ -6,6 +6,7 @@ import { dev } from '$app/environment';
 export function isPublicLearnerPath(path: string, options: { devFixture?: boolean } = {}): boolean {
 	if ((options.devFixture ?? dev) && path.startsWith('/dev/shared-lesson/')) return true;
 	if (path === '/join' || path.startsWith('/join/')) return true;
+	if (path === '/resume' || path.startsWith('/resume/')) return true;
 	if (path.startsWith('/learn/home/')) return true;
 	if (path.startsWith('/learn/instances/')) return true;
 	return false;
