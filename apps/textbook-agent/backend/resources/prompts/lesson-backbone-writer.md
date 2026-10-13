@@ -29,13 +29,10 @@ Return JSON matching the supplied schema. Do not write any question text.
    - `purpose`: what the learner uses the figure for, naming what is compared,
      ordered, or read (e.g. 'compare what a sunflower and a hamster take in over
      28 days and how each changes').
-   - `mode`: the kind of figure. `"diagram"` for anything measured or
-     structured: shapes with lengths, graphs, number lines, charts, tables,
-     flows, cycles; give exact `data`. `"image"` for a realistic picture:
-     scenes, organisms, apparatus, places, objects whose look matters;
-     describe it fully in `must_show` (and `labels_required` for any labels);
-     `data` is optional. Choose `"diagram"` whenever the learner must read
-     exact values from the figure.
+   - `mode`: the kind of figure, one of `"render"`, `"diagram"` or `"image"`.
+     Choose it with the FIGURE KINDS card below. A `"render"` figure gives exact
+     `data`. A `"diagram"` or `"image"` figure describes the picture fully in
+     `must_show` (and `labels_required` for any labels); its `data` is optional.
    - `must_show`: the exact things that must be visible (shapes, values,
      relationships, positions). Required for `"image"` figures.
    - `labels_required`: every label, axis name, unit and value that must
@@ -48,7 +45,7 @@ Return JSON matching the supplied schema. Do not write any question text.
    table, chart, or measured diagram the lesson needs, each with complete
    `data`: every series is a list, all series in a figure have the same length,
    and every number in `labels_required` or `must_show` appears in `data`. Write
-   value labels as 'Day 28: 48 cm'. If the lesson needs to show quantities and
+   value labels as 'Day 28: 48 cm'. A `render` figure's series hold at most 12 values each and at most 8 series; if the case has more, summarise it (for example weekly instead of daily readings). If the lesson needs to show quantities and
    the case supports no such figure, the lesson shows none.
    Use an empty list when the scenario needs no figure.
 3. `variants`: zero, one or two variants for practice. A variant keeps the SAME
@@ -56,6 +53,15 @@ Return JSON matching the supplied schema. Do not write any question text.
    names or context details). `change` states what changed; `data` and
    `answer` are complete and exact for the variant, never "same as the anchor".
    A variant that needs a figure lists its own `figure_ids`.
+
+## Figure kinds
+
+FIGURE KINDS. Every figure has a `mode`:
+- render: drawn exactly and to scale: tables of values, bar charts, graphs of a rule (y = 2x + 1), number lines, shapes with given side lengths, simple step flows, and cycles. It cannot draw real objects such as plants, apparatus or organs.
+- diagram: a flat, labelled schematic of real things and their named parts. It may carry value labels as text (for example 'Height Day 28: 48 cm'), but it is not to scale: its numbers are words on the picture, not measurements to read off.
+- image: a realistic scene or object where what it looks like is the point. Little or no text.
+Choose in this order: if the learner must read exact values, lengths or positions from the figure, use render. If the learner must see real things and their named parts, use diagram. If only the look matters, use image. A figure whose data holds a series of values (a list of numbers) is always render.
+Examples: a table of seedling heights at each weekly check is render; two labelled seedlings side by side, one green and tall in the sun, one pale and short in the dark, with their heights written as labels, is diagram.
 
 ## Rules
 
@@ -73,7 +79,7 @@ Return JSON matching the supplied schema. Do not write any question text.
 - Do not write questions, prompts, answer options or feedback. Questions are
   written later against this backbone.
 - Do not name renderers, widgets, page objects or layout. `mode` is only the
-  kind of figure (diagram or image), never a tool.
+  kind of figure (render, diagram or image), never a tool.
 - Do not output ids for the anchor or the variants; they are assigned for you.
   Figure ids must be unique, and every id in `figure_ids` must exist in
   `figures`.
