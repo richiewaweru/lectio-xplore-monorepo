@@ -12,7 +12,14 @@ from __future__ import annotations
 
 from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictFloat,
+    StrictInt,
+    model_validator,
+)
 
 Family = Literal[
     "polygon_area",
@@ -21,6 +28,7 @@ Family = Literal[
     "function_graph",
     "flow",
     "cycle",
+    "table",
 ]
 FAMILIES: tuple[str, ...] = (
     "polygon_area",
@@ -29,6 +37,7 @@ FAMILIES: tuple[str, ...] = (
     "function_graph",
     "flow",
     "cycle",
+    "table",
 )
 
 Point = tuple[float, float]
@@ -238,6 +247,20 @@ class CycleSpec(_Spec):
     clockwise: bool = True
 
 
+# --- table ------------------------------------------------------------------------
+
+# Strict members keep 5 an int and 5.0 a float, and never turn "5" into a number:
+# a table shows exactly the values it was given.
+TableCell = StrictInt | StrictFloat | str
+
+
+class TableSpec(_Spec):
+    family: Literal["table"] = "table"
+    columns: list[ShortText] = Field(min_length=2, max_length=8)
+    rows: list[list[TableCell]] = Field(min_length=1, max_length=12)
+    unit_note: str | None = None
+
+
 # --- union and builder result ----------------------------------------------------------
 
 RenderSpec = Annotated[
@@ -248,6 +271,7 @@ RenderSpec = Annotated[
         FunctionGraphSpec,
         FlowSpec,
         CycleSpec,
+        TableSpec,
     ],
     Field(discriminator="family"),
 ]
@@ -263,6 +287,7 @@ class RenderSpecResult(_Spec):
         "function_graph",
         "flow",
         "cycle",
+        "table",
         "none",
     ]
     spec: RenderSpec | None = None
@@ -308,4 +333,6 @@ __all__ = [
     "RenderSpecError",
     "RenderSpecResult",
     "Segment",
+    "TableCell",
+    "TableSpec",
 ]

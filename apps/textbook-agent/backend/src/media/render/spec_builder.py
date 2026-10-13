@@ -43,6 +43,8 @@ curves [linear {form:"linear", m, c, label} | quadratic {form:"quadratic", a, b,
 edges [{start: id, end: id, label}]; direction "vertical"|"horizontal".
 - cycle: a repeating loop of stages.
   fields: nodes [text] (3-8, short); center_label; clockwise (bool).
+- table: show exact values in rows and columns.
+  fields: columns [text] (2-8); rows [[text|number]] (1-12, each the same length as columns); unit_note.
 """
 
 _EXAMPLE = """\
