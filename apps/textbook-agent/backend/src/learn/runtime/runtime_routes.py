@@ -754,7 +754,10 @@ async def api_learner_home(
             classes.append({"id": c.id, "name": c.name})
 
     due_soon = [i for i in instances if i.status == "active" and i.assignment_id]
-    in_progress = [i for i in instances if i.status == "active"]
+    due_soon_ids = {i.id for i in due_soon}
+    in_progress = [
+        i for i in instances if i.status == "active" and i.id not in due_soon_ids
+    ]
     completed = [i for i in instances if i.status == "completed"]
 
     async def _inst(i: LearningInstanceModel) -> dict[str, Any]:
