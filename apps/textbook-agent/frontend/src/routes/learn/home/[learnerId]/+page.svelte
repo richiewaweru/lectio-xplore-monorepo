@@ -4,6 +4,7 @@
 	import { browser } from '$app/environment';
 	import { learnerFetch } from '$lib/learn/student/api/learner-fetch';
 	import { ensureOk } from '$lib/api/errors';
+	import InterestCard from '$lib/learn/student/InterestCard.svelte';
 	import {
 		progressPercent,
 		topicAction,
@@ -11,8 +12,6 @@
 		type Topic
 	} from '$lib/learn/student/topics';
 
-	const CONTACT_HREF =
-		'mailto:rmainawaweru@gmail.com?subject=' + encodeURIComponent('Lectio for my own topic');
 
 	let ready = $state(false);
 	let error = $state<string | null>(null);
@@ -122,7 +121,7 @@
 			</section>
 		{/if}
 
-		<p class="contact"><a href={CONTACT_HREF}>Want this for your own topic? Get in touch</a></p>
+		<InterestCard source="home" />
 	{/if}
 </main>
 
@@ -235,13 +234,6 @@
 	.empty {
 		color: var(--ink-3);
 		font-size: 14px;
-	}
-	.contact {
-		margin: 0;
-		font-size: 14px;
-	}
-	.contact a {
-		color: var(--ink-2);
 	}
 	@media (max-width: 720px) {
 		h1 {

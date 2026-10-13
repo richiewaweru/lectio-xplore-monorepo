@@ -4,6 +4,8 @@
 	import { browser } from '$app/environment';
 	import { learnerFetch } from '$lib/learn/student/api/learner-fetch';
 	import { ensureOk } from '$lib/api/errors';
+	import InterestCard from '$lib/learn/student/InterestCard.svelte';
+	import { Dialog } from '$lib/ui';
 	import {
 		currentLessonId,
 		isOpenable,
@@ -15,6 +17,8 @@
 	let ready = $state(false);
 	let error = $state<string | null>(null);
 	let topic = $state<Topic | null>(null);
+	let inlineOpen = $state(false);
+	let dialogOpen = $state(false);
 
 	const learnerId = $derived(page.params.learnerId);
 	const unitId = $derived(page.params.unitId);
@@ -112,8 +116,30 @@
 				</li>
 			{/each}
 		</ol>
+
+		<div class="interest-desktop">
+			{#if inlineOpen}
+				<InterestCard source="topic" />
+			{:else}
+				<p class="interest-note">
+					Want this for your own topic?
+					<button type="button" class="link" onclick={() => (inlineOpen = true)}>Tell me</button>
+				</p>
+			{/if}
+		</div>
 	{/if}
 </main>
+
+{#if ready && topic}
+	<div class="interest-bar">
+		<button type="button" onclick={() => (dialogOpen = true)}>
+			Want this for your own topic? <span>Tell me</span>
+		</button>
+	</div>
+	<Dialog bind:open={dialogOpen} title="Tell me what you're curious about">
+		<InterestCard source="topic" framed={false} />
+	</Dialog>
+{/if}
 
 <style>
 	.topic-page {
@@ -263,5 +289,58 @@
 		margin: 0;
 		font-size: 12px;
 		color: var(--ink-3);
+	}
+	.interest-note {
+		margin: 0;
+		color: var(--ink-2);
+		font-size: 14px;
+	}
+	.link {
+		border: 0;
+		background: none;
+		padding: 0;
+		color: var(--accent);
+		font: inherit;
+		font-weight: 550;
+		cursor: pointer;
+		text-decoration: underline;
+	}
+	.interest-bar {
+		display: none;
+	}
+	@media (max-width: 640px) {
+		.interest-desktop {
+			display: none;
+		}
+		.topic-page {
+			padding-bottom: 88px;
+		}
+		.interest-bar {
+			display: block;
+			position: fixed;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			z-index: 20;
+			box-sizing: border-box;
+			border-top: 1px solid var(--rule);
+			background: var(--surface);
+			padding: 10px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+		}
+		.interest-bar button {
+			width: 100%;
+			border: 0;
+			background: none;
+			padding: 4px 0;
+			color: var(--ink-2);
+			font: inherit;
+			font-size: 14px;
+			text-align: left;
+			cursor: pointer;
+		}
+		.interest-bar span {
+			color: var(--accent);
+			font-weight: 550;
+		}
 	}
 </style>
