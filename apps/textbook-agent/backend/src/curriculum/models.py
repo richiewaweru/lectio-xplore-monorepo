@@ -441,6 +441,8 @@ class FigureProgressDTO(StrictModel):
     # True when the worker will requeue this failed figure on its own.
     auto_retrying: bool = False
     warnings: list[str] = Field(default_factory=list)
+    # Who drew the figure: data_table | llm_family:<name> | image | image_label_only | failed.
+    route: str | None = None
 
 
 class ArtifactProgressDTO(StrictModel):

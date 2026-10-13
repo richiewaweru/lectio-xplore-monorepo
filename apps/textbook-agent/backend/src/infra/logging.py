@@ -49,6 +49,10 @@ _OPTIONAL_LOG_FIELDS = (
     "purpose",
     "attempts",
     "warnings",
+    # One ``figure_route`` event per figure: who drew it, and from what.
+    "figure_id",
+    "route",
+    "data_present",
 )
 
 

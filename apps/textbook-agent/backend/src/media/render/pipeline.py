@@ -11,9 +11,10 @@ import logging
 from dataclasses import dataclass
 
 from media.generation.contracts import VisualGeneratorWorkOrder
-from media.render.contracts import RenderLayoutError, RenderSpecError
+from media.render.contracts import RenderLayoutError, RenderSpec, RenderSpecError
 from media.render.export import RenderedFigure, render_spec
 from media.render.families import RENDERERS
+from media.render.number_guard import allowed_numbers, format_number, unsupported_numbers
 from media.render.spec_builder import SpecBuilder
 from media.render.validate import cross_check_numbers, validate_spec
 
@@ -76,7 +77,72 @@ def _unavailable(
     return Unavailable(code, errors, attempts)
 
 
-async def render_figure(order: VisualGeneratorWorkOrder, *, builder: SpecBuilder) -> RenderOutcome:
+def _spec_errors(order: VisualGeneratorWorkOrder, spec: object) -> list[RenderSpecError]:
+    """Structural errors, then numbers that neither the data nor an approved fact holds."""
+    errors = validate_spec(spec)
+    if errors:
+        return errors
+    renderer = RENDERERS.get(str(getattr(spec, "family", "")))
+    if renderer is None:
+        return []
+    bad = unsupported_numbers(renderer.numbers(spec), allowed_numbers(order))
+    return [
+        RenderSpecError(
+            f"number_not_in_data:{format_number(value)}",
+            "spec",
+            f"{format_number(value)} is not in the figure's data or approved facts",
+        )
+        for value in bad
+    ]
+
+
+async def _draw(
+    order: VisualGeneratorWorkOrder, spec: object, family: str, attempts: int
+) -> Rendered | Unavailable:
+    try:
+        figure = await asyncio.to_thread(render_spec, spec)
+    except RenderLayoutError as exc:
+        return _unavailable(
+            order,
+            "render_layout_failed",
+            [RenderSpecError("render_layout_failed", "spec", str(exc)).as_dict()],
+            attempts,
+        )
+    warnings = cross_check_numbers(spec, [e.text for e in order.source_of_truth])
+    logger.info(
+        "render_figure_rendered",
+        extra={
+            "event": "render_figure_rendered",
+            "work_order_id": order.work_order_id,
+            "family": family,
+            "attempts": attempts,
+            "warnings": len(warnings),
+        },
+    )
+    return Rendered(figure=figure, spec=spec, warnings=warnings, attempts=attempts)
+
+
+async def render_figure(
+    order: VisualGeneratorWorkOrder,
+    *,
+    builder: SpecBuilder | None = None,
+    prebuilt: RenderSpec | None = None,
+) -> RenderOutcome:
+    """Render one figure.
+
+    A ``prebuilt`` spec (built by code from the figure's data) is tried first and
+    never repaired: if it fails validation or the number guard the figure is
+    ``Unavailable``. Otherwise ``builder`` writes the spec and the repair loop
+    applies. Every spec passes the number guard before it is drawn.
+    """
+    if prebuilt is not None:
+        errors = _spec_errors(order, prebuilt)
+        if errors:
+            return _unavailable(order, "render_spec_invalid", [e.as_dict() for e in errors], 1)
+        return await _draw(order, prebuilt, str(prebuilt.family), 1)
+    if builder is None:
+        return _fallback(order, "no_spec_builder")
+
     try:
         result = await builder.build(order)
     except Exception as exc:
@@ -92,29 +158,9 @@ async def render_figure(order: VisualGeneratorWorkOrder, *, builder: SpecBuilder
     repairs = 0
     while True:
         spec = result.spec
-        errors = validate_spec(spec)
+        errors = _spec_errors(order, spec)
         if not errors:
-            try:
-                figure = await asyncio.to_thread(render_spec, spec)
-            except RenderLayoutError as exc:
-                return _unavailable(
-                    order,
-                    "render_layout_failed",
-                    [RenderSpecError("render_layout_failed", "spec", str(exc)).as_dict()],
-                    attempts,
-                )
-            warnings = cross_check_numbers(spec, [e.text for e in order.source_of_truth])
-            logger.info(
-                "render_figure_rendered",
-                extra={
-                    "event": "render_figure_rendered",
-                    "work_order_id": order.work_order_id,
-                    "family": family,
-                    "attempts": attempts,
-                    "warnings": len(warnings),
-                },
-            )
-            return Rendered(figure=figure, spec=spec, warnings=warnings, attempts=attempts)
+            return await _draw(order, spec, family, attempts)
 
         error_dicts = [e.as_dict() for e in errors]
         if repairs >= MAX_REPAIRS:

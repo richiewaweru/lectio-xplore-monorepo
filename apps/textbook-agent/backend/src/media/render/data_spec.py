@@ -74,7 +74,7 @@ def spec_from_data(
     if not all(_cell_ok(x) for v in series for x in v):
         return None
     labels = [str(label).strip() for label in labels_required or []]
-    if len(labels) == len(data) and all(labels):
+    if len(labels) == len(data) and all(labels) and all(len(h) <= _HEADER_MAX for h in labels):
         headers = labels
     else:
         headers = [readable_key(str(key)) for key in data]

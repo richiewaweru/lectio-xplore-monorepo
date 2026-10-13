@@ -122,6 +122,9 @@ class ReadyFigureMediaResult(BaseModel):
     status: str = "ready"
     #: Visual QC verdict carried from the executor block (never inferred).
     qc_state: QcState = "unreviewed"
+    #: Which route drew the figure (see ``GeneratedVisualBlock.render_route``).
+    #: Omitted from the durable output while unset.
+    render_route: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class FigureMediaResult(BaseModel):
@@ -713,6 +716,7 @@ def bind_generated_figure(
         source_facts=tuple(work.work_order.source_of_truth),
         status=block.status,
         qc_state=block.qc_state,
+        render_route=block.render_route,
     )
 
 

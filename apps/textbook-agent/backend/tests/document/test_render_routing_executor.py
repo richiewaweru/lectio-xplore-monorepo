@@ -29,7 +29,7 @@ def make_order(text: str = FULL_TEXT, mode: str = "diagram") -> VisualGeneratorW
             attaches_to="s1",
             mode=mode,
             purpose="Show the L-shaped room",
-            must_show=["every side length"],
+            must_show=["every side length", "sides 9 m, 7 m, 3 m, 2 m, 5 m and 6 m"],
         ),
         source_of_truth=[SourceOfTruthEntry(key="caption", text=text)],
     )

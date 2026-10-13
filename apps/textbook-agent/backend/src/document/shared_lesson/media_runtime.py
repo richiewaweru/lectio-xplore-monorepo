@@ -657,7 +657,7 @@ async def _settle_unavailable_after_rollback(
         job.work,
         error_code=failure.error_code,
         reason=safe_summary_for_code(failure.error_code)
-        if failure.error_code.startswith(("provider_", "render_"))
+        if failure.error_code.startswith(("provider_", "render_", "figure_"))
         else failure.safe_summary,
         attempts=max(attempt, 1),
     )

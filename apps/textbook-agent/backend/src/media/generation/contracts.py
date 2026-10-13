@@ -49,6 +49,10 @@ class GeneratedVisualBlock(BaseModel):
     qc_correction_hint: str | None = None
     qc_trace_id: str | None = None
     provider_text: str | None = None
+    # Which route drew the figure (data_table | llm_family:<name> | image |
+    # image_label_only | failed). Omitted from dumps while unset, so stored blocks
+    # are unchanged.
+    render_route: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class ExecutorOutcome(BaseModel):

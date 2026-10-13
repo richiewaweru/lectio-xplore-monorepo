@@ -68,8 +68,11 @@ def test_too_many_columns_or_rows_return_none() -> None:
     assert spec_from_data({"a": list(range(13)), "b": list(range(13))}, [], []) is None
 
 
-def test_header_over_limit_returns_none() -> None:
-    assert spec_from_data({"a": [1, 2], "b": [3, 4]}, ["ok", "L" * 41], []) is None
+def test_label_over_header_limit_falls_back_to_readable_keys() -> None:
+    spec = spec_from_data({"a": [1, 2], "b_cm": [3, 4]}, ["ok", "L" * 41], [])
+    assert spec is not None
+    assert spec.columns == ["A", "B (cm)"]
+    assert spec_from_data({"a" * 41: [1, 2], "b": [3, 4]}, [], []) is None
 
 
 def test_is_data_figure() -> None:
