@@ -407,9 +407,13 @@ async def api_get_instance(
 
     contracts = _contracts_index(document)
     scores = score_split(list(attempts), contracts_by_interaction=contracts)
+    from learn.runtime.topic_service import build_instance_topic
+
+    topic = await build_instance_topic(session, instance)
     return {
         "id": instance.id,
         "learner_id": instance.learner_id,
+        "topic": topic,
         "learn_release_id": instance.learn_release_id,
         "assignment_id": instance.assignment_id,
         "status": instance.status,

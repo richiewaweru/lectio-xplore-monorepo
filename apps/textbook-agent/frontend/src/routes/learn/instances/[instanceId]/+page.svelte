@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { learnerFetch } from '$lib/learn/student/api/learner-fetch';
+	import { goto } from '$app/navigation';
+	import { getLearnerToken, learnerFetch } from '$lib/learn/student/api/learner-fetch';
+	import { nextLessonFromTopic, type InstanceTopic } from '$lib/learn/student/instance-topic';
 	import { ensureOk } from '$lib/api/errors';
 	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
 	import {
@@ -21,6 +22,16 @@
 	let releaseId = $state<string | null>(null);
 	let attemptsByInteraction = $state(new Map<string, StoredAttempt>());
 	let completing = $state(false);
+	let isLearner = $state(false);
+	let learnerId = $state<string | null>(null);
+	let topic = $state<InstanceTopic | null>(null);
+	let completedSectionIds = $state<string[]>([]);
+	let currentSectionId = $state<string | null>(null);
+
+	const backHref = $derived(
+		!learnerId ? null : topic ? `/learn/home/${learnerId}/topics/${topic.unit_id}` : `/learn/home/${learnerId}`
+	);
+	const backLabel = $derived(topic ? topic.title : 'Home');
 
 	const instanceId = $derived(page.params.instanceId);
 
@@ -32,14 +43,28 @@
 		status = instance.status;
 		scoreLine = `graded ${instance.graded?.score_earned ?? instance.score_earned}/${instance.graded?.score_possible ?? instance.score_possible} · practice ${instance.practice?.score_earned ?? 0}/${instance.practice?.score_possible ?? 0}`;
 		releaseId = instance.learn_release_id;
+		learnerId = instance.learner_id ?? null;
+		topic = (instance.topic ?? null) as InstanceTopic | null;
+		completedSectionIds = (instance.progress?.completed_section_ids ?? []) as string[];
+		currentSectionId = instance.current_section_id ?? null;
 		attemptsByInteraction = latestAttemptByInteraction(
 			(instance.attempts ?? []) as StoredAttempt[]
 		);
 		return instance;
 	}
 
-	onMount(async () => {
-		if (!browser || !instanceId) return;
+	// Re-runs when the instance id changes (next-lesson link keeps this page mounted).
+	$effect(() => {
+		const id = instanceId;
+		if (!browser || !id) return;
+		isLearner = !!getLearnerToken();
+		ready = false;
+		error = null;
+		document = null;
+		void loadInstance();
+	});
+
+	async function loadInstance() {
 		try {
 			const instance = await refreshInstance();
 			const releaseResp = await learnerFetch(`/api/v1/learn/releases/${instance.learn_release_id}`);
@@ -58,7 +83,7 @@
 			error = err instanceof Error ? err.message : 'Failed to load instance';
 			ready = true;
 		}
-	});
+	}
 
 	async function onSubmitAttempt(args: {
 		interactionId: string;
@@ -99,6 +124,11 @@
 		}
 	}
 
+	async function finishLesson() {
+		await completeLesson();
+		if (status === 'completed' && backHref) await goto(backHref);
+	}
+
 	async function markSectionVisited(sectionId: string) {
 		if (!instanceId) return;
 		const response = await learnerFetch(`/api/v1/learn/instances/${instanceId}/sections/complete`, {
@@ -112,25 +142,40 @@
 </script>
 
 <main class="instance-page">
-	<div class="banner">
-		<p class="eyebrow">Learning instance · {status}</p>
-		<p class="lede">Score {scoreLine}.</p>
-		{#if status === 'completed'}
-			<p class="lede"><a href={`/learn/instances/${instanceId}/outcome`}>View outcome</a></p>
+	{#if isLearner}
+		{#if backHref}
+			<nav class="back-nav"><a class="back-link" data-testid="topic-back-link" href={backHref}>&lsaquo; {backLabel}</a></nav>
 		{/if}
-	</div>
+	{:else}
+		<div class="banner">
+			<p class="eyebrow">Learning instance · {status}</p>
+			<p class="lede">Score {scoreLine}.</p>
+			{#if status === 'completed'}
+				<p class="lede"><a href={`/learn/instances/${instanceId}/outcome`}>View outcome</a></p>
+			{/if}
+		</div>
+	{/if}
 	{#if !ready}
 		<p class="lede">Loading…</p>
 	{:else if error}
 		<p class="lede error">{error}</p>
 	{:else if document}
-		<StudentLessonShell
-			{document}
-			{attemptsByInteraction}
-			{onSubmitAttempt}
-			onSectionChange={markSectionVisited}
-		/>
-		{#if status === 'completed'}
+		{#key instanceId}
+			<StudentLessonShell
+				{document}
+				{attemptsByInteraction}
+				{onSubmitAttempt}
+				onSectionChange={markSectionVisited}
+				initialCompletedSectionIds={completedSectionIds}
+				initialCurrentSectionId={currentSectionId}
+				nextLesson={nextLessonFromTopic(topic)}
+				onFinish={finishLesson}
+				onLeaveForNextLesson={completeLesson}
+			/>
+		{/key}
+		{#if isLearner}
+			<!-- Learners finish from the last section of the player. -->
+		{:else if status === 'completed'}
 			<p class="completion-state">Completed · <a href={`/learn/instances/${instanceId}/outcome`}>View outcome</a></p>
 		{:else}
 			<div class="completion-actions">
@@ -152,6 +197,19 @@
 		max-width: 1080px;
 		margin: 0 auto;
 		padding: 20px 18px 0;
+	}
+	.back-nav {
+		max-width: 1080px;
+		margin: 0 auto;
+		padding: 16px 24px 0;
+	}
+	.back-link {
+		color: var(--ink-2);
+		font-size: 14px;
+		text-decoration: none;
+	}
+	.back-link:hover {
+		text-decoration: underline;
 	}
 	.eyebrow {
 		margin: 0 0 6px;
