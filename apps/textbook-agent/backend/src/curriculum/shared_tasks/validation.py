@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -336,6 +337,8 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
             for value in values
         ):
             errors.append(f"task {task.id!r} missing-values response requires values")
+        elif "sentence" in response:
+            errors.extend(_missing_values_sentence_errors(task, response["sentence"], len(values)))
 
     if (
         task.role == "predict"
@@ -487,6 +490,28 @@ def validate_task_response_contract(task: SharedTaskSpec) -> list[str]:
             response.get("answers"), list
         ):
             errors.append(f"task {task.id!r} missing-values response requires values")
+    return errors
+
+
+def _missing_values_sentence_errors(task: SharedTaskSpec, sentence: Any, count: int) -> list[str]:
+    """Check that a fill-in sentence carries each [1]..[n] gap marker exactly once."""
+
+    if not isinstance(sentence, str) or not sentence.strip():
+        return [f"task {task.id!r} missing-values sentence must be a non-empty string"]
+    found = [int(match) for match in re.findall(r"\[(\d+)\]", sentence)]
+    errors: list[str] = []
+    for index in range(1, count + 1):
+        seen = found.count(index)
+        if seen == 0:
+            errors.append(f"task {task.id!r} missing-values sentence is missing gap marker [{index}]")
+        elif seen > 1:
+            errors.append(f"task {task.id!r} missing-values sentence repeats gap marker [{index}]")
+    extra = sorted({marker for marker in found if marker < 1 or marker > count})
+    if extra:
+        errors.append(
+            f"task {task.id!r} missing-values sentence has gap markers "
+            f"{', '.join(f'[{marker}]' for marker in extra)} beyond the {count} values"
+        )
     return errors
 
 

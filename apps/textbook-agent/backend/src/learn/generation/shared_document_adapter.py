@@ -251,6 +251,8 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
             "case_sensitive": evaluation.get("case_sensitive", False),
             "blank_count": len(answers) if isinstance(answers, list) else 1,
         }
+        if isinstance(response.get("sentence"), str) and response["sentence"].strip():
+            config["sentence"] = response["sentence"]
         if evaluation_type == "rubric":
             config["rubric_criteria"] = _rubric_review(evaluation, task_id=task.id)[0]
         return config
