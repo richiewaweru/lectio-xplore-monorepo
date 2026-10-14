@@ -21,6 +21,37 @@ from .models import (
 _FEEDBACK_META_KEYS = frozenset({"correct", "incorrect", "partial", "by_option"})
 
 
+ALLOWED_EVALUATION_TYPES: dict[str, frozenset[str]] = {
+    "single_choice": frozenset({"exact_match", "choice_keys"}),
+    "multiple_choice": frozenset({"exact_match", "choice_keys"}),
+    "missing_values": frozenset({"rubric", "exact_match", "accepted_answers"}),
+    "classification": frozenset({"rubric", "mapping"}),
+    "matching": frozenset({"rubric", "mapping", "exact_match"}),
+    "ordered_items": frozenset({"rubric", "ordered_match", "exact_match"}),
+    "number": frozenset({"rubric", "numeric", "exact_match"}),
+    "text": frozenset({"rubric", "accepted_answers", "teacher_review", "exact_match"}),
+}
+
+
+def _finite_number(value: object) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+
+
+def _parses_as_finite_number(value: object) -> bool:
+    if _finite_number(value):
+        return True
+    if isinstance(value, str) and value.strip():
+        try:
+            return math.isfinite(float(value.strip()))
+        except ValueError:
+            return False
+    return False
+
+
 def _present_feedback(feedback: dict[str, Any] | None) -> dict[str, Any]:
     """Treat explicit ``null`` feedback entries as omitted rather than blank."""
     if not isinstance(feedback, dict):
@@ -329,17 +360,7 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
     elif set(task.evaluation) - TASK_EVALUATION_FIELDS[evaluation_type]:
         unexpected = sorted(set(task.evaluation) - TASK_EVALUATION_FIELDS[evaluation_type])
         errors.append(f"task {task.id!r} evaluation contains unsupported fields {unexpected}")
-    allowed_evaluation_types = {
-        "single_choice": {"exact_match", "choice_keys"},
-        "multiple_choice": {"exact_match", "choice_keys"},
-        "missing_values": {"rubric", "exact_match", "accepted_answers"},
-        "classification": {"rubric", "mapping"},
-        "matching": {"rubric", "mapping", "exact_match"},
-        "ordered_items": {"rubric", "ordered_match", "exact_match"},
-        "number": {"rubric", "numeric", "exact_match"},
-        "text": {"rubric", "accepted_answers", "teacher_review", "exact_match"},
-    }
-    if response_type in allowed_evaluation_types and evaluation_type not in allowed_evaluation_types[response_type]:
+    if response_type in ALLOWED_EVALUATION_TYPES and evaluation_type not in ALLOWED_EVALUATION_TYPES[response_type]:
         errors.append(
             f"task {task.id!r} evaluation type {evaluation_type!r} is incompatible with {response_type!r}"
         )
@@ -353,6 +374,26 @@ def validate_final_task_response_contract(task: SharedTaskSpec) -> list[str]:
         answer = task.evaluation.get("answer", task.evaluation.get("correct_value"))
         if answer is None or (isinstance(answer, str) and not answer.strip()):
             errors.append(f"task {task.id!r} exact-match evaluation requires an answer")
+        elif response_type == "number":
+            if not _parses_as_finite_number(answer):
+                errors.append(f"task {task.id!r} exact-match number answer must be a finite number")
+        elif response_type == "text":
+            if not (
+                (isinstance(answer, str) and answer.strip()) or _finite_number(answer)
+            ):
+                errors.append(
+                    f"task {task.id!r} exact-match text answer must be a non-empty string or finite number"
+                )
+        elif response_type == "missing_values":
+            response_values = response.get("values", response.get("answers"))
+            if answer != response_values:
+                errors.append(f"task {task.id!r} exact-match evaluation must preserve missing-value answers")
+        elif response_type == "matching":
+            if answer != response.get("pairs"):
+                errors.append(f"task {task.id!r} exact-match evaluation must preserve matching pairs")
+        elif response_type == "ordered_items":
+            if answer != response.get("correct_order", response.get("order")):
+                errors.append(f"task {task.id!r} exact-match evaluation must preserve the answer order")
     elif evaluation_type == "choice_keys" and response_type not in {"single_choice", "multiple_choice"}:
         correct = task.evaluation.get("correct")
         if not isinstance(correct, list) or not correct:
@@ -665,6 +706,7 @@ def assert_task_preserved(realized: Mapping[str, object], task: SharedTaskSpec) 
 
 
 __all__ = [
+    "ALLOWED_EVALUATION_TYPES",
     "assert_task_preserved",
     "assert_task_response_contract",
     "finalize_shared_tasks",

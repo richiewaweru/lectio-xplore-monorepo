@@ -406,11 +406,37 @@ def evaluate_sequence(
     )
 
 
+def _validate_numeric_prediction(response: Mapping[str, Any]) -> None:
+    given = response.get("value")
+    if not isinstance(given, (int, float)) or isinstance(given, bool) or not _isfinite(given):
+        raise InteractionResponseError(
+            "numeric response value must be a finite number", "invalid-response"
+        )
+
+
+def _prediction_saved(feedback: Mapping[str, Any]) -> EvaluationResult:
+    saved = str(feedback.get("saved") or "Prediction saved.")
+    return EvaluationResult(
+        outcome="pending-review",
+        score_earned=0.0,
+        score_possible=0.0,
+        feedback=saved,
+        details={"mode": "prediction"},
+    )
+
+
 def evaluate_interaction(contract: Mapping[str, Any], response: Any) -> EvaluationResult:
     kind = str(contract.get("kind") or "")
     config = contract.get("config") if isinstance(contract.get("config"), dict) else {}
     feedback = contract.get("feedback") if isinstance(contract.get("feedback"), dict) else {}
     response_map = response if isinstance(response, dict) else {}
+
+    # A numeric prediction may carry no answer key (a guess has no right answer),
+    # so the numeric evaluator cannot run. Validate the response shape only.
+    is_prediction = contract.get("role") == "predict"
+    if is_prediction and kind == "numeric" and config.get("value") is None:
+        _validate_numeric_prediction(response_map)
+        return _prediction_saved(feedback)
 
     if kind in {"choice", "image-hotspot"}:
         result = evaluate_choice(config, response_map, feedback)
@@ -432,15 +458,8 @@ def evaluate_interaction(contract: Mapping[str, Any], response: Any) -> Evaluati
     # A prediction still validates the submitted response, but it is an
     # ungraded commitment. Reuse the existing pending-review representation so
     # no learner-facing right/wrong state or score is produced.
-    if contract.get("role") == "predict":
-        saved = str(feedback.get("saved") or "Prediction saved.")
-        return EvaluationResult(
-            outcome="pending-review",
-            score_earned=0.0,
-            score_possible=0.0,
-            feedback=saved,
-            details={"mode": "prediction"},
-        )
+    if is_prediction:
+        return _prediction_saved(feedback)
     return result
 
 

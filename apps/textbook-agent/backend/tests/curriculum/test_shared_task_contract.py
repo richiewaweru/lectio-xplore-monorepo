@@ -268,3 +268,46 @@ def test_passive_actions_have_meaning_and_never_get_shared_tasks() -> None:
 
     assert all(learner_action_meaning(block.learner_action.action)[0] == "passive" for block in plan.sections[0].blocks)
     assert finalize_shared_tasks(plan, []) == []
+
+
+_PAIRS = [{"left": "a", "right": "b"}]
+_ORDER_RESPONSE = {"type": "ordered_items", "items": ["a", "b"], "correct_order": ["b", "a"]}
+
+_EXACT_MATCH_CASES = [
+    # (action, response, good evaluation, bad evaluation, error fragment)
+    ("enter-number", {"type": "number"}, {"type": "exact_match", "answer": 4.5},
+     {"type": "exact_match", "answer": "four"}, "finite number"),
+    ("enter-number", {"type": "number"}, {"type": "exact_match", "correct_value": "4.5"},
+     {"type": "exact_match", "answer": True}, "finite number"),
+    ("enter-number", {"type": "number"}, {"type": "exact_match", "answer": 3},
+     {"type": "exact_match", "answer": float("inf")}, "finite number"),
+    ("enter-text", {"type": "text"}, {"type": "exact_match", "answer": "photosynthesis"},
+     {"type": "exact_match", "answer": ["x"]}, "non-empty string or finite number"),
+    ("enter-text", {"type": "text"}, {"type": "exact_match", "answer": 12},
+     {"type": "exact_match", "answer": True}, "non-empty string or finite number"),
+    ("complete-missing-values", {"type": "missing_values", "values": ["4", "5"]},
+     {"type": "exact_match", "answer": ["4", "5"]},
+     {"type": "exact_match", "answer": ["4", "6"]}, "missing-value answers"),
+    ("match-pairs", {"type": "matching", "pairs": _PAIRS},
+     {"type": "exact_match", "answer": _PAIRS},
+     {"type": "exact_match", "answer": [{"left": "a", "right": "c"}]}, "matching pairs"),
+    ("order-items", _ORDER_RESPONSE,
+     {"type": "exact_match", "answer": ["b", "a"]},
+     {"type": "exact_match", "answer": ["a", "b"]}, "answer order"),
+]
+
+
+@pytest.mark.parametrize(("action", "response", "good", "bad", "fragment"), _EXACT_MATCH_CASES)
+def test_exact_match_answer_must_fit_the_response_shape(action, response, good, bad, fragment) -> None:
+    plan = _plan([action])
+    block = plan.sections[0].blocks[0]
+
+    assert validate_final_task_response_contract(_task(plan, block, response=response, evaluation=good)) == []
+    errors = validate_final_task_response_contract(_task(plan, block, response=response, evaluation=bad))
+    assert any(fragment in error for error in errors), errors
+
+
+def test_allowed_evaluation_types_is_exported_and_covers_every_response_type() -> None:
+    from curriculum.shared_tasks.validation import ALLOWED_EVALUATION_TYPES
+
+    assert set(ALLOWED_EVALUATION_TYPES) == set(ACTION_RESPONSE_TYPES.values())

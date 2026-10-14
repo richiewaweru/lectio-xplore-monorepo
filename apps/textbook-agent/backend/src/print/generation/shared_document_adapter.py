@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from curriculum.shared_tasks.models import SharedTaskSpec
+from curriculum.shared_tasks.ordering import scramble_for_display
 from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.inline import parse_inline_markup
@@ -312,7 +313,6 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
         values = response.get("values", response.get("answers"))
         if not isinstance(values, list) or not values:
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has no fill-in prompts")
-        prompt += "\nComplete each value: " + ", ".join(str(value) for value in values)
         if evaluation.get("type") == "accepted_answers":
             accepted = evaluation.get("accepted_answers")
             if isinstance(accepted, list):
@@ -355,9 +355,11 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
         order = evaluation.get("correct_order", evaluation.get("order"))
         if order is None:
             order = evaluation.get("answer", evaluation.get("correct_value"))
+        if order is None:
+            order = response.get("correct_order", response.get("order"))
         if not isinstance(items, list) or not items or not isinstance(order, list) or not order:
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has invalid ordering data")
-        prompt += "\nPut these in order: " + "; ".join(map(str, items))
+        prompt += "\nPut these in order: " + "; ".join(map(str, scramble_for_display(task.id, items, order)))
         answer = " → ".join(map(str, order))
     elif response_type == "number":
         unit = response.get("unit") or evaluation.get("unit")

@@ -7,11 +7,13 @@ existing Learn interaction contract; this module never authors content.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from curriculum.shared_tasks.models import ACTION_RESPONSE_TYPES, SharedTaskSpec
+from curriculum.shared_tasks.ordering import scramble_for_display
 from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.media import (
@@ -128,6 +130,77 @@ def _choice_correct_ids(evaluation: Mapping[str, Any], *, task_id: str) -> list[
     return list(values)
 
 
+def _rubric_review(
+    evaluation: Mapping[str, Any], *, task_id: str
+) -> tuple[str | list[str], str]:
+    """Return (preserved criteria, review guidance) for a rubric evaluation."""
+    criteria = evaluation.get("criteria") or evaluation.get("rubric")
+    if isinstance(criteria, str):
+        if not criteria.strip():
+            raise SharedDocumentLearnMappingError(
+                f"task {task_id!r} rubric evaluation requires non-empty text criteria"
+            )
+        return criteria, criteria
+    if isinstance(criteria, list) and criteria and all(
+        isinstance(item, str) and item.strip() for item in criteria
+    ):
+        preserved = list(criteria)
+        guidance = "Review the learner response against these rubric criteria:\n" + "\n".join(
+            f"- {criterion}" for criterion in preserved
+        )
+        return preserved, guidance
+    raise SharedDocumentLearnMappingError(
+        f"task {task_id!r} rubric evaluation requires non-empty text criteria"
+    )
+
+
+def _coerce_finite_number(value: Any) -> int | float | None:
+    """Return a finite int/float for numbers or numeric strings, else None."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return value if math.isfinite(value) else None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            number = float(text)
+        except ValueError:
+            return None
+        if not math.isfinite(number):
+            return None
+        try:
+            return int(text)
+        except ValueError:
+            return number
+    return None
+
+
+def _learn_kind_and_config(task: SharedTaskSpec) -> tuple[str, dict[str, Any]]:
+    """Decide the Learn interaction kind per task, then build its config.
+
+    The default kind comes from the response type.  A number response graded by
+    a rubric has no numeric answer: it becomes a teacher-reviewed short response
+    unless it is a prediction (a guess is saved ungraded, so it keeps the
+    numeric input without an answer key).
+    """
+    response_type = str(task.response.get("type") or "")
+    kind = _INTERACTION_KINDS.get(response_type)
+    if kind is None:
+        raise SharedDocumentLearnMappingError(
+            f"task {task.id!r} action has no existing Learn interaction mapping"
+        )
+    evaluation = task.evaluation if isinstance(task.evaluation, Mapping) else {}
+    if (
+        kind == "numeric"
+        and str(evaluation.get("type") or "") == "rubric"
+        and task.role != "predict"
+    ):
+        kind = "short-response"
+    return kind, _learn_config(task, kind)
+
+
 def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]:
     response = _mapping(task.response, field="response", task_id=task.id)
     evaluation = _mapping(task.evaluation, field="evaluation", task_id=task.id)
@@ -155,6 +228,8 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
             answers = evaluation.get("accepted_answers")
         elif evaluation_type == "exact_match":
             answers = evaluation.get("answer", evaluation.get("correct_value"))
+        elif evaluation_type == "rubric":
+            answers = response_answers
         else:
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} evaluation is not supported by Learn fill-blank interaction"
@@ -163,57 +238,56 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} fill-blank answers cannot be represented exactly in Learn"
             )
-        return {
+        config = {
             "answers": answers,
             "answer_lines": response.get("answer_lines"),
             "case_sensitive": evaluation.get("case_sensitive", False),
         }
+        if evaluation_type == "rubric":
+            config["rubric_criteria"] = _rubric_review(evaluation, task_id=task.id)[0]
+        return config
     if interaction_kind == "numeric":
+        is_prediction = task.role == "predict"
+        rubric_criteria: str | list[str] | None = None
         if evaluation_type == "numeric":
             value = evaluation.get("value")
             tolerance = evaluation.get("tolerance")
             unit = evaluation.get("unit")
         elif evaluation_type == "exact_match":
-            value = evaluation.get("answer", evaluation.get("correct_value"))
+            value = _coerce_finite_number(evaluation.get("answer", evaluation.get("correct_value")))
             tolerance = 0
+            unit = response.get("unit")
+        elif evaluation_type == "rubric" and is_prediction:
+            # A prediction has no right answer: keep the numeric input but
+            # carry no answer key.  The runtime saves it ungraded.
+            rubric_criteria, _ = _rubric_review(evaluation, task_id=task.id)
+            value = None
+            tolerance = None
             unit = response.get("unit")
         else:
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} evaluation is not supported by Learn numeric interaction"
             )
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise SharedDocumentLearnMappingError(f"task {task.id!r} has no numeric Learn answer")
-        return {
-            "value": value,
-            "tolerance": tolerance,
-            "unit": unit,
-            **{
-                key: response[key]
-                for key in ("min", "max", "step", "precision", "answer_lines")
-                if key in response
-            },
+        extras = {
+            key: response[key]
+            for key in ("min", "max", "step", "precision", "answer_lines")
+            if key in response
         }
+        if value is None and is_prediction:
+            config = {"unit": unit, **extras}
+            if rubric_criteria is not None:
+                config["rubric_criteria"] = rubric_criteria
+            return config
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+        ):
+            raise SharedDocumentLearnMappingError(f"task {task.id!r} has no numeric Learn answer")
+        return {"value": value, "tolerance": tolerance, "unit": unit, **extras}
     if interaction_kind == "short-response":
         if evaluation_type == "rubric":
-            criteria = evaluation.get("criteria") or evaluation.get("rubric")
-            if isinstance(criteria, str):
-                if not criteria.strip():
-                    raise SharedDocumentLearnMappingError(
-                        f"task {task.id!r} rubric evaluation requires non-empty text criteria"
-                    )
-                preserved_criteria: str | list[str] = criteria
-                guidance = criteria
-            elif isinstance(criteria, list) and criteria and all(
-                isinstance(item, str) and item.strip() for item in criteria
-            ):
-                preserved_criteria = list(criteria)
-                guidance = "Review the learner response against these rubric criteria:\n" + "\n".join(
-                    f"- {criterion}" for criterion in preserved_criteria
-                )
-            else:
-                raise SharedDocumentLearnMappingError(
-                    f"task {task.id!r} rubric evaluation requires non-empty text criteria"
-                )
+            preserved_criteria, guidance = _rubric_review(evaluation, task_id=task.id)
             return {
                 "evaluation": "teacher-review",
                 "review_guidance": guidance,
@@ -228,7 +302,11 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
             answers = evaluation.get("accepted_answers")
         elif evaluation_type == "exact_match":
             answer = evaluation.get("answer", evaluation.get("correct_value"))
-            answers = [answer] if isinstance(answer, str) else None
+            if isinstance(answer, bool):
+                answer = None
+            elif isinstance(answer, (int, float)):
+                answer = str(answer) if math.isfinite(answer) else None
+            answers = [answer] if isinstance(answer, str) and answer.strip() else None
         else:
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} evaluation is not supported by Learn text interaction"
@@ -252,7 +330,7 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
         items = response.get("items")
         categories = response.get("categories")
         if (
-            evaluation_type != "mapping"
+            evaluation_type not in {"mapping", "rubric"}
             or not isinstance(placements, Mapping)
             or not isinstance(items, list)
             or not isinstance(categories, list)
@@ -260,33 +338,49 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} classification data cannot be mapped to Learn"
             )
-        return {
+        try:
+            classify_pairs = [{"left": item, "right": placements[item]} for item in items]
+        except KeyError as exc:
+            raise SharedDocumentLearnMappingError(
+                f"task {task.id!r} classification data cannot be mapped to Learn"
+            ) from exc
+        config = {
             "items": items,
             "categories": [{"id": item, "label": item} for item in categories],
-            "pairs": [{"left": item, "right": placements[item]} for item in items],
+            "pairs": classify_pairs,
         }
+        if evaluation_type == "rubric":
+            config["rubric_criteria"] = _rubric_review(evaluation, task_id=task.id)[0]
+        return config
     if interaction_kind == "match-pairs":
         pairs = response.get("pairs")
         evaluation_pairs = evaluation.get("pairs", evaluation.get("correct_pairs"))
         if evaluation_type == "exact_match":
             evaluation_pairs = evaluation.get("answer", evaluation.get("correct_value"))
+        elif evaluation_type == "rubric":
+            evaluation_pairs = pairs
         if (
             not isinstance(pairs, list)
-            or evaluation_type not in {"mapping", "exact_match"}
+            or evaluation_type not in {"mapping", "exact_match", "rubric"}
             or evaluation_pairs != pairs
         ):
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} matching evaluation cannot be mapped to Learn"
             )
-        return {"pairs": pairs}
+        config = {"pairs": pairs}
+        if evaluation_type == "rubric":
+            config["rubric_criteria"] = _rubric_review(evaluation, task_id=task.id)[0]
+        return config
     if interaction_kind == "sequence":
-        if evaluation_type not in {"ordered_match", "exact_match"}:
+        if evaluation_type not in {"ordered_match", "exact_match", "rubric"}:
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} ordering evaluation cannot be mapped to Learn"
             )
         order = evaluation.get("correct_order", evaluation.get("order"))
         if order is None and evaluation_type == "exact_match":
             order = evaluation.get("answer", evaluation.get("correct_value"))
+        if evaluation_type == "rubric":
+            order = response.get("correct_order", response.get("order"))
         if not isinstance(order, list) or not order:
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} has no Learn expected ordering"
@@ -296,7 +390,10 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} expected ordering cannot be represented exactly in Learn"
             )
-        return {"items": response.get("items", order), "order": order}
+        config = {"items": scramble_for_display(task.id, response.get("items", order), order), "order": order}
+        if evaluation_type == "rubric":
+            config["rubric_criteria"] = _rubric_review(evaluation, task_id=task.id)[0]
+        return config
     raise SharedDocumentLearnMappingError(
         f"task {task.id!r} action has no existing Learn interaction mapping"
     )
@@ -317,12 +414,7 @@ def _task_contract(
         raise SharedDocumentLearnMappingError(
             f"task {task.id!r} action and response do not have a Learn mapping"
         )
-    interaction_kind = _INTERACTION_KINDS.get(response_type)
-    if interaction_kind is None:
-        raise SharedDocumentLearnMappingError(
-            f"task {task.id!r} action has no existing Learn interaction mapping"
-        )
-    config = _learn_config(task, interaction_kind)
+    interaction_kind, config = _learn_kind_and_config(task)
     contract = {
         "id": anchor.id,
         "kind": interaction_kind,
