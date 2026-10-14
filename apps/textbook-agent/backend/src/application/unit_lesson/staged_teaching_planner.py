@@ -27,6 +27,8 @@ from application.unit_lesson.teaching_planner import (
     _frozen_assessment_reuse_flags,
     _repair_missing_assessment_sources,
     _task_source_contract_errors,
+    _learner_role_errors,
+    _learner_role_errors_for_section,
     _unknown_learner_action_errors,
     _action_source_compatibility_errors_for_section,
     _assessment_source_policy,
@@ -1004,6 +1006,7 @@ def section_check_errors(
     errors.extend(f"{i.code}: {i.message}" for i in validation.issues if i.blocking)
 
     errors.extend(_unknown_learner_action_errors_for_section(section))
+    errors.extend(_learner_role_errors_for_section(section))
     errors.extend(_task_source_contract_errors_for_section(section))
     errors.extend(_action_source_compatibility_errors_for_section(section, packet))
     if advisory_gate:
@@ -1927,6 +1930,7 @@ async def finish_staged_plan(
     # Final safety net on the final plan (no mutation after this point).
     ownership_errors = list(ownership_errors)
     ownership_errors.extend(_unknown_learner_action_errors(plan))
+    ownership_errors.extend(_learner_role_errors(plan))
     ownership_errors.extend(_task_source_contract_errors(plan))
     ownership_errors.extend(_action_source_compatibility_errors(plan, packet))
     flags: list[dict[str, Any]] = list(spine_result.flags)

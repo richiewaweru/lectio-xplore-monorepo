@@ -241,7 +241,8 @@ JSON only. No preamble, no code fences, no commentary.
         "target": str,
         "purpose": str,
         "expected_evidence": str,
-        "difficulty": "guided" | "independent"
+        "difficulty": "guided" | "independent",
+        "role": "predict" | "practice" | "check"
       } | null,
       "visual": {
         "figure_ref": str | null,

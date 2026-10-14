@@ -317,7 +317,7 @@ def _draft_contract_validator(
                 action=expected["action"],
                 purpose=expected["purpose"],
                 prompt=draft.prompt,
-                role=draft.role,
+                role=expected.get("role") or draft.role,
                 display_prompt=draft.display_prompt,
                 difficulty=draft.difficulty,
                 sourcebook_refs=list(descriptor["sourcebook_refs"]),
@@ -472,6 +472,11 @@ async def author_shared_tasks(
                 "target": block.learner_action.target,  # type: ignore[union-attr]
                 "expected_evidence": block.learner_action.expected_evidence,  # type: ignore[union-attr]
                 "difficulty": block.learner_action.difficulty,  # type: ignore[union-attr]
+                **(
+                    {"role": block.learner_action.role}  # type: ignore[union-attr]
+                    if block.learner_action.role is not None  # type: ignore[union-attr]
+                    else {}
+                ),
             },
             "task_mode": block.task_mode,
             "intent": block.intent,
@@ -533,7 +538,7 @@ async def author_shared_tasks(
             action=block.learner_action.action,  # type: ignore[union-attr]
             purpose=block.learner_action.purpose,  # type: ignore[union-attr]
             prompt=draft_task.prompt,
-            role=draft_task.role,
+            role=block.learner_action.role or draft_task.role,  # type: ignore[union-attr]
             display_prompt=draft_task.display_prompt,
             difficulty=draft_task.difficulty,
             sourcebook_refs=list(block.sourcebook_refs),

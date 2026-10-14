@@ -51,6 +51,16 @@ class LearnerActionBrief(BaseModel):
         description="What successful performance should show.",
     )
     difficulty: Difficulty
+    role: Literal["predict", "practice", "check"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Why the learner is asked to respond. predict = a guess before teaching "
+            "reveals the answer; never marked, revisited later. practice = the "
+            "learner tries with feedback, low stakes. check = shows whether the "
+            "learner got it. Set for every response-bearing action."
+        ),
+    )
 
 
 # Subset of media.generation.contracts.VisualMode. Defined locally: the

@@ -186,3 +186,59 @@ def test_alias_and_passive_actions_are_known() -> None:
     assert _unknown_learner_action_errors(passive_plan) == []
     assert _task_source_contract_errors(alias_plan) == []
     assert _task_source_contract_errors(passive_plan) == []
+
+
+def _role_action(action: str = "select-one", **kwargs: object) -> LearnerActionBrief:
+    return LearnerActionBrief(
+        action=action,  # type: ignore[arg-type]
+        target="the idea",
+        purpose="elicit a guess",
+        expected_evidence="learner commits to a guess",
+        difficulty="guided",
+        **kwargs,  # type: ignore[arg-type]
+    )
+
+
+def test_learner_action_role_is_omitted_when_none_and_hash_is_unchanged() -> None:
+    from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+
+    plain = _plan(_block(learner_action=_role_action(), task_mode="formative"))
+    assert "role" not in plain.sections[0].blocks[0].learner_action.model_dump(mode="json")
+    assert "role" not in plain.model_dump_json()
+    with_role = _plan(
+        _block(learner_action=_role_action(role="practice"), task_mode="formative")
+    )
+    assert teaching_plan_content_hash(plain) != teaching_plan_content_hash(with_role)
+    assert teaching_plan_content_hash(plain) == teaching_plan_content_hash(
+        TeachingPlan.model_validate_json(plain.model_dump_json())
+    )
+
+
+def test_learner_action_role_round_trips_and_rejects_unknown() -> None:
+    brief = _role_action(role="predict")
+    assert LearnerActionBrief.model_validate(brief.model_dump(mode="json")).role == "predict"
+    with pytest.raises(ValidationError):
+        _role_action(role="quiz")
+
+
+def test_role_validation_rejects_predict_on_assessment_and_role_on_passive() -> None:
+    from application.unit_lesson.teaching_planner import _learner_role_errors
+
+    bad_predict = _plan(
+        _block(learner_action=_role_action(role="predict"), task_mode="assessment", source_question_ids=["q1"])
+    )
+    errors = _learner_role_errors(bad_predict)
+    assert len(errors) == 1 and "TEACHING_LEARNER_ROLE_INVALID" in errors[0]
+
+    passive = _plan(
+        _block(learner_action=_role_action("read-explanation", role="practice"))
+    )
+    errors = _learner_role_errors(passive)
+    assert len(errors) == 1 and "must be omitted" in errors[0]
+
+    ok = _plan(
+        _block(learner_action=_role_action(role="check"), task_mode="assessment", source_question_ids=["q2"]),
+        _block(id="b2", learner_action=_role_action(role="predict"), task_mode="formative"),
+        _block(id="b3", learner_action=_role_action()),
+    )
+    assert _learner_role_errors(ok) == []

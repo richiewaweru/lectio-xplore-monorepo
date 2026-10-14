@@ -305,6 +305,39 @@ def _unknown_learner_action_errors_for_section(section: TeachingPlanSection) -> 
     return errors
 
 
+def _learner_role_errors_for_section(section: TeachingPlanSection) -> list[str]:
+    """Reject roles that contradict the block's task mode or action kind."""
+    from curriculum.teaching_plan.compatibility import response_bearing_action
+
+    errors: list[str] = []
+    for block in section.blocks:
+        action = block.learner_action
+        role = getattr(action, "role", None) if action is not None else None
+        if role is None:
+            continue
+        if not response_bearing_action(action.action):
+            errors.append(
+                "TEACHING_LEARNER_ROLE_INVALID: "
+                f"block {block.id!r} learner_action.action={action.action!r} is not "
+                f"response-bearing, so learner_action.role={role!r} must be omitted."
+            )
+        elif role == "predict" and block.task_mode == "assessment":
+            errors.append(
+                "TEACHING_LEARNER_ROLE_INVALID: "
+                f"block {block.id!r} has task_mode='assessment' but "
+                "learner_action.role='predict'. An assessment is a check; use "
+                "role='check', or make the block formative."
+            )
+    return errors
+
+
+def _learner_role_errors(plan: TeachingPlan) -> list[str]:
+    errors: list[str] = []
+    for section in plan.sections:
+        errors.extend(_learner_role_errors_for_section(section))
+    return errors
+
+
 def _unknown_learner_action_errors(plan: TeachingPlan) -> list[str]:
     """Defensive check for legacy plans; new structured output uses a closed enum."""
     errors: list[str] = []
