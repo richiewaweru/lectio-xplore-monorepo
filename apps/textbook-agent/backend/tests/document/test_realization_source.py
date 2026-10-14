@@ -309,7 +309,9 @@ async def test_advisory_semantic_issue_reaches_ready_with_flags_and_learn_print_
     assert result.ready.run_id == run_id
     # The document identity is untouched by flags.
     assert result.ready.document.content_hash == result.ready.content_hash
-    [flag] = result.ready.quality_flags
+    # Advisory section shaping (074bc571) may also flag the fixture writer output
+    # as a writer_warning; this test is about the semantic finding.
+    [flag] = [f for f in result.ready.quality_flags if f.source == "semantic_qa"]
     assert flag.code == "must_establish_uncovered"
     assert flag.source == "semantic_qa"
     assert flag.section_id == "orient"

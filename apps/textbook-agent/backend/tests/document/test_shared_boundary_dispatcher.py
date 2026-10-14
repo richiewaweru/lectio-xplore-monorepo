@@ -306,6 +306,7 @@ async def test_boundary_failure_is_pending_repair_and_preserves_ready_writers(
         run_id=run_id,
         owner_user_id=owner,
         semantic_validator=_issue,
+        repair_engine=_ChangingRepair(),
     )
 
     assert result.state == "pending_repair"
