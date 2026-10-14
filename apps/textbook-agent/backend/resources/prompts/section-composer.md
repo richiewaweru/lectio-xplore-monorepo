@@ -13,6 +13,9 @@ Use only these ordinary kinds: `paragraph`, `heading`, `list`, `table`,
 Figures are placed by code from the teaching plan and must not be emitted. A
 block's `visual` field is context only; still give that block its ordinary
 node(s) as usual.
+When a block's `visual` asks for a table (its `purpose` or `must_show` names a
+table), do not choose `table` for that block: the code-placed figure already
+shows it. Use a paragraph (or another eligible kind) instead.
 
 The deterministic validator decides eligibility from only the current block's
 `intent`, `brief`, and `evidence`, using case-insensitive substring matches.
