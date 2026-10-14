@@ -19,6 +19,7 @@
 		ServerEvaluation
 	} from './types';
 	import InlineMarkup from '$lib/learn/document/renderers/InlineMarkup.svelte';
+	import './kinds/kinds.css';
 	import ChoiceInteraction from './kinds/ChoiceInteraction.svelte';
 	import ClassifyInteraction from './kinds/ClassifyInteraction.svelte';
 	import FillBlankInteraction from './kinds/FillBlankInteraction.svelte';
@@ -306,125 +307,6 @@
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		color: var(--green, #1b5e40);
-	}
-
-	/* Kind components render inside the frame; their markup is styled here. */
-	.ix-shell :global(.options),
-	.ix-shell :global(.steps),
-	.ix-shell :global(.chips),
-	.ix-shell :global(.col) {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: grid;
-		gap: 8px;
-	}
-	.ix-shell :global(.chips) {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-	}
-	.ix-shell :global(.columns) {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 12px;
-	}
-	.ix-shell :global(.option),
-	.ix-shell :global(.chip) {
-		width: 100%;
-		text-align: left;
-		min-height: 56px;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		border: 1px solid var(--rule-strong, #c9c3b5);
-		border-radius: 10px;
-		background: var(--surface, #fff);
-		padding: 12px 14px;
-		cursor: pointer;
-		color: inherit;
-		font: inherit;
-	}
-	.ix-shell :global(.option:disabled),
-	.ix-shell :global(.chip:disabled) {
-		cursor: default;
-	}
-	.ix-shell :global(.option-letter) { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; background: var(--sand, #f3eee3); font-weight: 700; }
-	.ix-shell :global(.chip) {
-		width: auto;
-		border-radius: 999px;
-	}
-	.ix-shell :global(.option.selected),
-	.ix-shell :global(.option.matched),
-	.ix-shell :global(.chip.selected),
-	.ix-shell :global(.chip.matched) {
-		border-color: var(--green, #1b5e40);
-		background: var(--sand, #f3eee3);
-	}
-	.ix-shell :global(.placed-note) {
-		margin-left: auto;
-		font-size: 13px;
-		opacity: 0.75;
-	}
-	/* Marks after a check */
-	.ix-shell :global([data-mark='right']) {
-		border-color: #1b5e40;
-		background: var(--green-tint, #e4f0e8);
-	}
-	.ix-shell :global([data-mark='wrong']) {
-		border-color: #b3261e;
-		background: #fbeceb;
-	}
-	.ix-shell :global([data-mark='missed']) {
-		border-style: dashed;
-		border-color: #b3261e;
-	}
-	.ix-shell :global(.field) {
-		display: grid;
-		gap: 6px;
-	}
-	.ix-shell :global(.blanks) {
-		display: grid;
-		gap: 8px;
-	}
-	.ix-shell :global(.sr) {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-	}
-	.ix-shell :global(input) {
-		width: 100%;
-		box-sizing: border-box;
-		border: 1px solid var(--rule, #d6d3d1);
-		border-radius: 8px;
-		padding: 10px 12px;
-		background: var(--paper, #fafaf9);
-		color: inherit;
-		font: inherit;
-	}
-	.ix-shell :global(.steps li) {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 10px;
-		border: 1px solid var(--rule, #d6d3d1);
-		border-radius: 10px;
-		background: var(--paper, #fafaf9);
-		padding: 8px 10px;
-	}
-	.ix-shell :global(.moves) {
-		display: flex;
-		gap: 4px;
-	}
-	.ix-shell :global(.moves button) {
-		border: 1px solid var(--rule, #d6d3d1);
-		border-radius: 6px;
-		background: white;
-		width: 28px;
-		height: 28px;
-		cursor: pointer;
 	}
 
 	.controls {

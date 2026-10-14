@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import InlineMarkup from '$lib/learn/document/renderers/InlineMarkup.svelte';
 	import type { ItemResults, KindProgress, LearnerResponse } from '../types';
+	import MarkBadge from './MarkBadge.svelte';
 	import { choiceOptions, mapResults } from './shared';
 
 	interface Props {
@@ -48,19 +49,48 @@
 
 <ul class="options" role="group" aria-label="Choose one">
 	{#each options as option (option.id)}
-		<li>
+		{@const mark = marks && selected === option.id ? (marks[option.id] ? 'right' : 'wrong') : undefined}
+		<li class="row">
 			<button
 				type="button"
 				class="option"
 				class:selected={selected === option.id}
+				class:has-mark={!!mark}
 				aria-pressed={selected === option.id}
-				data-mark={marks && selected === option.id ? (marks[option.id] ? 'right' : 'wrong') : undefined}
+				data-mark={mark}
 				{disabled}
 				onclick={() => (selected = option.id)}
 			>
 				<span class="option-letter" aria-hidden="true">{option.letter}</span>
 				<span><InlineMarkup value={option.text} /></span>
 			</button>
+			{#if mark}<span class="badge"><MarkBadge {mark} /></span>{/if}
 		</li>
 	{/each}
 </ul>
+
+<style>
+	.row {
+		position: relative;
+	}
+	.option-letter {
+		display: grid;
+		place-items: center;
+		flex: 0 0 28px;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: var(--sand, #f3eee3);
+		font-weight: 700;
+	}
+	.has-mark {
+		padding-right: 48px;
+	}
+	.badge {
+		position: absolute;
+		right: 12px;
+		top: 50%;
+		transform: translateY(-50%);
+		display: flex;
+	}
+</style>

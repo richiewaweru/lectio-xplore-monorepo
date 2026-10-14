@@ -85,14 +85,15 @@ describe('multi-select', () => {
 
 	it('retry keeps the right picks and drops the wrong one', async () => {
 		render(InteractionShell, { node: multi });
-		await click('Alpha');
-		await click('Beta');
-		await click('Gamma');
+		const box = (name: string) => screen.getByRole('checkbox', { name });
+		await fireEvent.click(box('Alpha'));
+		await fireEvent.click(box('Beta'));
+		await fireEvent.click(box('Gamma'));
 		await fireEvent.click(check());
 		expect(status().getAttribute('data-outcome')).toBe('partial');
 		await fireEvent.click(screen.getByTestId('interaction-try-again'));
-		expect(screen.getByRole('button', { name: 'Alpha' }).getAttribute('aria-pressed')).toBe('true');
-		expect(screen.getByRole('button', { name: 'Gamma' }).getAttribute('aria-pressed')).toBe('false');
+		expect(box('Alpha').getAttribute('aria-checked')).toBe('true');
+		expect(box('Gamma').getAttribute('aria-checked')).toBe('false');
 	});
 });
 
@@ -229,16 +230,18 @@ describe('classify', () => {
 		await click('Plant');
 		await click('Fern');
 		await click('Plant');
-		// tap a placed item to return it, then place it correctly
-		await click('Hamster');
+		// remove a placed item to return it, then place it correctly
+		await click('Remove Hamster from Plant');
 		expect(check().disabled).toBe(true);
 		await click('Hamster');
 		await click('Plant');
 		await fireEvent.click(check());
 		expect(status().getAttribute('data-outcome')).toBe('partial');
 		await fireEvent.click(screen.getByTestId('interaction-try-again'));
-		expect(screen.getByRole('button', { name: 'Sunflower' }).className).toContain('matched');
-		expect(screen.getByRole('button', { name: 'Fern' }).className).toContain('matched');
+		const placed = (label: string) => screen.getByText(label).closest('.chip') as HTMLElement;
+		expect(placed('Sunflower').className).toContain('matched');
+		expect(placed('Fern').className).toContain('matched');
+		// Hamster went back to the pool as a tappable item
 		expect(screen.getByRole('button', { name: 'Hamster' }).className).not.toContain('matched');
 	});
 });
