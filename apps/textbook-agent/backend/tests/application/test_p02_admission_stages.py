@@ -290,6 +290,13 @@ async def test_g07_regenerate_stale_then_admit_rebinds_identity(
     assert created1 is True
     assert first.status == "queued"
 
+    first.shared_document_run_id = "old-run"
+    first.shared_document_id = "old-doc"
+    first.shared_document_revision = 3
+    first.shared_document_hash = "old-doc-hash"
+    first.shared_document_state = "ready"
+    await db_session.flush()
+
     updated = await mark_stale_for_preparation_regenerate(
         db_session,
         path_lesson_id=lesson.id,
@@ -320,3 +327,9 @@ async def test_g07_regenerate_stale_then_admit_rebinds_identity(
     assert rebound.preparation_generation_id == new_prep
     assert rebound.output_id == "learn-out-new"
     assert int(rebound.realization_revision) >= 2
+    # The old preparation's shared-document run must not stay pinned.
+    assert rebound.shared_document_run_id is None
+    assert rebound.shared_document_id is None
+    assert rebound.shared_document_revision is None
+    assert rebound.shared_document_hash is None
+    assert rebound.shared_document_state is None
