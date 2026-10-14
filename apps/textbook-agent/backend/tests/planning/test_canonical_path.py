@@ -8,6 +8,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from pydantic import ValidationError
 from tests.planning.path_helpers import four_lesson_draft
 
 from curriculum.path_models import PathPlanDraft, PathPlannerRequest
@@ -36,26 +37,65 @@ def test_normal_four_lesson_plan() -> None:
     )
 
 
-def test_lesson_mode_parse_normalizes_and_never_raises() -> None:
-    draft = four_lesson_draft()
-    payload = draft.model_dump()
+def test_lesson_mode_parse_normalizes_case_and_whitespace() -> None:
+    payload = four_lesson_draft().model_dump()
     payload["lessons"][0]["lesson_mode"] = "  Consolidation "
     payload["lessons"][0]["lesson_mode_reason"] = "  Facts met last week.  "
-    payload["lessons"][1]["lesson_mode"] = "repair"  # not planner-assignable
-    payload["lessons"][1]["lesson_mode_reason"] = "   "
-    payload["lessons"][2]["lesson_mode"] = "nonsense"
     plan = normalize_path_plan_draft(PathPlanDraft.model_validate(payload))
     assert plan.lessons[0].lesson_mode == "consolidation"
     assert plan.lessons[0].lesson_mode_reason == "Facts met last week."
-    assert plan.lessons[1].lesson_mode is None
-    assert plan.lessons[1].lesson_mode_reason is None
-    assert plan.lessons[2].lesson_mode is None
-    assert plan.lessons[3].lesson_mode is None  # omitted entirely
     assert validate_canonical_path_plan(plan) == []
     jsonschema.validate(
         plan.model_dump(mode="json"),
         json.loads(SCHEMA_PATH.read_text(encoding="utf-8")),
     )
+
+
+def test_normalize_tolerates_invalid_mode_defensively_and_logs(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Drafts normally reject bad modes; normalize still must not raise on one."""
+    draft = four_lesson_draft()
+    bad = draft.lessons[1].model_copy(update={"lesson_mode": "repair", "lesson_mode_reason": "  "})
+    bad2 = draft.lessons[2].model_copy(update={"lesson_mode": "nonsense"})
+    lessons = [draft.lessons[0], bad, bad2, draft.lessons[3]]
+    loose = PathPlanDraft.model_construct(scope=draft.scope, lessons=lessons)
+    with caplog.at_level("WARNING", logger="curriculum.planner_diagnostics"):
+        plan = normalize_path_plan_draft(loose)
+    assert plan.lessons[1].lesson_mode is None
+    assert plan.lessons[1].lesson_mode_reason is None
+    assert plan.lessons[2].lesson_mode is None
+    invalid = [r for r in caplog.records if getattr(r, "event", "") == "path_lesson_mode_invalid"]
+    assert sorted(r.raw_value for r in invalid) == ["nonsense", "repair"]
+
+
+def test_draft_schema_requires_lesson_mode_and_reason() -> None:
+    schema = PathPlanDraft.model_json_schema()
+    lesson = schema["$defs"]["PathLessonDraft"]
+    assert "lesson_mode" in lesson["required"]
+    assert "lesson_mode_reason" in lesson["required"]
+    assert lesson["properties"]["lesson_mode"]["enum"] == [
+        "first_exposure",
+        "consolidation",
+        "transfer",
+    ]
+    assert lesson["properties"]["lesson_mode_reason"]["minLength"] == 1
+
+
+@pytest.mark.parametrize("missing", ["lesson_mode", "lesson_mode_reason"])
+def test_draft_without_mode_or_reason_is_rejected(missing: str) -> None:
+    payload = four_lesson_draft().model_dump()
+    del payload["lessons"][2][missing]
+    with pytest.raises(ValidationError) as exc_info:
+        PathPlanDraft.model_validate(payload)
+    assert f"{missing} is required for every lesson" in str(exc_info.value)
+
+
+def test_draft_rejects_unplannable_mode() -> None:
+    payload = four_lesson_draft().model_dump()
+    payload["lessons"][0]["lesson_mode"] = "repair"
+    with pytest.raises(ValidationError):
+        PathPlanDraft.model_validate(payload)
 
 
 def test_extra_unknown_fields_ignored() -> None:
@@ -91,6 +131,8 @@ def test_arbitrary_unique_keys_normalized_to_l_sequence() -> None:
                 "requires": [],
                 "must_establish": ["the heart pumps blood"],
                 "knowledge_type": "conceptual",
+                "lesson_mode": "first_exposure",
+                "lesson_mode_reason": "It teaches something new.",
             },
             {
                 "key": "second",
@@ -99,6 +141,8 @@ def test_arbitrary_unique_keys_normalized_to_l_sequence() -> None:
                 "requires": ["first"],
                 "must_establish": ["arteries, veins and capillaries have different roles"],
                 "knowledge_type": "conceptual",
+                "lesson_mode": "first_exposure",
+                "lesson_mode_reason": "It teaches something new.",
             },
             {
                 "key": "third",
@@ -107,6 +151,8 @@ def test_arbitrary_unique_keys_normalized_to_l_sequence() -> None:
                 "requires": ["first", "second"],
                 "must_establish": ["blood transports materials"],
                 "knowledge_type": "factual",
+                "lesson_mode": "first_exposure",
+                "lesson_mode_reason": "It teaches something new.",
             },
         ]
     )
@@ -126,6 +172,8 @@ def test_dependency_mapping_survives_key_normalization() -> None:
                 "requires": [],
                 "must_establish": ["a"],
                 "knowledge_type": "factual",
+                "lesson_mode": "first_exposure",
+                "lesson_mode_reason": "It teaches something new.",
             },
             {
                 "key": "beta",
@@ -134,6 +182,8 @@ def test_dependency_mapping_survives_key_normalization() -> None:
                 "requires": ["alpha"],
                 "must_establish": ["b"],
                 "knowledge_type": "factual",
+                "lesson_mode": "first_exposure",
+                "lesson_mode_reason": "It teaches something new.",
             },
         ]
     )

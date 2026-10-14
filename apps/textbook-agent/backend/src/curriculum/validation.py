@@ -9,6 +9,7 @@ from curriculum.models import (
     CanonicalPathScope,
     PathPlanDraft,
 )
+from curriculum.planner_diagnostics import log_path_lesson_mode_invalid
 from curriculum.planning.skeletons import PLANNER_LESSON_MODES
 
 _KNOWLEDGE_TYPES: frozenset[str] = frozenset(
@@ -251,6 +252,8 @@ def normalize_path_plan_draft(draft: PathPlanDraft) -> CanonicalPathPlan:
 
         raw_mode = (lesson.lesson_mode or "").strip().casefold()
         lesson_mode = raw_mode if raw_mode in PLANNER_LESSON_MODES else None
+        if raw_mode and lesson_mode is None:
+            log_path_lesson_mode_invalid(key=old_key, raw_value=lesson.lesson_mode)
         lesson_mode_reason = (lesson.lesson_mode_reason or "").strip() or None
 
         lessons.append(

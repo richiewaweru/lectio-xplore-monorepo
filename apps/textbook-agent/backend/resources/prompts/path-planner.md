@@ -101,8 +101,9 @@ and put only earlier lesson keys in `requires`.
 
 ### Step 8 — Set lesson_mode
 
-Decide each lesson's mode from its objective and must_establish only. Use one
-of three values:
+Decide each lesson's mode from its objective and must_establish only.
+lesson_mode and lesson_mode_reason are REQUIRED for every lesson; never null,
+never omitted. Use one of three values:
 
   first_exposure   the lesson teaches something new
   consolidation    the lesson uses ideas taught in earlier lessons on new

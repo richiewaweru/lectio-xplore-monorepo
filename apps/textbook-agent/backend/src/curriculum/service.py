@@ -33,6 +33,7 @@ from curriculum.validation import (
     assert_concept_slugs_unique,
     concept_slug_for,
 )
+from curriculum.planner_diagnostics import log_path_lesson_modes
 from curriculum.planning.objective_ownership import hash_path_objective
 from curriculum.planning.skeletons import PLANNER_LESSON_MODES
 
@@ -212,6 +213,7 @@ async def persist_path_plan(
                     prerequisite_lesson_id=lesson_by_key[required_key].id,
                 )
             )
+    log_path_lesson_modes(unit_id=unit.id, lessons=plan.lessons)
     unit.active_path_version_id = version.id
     await session.flush()
     await _refresh_merge_hints(session, version)

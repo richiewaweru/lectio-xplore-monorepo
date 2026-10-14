@@ -34,8 +34,40 @@ class PathLessonDraft(TolerantModel):
     requires: list[str] = Field(default_factory=list)
     must_establish: list[str] = Field(default_factory=list)
     knowledge_type: str = ""
-    lesson_mode: str | None = None
-    lesson_mode_reason: str | None = None
+    lesson_mode: Literal["first_exposure", "consolidation", "transfer"] = Field(
+        description=(
+            "How this lesson relates to earlier lessons. Required for every lesson. "
+            "first_exposure = the lesson teaches something new; "
+            "consolidation = the lesson uses ideas from earlier lessons on new cases "
+            "or combines them; "
+            "transfer = the lesson applies everything to an unfamiliar situation."
+        ),
+    )
+    lesson_mode_reason: str = Field(
+        min_length=1,
+        description="One short sentence saying why this lesson has that mode. Required.",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _require_lesson_mode(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        raw_mode = data.get("lesson_mode")
+        if isinstance(raw_mode, str):
+            raw_mode = raw_mode.strip().casefold()
+            data = {**data, "lesson_mode": raw_mode}
+        if not raw_mode:
+            raise ValueError(
+                "lesson_mode is required for every lesson: "
+                "first_exposure, consolidation or transfer."
+            )
+        reason = data.get("lesson_mode_reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError(
+                "lesson_mode_reason is required for every lesson: one short sentence."
+            )
+        return data
 
 
 class PathPlanDraft(TolerantModel):
@@ -253,7 +285,8 @@ class ScheduleSuggestRequest(PathVersionMutationRequest):
 
 
 class ShapeDeviationCreateRequest(PathLessonMutationRequest):
-    lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"]
+    # None = use the lesson's stored mode (first_exposure when it has none).
+    lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"] | None = None
     operation: Literal["insert", "remove", "replace", "reorder"]
     target_slot: str = Field(min_length=1, max_length=80)
     replacement_slot: str | None = Field(default=None, max_length=80)
@@ -309,7 +342,8 @@ class MarksWriteRequest(PathLessonMutationRequest):
 
 class PrepareLessonRequest(StrictModel):
     group_ids: list[str] = Field(default_factory=list)
-    lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"]
+    # None = use the lesson's stored mode (first_exposure when it has none).
+    lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"] | None = None
 
 
 class GuardedPrepareLessonRequest(PrepareLessonRequest):
