@@ -102,9 +102,21 @@ When an action is warranted, describe only semantic learner behavior:
   "target": "which lever requires less effort",
   "purpose": "elicit a prediction before explaining mechanical advantage",
   "expected_evidence": "the learner commits to one prediction that can be revisited",
-  "difficulty": "guided"
+  "difficulty": "guided",
+  "role": "predict"
 }
 ```
+
+### Role
+
+Set `role` on every response-bearing action (omit it for `read-explanation` and
+`compare-without-response`):
+
+- `check`: the block's `task_mode` is `assessment`.
+- `predict`: a question asked before the concept is taught, to surface prior
+  ideas or misconceptions. The learner's guess is never marked and is revisited
+  later. Never use `predict` with `task_mode: assessment`.
+- `practice`: everything else; the learner tries, with feedback, at low stakes.
 
 Never name Learn interaction types, Print treatments, page objects, layouts,
 components, renderers, or any identifier that was not supplied exactly.

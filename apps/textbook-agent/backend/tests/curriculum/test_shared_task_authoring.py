@@ -501,3 +501,28 @@ async def test_terminal_provider_error_is_not_semantically_repaired() -> None:
             provider=provider,
         )
     assert len(provider.calls) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("plan_role", "draft_role", "expected"),
+    [("predict", "check", "predict"), ("check", None, "check"), (None, "practice", "practice")],
+)
+async def test_plan_role_overrides_draft_role(plan_role, draft_role, expected) -> None:
+    plan = _plan()
+    plan.sections[0].blocks[0].learner_action.role = plan_role
+    payload = _task()
+    if draft_role is not None:
+        payload["tasks"][0]["role"] = draft_role
+    if plan_role == "predict":
+        payload["tasks"][0]["feedback"] = {"saved": "Saved. We will revisit this."}
+    provider = ScriptedProvider(payload)
+
+    tasks = await author_shared_tasks(
+        plan,
+        _sourcebook(plan),
+        approved_item_snapshot=_items_snapshot(plan),
+        provider=provider,
+    )
+
+    assert tasks[0].role == expected
