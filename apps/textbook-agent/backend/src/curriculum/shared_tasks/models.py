@@ -33,7 +33,7 @@ TASK_RESPONSE_FIELDS: dict[TaskResponseType, frozenset[str]] = {
     "multiple_choice": frozenset({"type", "options", "answer_lines"}),
     "number": frozenset({"type", "unit", "min", "max", "step", "precision", "answer_lines"}),
     "text": frozenset({"type", "min_length", "max_length", "placeholder", "answer_lines"}),
-    "missing_values": frozenset({"type", "values", "answers", "answer_lines"}),
+    "missing_values": frozenset({"type", "values", "answers", "answer_lines", "sentence"}),
     "classification": frozenset({"type", "items", "categories", "correct_placements"}),
     "matching": frozenset({"type", "pairs"}),
     "ordered_items": frozenset({"type", "items", "correct_order", "order"}),

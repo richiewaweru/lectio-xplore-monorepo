@@ -175,3 +175,14 @@ def test_old_match_order_uses_shared_task_id_like_print() -> None:
 def test_non_document_inputs_are_tolerated() -> None:
     assert learner_safe_document({}) == {}
     assert learner_safe_document({"nodes": "nope"}) == {"nodes": "nope"}
+
+
+def test_fill_blank_sentence_survives_while_answers_are_stripped() -> None:
+    document = _document()
+    for node in document["nodes"]:
+        if node.get("interaction_type") == "fill-blank":
+            node["config"]["sentence"] = "The [1] and the [2]."
+    node = _interactions(learner_safe_document(document))["fill-blank"]
+    assert node["config"]["sentence"] == "The [1] and the [2]."
+    assert "answers" not in node["config"]
+    assert node["config"]["blank_count"] == 2

@@ -311,3 +311,39 @@ def test_allowed_evaluation_types_is_exported_and_covers_every_response_type() -
     from curriculum.shared_tasks.validation import ALLOWED_EVALUATION_TYPES
 
     assert set(ALLOWED_EVALUATION_TYPES) == set(ACTION_RESPONSE_TYPES.values())
+
+
+def _fill_blank_errors(sentence) -> list[str]:
+    plan = _plan(["complete-missing-values"])
+    block = plan.sections[0].blocks[0]
+    response = {"type": "missing_values", "values": ["chlorophyll", "stomata"], "sentence": sentence}
+    evaluation = {"type": "accepted_answers", "accepted_answers": ["chlorophyll", "stomata"]}
+    return validate_final_task_response_contract(_task(plan, block, response=response, evaluation=evaluation))
+
+
+def test_fill_blank_sentence_accepts_markers_in_any_order() -> None:
+    assert _fill_blank_errors("Leaves breathe through [2] and use [1] to absorb light.") == []
+
+
+def test_fill_blank_sentence_is_optional() -> None:
+    plan = _plan(["complete-missing-values"])
+    block = plan.sections[0].blocks[0]
+    response = {"type": "missing_values", "values": ["4", "5"]}
+    evaluation = {"type": "accepted_answers", "accepted_answers": ["4", "5"]}
+    assert validate_final_task_response_contract(_task(plan, block, response=response, evaluation=evaluation)) == []
+
+
+@pytest.mark.parametrize(
+    ("sentence", "fragment"),
+    [
+        ("Leaves use [1] only.", "missing gap marker [2]"),
+        ("Leaves use [1] and [1] and [2].", "repeats gap marker [1]"),
+        ("Leaves use [1], [2] and [3].", "[3] beyond the 2 values"),
+        ("Leaves use [0], [1] and [2].", "[0] beyond the 2 values"),
+        ("   ", "non-empty string"),
+        (["x"], "non-empty string"),
+    ],
+)
+def test_fill_blank_sentence_marker_errors(sentence, fragment) -> None:
+    errors = _fill_blank_errors(sentence)
+    assert any(fragment in error for error in errors), errors

@@ -298,6 +298,12 @@ def _choice_task(task: SharedTaskSpec) -> tuple[dict[str, Any], list[dict[str, A
     return {"stem": _inline(task.display_prompt or task.prompt), "options": paper_options}, answer_runs, labels
 
 
+def _gap_answers(values: list[Any], *, labelled: bool) -> str:
+    if labelled and len(values) > 1:
+        return "; ".join(f"({index}) {value}" for index, value in enumerate(values, start=1))
+    return "; ".join(map(str, values))
+
+
 def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]]:
     response = _mapping(task.response, field="response", task=task)
     evaluation = _mapping(task.evaluation, field="evaluation", task=task)
@@ -313,14 +319,22 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
         values = response.get("values", response.get("answers"))
         if not isinstance(values, list) or not values:
             raise SharedDocumentPrintMappingError(f"task {task.id!r} has no fill-in prompts")
+        sentence = response.get("sentence")
+        if isinstance(sentence, str) and sentence.strip():
+            # Markers become numbered gaps before inline parsing; answers stay in the key only.
+            prompt += "\n" + re.sub(r"\[(\d+)\]", r"(\1) ________", sentence.strip())
         if evaluation.get("type") == "accepted_answers":
             accepted = evaluation.get("accepted_answers")
             if isinstance(accepted, list):
-                answer = "; ".join(map(str, accepted))
+                answer = _gap_answers(accepted, labelled=bool(sentence))
         else:
             result = evaluation.get("answer", evaluation.get("correct_value"))
             if result is not None:
-                answer = "; ".join(map(str, result)) if isinstance(result, list) else str(result)
+                answer = (
+                    _gap_answers(result, labelled=bool(sentence))
+                    if isinstance(result, list)
+                    else str(result)
+                )
     elif response_type == "classification":
         items, categories = response.get("items"), response.get("categories")
         placements = evaluation.get("correct_placements", response.get("correct_placements"))

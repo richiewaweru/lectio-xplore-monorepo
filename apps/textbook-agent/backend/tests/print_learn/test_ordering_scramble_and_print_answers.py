@@ -157,3 +157,38 @@ def test_learn_right_items_match_print_right_column(size: int) -> None:
     answer = _plain(entry["answer"])
     for index, right in enumerate(rights):
         assert f"{index + 1} (L{index}) → {chr(65 + shown.index(right))} ({right})" in answer
+
+
+def _sentence_task() -> SharedTaskSpec:
+    return _task(
+        "t-sentence",
+        "complete-missing-values",
+        {
+            "type": "missing_values",
+            "values": ["chlorophyll", "stomata"],
+            "sentence": "Leaves absorb light with [1] and breathe through [2].",
+        },
+        {"type": "accepted_answers", "accepted_answers": ["chlorophyll", "stomata"]},
+    )
+
+
+def test_learn_fill_blank_passes_sentence_through() -> None:
+    config = _learn_config(_sentence_task(), "fill-blank")
+    assert config["sentence"] == "Leaves absorb light with [1] and breathe through [2]."
+    assert config["blank_count"] == 2
+    plain = _task(
+        "t-plain",
+        "complete-missing-values",
+        {"type": "missing_values", "values": ["a"]},
+        {"type": "accepted_answers", "accepted_answers": ["a"]},
+    )
+    assert "sentence" not in _learn_config(plain, "fill-blank")
+
+
+def test_print_fill_blank_sentence_shows_gaps_and_labels_answers() -> None:
+    item, entry = _question_task(_sentence_task())
+    text = _plain(item["prompt"])
+    assert text.startswith("Do the task.\n")
+    assert "(1) ________" in text and "(2) ________" in text
+    assert "[1]" not in text and "chlorophyll" not in text and "stomata" not in text
+    assert entry["answer"] == "(1) chlorophyll; (2) stomata"
