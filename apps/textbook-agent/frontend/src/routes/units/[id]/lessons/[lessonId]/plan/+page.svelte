@@ -650,13 +650,23 @@
 								<a class="link" href={lessonWorkspaceHref(unitId, lessonId, artifact.path)}>View {artifactTitle(artifact.path)}</a>
 							</div>
 						{:else}
-							<p>{artifact.errorSummary || 'This output exists but needs attention.'}</p>
+							<p>{artifact.recreatable && approvedFresh ? 'The plan changed since this output was made. Create a new one from the approved plan.' : artifact.errorSummary || 'This output exists but needs attention.'}</p>
 							<div class="actions">
 								{#if artifact.openHref}<a class="link" href={artifact.openHref}>Open {artifactTitle(artifact.path)}</a>{/if}
 								<a class="link" href={`${lessonWorkspaceHref(unitId, lessonId, artifact.path)}?tab=issues`}>Issues</a>
 								{#if artifact.realizationId && artifact.retryable && ctx.statusFresh && path && lesson}<Button variant="secondary" busy={busy === artifact.path} onclick={() => void retryArtifact(artifact)}>Retry</Button>{/if}
 								{#if artifact.realizationId && artifact.regenerable && !artifact.retryable && ctx.statusFresh && path && lesson}<Button variant="secondary" busy={busy === artifact.path} onclick={() => void retryArtifact(artifact)}>Regenerate</Button>{/if}
-								{#if artifact.recoveryAction === 'reprepare'}<a class="link" href={lessonWorkspaceHref(unitId, lessonId, 'plan')}>Reprepare and review</a>{/if}
+								{#if artifact.recreatable}
+									<Button
+										variant={artifact.path === 'learn' ? 'primary' : 'secondary'}
+										disabled={!approvedFresh}
+										busy={busy === artifact.path}
+										onclick={() => void (artifact.path === 'learn' ? createLearn() : createPrint())}
+									>
+										{busy === artifact.path ? `Creating ${artifactTitle(artifact.path)}…` : `Create new ${artifactTitle(artifact.path)}`}
+									</Button>
+								{/if}
+								{#if artifact.recoveryAction === 'reprepare' && !(artifact.recreatable && approvedFresh)}<a class="link" href={lessonWorkspaceHref(unitId, lessonId, 'plan')}>Reprepare and review</a>{/if}
 							</div>
 						{/if}
 					</Card>

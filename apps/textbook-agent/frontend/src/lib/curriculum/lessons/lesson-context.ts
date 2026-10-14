@@ -116,7 +116,7 @@ export function lessonArtifactUi(
 			path, exists: false, state: status ? 'needs_attention' : 'not_created',
 			realizationId: null, outputId: null, openHref: null,
 			errorSummary: loadError ?? (status ? 'Path status is ambiguous. Refresh the lesson workspace.' : null),
-			retryable: false, regenerable: false, runId: null, recoveryAction: status ? 'reload_lesson' : null, legacyAmbiguous: Boolean(status),
+			retryable: false, regenerable: false, recreatable: false, runId: null, recoveryAction: status ? 'reload_lesson' : null, legacyAmbiguous: Boolean(status),
 			sharedDocumentState: null, autoRetry: null
 		};
 	}
@@ -152,6 +152,9 @@ export function lessonArtifactUi(
 		// run is not retryable (error.recovery_action "regenerate"). The retry
 		// endpoint then starts a new revision, so offer Regenerate instead of nothing.
 		regenerable: (derived.action === 'regenerate' || (canonicalState === 'failed_recoverable' && workspace.error?.recovery_action === 'regenerate' && workspace.error?.retryable !== true)) && Boolean(workspace.realization_id) && !workspace.legacy_ambiguous && !workspace.stale,
+		// A stale row (superseded by a replan) can be rebound onto the new approved
+		// preparation by the generate route, so offer a fresh Create.
+		recreatable: workspace.stale === true && !workspace.legacy_ambiguous && state !== 'preparing' && state !== 'ready' && state !== 'needs_review',
 		runId: derived.runId,
 		recoveryAction: state === 'needs_review' ? null : derived.recoveryAction,
 		legacyAmbiguous: Boolean(workspace.legacy_ambiguous),

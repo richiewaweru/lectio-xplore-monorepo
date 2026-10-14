@@ -187,7 +187,7 @@
 	}
 
 	async function createLearn() {
-		if (!ctx.path || !ctx.lesson || artifact.exists || !ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)) return;
+		if (!ctx.path || !ctx.lesson || (artifact.exists && !artifact.recreatable) || !ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)) return;
 		busy = 'create';
 		error = null;
 		try {
@@ -320,7 +320,7 @@
 				<InlineError message="The lesson document has changed since this Learn lesson was built. Regenerate Learn from the current plan to pick up the latest content." hint="This preview still shows the last built version." />
 			{/if}
 			<StudentLessonShell {document} preview />
-		{:else}<EmptyState title="Learn needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Learn output is stale. Reprepare and review the lesson before creating another output.' : [loadError || 'The Learn preview is unavailable.', autoRetryText(artifact.autoRetry)].filter(Boolean).join(' ')}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry Learn</Button>{/if}{#if ctx.statusFresh && artifact.regenerable && !artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Regenerate Learn</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
+		{:else}<EmptyState title="Learn needs attention" description={artifact.recreatable && preparationIsApprovedAndFresh(ctx.preparation) ? 'The plan changed since this Learn lesson was made. Create a new one from the approved plan.' : artifact.recoveryAction === 'reprepare' ? 'This Learn output is stale. Reprepare and review the lesson before creating another output.' : [loadError || 'The Learn preview is unavailable.', autoRetryText(artifact.autoRetry)].filter(Boolean).join(' ')}>{#snippet actions()}{#if ctx.statusFresh && artifact.recreatable && preparationIsApprovedAndFresh(ctx.preparation)}<Button busy={busy === 'create'} onclick={() => void createLearn()}>{busy === 'create' ? 'Creating…' : 'Create new Learn'}</Button>{/if}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry Learn</Button>{/if}{#if ctx.statusFresh && artifact.regenerable && !artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Regenerate Learn</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
 	{/if}
 </div>
 

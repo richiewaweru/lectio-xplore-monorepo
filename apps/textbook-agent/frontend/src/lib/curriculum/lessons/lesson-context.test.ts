@@ -35,6 +35,18 @@ describe('canonical Unit lesson workspace mapping', () => {
 		expect(lessonArtifactUi(status, 'print').regenerable).toBe(false);
 	});
 
+	it('marks stale failed_terminal rows recreatable but not fresh or legacy-ambiguous ones', () => {
+		const approved = { state: 'approved', approved_snapshot_verified: true } as const;
+		const staleRow = { state: 'failed_terminal', realization_id: 'lr', stale: true, error: { message: 'Lesson preparation regenerated', recovery_action: 'reprepare' } } as const;
+		const stale = base({ workspace: { preparation: approved, learn: staleRow, print: { state: 'not_created' } } });
+		expect(lessonArtifactUi(stale, 'learn')).toMatchObject({ state: 'needs_attention', recreatable: true, retryable: false, regenerable: false });
+		const fresh = base({ workspace: { preparation: approved, learn: { state: 'failed_terminal', realization_id: 'lr', error: { message: 'boom', recovery_action: 'regenerate' } }, print: { state: 'not_created' } } });
+		expect(lessonArtifactUi(fresh, 'learn').recreatable).toBe(false);
+		const legacy = base({ workspace: { preparation: approved, learn: { ...staleRow, legacy_ambiguous: true }, print: { state: 'not_created' } } });
+		expect(lessonArtifactUi(legacy, 'learn').recreatable).toBe(false);
+		expect(lessonArtifactUi(base({ workspace: { preparation: approved, learn: { state: 'ready', realization_id: 'lr', stale: true }, print: { state: 'not_created' } } }), 'learn').recreatable).toBe(false);
+	});
+
 	it('offers Regenerate when a recoverable realization carries a non-retryable document failure', () => {
 		// Real status shape: realization recovery "retry", but the shared document
 		// run failed terminally (error.retryable false, error.recovery_action

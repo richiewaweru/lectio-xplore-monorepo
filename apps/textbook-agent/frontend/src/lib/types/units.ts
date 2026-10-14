@@ -359,6 +359,8 @@ export interface LessonArtifactUi {
 	retryable: boolean;
 	/** failed_terminal (incl. legacy rows): offer Regenerate via the realization retry route. */
 	regenerable: boolean;
+	/** Stale realization from an older plan: a new one can be created from the approved plan. */
+	recreatable: boolean;
 	runId: string | null;
 	recoveryAction: string | null;
 	legacyAmbiguous: boolean;
