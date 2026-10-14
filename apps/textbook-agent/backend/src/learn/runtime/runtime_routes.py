@@ -335,6 +335,10 @@ async def api_submit_attempt(
         "completed": evaluation.get("completed", False),
         "assessment_mode": evaluation.get("assessment_mode", attempt.assessment_mode),
         "idempotent_replay": evaluation.get("idempotent_replay", False),
+        "item_results": evaluation.get("item_results"),
+        "attempts_used": evaluation.get("attempts_used"),
+        "attempts_left": evaluation.get("attempts_left"),
+        "reveal": evaluation.get("reveal"),
         "response_json": attempt.response_json,
     }
 
@@ -403,10 +407,46 @@ async def api_get_instance(
         if release is not None and isinstance(release.document_json, dict)
         else {}
     )
+    from learn.runtime.attempt_rules import attempt_state
+    from learn.runtime.evaluation import (
+        InteractionConfigError,
+        InteractionResponseError,
+        evaluate_interaction,
+        feedback_for_outcome,
+    )
     from learn.runtime.runtime_service import _contracts_index
 
     contracts = _contracts_index(document)
     scores = score_split(list(attempts), contracts_by_interaction=contracts)
+    attempts_by_interaction: dict[str, list[Any]] = {}
+    for a in attempts:
+        attempts_by_interaction.setdefault(a.interaction_id, []).append(a)
+    interaction_states: dict[str, dict[str, Any]] = {}
+    for interaction_id, rows in attempts_by_interaction.items():
+        contract = contracts.get(interaction_id)
+        if not isinstance(contract, dict):
+            continue
+        latest = rows[-1]
+        state = attempt_state(contract, [row.outcome for row in rows])
+        item_results = None
+        if contract.get("role") != "predict":
+            try:
+                item_results = (
+                    evaluate_interaction(contract, latest.response_json).details or {}
+                ).get("item_results")
+            except (InteractionConfigError, InteractionResponseError):
+                item_results = None
+        interaction_states[interaction_id] = {
+            **state,
+            "item_results": item_results,
+            "outcome": latest.outcome,
+            "feedback": feedback_for_outcome(contract, latest.outcome),
+        }
+
+    def _attempt_feedback(a: Any) -> str:
+        contract = contracts.get(a.interaction_id)
+        return feedback_for_outcome(contract, a.outcome) if isinstance(contract, dict) else ""
+
     from learn.runtime.topic_service import build_instance_topic
 
     topic = await build_instance_topic(session, instance)
@@ -439,10 +479,12 @@ async def api_get_instance(
                 "score_earned": a.score_earned,
                 "score_possible": a.score_possible,
                 "response_json": a.response_json,
+                "feedback": _attempt_feedback(a),
                 "created_at": a.created_at.isoformat() if a.created_at else None,
             }
             for a in attempts
         ],
+        "interaction_states": interaction_states,
     }
 
 

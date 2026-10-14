@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import LearnReleaseModel
+from learn.runtime.attempt_rules import attempt_state, effective_policy, max_attempts_of
 from learn.runtime.evaluation import (
     InteractionConfigError,
     InteractionResponseError,
@@ -467,6 +468,15 @@ async def assert_instance_access(
     return row
 
 
+def _item_results_of(evaluation: Any, contract: dict[str, Any]) -> Any:
+    if contract.get("role") == "predict":
+        return None
+    details = getattr(evaluation, "details", None)
+    if isinstance(details, dict):
+        return details.get("item_results")
+    return None
+
+
 async def submit_attempt(
     session: AsyncSession,
     *,
@@ -550,6 +560,7 @@ async def submit_attempt(
             re_eval = evaluate_interaction(contract, existing.response_json)
             payload["feedback"] = re_eval.feedback
             payload["completed"] = is_complete(re_eval, contract.get("completion"))
+            payload["item_results"] = _item_results_of(re_eval, contract)
             if is_prediction:
                 # Older prediction attempts may have been persisted before the
                 # ungraded runtime path existed. Never expose their historical
@@ -563,6 +574,19 @@ async def submit_attempt(
                 )
         except (InteractionConfigError, InteractionResponseError):
             pass
+        payload.setdefault("item_results", None)
+        history = (
+            await session.execute(
+                select(LearnerAttemptModel)
+                .where(
+                    LearnerAttemptModel.learning_instance_id == learning_instance_id,
+                    LearnerAttemptModel.interaction_id == existing.interaction_id,
+                    LearnerAttemptModel.created_at <= existing.created_at,
+                )
+                .order_by(LearnerAttemptModel.created_at.asc())
+            )
+        ).scalars().all()
+        payload.update(attempt_state(contract, [row.outcome for row in history]))
         return existing, payload, False
 
     prior = (
@@ -576,14 +600,10 @@ async def submit_attempt(
         )
     ).scalars().all()
 
-    attempt_policy = contract.get("attempt_policy") if isinstance(contract.get("attempt_policy"), dict) else {}
-    max_attempts = attempt_policy.get("max_attempts")
-    if max_attempts is not None:
-        try:
-            max_n = int(max_attempts)
-        except (TypeError, ValueError):
-            max_n = 0
-        if max_n > 0 and len(prior) >= max_n:
+    attempt_policy = effective_policy(contract)
+    max_n = max_attempts_of(attempt_policy)
+    if max_n is not None:
+        if len(prior) >= max_n:
             raise HTTPException(
                 status_code=422,
                 detail={
@@ -676,6 +696,8 @@ async def submit_attempt(
         "assessment_mode": assessment_mode,
         "idempotent_replay": False,
         "score_aggregation": score_aggregation_of(contract),
+        "item_results": _item_results_of(evaluation, contract),
+        **attempt_state(contract, [row.outcome for row in prior] + [evaluation.outcome]),
     }
     return attempt, payload, True
 

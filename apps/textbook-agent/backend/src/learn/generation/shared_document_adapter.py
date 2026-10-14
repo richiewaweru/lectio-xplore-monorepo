@@ -51,6 +51,7 @@ from document.shared_lesson.repository import StoredSharedLessonDocument
 from infra.execution.checkpoints import content_hash
 from learn.contracts.lesson_document import LearnDocument, assert_valid_learn_document
 from learn.generation.assemble import assemble_learn_document
+from learn.runtime.attempt_rules import policy_for
 
 
 class SharedDocumentLearnMappingError(ValueError):
@@ -72,11 +73,17 @@ class SharedDocumentLearnRealization:
 
 _DEFAULT_FEEDBACK = {"correct": "Correct.", "incorrect": "Not yet — try again."}
 _DEFAULT_PREDICTION_FEEDBACK = "Prediction saved."
-_DEFAULT_ATTEMPT_POLICY = {
-    "max_attempts": None,
-    "show_feedback_after_submit": True,
-    "allow_retry_after_correct": True,
-}
+
+def _attempt_policy_for(contract: dict[str, Any]) -> dict[str, Any]:
+    policy = policy_for(contract)
+    return {
+        "max_attempts": policy["max_attempts"],
+        "allow_retry_after_correct": policy["allow_retry_after_correct"],
+        "show_feedback_after_submit": True,
+        "score_aggregation": policy["score_aggregation"],
+    }
+
+
 _DEFAULT_COMPLETION = {"type": "submitted"}
 
 _INTERACTION_KINDS = {
@@ -439,7 +446,7 @@ def _task_contract(
             )
         ),
         "assessment_mode": "graded" if task.mode == "assessment" else "practice",
-        "attempt_policy": dict(_DEFAULT_ATTEMPT_POLICY),
+        "attempt_policy": {},
         "completion": dict(_DEFAULT_COMPLETION),
         "ai_config_rule": "config-only",
         "teaching_block_id": task.teaching_block_id,
@@ -477,6 +484,7 @@ def _task_contract(
     if task.option_notes is not None:
         contract["option_notes"] = dict(task.option_notes)
         contract["shared_task"]["option_notes"] = dict(task.option_notes)
+    contract["attempt_policy"] = _attempt_policy_for(contract)
     return contract
 
 
