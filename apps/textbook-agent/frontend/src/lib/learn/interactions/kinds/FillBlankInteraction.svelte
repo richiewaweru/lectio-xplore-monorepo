@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import type { ItemResults, KindProgress, LearnerResponse } from '../types';
 	import InlineMarkup from '$lib/learn/document/renderers/InlineMarkup.svelte';
+	import MarkBadge from './MarkBadge.svelte';
 	import { listResults } from './shared';
 
 	interface Props {
@@ -70,12 +71,15 @@
 	});
 </script>
 
-{#snippet gapInput(i: number, label: string)}
+{#snippet gapInput(i: number, label: string, inline: boolean)}
+	{@const mark = marks ? (marks[i] ? 'right' : 'wrong') : undefined}
 	<input
 		type="text"
+		class:inline
 		aria-label={label}
 		value={blanks[i] ?? ''}
-		data-mark={marks ? (marks[i] ? 'right' : 'wrong') : undefined}
+		data-mark={mark}
+		style:width={inline ? `${Math.max(6, (blanks[i] ?? '').length + 2)}ch` : undefined}
 		{disabled}
 		oninput={(e) => {
 			const next = [...blanks];
@@ -83,6 +87,7 @@
 			blanks = next;
 		}}
 	/>
+	{#if mark}<MarkBadge {mark} />{/if}
 {/snippet}
 
 {#if segments}
@@ -90,7 +95,7 @@
 		{#each segments as seg, k (k)}
 			{#if seg.gap !== undefined}
 				{#if seg.gap >= 0 && seg.gap < blanks.length}
-					<span class="gap">{@render gapInput(seg.gap, `Gap ${seg.gap + 1}`)}</span>
+					<span class="gap">{@render gapInput(seg.gap, `Gap ${seg.gap + 1}`, true)}</span>
 				{/if}
 			{:else if seg.text}
 				<span><InlineMarkup value={seg.text} /></span>
@@ -100,10 +105,10 @@
 {:else}
 	<div class="blanks" data-testid="fill-blank-interaction">
 		{#each blanks as _, i (i)}
-			<label class="field">
-				<span class="sr">Blank {i + 1}</span>
-				{@render gapInput(i, `Blank ${i + 1}`)}
-			</label>
+			<div class="blank-row">
+				<span class="blank-num" aria-hidden="true">{i + 1}</span>
+				{@render gapInput(i, `Blank ${i + 1}`, false)}
+			</div>
 		{/each}
 	</div>
 {/if}
@@ -111,15 +116,41 @@
 <style>
 	.sentence {
 		margin: 0;
-		line-height: 2.4;
+		line-height: 2.6;
 		font-size: 18px;
 	}
 	.gap {
-		display: inline-block;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
 		margin: 0 4px;
 		vertical-align: middle;
+		line-height: 1;
 	}
-	.gap :global(input) {
-		width: 9em;
+	.gap input.inline {
+		width: 6ch;
+		max-width: 100%;
+		min-width: 6ch;
+		text-align: center;
+		border-bottom: 3px solid var(--ink, #1c2321);
+	}
+	.blanks {
+		display: grid;
+		gap: 10px;
+	}
+	.blank-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.blank-num {
+		display: grid;
+		place-items: center;
+		flex: 0 0 28px;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: var(--sand, #f3eee3);
+		font-weight: 700;
 	}
 </style>

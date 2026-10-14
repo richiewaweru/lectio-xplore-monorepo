@@ -1,0 +1,83 @@
+/* Primitives shared by every question kind. Kind-specific styles live in each component. */
+.ix-shell .options,
+.ix-shell .col,
+.ix-shell .steps {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 8px;
+}
+.ix-shell .sr {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+.ix-shell .hint {
+	margin: 0;
+	font-size: 14px;
+	opacity: 0.75;
+}
+.ix-shell .field {
+	display: grid;
+	gap: 6px;
+}
+.ix-shell .field-label {
+	font-size: 14px;
+	font-weight: 700;
+}
+.ix-shell .option {
+	width: 100%;
+	text-align: left;
+	min-height: 56px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	border: 1px solid var(--rule-strong, #c9c3b5);
+	border-radius: 10px;
+	background: var(--surface, #fff);
+	padding: 12px 14px;
+	cursor: pointer;
+	color: inherit;
+	font: inherit;
+}
+.ix-shell .option:disabled {
+	cursor: default;
+}
+.ix-shell .option.selected,
+.ix-shell .option.matched {
+	border-color: var(--green, #1b5e40);
+	background: var(--sand, #f3eee3);
+}
+.ix-shell :is(button, input, textarea):focus-visible {
+	outline: 3px solid var(--action, #c2410c);
+	outline-offset: 2px;
+}
+.ix-shell input,
+.ix-shell textarea {
+	width: 100%;
+	box-sizing: border-box;
+	min-height: 44px;
+	border: 1px solid var(--rule-strong, #c9c3b5);
+	border-radius: 8px;
+	padding: 10px 12px;
+	background: var(--paper, #fafaf9);
+	color: inherit;
+	font: inherit;
+}
+/* Marks after a check (colour is never the only cue: see MarkBadge). */
+.ix-shell [data-mark='right'] {
+	border-color: #1b5e40;
+	background: var(--green-tint, #e4f0e8);
+}
+.ix-shell [data-mark='wrong'] {
+	border-color: #b3261e;
+	background: #fbeceb;
+}
+.ix-shell [data-mark='missed'] {
+	border-style: dashed;
+	border-color: #b3261e;
+}

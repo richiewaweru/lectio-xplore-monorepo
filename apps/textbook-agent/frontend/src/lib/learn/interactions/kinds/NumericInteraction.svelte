@@ -12,13 +12,20 @@
 	}
 
 	let {
-		config: _config,
+		config,
 		disabled = false,
 		itemResults: _itemResults = null,
 		initialResponse = null,
 		response = $bindable({}),
 		progress = $bindable({ done: 0, total: 1 })
 	}: Props = $props();
+
+	const uid = $props.id();
+	const unit = $derived(typeof config.unit === 'string' && config.unit.trim() ? config.unit.trim() : '');
+	const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+	const min = $derived(num(config.min));
+	const max = $derived(num(config.max));
+	const step = $derived(num(config.step) ?? 'any');
 
 	let raw = $state('');
 
@@ -41,13 +48,34 @@
 	});
 </script>
 
-<label class="field">
-	<span class="sr">Answer</span>
-	<input
-		type="number"
-		aria-label="Answer"
-		value={raw}
-		{disabled}
-		oninput={(e) => (raw = (e.currentTarget as HTMLInputElement).value)}
-	/>
-</label>
+<div class="field">
+	<label class="field-label" for={`${uid}-answer`}>Answer</label>
+	<div class="entry">
+		<input
+			id={`${uid}-answer`}
+			type="number"
+			inputmode="decimal"
+			{min}
+			{max}
+			{step}
+			value={raw}
+			aria-describedby={unit ? `${uid}-unit` : undefined}
+			{disabled}
+			oninput={(e) => (raw = (e.currentTarget as HTMLInputElement).value)}
+		/>
+		{#if unit}<span class="unit" id={`${uid}-unit`}>{unit}</span>{/if}
+	</div>
+</div>
+
+<style>
+	.entry {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		max-width: 320px;
+	}
+	.unit {
+		font-weight: 600;
+		white-space: nowrap;
+	}
+</style>
