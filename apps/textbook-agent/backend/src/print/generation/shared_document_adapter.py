@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from curriculum.shared_tasks.models import SharedTaskSpec
-from curriculum.shared_tasks.ordering import scramble_for_display
+from curriculum.shared_tasks.ordering import derange_for_display, scramble_for_display
 from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.inline import parse_inline_markup
@@ -341,10 +341,9 @@ def _question_task(task: SharedTaskSpec) -> tuple[dict[str, Any], dict[str, Any]
             left.append(str(pair["left"]))
             right.append(str(pair["right"]))
         # Two columns on paper: numbered items on the left, lettered matches on the
-        # right. The right column is rotated so no row lines up with its own answer.
+        # right. The right column is shuffled (same order as Learn) so no row lines up with its own answer.
         unique_right = list(dict.fromkeys(right))
-        shift = len(unique_right) // 2
-        shown_right = unique_right[shift:] + unique_right[:shift]
+        shown_right = derange_for_display(task.id, unique_right)
         letters = {text: _letters(index + 1) for index, text in enumerate(shown_right)}
         match = {"left": [_inline(text) for text in left], "right": [_inline(text) for text in shown_right]}
         answer = "; ".join(

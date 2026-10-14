@@ -303,3 +303,37 @@ async def test_post_sessions_requires_teacher_ownership(_overrides):
         _overrides["user"] = OTHER
         denied = await client.post("/api/v1/learn/sessions", json={"learner_id": learner_id})
         assert denied.status_code == 404
+
+
+def _interaction_nodes(document: dict) -> list[dict]:
+    found = [n for n in document.get("nodes", []) if n.get("kind") == "interaction"]
+    for block in (document.get("blocks") or {}).values():
+        if isinstance(block, dict) and block.get("learn_interaction"):
+            found.append(block["learn_interaction"])
+    return found
+
+
+@pytest.mark.asyncio
+async def test_learner_release_has_no_answer_key_but_owner_keeps_full_document(_overrides):
+    async with _client() as client:
+        ctx = await _teacher_setup(client, _overrides)
+        joined = await _join(client, ctx["invite"], "Ann")
+        await _first_instance(client, joined)
+        url = f"/api/v1/learn/releases/{ctx['release_id']}"
+
+        learner = await client.get(url, headers=_h(joined["token"]))
+        assert learner.status_code == 200, learner.text
+        learner_nodes = _interaction_nodes(learner.json()["document"])
+        assert learner_nodes
+        for node in learner_nodes:
+            assert "contract" not in node
+            assert "order" not in node["config"]
+            assert "pairs" not in node["config"]
+            assert "correct_option_id" not in node["config"]
+        assert learner_nodes[0]["config"]["items"]
+
+        _overrides["user"] = TEACHER
+        owner = await client.get(url)
+        assert owner.status_code == 200, owner.text
+        owner_nodes = _interaction_nodes(owner.json()["document"])
+        assert [n["config"].get("order") for n in owner_nodes] == [["a", "b", "c"]]

@@ -25,6 +25,7 @@ from core.entities.user import User
 from infra.auth.middleware import get_current_user, get_optional_user
 from infra.database.session import get_async_session
 from learn.authoring.builder.service import SharedDocumentLineageError
+from learn.publishing.learner_safe import learner_safe_document
 from learn.publishing.publish_validation import (
     PublishValidationError,
     validate_publishable_lesson_document,
@@ -494,5 +495,7 @@ async def get_learn_release(
         if has_instance is not None:
             release = await session.get(LearnReleaseModel, release_id)
             if release is not None:
-                return _to_response(release)
+                response = _to_response(release)
+                response.document = learner_safe_document(response.document)
+                return response
     raise HTTPException(status_code=404, detail="LearnRelease not found")
