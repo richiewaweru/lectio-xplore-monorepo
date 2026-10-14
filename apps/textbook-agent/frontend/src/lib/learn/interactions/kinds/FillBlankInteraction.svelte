@@ -79,7 +79,7 @@
 		aria-label={label}
 		value={blanks[i] ?? ''}
 		data-mark={mark}
-		style:width={inline ? `${Math.max(6, (blanks[i] ?? '').length + 2)}ch` : undefined}
+		style:width={inline ? `calc(${Math.max(6, (blanks[i] ?? '').length + 1)}ch + 28px)` : undefined}
 		{disabled}
 		oninput={(e) => {
 			const next = [...blanks];
@@ -128,9 +128,9 @@
 		line-height: 1;
 	}
 	.gap input.inline {
-		width: 6ch;
+		width: calc(6ch + 28px);
 		max-width: 100%;
-		min-width: 6ch;
+		min-width: calc(6ch + 28px);
 		text-align: center;
 		border-bottom: 3px solid var(--ink, #1c2321);
 	}

@@ -215,3 +215,40 @@ describe('marks after a check', () => {
 		expect(container.querySelector('[data-mark-text]')?.textContent).toBe('correct');
 	});
 });
+
+describe('disabled and sizing details', () => {
+	it('inline gap width grows with the word and includes padding', async () => {
+		render(InteractionShell, {
+			node: node('fill-blank', { blank_count: 1, sentence: 'It uses [1].' })
+		});
+		const gap = screen.getByLabelText('Gap 1') as HTMLInputElement;
+		await fireEvent.input(gap, { target: { value: 'chlorophyll' } });
+		expect(gap.style.width).toBe('calc(12ch + 28px)');
+	});
+
+	it('drops the undo wording and hint once the question is checked', async () => {
+		render(InteractionShell, {
+			node: node('match-pairs', { left_items: ['Leaf'], right_items: ['stomata'] })
+		});
+		expect(screen.getByText(/Tap a matched item to undo/)).toBeTruthy();
+		await click('Leaf');
+		await click('stomata');
+		await fireEvent.click(check());
+		expect(screen.queryByText(/Tap a matched item to undo/)).toBeNull();
+		const leaf = screen.getByRole('button', { name: 'Leaf' });
+		expect(document.getElementById(leaf.getAttribute('aria-describedby')!)?.textContent).toBe(
+			'Leaf, matched with stomata.'
+		);
+	});
+
+	it('hides the classify remove buttons when locked', async () => {
+		render(InteractionShell, {
+			node: node('classify', { items: ['Fern'], categories: ['Plant', 'Animal'] })
+		});
+		await click('Fern');
+		await click('Plant');
+		expect(screen.getByRole('button', { name: 'Remove Fern from Plant' })).toBeTruthy();
+		await fireEvent.click(check());
+		expect(screen.queryByRole('button', { name: 'Remove Fern from Plant' })).toBeNull();
+	});
+});

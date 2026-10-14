@@ -138,7 +138,9 @@
 	});
 </script>
 
-<p class="hint">Tap an item on the left, then tap its match on the right. Tap a matched item to undo.</p>
+{#if !disabled}
+	<p class="hint">Tap an item on the left, then tap its match on the right. Tap a matched item to undo.</p>
+{/if}
 <div class="columns">
 	<div class="column">
 		<ul class="col" aria-label="Items to match">
@@ -167,7 +169,7 @@
 								>↔ {letterOf(m.right)} · {plain(labelOf(m.right))}</span
 							>
 							<span class="sr" id={`${uid}-l-${index}`}
-								>{plain(item.label)}, matched with {plain(labelOf(m.right))}. Tap to undo.</span
+								>{plain(item.label)}, matched with {plain(labelOf(m.right))}.{disabled ? '' : ' Tap to undo.'}</span
 							>
 						{/if}
 					</div>
@@ -201,7 +203,7 @@
 						{#if m}
 							<span class="pair-chip" aria-hidden="true">↔ {numberOf(m.left)}</span>
 							<span class="sr" id={`${uid}-r-${index}`}
-								>Matched with item {numberOf(m.left)}. Tap to undo.</span
+								>Matched with item {numberOf(m.left)}.{disabled ? '' : ' Tap to undo.'}</span
 							>
 						{/if}
 					</div>

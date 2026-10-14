@@ -182,6 +182,7 @@
 					<li class="chip matched" data-testid="placed-chip" data-mark={mark}>
 						<span><InlineMarkup value={item.label} /></span>
 						<MarkBadge {mark} />
+						{#if !disabled}
 						<button
 							type="button"
 							class="remove"
@@ -191,6 +192,7 @@
 						>
 							<span aria-hidden="true">✕</span>
 						</button>
+						{/if}
 					</li>
 				{/each}
 			</ul>
