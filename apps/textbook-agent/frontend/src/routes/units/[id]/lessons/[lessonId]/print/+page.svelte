@@ -131,7 +131,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	}
 
 	async function createPrint() {
-		if (!ctx.path || !ctx.lesson || artifact.exists || !ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)) return;
+		if (!ctx.path || !ctx.lesson || (artifact.exists && !artifact.recreatable) || !ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)) return;
 		busy = 'create';
 		error = null;
 		try {
@@ -200,7 +200,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 			{#snippet actions()}<a class="link" href={`/units/${encodeURIComponent(ctx.unitId)}/lessons/${encodeURIComponent(ctx.lessonId)}/review`}>Review flagged content</a><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
 	{:else if activeTab === 'preview'}
-		{#if pageDocumentV2}<div class="doc"><LectioPageDocumentView document={pageDocumentV2} edition="teacher" /></div>{:else}<EmptyState title="Print needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Print output is stale. Reprepare and review the lesson before creating another output.' : [artifact.errorSummary || error || 'The Print document is unavailable.', autoRetryText(artifact.autoRetry)].filter(Boolean).join(' ')}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Retry Print</Button>{/if}{#if ctx.statusFresh && artifact.regenerable && !artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Regenerate Print</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
+		{#if pageDocumentV2}<div class="doc"><LectioPageDocumentView document={pageDocumentV2} edition="teacher" /></div>{:else}<EmptyState title="Print needs attention" description={artifact.recreatable && preparationIsApprovedAndFresh(ctx.preparation) ? 'The plan changed since this Print was made. Create a new one from the approved plan.' : artifact.recoveryAction === 'reprepare' ? 'This Print output is stale. Reprepare and review the lesson before creating another output.' : [artifact.errorSummary || error || 'The Print document is unavailable.', autoRetryText(artifact.autoRetry)].filter(Boolean).join(' ')}>{#snippet actions()}{#if ctx.statusFresh && artifact.recreatable && preparationIsApprovedAndFresh(ctx.preparation)}<Button busy={busy === 'create'} onclick={() => void createPrint()}>{busy === 'create' ? 'Creating…' : 'Create new Print'}</Button>{/if}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Retry Print</Button>{/if}{#if ctx.statusFresh && artifact.regenerable && !artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Regenerate Print</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
 	{/if}
 </div>
 
