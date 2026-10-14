@@ -106,3 +106,19 @@ def test_result_union_accepts_table() -> None:
         {"family": "table", "spec": table.GALLERY["table_weekly_growth"]}
     )
     assert isinstance(result.spec, TableSpec)
+
+
+def test_a_short_column_beside_long_headers_keeps_room_for_its_words() -> None:
+    # Lesson "Do Plants Eat Soil?" fig-1: a numeric Day column was squeezed until
+    # 'Day' no longer fit, and the figure fell through to the image model.
+    spec = TableSpec(
+        columns=[
+            "Day",
+            "Pot A – plant dried mass (g)",
+            "Pot A – soil dried mass (g)",
+            "Pot B (no plant) – soil dried mass (g)",
+        ],
+        rows=[[0, 0.4, 500.0, 500.0], [42, 3.6, 499.6, 500.0]],
+    )
+    texts = _cell_texts(spec)
+    assert "Day" in texts and "42" in texts

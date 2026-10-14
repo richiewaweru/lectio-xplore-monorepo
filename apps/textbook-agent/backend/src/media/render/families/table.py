@@ -41,18 +41,43 @@ def _wrap(text: str, chars: int) -> str:
     return "\n".join(textwrap.wrap(text, width=chars, break_long_words=False)) or text
 
 
+def _column_widths(weights: list[float], minimums: list[float], usable: float) -> list[float]:
+    """Share ``usable`` by ``weights`` while every column keeps at least its minimum.
+
+    Columns whose share falls below their minimum are pinned to it and the rest
+    is re-shared among the others. When the minimums alone exceed ``usable`` the
+    widths follow the minimums and the caller's fit check shrinks the font.
+    """
+    if sum(minimums) >= usable:
+        total = sum(minimums)
+        return [usable * m / total for m in minimums]
+    pinned: dict[int, float] = {}
+    while True:
+        free = [i for i in range(len(weights)) if i not in pinned]
+        space = usable - sum(pinned.values())
+        total = sum(weights[i] for i in free)
+        shares = {i: space * weights[i] / total for i in free}
+        short = [i for i in free if shares[i] < minimums[i]]
+        if not short:
+            return [pinned.get(i, shares.get(i, 0.0)) for i in range(len(weights))]
+        for i in short:
+            pinned[i] = minimums[i]
+
+
 def _layout(spec: TableSpec, font_size: float) -> tuple[list[float], list[list[str]], list[float]]:
     """Column widths, wrapped cell text (header first) and row heights, in inches."""
     grid = [[*spec.columns]] + [[cell_text(c) for c in row] for row in spec.rows]
     usable = _WIDTH - 2 * _MARGIN
+    em_in = font_size / 72.0
     weights = []
+    minimums = []
     for col in range(len(spec.columns)):
         longest_word = max(len(w) for row in grid for w in (row[col].split() or [""]))
         longest_cell = max(len(row[col]) for row in grid)
         weights.append(max(4.0, min(float(longest_cell), 22.0), float(longest_word)))
-    total = sum(weights)
-    widths = [usable * w / total for w in weights]
-    em_in = font_size / 72.0
+        # A word never breaks, so its column must hold it plus the cell padding.
+        minimums.append((longest_word + 1) * em_in * _CHAR_EM + 2 * _CELL_PAD)
+    widths = _column_widths(weights, minimums, usable)
     wrapped = [
         [
             _wrap(text, max(3, int((widths[i] - 2 * _CELL_PAD) / (em_in * _CHAR_EM))))
