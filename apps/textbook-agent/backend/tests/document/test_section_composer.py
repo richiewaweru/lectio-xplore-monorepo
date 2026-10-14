@@ -23,6 +23,7 @@ from document.shared_lesson.composer import (
     SectionCompositionPlan,
     _KIND_CUES,
     _eligible_non_paragraph_kinds,
+    visual_is_table,
     compose_section,
     validate_and_build_composition,
     validate_composition_plan,
@@ -1121,3 +1122,101 @@ def test_composer_prompt_cue_bullets_match_code_cue_tables() -> None:
     for kind in ("table", "compare"):
         assert bullet_cues(kind) == _KIND_CUES[kind], kind
     assert flat.count(_COMPARE_TABLE_GUIDANCE) == 1
+
+
+def _table_block(visual: VisualSpec | None) -> TeachingPlanBlock:
+    return TeachingPlanBlock(
+        id="b0",
+        position=0,
+        intent="compare the plant on day 0 and day 42",
+        brief="Compare the data for day 0 and day 42.",
+        evidence="Learner reads the data.",
+        visual=visual,
+    )
+
+
+@pytest.mark.parametrize(
+    ("purpose", "must_show", "expected"),
+    [
+        ("Show growth", ["a table with a row for Day 0 and a row for Day 42"], True),
+        ("Display the Table of results", ["rows"], True),
+        ("Show growth", ["a tablet", "timetable"], False),
+        ("Show growth", ["a bar chart of height"], False),
+    ],
+)
+def test_visual_is_table_word_boundary(
+    purpose: str, must_show: list[str], expected: bool
+) -> None:
+    assert visual_is_table(VisualSpec(purpose=purpose, must_show=must_show)) is expected
+    assert visual_is_table(None) is False
+
+
+def test_table_choice_on_table_visual_block_is_a_hard_issue() -> None:
+    visual = VisualSpec(
+        purpose="Show growth", must_show=["a table with a row for Day 0 and a row for Day 42"]
+    )
+    section = _section(_table_block(visual))
+    with pytest.raises(CompositionValidationError) as excinfo:
+        validate_and_build_composition(
+            section=section,
+            choices=[CompositionChoice(**_choice("b0", "table", "comparison"))],
+            tasks=[],
+            forbid_table_duplicating_figure=True,
+        )
+    assert ("table_duplicates_table_figure", "choices[0].kind") in excinfo.value.issues
+    assert "already shows a table as its figure" in " ".join(excinfo.value.errors)
+    assert "table" not in [kind for kind, _ in _eligible_non_paragraph_kinds(section.blocks[0])]
+    plan = validate_and_build_composition(
+        section=section,
+        choices=[CompositionChoice(**_choice("b0", "paragraph", "explanation"))],
+        tasks=[],
+    )
+    assert [item.kind for item in plan.items] == ["paragraph", "figure"]
+
+
+def test_table_choice_allowed_with_non_table_or_missing_visual() -> None:
+    for visual in (
+        VisualSpec(purpose="Show growth", must_show=["a bar chart of height"]),
+        None,
+    ):
+        plan = validate_and_build_composition(
+            section=_section(_table_block(visual)),
+            choices=[CompositionChoice(**_choice("b0", "table", "comparison"))],
+            tasks=[],
+            forbid_table_duplicating_figure=True,
+        )
+        assert [item.kind for item in plan.items][0] == "table"
+        assert not any(code == "table_duplicates_table_figure" for code, _ in plan.warnings)
+
+
+@pytest.mark.asyncio
+async def test_table_on_table_visual_block_is_repaired_with_guidance() -> None:
+    visual = VisualSpec(purpose="Show growth", must_show=["a table of Day 0 and Day 42"])
+    section = _section(_table_block(visual))
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        kind = "table" if len(calls) == 1 else "paragraph"
+        return {"items": [_choice("b0", kind, "comparison" if kind == "table" else "explanation")]}
+
+    plan = await compose_section(section=section, tasks=[], provider=provider)
+    assert len(calls) == 2
+    assert "already shows a table" in calls[1]["repair_errors"][0]
+    assert calls[0]["section"]["blocks"][0]["visual"]["must_show"]  # visual is exposed
+    assert [item.kind for item in plan.items] == ["paragraph", "figure"]
+
+
+def test_composer_prompt_forbids_table_for_table_visual() -> None:
+    prompt = " ".join(effective_prompt_text("section-composer").split())
+    assert "do not choose `table` for that block" in prompt
+
+
+def test_stored_table_plus_table_figure_still_verifies() -> None:
+    visual = VisualSpec(purpose="Show growth", must_show=["a table of Day 0 and Day 42"])
+    section = _section(_table_block(visual))
+    choices = [CompositionChoice(**_choice("b0", "table", "comparison"))]
+    # Without the flag (stored-plan path) the legacy table + figure is accepted.
+    stored = validate_and_build_composition(section=section, choices=choices, tasks=[])
+    assert [item.kind for item in stored.items] == ["table", "figure"]
+    validate_composition_plan(plan=stored, section=section, tasks=[])

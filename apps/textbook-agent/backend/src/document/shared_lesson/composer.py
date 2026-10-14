@@ -11,7 +11,11 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from curriculum.shared_tasks.models import SharedTaskSpec
-from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
+from curriculum.teaching_plan.models import (
+    TeachingPlanBlock,
+    TeachingPlanSection,
+    VisualSpec,
+)
 
 #: Figures are placed by code from the Teaching Plan visual spec; the composer
 #: never chooses one.
@@ -125,6 +129,7 @@ COMPOSITION_ISSUE_CODES = frozenset(
         "heading_missing_subsection_cue",
         "kind_missing_semantic_cue",
         "callout_missing_cautionary_cue",
+        "table_duplicates_table_figure",
         "block_missing_ordinary_node",
         "block_exceeds_node_limit",
         "section_exceeds_node_limit",
@@ -150,6 +155,7 @@ HARD_COMPOSITION_ISSUE_CODES = frozenset(
         "plan_diverges_from_deterministic",
         "provider_draft_schema_invalid",
         "kind_role_mismatch",
+        "table_duplicates_table_figure",
     }
 )
 
@@ -301,6 +307,19 @@ _CALLOUT_CUES = (
 )
 
 
+_TABLE_WORD = re.compile(r"\btable\b", re.IGNORECASE)
+
+
+def visual_is_table(visual: VisualSpec | None) -> bool:
+    """True when a block's visual spec asks for a table (figure of a table).
+
+    Looks for the whole word "table" in ``purpose`` or any ``must_show`` item.
+    """
+    if visual is None:
+        return False
+    return any(_TABLE_WORD.search(text) for text in (visual.purpose, *visual.must_show))
+
+
 def _eligible_non_paragraph_kinds(block: TeachingPlanBlock) -> tuple[tuple[str, str], ...]:
     """Return (kind, matched cue) pairs this block is eligible for, per the
     same deterministic cue tables the validator uses. Paragraph is excluded
@@ -312,6 +331,8 @@ def _eligible_non_paragraph_kinds(block: TeachingPlanBlock) -> tuple[tuple[str, 
     if subsection_cue is not None:
         eligible.append(("heading", subsection_cue))
     for kind, cues in _KIND_CUES.items():
+        if kind == "table" and visual_is_table(block.visual):
+            continue  # the block's figure already shows the table
         matched = next((cue for cue in cues if cue in text), None)
         if matched is not None:
             eligible.append((kind, matched))
@@ -343,6 +364,7 @@ def _evaluate_composition(
     policy: CompositionPolicy,
     section_slot_id: str,
     soft_bounds: bool,
+    forbid_table_duplicating_figure: bool = False,
 ) -> tuple[
     list[str],
     list[tuple[str, str]],
@@ -419,6 +441,18 @@ def _evaluate_composition(
                 f"blocks/{block.id}",
                 f"heading for block {block.id!r} lacks a genuine subsection cue",
             )
+        if (
+            forbid_table_duplicating_figure
+            and choice.kind == "table"
+            and visual_is_table(block.visual)
+        ):
+            _fail(
+                "table_duplicates_table_figure",
+                f"choices[{choice_index}].kind",
+                f"block {block.id!r} already shows a table as its figure; choose a"
+                " paragraph (or another eligible kind) instead of a table"
+                + _kind_missing_cue_guidance(block),
+            )
         kind_cues = _KIND_CUES.get(choice.kind)
         if kind_cues and not any(cue in _block_text(block) for cue in kind_cues):
             _fail(
@@ -477,8 +511,12 @@ def validate_and_build_composition(
     policy: CompositionPolicy | None = None,
     accept_soft_issues: bool = False,
     reserve_key_idea: bool = True,
+    forbid_table_duplicating_figure: bool = False,
 ) -> SectionCompositionPlan:
     """Validate model-selected form and build stable IDs plus fixed task anchors.
+
+    ``forbid_table_duplicating_figure`` is True only for fresh provider drafts;
+    stored plans are re-verified without it so existing lessons stay valid.
 
     Shape targets are advisory on every call. ``accept_soft_issues`` remains
     accepted for durable callers that already pass it, but it no longer
@@ -537,6 +575,7 @@ def validate_and_build_composition(
         policy=policy,
         section_slot_id=section.slot_id,
         soft_bounds=accept_soft_issues,
+        forbid_table_duplicating_figure=forbid_table_duplicating_figure,
     )
     errors.extend(pass_errors)
     issues.extend(pass_issues)
@@ -739,6 +778,7 @@ async def compose_section(
                 tasks=tasks,
                 policy=policy,
                 accept_soft_issues=(attempt == 1),
+                forbid_table_duplicating_figure=True,
             )
         except (ValidationError, CompositionValidationError) as exc:
             if isinstance(exc, CompositionValidationError):
