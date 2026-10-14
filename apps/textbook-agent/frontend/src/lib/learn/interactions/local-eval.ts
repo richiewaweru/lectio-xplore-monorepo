@@ -1,9 +1,12 @@
 /**
- * Lightweight local evaluation for preview mode when no onSubmit bridge is provided.
- * Production uses the runtime API; these helpers mirror retained contract shapes.
+ * Local evaluation for teacher preview when no onSubmit bridge is provided.
+ * Production uses the runtime API; these helpers mirror its scoring, item_results
+ * and retry rules (see attempt-rules.ts) so preview behaves like the learner view.
  */
 
-import type { FeedbackSpec, ServerEvaluation } from './types';
+import type { InteractionNode } from '$lib/learn/document/types';
+import { attemptState, isTeacherReview, isUnmarked } from './attempt-rules';
+import type { FeedbackSpec, ItemResults, LearnerResponse, ServerEvaluation } from './types';
 
 /** Prediction submissions are recorded but never receive a right/wrong result. */
 export function savePrediction(feedback: FeedbackSpec): ServerEvaluation {
@@ -19,66 +22,80 @@ function feedbackFor(
 	return feedback.incorrect;
 }
 
+function partialOutcome(earned: number, possible: number): 'correct' | 'partial' | 'incorrect' {
+	if (possible > 0 && earned === possible) return 'correct';
+	return earned > 0 ? 'partial' : 'incorrect';
+}
+
+function binary(ok: boolean, feedback: FeedbackSpec, itemResults: ItemResults): ServerEvaluation {
+	return {
+		outcome: ok ? 'correct' : 'incorrect',
+		feedback: feedbackFor(ok ? 'correct' : 'incorrect', feedback),
+		score_earned: ok ? 1 : 0,
+		score_possible: 1,
+		item_results: itemResults
+	};
+}
+
 export function evalChoice(
 	correctOptionId: string,
 	selected: string,
 	feedback: FeedbackSpec
 ): ServerEvaluation {
 	const ok = selected === correctOptionId;
-	return {
-		outcome: ok ? 'correct' : 'incorrect',
-		feedback: feedbackFor(ok ? 'correct' : 'incorrect', feedback),
-		score_earned: ok ? 1 : 0,
-		score_possible: 1
-	};
+	return binary(ok, feedback, { [selected]: ok });
 }
 
 export function evalMultiSelect(
 	correctIds: string[],
 	selected: string[],
-	feedback: FeedbackSpec
+	feedback: FeedbackSpec,
+	allOptionIds: string[] = []
 ): ServerEvaluation {
 	const correct = new Set(correctIds);
 	const picked = new Set(selected);
-	const allCorrect = [...correct].every((id) => picked.has(id));
-	const noExtras = [...picked].every((id) => correct.has(id));
-	const any = [...picked].some((id) => correct.has(id));
+	const hits = [...picked].filter((id) => correct.has(id)).length;
+	const falsePositives = picked.size - hits;
+	const possible = correct.size;
+	const earned = Math.max(0, hits - falsePositives);
 	const outcome =
-		allCorrect && noExtras ? 'correct' : any ? 'partial' : 'incorrect';
+		earned === possible && falsePositives === 0 && picked.size === correct.size
+			? 'correct'
+			: earned > 0
+				? 'partial'
+				: 'incorrect';
+	const ids = new Set([...allOptionIds, ...correct, ...picked]);
+	const itemResults: Record<string, boolean> = {};
+	for (const id of ids) itemResults[id] = picked.has(id) === correct.has(id);
 	return {
 		outcome,
 		feedback: feedbackFor(outcome, feedback),
-		score_earned: outcome === 'correct' ? 1 : outcome === 'partial' ? 0.5 : 0,
-		score_possible: 1
+		score_earned: earned,
+		score_possible: possible,
+		item_results: itemResults
 	};
 }
 
+/** answers[i] may be one string or a list of accepted alternatives. */
 export function evalFillBlank(
-	answers: string[],
+	answers: Array<string | string[]>,
 	blanks: string[],
 	feedback: FeedbackSpec,
 	caseSensitive = false
 ): ServerEvaluation {
 	const norm = (s: string) => (caseSensitive ? s.trim() : s.trim().toLowerCase());
-	if (blanks.length !== answers.length) {
-		return {
-			outcome: 'incorrect',
-			feedback: feedback.incorrect,
-			score_earned: 0,
-			score_possible: 1
-		};
-	}
-	let hits = 0;
-	for (let i = 0; i < answers.length; i++) {
-		if (norm(blanks[i] ?? '') === norm(answers[i] ?? '')) hits += 1;
-	}
-	const outcome =
-		hits === answers.length ? 'correct' : hits > 0 ? 'partial' : 'incorrect';
+	const itemResults = answers.map((answer, i) => {
+		const accepted = (Array.isArray(answer) ? answer : [answer]).map((a) => norm(String(a)));
+		return accepted.includes(norm(blanks[i] ?? ''));
+	});
+	const hits = itemResults.filter(Boolean).length;
+	const outcome = partialOutcome(hits, answers.length);
 	return {
 		outcome,
 		feedback: feedbackFor(outcome, feedback),
-		score_earned: answers.length ? hits / answers.length : 0,
-		score_possible: 1
+		score_earned: hits,
+		score_possible: answers.length,
+		item_results: itemResults
 	};
 }
 
@@ -89,12 +106,7 @@ export function evalNumeric(
 	feedback: FeedbackSpec
 ): ServerEvaluation {
 	const ok = Number.isFinite(value) && Math.abs(value - expected) <= tolerance;
-	return {
-		outcome: ok ? 'correct' : 'incorrect',
-		feedback: feedbackFor(ok ? 'correct' : 'incorrect', feedback),
-		score_earned: ok ? 1 : 0,
-		score_possible: 1
-	};
+	return binary(ok, feedback, null);
 }
 
 export function evalShortResponse(
@@ -106,12 +118,7 @@ export function evalShortResponse(
 		accepted.length === 0
 			? raw.trim().length > 0
 			: accepted.some((a) => a.trim().toLowerCase() === raw.trim().toLowerCase());
-	return {
-		outcome: ok ? 'correct' : 'incorrect',
-		feedback: feedbackFor(ok ? 'correct' : 'incorrect', feedback),
-		score_earned: ok ? 1 : 0,
-		score_possible: 1
-	};
+	return binary(ok, feedback, null);
 }
 
 export function evalPairs(
@@ -119,22 +126,19 @@ export function evalPairs(
 	matches: Array<{ left: string; right: string }>,
 	feedback: FeedbackSpec
 ): ServerEvaluation {
-	const key = (p: { left: string; right: string }) => `${p.left}→${p.right}`;
-	const want = new Set(correct.map(key));
-	const got = new Set(matches.map(key));
+	const expected = new Map(correct.map((p) => [p.left, p.right]));
+	const placed = new Map(matches.map((m) => [m.left, m.right]));
 	let hits = 0;
-	for (const k of got) if (want.has(k)) hits += 1;
-	const outcome =
-		hits === want.size && got.size === want.size
-			? 'correct'
-			: hits > 0
-				? 'partial'
-				: 'incorrect';
+	for (const m of matches) if (expected.get(m.left) === m.right) hits += 1;
+	const itemResults: Record<string, boolean> = {};
+	for (const [left, right] of expected) itemResults[left] = placed.get(left) === right;
+	const outcome = partialOutcome(hits, expected.size);
 	return {
 		outcome,
 		feedback: feedbackFor(outcome, feedback),
-		score_earned: want.size ? hits / want.size : 0,
-		score_possible: 1
+		score_earned: hits,
+		score_possible: expected.size,
+		item_results: itemResults
 	};
 }
 
@@ -143,13 +147,114 @@ export function evalSequence(
 	order: string[],
 	feedback: FeedbackSpec
 ): ServerEvaluation {
-	const ok =
-		correctOrder.length === order.length &&
-		correctOrder.every((id, i) => id === order[i]);
+	const itemResults = correctOrder.map((id, i) => order[i] === id);
+	const hits = itemResults.filter(Boolean).length;
+	const outcome = partialOutcome(hits, correctOrder.length);
 	return {
-		outcome: ok ? 'correct' : 'incorrect',
-		feedback: feedbackFor(ok ? 'correct' : 'incorrect', feedback),
-		score_earned: ok ? 1 : 0,
-		score_possible: 1
+		outcome,
+		feedback: feedbackFor(outcome, feedback),
+		score_earned: hits,
+		score_possible: correctOrder.length,
+		item_results: itemResults
 	};
+}
+
+function strings(v: unknown): string[] {
+	return Array.isArray(v) ? v.map(String) : [];
+}
+
+function optionIds(config: Record<string, unknown>): string[] {
+	return Array.isArray(config.options)
+		? (config.options as Array<{ id: unknown }>).map((o) => String(o.id))
+		: [];
+}
+
+/** Mark one response against the preview config keys (no retry state). */
+function markResponse(
+	node: InteractionNode,
+	response: LearnerResponse,
+	feedback: FeedbackSpec
+): ServerEvaluation {
+	const c = (node.config ?? {}) as Record<string, unknown>;
+	const pairs = Array.isArray(c.pairs)
+		? (c.pairs as Array<{ left: unknown; right: unknown }>).map((p) => ({
+				left: String(p.left),
+				right: String(p.right)
+			}))
+		: [];
+	switch (node.interaction_type) {
+		case 'choice':
+			return evalChoice(
+				String(c.correct_option_id ?? ''),
+				String(response.selected_option_id ?? ''),
+				feedback
+			);
+		case 'multi-select':
+			return evalMultiSelect(
+				strings(c.correct_option_ids),
+				strings(response.selected_option_ids),
+				feedback,
+				optionIds(c)
+			);
+		case 'fill-blank':
+			return evalFillBlank(
+				(Array.isArray(c.answers) ? c.answers : []) as Array<string | string[]>,
+				strings(response.blanks),
+				feedback,
+				Boolean(c.case_sensitive)
+			);
+		case 'numeric':
+			return evalNumeric(
+				Number(c.value ?? 0),
+				Number(c.tolerance ?? 0),
+				Number(response.value),
+				feedback
+			);
+		case 'short-response':
+			return evalShortResponse(
+				Array.isArray(c.answers) ? strings(c.answers) : strings(c.accepted_answers),
+				String(response.text ?? ''),
+				feedback
+			);
+		case 'match-pairs':
+		case 'classify':
+			return evalPairs(
+				pairs,
+				((response.matches as Array<{ left: unknown; right: unknown }>) ?? []).map((m) => ({
+					left: String(m.left),
+					right: String(m.right)
+				})),
+				feedback
+			);
+		case 'sequence': {
+			const order = Array.isArray(c.order) ? strings(c.order) : strings(c.items);
+			return evalSequence(order, strings(response.order), feedback);
+		}
+		default:
+			return { outcome: 'incorrect', feedback: feedback.incorrect };
+	}
+}
+
+/**
+ * Preview attempt: mark `response` and attach attempts_used / attempts_left / reveal
+ * following the server's rules. `priorOutcomes` are this question's earlier outcomes.
+ */
+export function evaluateLocalAttempt(
+	node: InteractionNode,
+	response: LearnerResponse,
+	feedback: FeedbackSpec,
+	priorOutcomes: string[]
+): ServerEvaluation {
+	let result: ServerEvaluation;
+	if (isUnmarked(node)) {
+		result = {
+			outcome: 'pending-review',
+			feedback: isTeacherReview(node)
+				? (feedback.saved ?? 'Answer saved for your teacher to review.')
+				: (feedback.saved ?? 'Prediction saved.')
+		};
+	} else {
+		result = markResponse(node, response, feedback);
+	}
+	return { ...result, ...attemptState(node, [...priorOutcomes, result.outcome]) };
 }

@@ -10,6 +10,7 @@
 		latestAttemptByInteraction,
 		newSubmissionId,
 		submitInstanceAttempt,
+		type InteractionStateDto,
 		type StoredAttempt
 	} from '$lib/learn/student/api/attempts';
 	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
@@ -48,7 +49,8 @@
 		completedSectionIds = (instance.progress?.completed_section_ids ?? []) as string[];
 		currentSectionId = instance.current_section_id ?? null;
 		attemptsByInteraction = latestAttemptByInteraction(
-			(instance.attempts ?? []) as StoredAttempt[]
+			(instance.attempts ?? []) as StoredAttempt[],
+			(instance.interaction_states ?? {}) as Record<string, InteractionStateDto>
 		);
 		return instance;
 	}
@@ -103,7 +105,11 @@
 			outcome: result.outcome,
 			feedback: result.feedback,
 			score_earned: result.score_earned,
-			score_possible: result.score_possible
+			score_possible: result.score_possible,
+			item_results: result.item_results,
+			attempts_used: result.attempts_used,
+			attempts_left: result.attempts_left,
+			reveal: result.reveal
 		};
 	}
 

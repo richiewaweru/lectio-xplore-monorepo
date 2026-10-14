@@ -1,5 +1,6 @@
 import { learnerFetch } from '$lib/learn/student/api/learner-fetch';
 import { ensureOk } from '$lib/api/errors';
+import type { ItemResults } from '$lib/learn/interactions/types';
 
 export type AttemptSubmitRequest = {
 	interaction_id: string;
@@ -21,6 +22,20 @@ export type AttemptSubmitResponse = {
 	assessment_mode: string;
 	idempotent_replay: boolean;
 	response_json: Record<string, unknown>;
+	item_results?: ItemResults;
+	attempts_used?: number;
+	attempts_left?: number | null;
+	reveal?: Record<string, unknown> | null;
+};
+
+/** Latest-attempt state the server sends per interaction on GET /instances/{id}. */
+export type InteractionStateDto = {
+	attempts_used?: number;
+	attempts_left?: number | null;
+	reveal?: Record<string, unknown> | null;
+	item_results?: ItemResults;
+	outcome?: string;
+	feedback?: string | null;
 };
 
 export type StoredAttempt = {
@@ -29,11 +44,14 @@ export type StoredAttempt = {
 	client_submission_id: string;
 	section_id?: string | null;
 	outcome: string;
+	feedback?: string | null;
 	assessment_mode: string;
 	score_earned: number;
 	score_possible: number;
 	response_json: Record<string, unknown>;
 	created_at?: string | null;
+	/** Attached by latestAttemptByInteraction from instance.interaction_states. */
+	state?: InteractionStateDto;
 };
 
 export async function submitInstanceAttempt(
@@ -50,11 +68,15 @@ export async function submitInstanceAttempt(
 }
 
 export function latestAttemptByInteraction(
-	attempts: StoredAttempt[]
+	attempts: StoredAttempt[],
+	states: Record<string, InteractionStateDto> = {}
 ): Map<string, StoredAttempt> {
 	const map = new Map<string, StoredAttempt>();
 	for (const attempt of attempts) {
 		map.set(attempt.interaction_id, attempt);
+	}
+	for (const [id, attempt] of map) {
+		if (states[id]) map.set(id, { ...attempt, state: states[id] });
 	}
 	return map;
 }

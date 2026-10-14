@@ -97,8 +97,16 @@
 			outcome: attempt.outcome,
 			feedback: attempt.feedback ?? attempt.outcome,
 			score_earned: attempt.score_earned,
-			score_possible: attempt.score_possible
+			score_possible: attempt.score_possible,
+			item_results: attempt.item_results,
+			attempts_used: attempt.attempts_used,
+			attempts_left: attempt.attempts_left,
+			reveal: attempt.reveal
 		};
+	}
+
+	function initialResponse(nodeId: string): Record<string, unknown> | null {
+		return attemptsByInteraction.get(nodeId)?.response ?? null;
 	}
 
 	function submitFor(nodeId: string): InteractionSubmitHandler | undefined {
@@ -186,6 +194,7 @@
 					{questionNumber}
 					onSubmit={submitFor(node.id)}
 					initialEvaluation={initialEval(node.id)}
+					initialResponse={initialResponse(node.id)}
 				/>
 			{:else}
 				<DocumentNodeRenderer {node} {assets} {figureNumber} />
