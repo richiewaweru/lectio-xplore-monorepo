@@ -90,6 +90,8 @@ def four_lesson_draft(**overrides: object) -> PathPlanDraft:
                 "requires": [],
                 "must_establish": ["the heart pumps blood"],
                 "knowledge_type": "conceptual",
+                "lesson_mode": "first_exposure",
+                "lesson_mode_reason": "It teaches something new.",
             },
             {
                 "key": "L2",
@@ -98,6 +100,8 @@ def four_lesson_draft(**overrides: object) -> PathPlanDraft:
                 "requires": ["L1"],
                 "must_establish": ["arteries, veins and capillaries have different roles"],
                 "knowledge_type": "conceptual",
+                "lesson_mode": "first_exposure",
+                "lesson_mode_reason": "It teaches something new.",
             },
             {
                 "key": "L3",
@@ -106,6 +110,8 @@ def four_lesson_draft(**overrides: object) -> PathPlanDraft:
                 "requires": ["L1", "L2"],
                 "must_establish": ["blood transports materials"],
                 "knowledge_type": "factual",
+                "lesson_mode": "first_exposure",
+                "lesson_mode_reason": "It teaches something new.",
             },
             {
                 "key": "L4",
@@ -114,6 +120,8 @@ def four_lesson_draft(**overrides: object) -> PathPlanDraft:
                 "requires": ["L1", "L2", "L3"],
                 "must_establish": ["blood circulates through the body"],
                 "knowledge_type": "conceptual",
+                "lesson_mode": "first_exposure",
+                "lesson_mode_reason": "It teaches something new.",
             },
         ],
     }
@@ -140,6 +148,8 @@ def overlapping_pair_plan() -> CanonicalPathPlan:
                         "blood flows through the heart",
                     ],
                     "knowledge_type": "conceptual",
+                    "lesson_mode": "first_exposure",
+                    "lesson_mode_reason": "It teaches something new.",
                 },
                 {
                     "key": "L2",
@@ -152,6 +162,8 @@ def overlapping_pair_plan() -> CanonicalPathPlan:
                         "the heart acts as a pump",
                     ],
                     "knowledge_type": "conceptual",
+                    "lesson_mode": "first_exposure",
+                    "lesson_mode_reason": "It teaches something new.",
                 },
                 {
                     "key": "L3",
@@ -160,6 +172,8 @@ def overlapping_pair_plan() -> CanonicalPathPlan:
                     "requires": ["L2"],
                     "must_establish": ["arteries carry blood away from the heart"],
                     "knowledge_type": "factual",
+                    "lesson_mode": "first_exposure",
+                    "lesson_mode_reason": "It teaches something new.",
                 },
             ]
         )
