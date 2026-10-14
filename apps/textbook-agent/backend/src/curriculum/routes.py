@@ -1863,7 +1863,8 @@ async def get_path_lesson_shape(
     lesson_id: str,
     lesson_mode: Literal[
         "first_exposure", "consolidation", "repair", "retrieval", "transfer"
-    ] = Query(default="first_exposure"),
+    ]
+    | None = Query(default=None),
     misconception_count: int = Query(default=1, ge=0, le=3),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),

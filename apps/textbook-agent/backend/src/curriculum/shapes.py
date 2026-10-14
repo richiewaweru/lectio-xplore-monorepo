@@ -11,6 +11,7 @@ from curriculum.models import ShapeDeviationCreateRequest
 from curriculum.planning.skeletons import (
     DeviationRequest,
     SkeletonPreviewRequest,
+    effective_lesson_mode,
     load_skeleton_catalog,
 )
 
@@ -68,9 +69,10 @@ async def lesson_shape_payload(
     session: AsyncSession,
     *,
     lesson: PathLessonModel,
-    lesson_mode: str,
+    lesson_mode: str | None = None,
     misconception_count: int,
 ) -> dict[str, Any]:
+    lesson_mode = lesson_mode or effective_lesson_mode(lesson.lesson_mode)
     catalog = load_skeleton_catalog()
     skeleton = catalog.skeleton_for(lesson.primary_knowledge_type, lesson_mode)
     skeleton_id = str(skeleton["id"])
@@ -132,6 +134,9 @@ async def request_shape_deviation(
     lesson: PathLessonModel,
     request: ShapeDeviationCreateRequest,
 ) -> PathLessonDeviationModel:
+    request = request.model_copy(
+        update={"lesson_mode": request.lesson_mode or effective_lesson_mode(lesson.lesson_mode)}
+    )
     catalog = load_skeleton_catalog()
     skeleton = catalog.skeleton_for(lesson.primary_knowledge_type, request.lesson_mode)
     skeleton_id = str(skeleton["id"])

@@ -70,6 +70,7 @@ from curriculum.planning.objective_ownership import ObjectiveOwnership, Objectiv
 from curriculum.planning.skeletons import (
     SkeletonPreviewRequest,
     SkeletonVariantPreview,
+    effective_lesson_mode,
     load_skeleton_catalog,
 )
 
@@ -457,6 +458,9 @@ async def prepare_path_lesson(
     regeneration_reason: str | None = None,
     trace_id: str | None = None,
 ) -> tuple[PreparedLessonResponse, StructuralPlan]:
+    request = request.model_copy(
+        update={"lesson_mode": request.lesson_mode or effective_lesson_mode(lesson.lesson_mode)}
+    )
     if version.status != "approved":
         raise PathPreparationBlocked("Path must be approved before lesson preparation")
     if lesson.skipped:
