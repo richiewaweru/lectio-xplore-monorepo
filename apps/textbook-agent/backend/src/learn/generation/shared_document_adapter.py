@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from curriculum.shared_tasks.models import ACTION_RESPONSE_TYPES, SharedTaskSpec
-from curriculum.shared_tasks.ordering import scramble_for_display
+from curriculum.shared_tasks.ordering import derange_for_display, scramble_for_display
 from curriculum.shared_tasks.validation import assert_task_response_contract
 from document.shared_lesson.hashing import shared_lesson_content_hash
 from document.shared_lesson.media import (
@@ -242,6 +242,7 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
             "answers": answers,
             "answer_lines": response.get("answer_lines"),
             "case_sensitive": evaluation.get("case_sensitive", False),
+            "blank_count": len(answers) if isinstance(answers, list) else 1,
         }
         if evaluation_type == "rubric":
             config["rubric_criteria"] = _rubric_review(evaluation, task_id=task.id)[0]
@@ -367,7 +368,15 @@ def _learn_config(task: SharedTaskSpec, interaction_kind: str) -> dict[str, Any]
             raise SharedDocumentLearnMappingError(
                 f"task {task.id!r} matching evaluation cannot be mapped to Learn"
             )
-        config = {"pairs": pairs}
+        left_items = [pair.get("left") for pair in pairs if isinstance(pair, Mapping)]
+        unique_right = list(
+            dict.fromkeys(pair.get("right") for pair in pairs if isinstance(pair, Mapping))
+        )
+        config = {
+            "pairs": pairs,
+            "left_items": left_items,
+            "right_items": derange_for_display(task.id, unique_right),
+        }
         if evaluation_type == "rubric":
             config["rubric_criteria"] = _rubric_review(evaluation, task_id=task.id)[0]
         return config

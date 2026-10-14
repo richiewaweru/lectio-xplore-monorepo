@@ -84,7 +84,8 @@
 		if (t === 'fill-blank') {
 			const answers = Array.isArray(cfg.answers) ? cfg.answers : [];
 			const ids = Array.isArray(cfg.blank_ids) ? cfg.blank_ids : [];
-			const n = Math.max(answers.length, ids.length, 1);
+			const declared = typeof cfg.blank_count === 'number' ? cfg.blank_count : 0;
+			const n = Math.max(answers.length, ids.length, declared, 1);
 			if (blanks.length !== n) blanks = Array.from({ length: n }, (_, i) => blanks[i] ?? '');
 		}
 		if (t === 'sequence' && order.length === 0) {
@@ -136,10 +137,14 @@
 	);
 
 	const matchLeft = $derived(
-		pairList.map((p) => ({ id: p.left, label: p.left }))
+		Array.isArray(config.left_items)
+			? (config.left_items as unknown[]).map((v) => ({ id: String(v), label: String(v) }))
+			: pairList.map((p) => ({ id: p.left, label: p.left }))
 	);
 	const matchRight = $derived(
-		[...new Set(pairList.map((p) => p.right))].map((id) => ({ id, label: id }))
+		Array.isArray(config.right_items)
+			? (config.right_items as unknown[]).map((v) => ({ id: String(v), label: String(v) }))
+			: [...new Set(pairList.map((p) => p.right))].map((id) => ({ id, label: id }))
 	);
 
 	const classifyCategories = $derived(

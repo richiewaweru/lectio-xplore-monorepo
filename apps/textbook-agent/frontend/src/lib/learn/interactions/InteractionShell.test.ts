@@ -202,3 +202,78 @@ describe('InteractionShell inline markup inside flex buttons', () => {
 		expect(container.querySelector('button.chip strong')).not.toBeNull();
 	});
 });
+
+describe('InteractionShell learner-safe config (no answer keys)', () => {
+	it('match-pairs renders left_items/right_items in the given order without pairs', () => {
+		const node: InteractionNode = {
+			id: 'match-safe',
+			kind: 'interaction',
+			interaction_type: 'match-pairs',
+			prompt: 'Match each part to its job.',
+			role: 'practice',
+			config: {
+				left_items: ['Roots', 'Leaves'],
+				right_items: ['Make food', 'Take in water']
+			},
+			feedback: { correct: 'Right.', incorrect: 'Look again.' }
+		};
+		const { container } = render(InteractionShell, { node });
+		const cols = container.querySelectorAll('ul.col');
+		expect(cols).toHaveLength(2);
+		const labels = (col: Element) =>
+			[...col.querySelectorAll('button')].map((b) => b.textContent?.trim());
+		expect(labels(cols[0])).toEqual(['Roots', 'Leaves']);
+		expect(labels(cols[1])).toEqual(['Make food', 'Take in water']);
+	});
+
+	it('classify works when pairs are absent', () => {
+		const node: InteractionNode = {
+			id: 'classify-safe',
+			kind: 'interaction',
+			interaction_type: 'classify',
+			prompt: 'Sort.',
+			role: 'practice',
+			config: {
+				items: ['Sunflower', 'Hamster'],
+				categories: [
+					{ id: 'Plant', label: 'Plant' },
+					{ id: 'Animal', label: 'Animal' }
+				]
+			},
+			feedback: { correct: 'ok', incorrect: 'no' }
+		};
+		render(InteractionShell, { node });
+		expect(screen.getByRole('button', { name: 'Sunflower' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Hamster' })).toBeTruthy();
+	});
+
+	it('fill-blank uses blank_count when answers are absent', () => {
+		const node: InteractionNode = {
+			id: 'fill-safe',
+			kind: 'interaction',
+			interaction_type: 'fill-blank',
+			prompt: 'Fill in.',
+			role: 'practice',
+			config: { blank_count: 3 },
+			feedback: { correct: 'ok', incorrect: 'no' }
+		};
+		const { container } = render(InteractionShell, { node });
+		expect(
+			container.querySelectorAll('[data-testid="fill-blank-interaction"] input')
+		).toHaveLength(3);
+	});
+
+	it('sequence renders from items when order is absent', () => {
+		const node: InteractionNode = {
+			id: 'seq-safe',
+			kind: 'interaction',
+			interaction_type: 'sequence',
+			prompt: 'Order.',
+			role: 'practice',
+			config: { items: ['Egg', 'Larva', 'Pupa'] },
+			feedback: { correct: 'ok', incorrect: 'no' }
+		};
+		render(InteractionShell, { node });
+		expect(screen.getByText('Larva')).toBeTruthy();
+	});
+});
