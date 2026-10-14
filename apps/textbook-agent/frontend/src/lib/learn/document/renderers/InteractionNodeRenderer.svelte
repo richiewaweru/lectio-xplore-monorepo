@@ -12,6 +12,7 @@
 		disabled?: boolean;
 		onSubmit?: InteractionSubmitHandler;
 		initialEvaluation?: ServerEvaluation | null;
+		initialResponse?: Record<string, unknown> | null;
 		questionNumber?: number;
 	}
 
@@ -20,6 +21,7 @@
 		disabled = false,
 		onSubmit = undefined,
 		initialEvaluation = null,
+		initialResponse = null,
 		questionNumber = undefined
 	}: Props = $props();
 </script>
@@ -30,7 +32,7 @@
 	data-interaction-type={node.interaction_type}
 	data-question-number={questionNumber}
 >
-	<InteractionShell {node} {disabled} {onSubmit} {initialEvaluation} {questionNumber} />
+	<InteractionShell {node} {disabled} {onSubmit} {initialEvaluation} {initialResponse} {questionNumber} />
 </section>
 
 <style>

@@ -87,8 +87,11 @@ describe('InteractionShell match-pairs', () => {
 
 	it('shows no check icon on incorrect feedback', async () => {
 		render(InteractionShell, { node: matchNode });
-		await fireEvent.click(screen.getByRole('button', { name: 'Roots' }));
-		await fireEvent.click(screen.getByRole('button', { name: 'Make food' }));
+		// Check stays disabled until every left item is placed.
+		for (const [l, r] of [['Roots', 'Make food'], ['Leaves', 'Take in water']]) {
+			await fireEvent.click(screen.getByRole('button', { name: l }));
+			await fireEvent.click(screen.getByRole('button', { name: r }));
+		}
 		await fireEvent.click(screen.getByTestId('interaction-check'));
 		expect(screen.getByRole('status').getAttribute('data-outcome')).not.toBe('correct');
 		expect(screen.queryByTestId('feedback-correct-icon')).toBeNull();

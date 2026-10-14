@@ -53,10 +53,14 @@
 			map.set(id, {
 				interactionId: stored.interaction_id,
 				outcome: stored.outcome,
-				feedback: stored.outcome,
+				feedback: stored.state?.feedback ?? stored.feedback ?? stored.outcome,
 				response: stored.response_json,
 				score_earned: stored.score_earned,
-				score_possible: stored.score_possible
+				score_possible: stored.score_possible,
+				item_results: stored.state?.item_results,
+				attempts_used: stored.state?.attempts_used,
+				attempts_left: stored.state?.attempts_left,
+				reveal: stored.state?.reveal
 			});
 		}
 		return map;

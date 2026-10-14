@@ -168,6 +168,10 @@ export interface InteractionAttemptState {
 	response?: Record<string, unknown>;
 	score_earned?: number;
 	score_possible?: number;
+	item_results?: Record<string, boolean> | boolean[] | null;
+	attempts_used?: number;
+	attempts_left?: number | null;
+	reveal?: Record<string, unknown> | null;
 }
 
 export function isLearnDocument(value: unknown): value is LearnDocument {
