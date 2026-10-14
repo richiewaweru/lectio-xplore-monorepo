@@ -138,7 +138,7 @@ def evaluate_choice(
         score_earned=1.0 if ok else 0.0,
         score_possible=1.0,
         feedback=_graded_feedback("correct" if ok else "incorrect", feedback),
-        details={"selected_option_id": selected},
+        details={"selected_option_id": selected, "item_results": {selected: ok}},
     )
 
 
@@ -178,7 +178,13 @@ def evaluate_multi_select(
         score_earned=score_earned,
         score_possible=score_possible,
         feedback=_graded_feedback(outcome, feedback),
-        details={"false_positives": false_positives},
+        details={
+            "false_positives": false_positives,
+            "item_results": {
+                option_id: (option_id in selected) == (option_id in correct)
+                for option_id in sorted((known or set()) | correct | selected)
+            },
+        },
     )
 
 
@@ -230,7 +236,10 @@ def evaluate_fill_blank(
         score_earned=score_earned,
         score_possible=score_possible,
         feedback=_graded_feedback(outcome, feedback),
-        details={"per_blank": per_blank},
+        details={
+            "per_blank": per_blank,
+            "item_results": [bool(item["correct"]) for item in per_blank],
+        },
     )
 
 
@@ -364,12 +373,19 @@ def evaluate_match_pairs(
             continue
         if expected.get(str(match.get("left"))) == str(match.get("right")):
             score_earned += 1.0
+    placed = {
+        str(match.get("left")): str(match.get("right"))
+        for match in matches
+        if isinstance(match, dict)
+    }
+    item_results = {left: placed.get(left) == right for left, right in expected.items()}
     outcome = _partial_outcome(score_earned, score_possible)
     return EvaluationResult(
         outcome=outcome,
         score_earned=score_earned,
         score_possible=score_possible,
         feedback=_graded_feedback(outcome, feedback),
+        details={"item_results": item_results},
     )
 
 
@@ -403,6 +419,9 @@ def evaluate_sequence(
         score_earned=score_earned,
         score_possible=score_possible,
         feedback=_graded_feedback(outcome, feedback),
+        details={
+            "item_results": [given[index] == item_id for index, item_id in enumerate(expected)]
+        },
     )
 
 
@@ -485,12 +504,9 @@ def score_aggregation_of(contract: Mapping[str, Any] | None) -> str:
     """Declared retry aggregation: first | latest | best (default latest)."""
     if not isinstance(contract, dict):
         return "latest"
-    policy = contract.get("score_aggregation") or contract.get("attempt_policy", {}).get(
-        "score_aggregation"
-    )
-    if policy in {"first", "latest", "best"}:
-        return str(policy)
-    return "latest"
+    from learn.runtime.attempt_rules import effective_policy
+
+    return str(effective_policy(contract)["score_aggregation"])
 
 
 def contract_from_v2_node(node: Mapping[str, Any]) -> dict[str, Any]:
@@ -630,4 +646,6 @@ def concept_bindings_from_contract(
 
 def feedback_for_outcome(contract: Mapping[str, Any], outcome: str) -> str:
     feedback = contract.get("feedback") if isinstance(contract.get("feedback"), dict) else {}
+    if contract.get("role") == "predict":
+        return str(feedback.get("saved") or "Prediction saved.")
     return _graded_feedback(outcome, feedback)
