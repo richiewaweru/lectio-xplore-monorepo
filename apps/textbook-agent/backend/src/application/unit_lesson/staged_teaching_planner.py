@@ -519,6 +519,41 @@ def spine_quantity_word_flags(spine: TeachingSpine) -> list[dict[str, Any]]:
     return flags
 
 
+def unused_backbone_figures(
+    plan: TeachingPlan, packet: ImmutableLessonPacket
+) -> list[dict[str, Any]]:
+    """Advisory flags for backbone figures no block references via ``visual.figure_ref``.
+
+    Placement is never forced; an unused figure is only surfaced so the author knows it
+    was dropped. Warning severity, never blocks approval.
+    """
+    figures = _backbone_figures(packet)
+    if not figures:
+        return []
+    used = {
+        block.visual.figure_ref
+        for section in plan.sections
+        for block in section.blocks
+        if block.visual is not None and block.visual.figure_ref
+    }
+    flags: list[dict[str, Any]] = []
+    for fid, figure in figures.items():
+        if fid in used:
+            continue
+        purpose = " ".join(str(figure.get("purpose") or "").split())
+        if len(purpose) > 80:
+            purpose = purpose[:77].rstrip() + "..."
+        label = f" ({purpose})" if purpose else ""
+        flags.append(
+            plan_quality_flag(
+                code="BACKBONE_FIGURE_UNUSED",
+                source="validator",
+                message=f"backbone figure '{fid}'{label} is not used by any block",
+            )
+        )
+    return flags
+
+
 # --------------------------------------------------------------------------- orchestration
 
 
@@ -1898,6 +1933,7 @@ async def finish_staged_plan(
     for result in sections.values():
         flags.extend(result.flags)
     flags.extend(review_flags)
+    flags.extend(unused_backbone_figures(plan, packet))
     if advisory_gate:
         flags.extend(_frozen_assessment_reuse_flags(plan, packet))
     else:
