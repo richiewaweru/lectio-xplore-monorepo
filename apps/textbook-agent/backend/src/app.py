@@ -16,6 +16,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from application.unit_lesson.native_http import native_lesson_router
 from application.unit_lesson.preparation_http import router as preparation_router
+from core.prompts.loader import warn_stale_path_planner_overrides
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
@@ -244,6 +245,11 @@ async def lifespan(app: FastAPI):
         get_resource_spec("lesson"),
         get_intent_catalogue()["intents"],
     )
+    try:
+        async with async_session_factory() as override_session:
+            await warn_stale_path_planner_overrides(override_session)
+    except Exception:
+        logger.debug("path-planner override check skipped", exc_info=True)
     await telemetry_monitor.start()
     pdf_temp_cleaned = cleanup_stale_pdf_exports(
         path_value=settings.pdf_temp_dir,

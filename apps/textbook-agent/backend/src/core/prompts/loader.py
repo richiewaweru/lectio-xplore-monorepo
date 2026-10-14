@@ -24,6 +24,7 @@ manifest.yaml shape:
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -36,6 +37,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import PromptOverrideModel
+
+logger = logging.getLogger(__name__)
+
+_PATH_PLANNER_ID = "path-planner"
+_LESSON_MODE_MARKER = "lesson_mode"
 
 _PROMPTS_DIR = Path(__file__).resolve().parents[3] / "resources" / "prompts"
 _MANIFEST_PATH = _PROMPTS_DIR / "manifest.yaml"
@@ -242,9 +248,52 @@ async def resolve_prompt(
         override = await _get_override_row(session, user_id=user_id, prompt_id=prompt_id)
         if override is not None:
             text = override.text
+            if prompt_id == _PATH_PLANNER_ID and _LESSON_MODE_MARKER not in text:
+                logger.warning(
+                    "path_planner_override_missing_lesson_mode user_id=%s",
+                    user_id,
+                    extra={
+                        "event": "path_planner_override_missing_lesson_mode",
+                        "user_id": user_id,
+                    },
+                )
             return text, hash_prompt(text)
     text = get_default_prompt(prompt_id)
     return text, hash_prompt(text)
+
+
+async def stale_path_planner_overrides(session: AsyncSession) -> list[str]:
+    """User ids whose stored `path-planner` override lacks ``lesson_mode``.
+
+    Such overrides replace the packaged prompt with an older one that never asks
+    for lesson_mode. Returns ids only; prompt text is never exposed or modified.
+    """
+    result = await session.execute(
+        select(PromptOverrideModel.user_id, PromptOverrideModel.text).where(
+            PromptOverrideModel.prompt_id == _PATH_PLANNER_ID
+        )
+    )
+    return [
+        user_id
+        for user_id, text in result.all()
+        if _LESSON_MODE_MARKER not in (text or "")
+    ]
+
+
+async def warn_stale_path_planner_overrides(session: AsyncSession) -> int:
+    """Log the stale-override count (count only) and return it. Never raises."""
+    try:
+        count = len(await stale_path_planner_overrides(session))
+    except Exception:
+        logger.debug("stale path-planner override check failed", exc_info=True)
+        return 0
+    if count:
+        logger.warning(
+            "path_planner_override_missing_lesson_mode count=%d",
+            count,
+            extra={"event": "path_planner_override_missing_lesson_mode", "count": count},
+        )
+    return count
 
 
 async def is_modified(prompt_id: str, user_id: str, session: AsyncSession) -> bool:
@@ -317,4 +366,6 @@ __all__ = [
     "load_manifest",
     "resolve_prompt",
     "save_override",
+    "stale_path_planner_overrides",
+    "warn_stale_path_planner_overrides",
 ]

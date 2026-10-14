@@ -14,6 +14,7 @@ strings (which contain slot ids) are safe to emit.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from typing import Any
 
 from infra.authoring.model_policy import V3_NODE_REASONING, get_v3_spec
@@ -71,4 +72,65 @@ def log_planner_attempt_failed(
         errors[:_MAX_LOGGED_ERRORS],
         repair_attached,
         will_retry,
+    )
+
+
+def log_path_lesson_modes(*, unit_id: str | None, lessons: Sequence[Any]) -> None:
+    """Emit one ``path_lesson_modes`` event per persisted plan (no lesson content).
+
+    ``lessons`` are canonical plan lessons. Only keys, mode values and whether a
+    reason exists are logged. A ``path_lesson_mode_missing`` warning follows when
+    any lesson has no mode.
+    """
+    try:
+        per_lesson = [
+            {
+                "key": getattr(lesson, "key", None),
+                "lesson_mode": getattr(lesson, "lesson_mode", None),
+                "has_reason": bool(getattr(lesson, "lesson_mode_reason", None)),
+            }
+            for lesson in lessons
+        ]
+        with_mode = sum(1 for item in per_lesson if item["lesson_mode"])
+        logger.info(
+            "path_lesson_modes unit_id=%s total_lessons=%d lessons_with_mode=%d",
+            unit_id,
+            len(per_lesson),
+            with_mode,
+            extra={
+                "event": "path_lesson_modes",
+                "unit_id": unit_id,
+                "total_lessons": len(per_lesson),
+                "lessons_with_mode": with_mode,
+                "lessons": per_lesson,
+            },
+        )
+        if with_mode < len(per_lesson):
+            logger.warning(
+                "path_lesson_mode_missing unit_id=%s missing=%d total_lessons=%d",
+                unit_id,
+                len(per_lesson) - with_mode,
+                len(per_lesson),
+                extra={
+                    "event": "path_lesson_mode_missing",
+                    "unit_id": unit_id,
+                    "missing_count": len(per_lesson) - with_mode,
+                    "total_lessons": len(per_lesson),
+                    "missing_keys": [item["key"] for item in per_lesson if not item["lesson_mode"]],
+                },
+            )
+    except Exception:
+        logger.debug("path_lesson_modes logging failed", exc_info=True)
+
+
+def log_path_lesson_mode_invalid(*, key: str | None, raw_value: object) -> None:
+    logger.warning(
+        "path_lesson_mode_invalid key=%s raw_value=%r",
+        key,
+        str(raw_value)[:60],
+        extra={
+            "event": "path_lesson_mode_invalid",
+            "key": key,
+            "raw_value": str(raw_value)[:60],
+        },
     )
