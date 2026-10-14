@@ -64,6 +64,9 @@ def validate_interaction_contract(contract: Mapping[str, Any]) -> list[str]:
     evaluator, response = _config_validator(str(kind))
     if evaluator is None:
         return errors
+    if contract.get("role") == "predict" and kind == "numeric" and config.get("value") is None:
+        # A numeric prediction is saved ungraded and carries no answer key.
+        return errors
     try:
         evaluator(config, response, {})
     except InteractionConfigError as exc:
