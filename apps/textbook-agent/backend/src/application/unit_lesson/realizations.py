@@ -347,6 +347,13 @@ async def admit_realization(
             existing.status = "queued"
             existing.error_summary = None
             existing.generation_run_id = None
+            # Shared-document lineage belongs to the old preparation's run;
+            # leaving it pinned makes the handoff raise SHARED_DOCUMENT_RUN_CONFLICT.
+            existing.shared_document_run_id = None
+            existing.shared_document_id = None
+            existing.shared_document_revision = None
+            existing.shared_document_hash = None
+            existing.shared_document_state = None
             existing.realization_revision = int(existing.realization_revision or 1) + 1
             if admission_request_key:
                 existing.admission_request_key = admission_request_key
