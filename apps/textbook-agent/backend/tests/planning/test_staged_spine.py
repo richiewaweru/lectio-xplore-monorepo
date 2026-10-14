@@ -448,3 +448,54 @@ def test_words_only_gives_advisory_flag_and_run_succeeds(monkeypatch) -> None:
     assert len(result.spine.sections[1].figure_plan) == 1
     restored = stp.spine_result_from_json(stp.spine_result_to_json(result))
     assert restored.flags == result.flags
+
+
+# ------------------------------------------------------------ unused backbone figures
+
+
+def _plan_with_refs(*refs: str | None):
+    from types import SimpleNamespace as NS
+
+    blocks = [
+        NS(visual=NS(figure_ref=ref) if ref is not None else None) for ref in refs
+    ]
+    return NS(sections=[NS(blocks=blocks)])
+
+
+def _two_figure_packet() -> ImmutableLessonPacket:
+    packet = _packet()
+    backbone = {
+        **BACKBONE,
+        "figures": [
+            *BACKBONE["figures"],
+            {"id": "fig-b", "purpose": "Bar chart of the changes. " * 10, "data": {}},
+        ],
+    }
+    return packet.model_copy(update={"backbone": backbone})
+
+
+def test_unused_backbone_figure_is_flagged_advisory() -> None:
+    flags = stp.unused_backbone_figures(_plan_with_refs("fig-a", None), _two_figure_packet())
+    assert len(flags) == 1
+    flag = flags[0]
+    assert flag["code"] == "BACKBONE_FIGURE_UNUSED"
+    assert flag["severity"] == "warning"
+    assert "'fig-b'" in flag["message"] and "not used by any block" in flag["message"]
+    assert len(flag["message"]) < 200
+
+
+def test_all_backbone_figures_used_gives_no_flags() -> None:
+    plan = _plan_with_refs("fig-a", "fig-b")
+    assert stp.unused_backbone_figures(plan, _two_figure_packet()) == []
+
+
+def test_no_backbone_gives_no_unused_flags() -> None:
+    assert stp.unused_backbone_figures(_plan_with_refs(None), _packet(backbone=False)) == []
+
+
+def test_unused_figure_flag_is_non_blocking_warning_only() -> None:
+    flags = stp.unused_backbone_figures(_plan_with_refs(), _two_figure_packet())
+    assert [f["code"] for f in flags] == ["BACKBONE_FIGURE_UNUSED"] * 2
+    assert all(f["severity"] == "warning" for f in flags)
+    # Advisory flags are plain dicts; they are not validation issues and cannot fail a plan.
+    assert not any("blocking" in f for f in flags)
