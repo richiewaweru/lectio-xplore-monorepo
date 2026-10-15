@@ -106,6 +106,14 @@ class VisualSpec(BaseModel):
             "written by the model. Absent for figures without data."
         ),
     )
+    chart: SkipJsonSchema[dict[str, Any] | None] = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "Chart declaration (bar or combo) copied by code from the backbone figure, "
+            "never written by the model. Absent for figures without one."
+        ),
+    )
 
     @model_validator(mode="after")
     def _normalize(self) -> VisualSpec:

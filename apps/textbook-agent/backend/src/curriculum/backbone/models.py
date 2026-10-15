@@ -17,13 +17,58 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ANCHOR_ID = "anchor-1"
 MAX_VARIANTS = 2
 _VARIANT_ID = re.compile(r"^v[1-9][0-9]*$")
+
+
+class ChartAxisSeries(BaseModel):
+    """One plotted numeric series of a combo chart: which data key and its axis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    min: float | None = Field(default=None, exclude_if=lambda value: value is None)
+    max: float | None = Field(default=None, exclude_if=lambda value: value is None)
+
+
+class ComboChartDeclaration(BaseModel):
+    """Bars on the left axis plus a line on the right axis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["combo"]
+    categories: str = Field(min_length=1)
+    bars: ChartAxisSeries
+    line: ChartAxisSeries
+
+
+class BarChartSeries(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+
+
+class BarChartDeclaration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["bar"]
+    categories: str = Field(min_length=1)
+    series: list[BarChartSeries] = Field(default_factory=list)
+    x_label: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    y_label: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    y_max: float | None = Field(default=None, exclude_if=lambda value: value is None)
+
+
+ChartDeclaration = Annotated[
+    ComboChartDeclaration | BarChartDeclaration, Field(discriminator="kind")
+]
 
 
 class BackboneFigure(BaseModel):
@@ -41,6 +86,16 @@ class BackboneFigure(BaseModel):
     mode: Literal["render", "diagram", "image"] | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
+    # How code draws ``data`` as a bar or combo chart. Needs mode "render" (checked in
+    # figure_data.py, not here, so stored backbones still load). Excluded when None so
+    # existing backbone hashes are unchanged.
+    chart: ChartDeclaration | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    def chart_dict(self) -> dict[str, Any] | None:
+        """The chart declaration as a plain dict for downstream copies, or None."""
+        if self.chart is None:
+            return None
+        return self.chart.model_dump(mode="json", exclude_none=True)
 
     @property
     def effective_mode(self) -> Literal["render", "diagram", "image"]:

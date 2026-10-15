@@ -65,19 +65,21 @@ def spec_from_data(
     """
     if not isinstance(data, dict) or not data:
         return None
-    series = list(data.values())
-    if not all(isinstance(v, list) for v in series):
+    # Scalars (a location, a total) are not columns; only the list keys form the table.
+    columns = {key: value for key, value in data.items() if isinstance(value, list)}
+    if not columns:
         return None
+    series = list(columns.values())
     length = len(series[0])
     if length < 2 or any(len(v) != length for v in series):
         return None
     if not all(_cell_ok(x) for v in series for x in v):
         return None
     labels = [str(label).strip() for label in labels_required or []]
-    if len(labels) == len(data) and all(labels) and all(len(h) <= _HEADER_MAX for h in labels):
+    if len(labels) == len(columns) and all(labels) and all(len(h) <= _HEADER_MAX for h in labels):
         headers = labels
     else:
-        headers = [readable_key(str(key)) for key in data]
+        headers = [readable_key(str(key)) for key in columns]
     if any(not h or len(h) > _HEADER_MAX for h in headers):
         return None
     rows = [[column[i] for column in series] for i in range(length)]

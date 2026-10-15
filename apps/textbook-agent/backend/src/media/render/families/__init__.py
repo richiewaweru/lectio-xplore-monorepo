@@ -16,6 +16,7 @@ from matplotlib.figure import Figure
 from media.render.contracts import RenderSpecError
 from media.render.families import (
     bar_chart,
+    combo_chart,
     cycle,
     flow,
     function_graph,
@@ -46,6 +47,7 @@ RENDERERS: dict[str, FamilyRenderer] = {
     "polygon_area": _module_renderer(polygon),
     "number_line": _module_renderer(number_line),
     "bar_chart": _module_renderer(bar_chart),
+    "combo_chart": _module_renderer(combo_chart),
     "function_graph": _module_renderer(function_graph),
     "flow": _module_renderer(flow),
     "cycle": _module_renderer(cycle),

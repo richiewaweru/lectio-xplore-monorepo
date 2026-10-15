@@ -62,7 +62,7 @@ an approved stem.
 Figures: every approved question whose backbone reference has a figure_id must be owned by a block whose visual has figure_ref set to that id; copy mode (render, diagram or image), purpose, must_show and labels_required from that backbone figure. The figure's data is copied by code; do not write it. Teaching blocks may also show a backbone figure the same way (for example the worked example on the anchor's figure). For backbone figures this replaces the default of adding no visual; still add no other visuals for variety.
 
 FIGURE KINDS. Every figure has a `mode`:
-- render: drawn exactly and to scale: tables of values, bar charts, graphs of a rule (y = 2x + 1), number lines, shapes with given side lengths, simple step flows, and cycles. It cannot draw real objects such as plants, apparatus or organs.
+- render: drawn exactly and to scale: tables of values, bar charts, combo charts (bars plus a line on two scales), graphs of a rule (y = 2x + 1), number lines, shapes with given side lengths, simple step flows, and cycles. It cannot draw real objects such as plants, apparatus or organs.
 - diagram: a flat, labelled schematic of real things and their named parts. It may carry value labels as text (for example 'Height Day 28: 48 cm'), but it is not to scale: its numbers are words on the picture, not measurements to read off.
 - image: a realistic scene or object where what it looks like is the point. Little or no text.
 Choose in this order: if the learner must read exact values, lengths or positions from the figure, use render. If the learner must see real things and their named parts, use diagram. If only the look matters, use image. A figure whose data holds a series of values (a list of numbers) is always render.

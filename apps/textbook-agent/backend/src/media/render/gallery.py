@@ -63,6 +63,7 @@ POLYGON_GALLERY: dict[str, dict[str, Any]] = {
 def _all_families() -> dict[str, dict[str, Any]]:
     from media.render.families import (
         bar_chart,
+        combo_chart,
         cycle,
         flow,
         function_graph,
@@ -71,7 +72,7 @@ def _all_families() -> dict[str, dict[str, Any]]:
     )
 
     merged = dict(POLYGON_GALLERY)
-    for module in (number_line, bar_chart, function_graph, flow, cycle, table):
+    for module in (number_line, bar_chart, combo_chart, function_graph, flow, cycle, table):
         merged.update(module.GALLERY)
     return merged
 
