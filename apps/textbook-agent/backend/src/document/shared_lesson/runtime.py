@@ -75,10 +75,11 @@ from infra.generation_runtime import (
 LOGGER = logging.getLogger(__name__)
 
 MAX_CONCURRENT_SECTION_WRITERS = 4
-SECTION_WRITER_LEASE_SECONDS = 360
-# A writer can make up to three 90-second provider calls. Bound the full
-# section operation below its lease so a stalled call fails while fenced.
-SECTION_WRITER_TIMEOUT_SECONDS = 300
+SECTION_WRITER_LEASE_SECONDS = 510
+# A writer can make up to three provider calls (V3_TIMEOUT_SECTION_SECONDS
+# each, 150 s in production). Bound the full section operation below its
+# lease so a stalled call fails while fenced.
+SECTION_WRITER_TIMEOUT_SECONDS = 450
 _COMPOSER_DEFINITION = "shared-section-composer:v2"
 _WRITER_DEFINITION = "shared-section-writer:v2"
 _SECTION_PROVIDER_SEMAPHORES: weakref.WeakKeyDictionary[

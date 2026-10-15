@@ -243,7 +243,7 @@ async def test_worker_passes_writer_specific_lease_without_changing_other_stage_
 
     assert await instance.run_one(db_session)
     assert captured["lease_seconds"] == 300
-    assert captured["writer_lease_seconds"] == 360
+    assert captured["writer_lease_seconds"] == 510
 
 
 @pytest.mark.asyncio

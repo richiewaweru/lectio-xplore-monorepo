@@ -1489,3 +1489,10 @@ def test_other_shared_document_runtimes_classify_provider_api_errors(error, retr
             assert failure.error_code.endswith("provider_request_rejected")
         internal = module._failure_for_exception(RuntimeError("boom"))
         assert internal.error_class == ErrorClass.INTERNAL_PROGRAMMING
+
+def test_section_writer_deadline_stays_below_its_lease() -> None:
+    from document.shared_lesson import runtime
+
+    # A stalled writer must hit its aggregate deadline while it still holds
+    # the lease, so the typed failure is recorded under a live fence.
+    assert runtime.SECTION_WRITER_TIMEOUT_SECONDS < runtime.SECTION_WRITER_LEASE_SECONDS
