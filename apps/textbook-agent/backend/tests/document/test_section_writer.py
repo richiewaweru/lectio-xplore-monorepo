@@ -404,6 +404,17 @@ def test_rejects_unknown_fields_planning_leaks_placeholders_and_unapproved_numbe
             validate_and_build_section(request=request, draft=invalid)
 
 
+def test_writer_supplied_figure_asset_id_is_dropped() -> None:
+    request = _request()
+    draft = _draft(request)
+    figure_draft = next(node for node in draft["nodes"] if node["kind"] == "figure")
+    figure_draft["display"]["asset_id"] = "fig-2"
+    result = validate_and_build_section(request=request, draft=draft)
+    figure = next(node for node in result.nodes if node.kind == "figure")
+    assert figure.display.asset_id is None
+    assert figure.accessibility.alt_text == ""
+
+
 def test_figure_node_is_code_placed_with_pending_alt_and_writer_cannot_author_alt() -> None:
     request = _request()
     figure_items = [item for item in request.composition_plan.items if item.kind == "figure"]

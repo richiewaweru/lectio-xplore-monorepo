@@ -808,6 +808,12 @@ def validate_and_build_section(
     warnings: list[tuple[str, str]] = []
     for node_index, (expected_item, written) in enumerate(zip(expected, parsed.nodes, strict=True)):
         node_path = f"nodes[{node_index}]"
+        if isinstance(written, WrittenFigure) and written.display.asset_id is not None:
+            # The asset is code-owned (media binds it). A model-invented asset_id
+            # would make the figure look bound with empty alt and block media.
+            written = written.model_copy(
+                update={"display": written.display.model_copy(update={"asset_id": None})}
+            )
         if written.id != expected_item.id:
             raise _composition_error(
                 "writer changed, omitted, or reordered a node ID",
