@@ -25,6 +25,7 @@ Family = Literal[
     "polygon_area",
     "number_line",
     "bar_chart",
+    "combo_chart",
     "function_graph",
     "flow",
     "cycle",
@@ -34,6 +35,7 @@ FAMILIES: tuple[str, ...] = (
     "polygon_area",
     "number_line",
     "bar_chart",
+    "combo_chart",
     "function_graph",
     "flow",
     "cycle",
@@ -169,6 +171,26 @@ class BarChartSpec(_Spec):
     orientation: Literal["vertical", "horizontal"] = "vertical"
 
 
+# --- combo_chart ----------------------------------------------------------------
+
+
+class ComboSeries(_Spec):
+    name: ShortText
+    values: list[float] = Field(min_length=1, max_length=12)
+    axis_label: ShortText | None = None
+    axis_min: float | None = None
+    axis_max: float | None = None
+
+
+class ComboChartSpec(_Spec):
+    family: Literal["combo_chart"] = "combo_chart"
+    categories: list[ShortText] = Field(min_length=1, max_length=12)
+    bars: ComboSeries
+    line: ComboSeries
+    x_label: ShortText | None = None
+    title: Annotated[str, Field(min_length=1, max_length=120)] | None = None
+
+
 # --- function_graph ---------------------------------------------------------------
 
 
@@ -268,6 +290,7 @@ RenderSpec = Annotated[
         PolygonAreaSpec,
         NumberLineSpec,
         BarChartSpec,
+        ComboChartSpec,
         FunctionGraphSpec,
         FlowSpec,
         CycleSpec,
@@ -284,6 +307,7 @@ class RenderSpecResult(_Spec):
         "polygon_area",
         "number_line",
         "bar_chart",
+        "combo_chart",
         "function_graph",
         "flow",
         "cycle",
@@ -311,6 +335,8 @@ __all__ = [
     "FAMILIES",
     "BarChartSpec",
     "BarSeries",
+    "ComboChartSpec",
+    "ComboSeries",
     "CycleSpec",
     "EdgeLabel",
     "Family",

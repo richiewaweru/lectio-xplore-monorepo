@@ -34,6 +34,11 @@ jumps [{start, end, label}]; intervals [{start, end, start_closed, end_closed, l
 - bar_chart: compare quantities across categories.
   fields: categories [text] (1-12); series [{name, values}] (1-3, one value per category); \
 x_label; y_label; y_max; y_step; orientation "vertical"|"horizontal".
+- combo_chart: bars (left axis) and a joined line with markers (right axis) over the same \
+categories, e.g. rainfall bars with a temperature line.
+  fields: categories [text] (1-12); bars {name, values, axis_label, axis_min, axis_max}; \
+line {name, values, axis_label, axis_min, axis_max} (one value per category in each); \
+x_label; title.
 - function_graph: axes with lines, parabolas or plotted points.
   fields: x_range [min,max]; y_range [min,max]; x_step; y_step; grid; x_label; y_label; \
 curves [linear {form:"linear", m, c, label} | quadratic {form:"quadratic", a, b, c, label} \

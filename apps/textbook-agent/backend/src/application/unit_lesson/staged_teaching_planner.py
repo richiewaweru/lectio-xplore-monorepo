@@ -863,6 +863,7 @@ def _expected_figure_visual(figure: dict[str, Any]) -> dict[str, Any] | None:
         "must_show": must_show,
         "labels_required": list(backbone_figure.labels_required),
         "data": backbone_figure.data or None,
+        "chart": backbone_figure.chart_dict(),
     }
 
 

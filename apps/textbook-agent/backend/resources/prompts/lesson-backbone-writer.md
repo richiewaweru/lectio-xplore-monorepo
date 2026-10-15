@@ -41,6 +41,7 @@ Return JSON matching the supplied schema. Do not write any question text.
      and '34 cm'). Never use placeholder labels such as '—'.
    - `data`: the exact values the figure plots or tabulates (same numbers as
      the anchor `data`).
+   - `chart` (optional): how code draws `data` as a chart; see Chart declaration below.
    The backbone is the only place numbers are authored. It must contain every
    table, chart, or measured diagram the lesson needs, each with complete
    `data`: every series is a list, all series in a figure have the same length,
@@ -54,10 +55,25 @@ Return JSON matching the supplied schema. Do not write any question text.
    `answer` are complete and exact for the variant, never "same as the anchor".
    A variant that needs a figure lists its own `figure_ids`.
 
+## Chart declaration
+
+A `render` figure that is a graph with bars and/or a line (not a plain table) declares
+`chart`, so code knows which `data` key is which. A table needs no `chart`.
+- `data` holds one list of category names plus one list of numbers per plotted series,
+  all the same length (at most 12). `chart` keys must name those `data` keys. Scalars
+  such as axis limits belong in `chart` (`min`/`max`), never as separate `data` keys.
+- Combo chart (bars on the left axis, a line on the right axis, two different scales):
+  `data`: `{"days": ["Mon", "Tue", "Wed"], "rainfall_mm": [0, 12, 4], "temperature_c": [18, 16, 19]}`;
+  `chart`: `{"kind": "combo", "categories": "days", "bars": {"key": "rainfall_mm", "label": "Rainfall (mm)", "min": 0, "max": 20}, "line": {"key": "temperature_c", "label": "Temperature (°C)", "min": 14, "max": 22}}`.
+  `min` and `max` are optional; when given they must enclose the series.
+- Bar chart (1 to 3 series):
+  `chart`: `{"kind": "bar", "categories": "days", "series": [{"key": "rainfall_mm", "label": "Rainfall (mm)"}], "x_label": "Day", "y_label": "Rainfall (mm)", "y_max": 20}`;
+  `x_label`, `y_label` and `y_max` are optional.
+
 ## Figure kinds
 
 FIGURE KINDS. Every figure has a `mode`:
-- render: drawn exactly and to scale: tables of values, bar charts, graphs of a rule (y = 2x + 1), number lines, shapes with given side lengths, simple step flows, and cycles. It cannot draw real objects such as plants, apparatus or organs.
+- render: drawn exactly and to scale: tables of values, bar charts, combo charts (bars plus a line on two scales), graphs of a rule (y = 2x + 1), number lines, shapes with given side lengths, simple step flows, and cycles. It cannot draw real objects such as plants, apparatus or organs.
 - diagram: a flat, labelled schematic of real things and their named parts. It may carry value labels as text (for example 'Height Day 28: 48 cm'), but it is not to scale: its numbers are words on the picture, not measurements to read off.
 - image: a realistic scene or object where what it looks like is the point. Little or no text.
 Choose in this order: if the learner must read exact values, lengths or positions from the figure, use render. If the learner must see real things and their named parts, use diagram. If only the look matters, use image. A figure whose data holds a series of values (a list of numbers) is always render.

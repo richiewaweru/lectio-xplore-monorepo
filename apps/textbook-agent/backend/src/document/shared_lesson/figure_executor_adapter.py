@@ -15,6 +15,7 @@ from media.generation.contracts import (
     diagram_visual_style,
 )
 from media.generation.executor import VisualStageError, execute_visual
+from media.render.chart_spec import chart_spec_from_declaration
 from media.render.data_spec import is_data_figure, readable_key, spec_from_data
 from media.render.number_guard import format_number, label_numbers_outside_data
 from media.render.pipeline import Rendered, Unavailable, render_figure
@@ -107,7 +108,21 @@ def data_value_labels(labels: list[str], data: dict | None) -> list[str]:
         return labels
     keys = list(series)
     added: list[str] = []
-    if len(keys) == 1:
+    categories = next(
+        (
+            v
+            for v in (data or {}).values()
+            if isinstance(v, list) and len(v) >= 2 and all(isinstance(x, str) for x in v)
+        ),
+        None,
+    )
+    if categories is not None:
+        # A list of names (days, groups) is the x axis; every numeric series is a measure.
+        for key in keys:
+            name = readable_key(key)
+            for cat, y in zip(categories, series[key], strict=False):
+                added.append(f"{cat}, {name}: {_plain(y)}")
+    elif len(keys) == 1:
         name = readable_key(keys[0])
         added = [f"{name} {i + 1}: {_plain(v)}" for i, v in enumerate(series[keys[0]])]
     else:
@@ -289,6 +304,40 @@ class RoutingFigureExecutor:
 
         if not data_figure and visual.mode in {"diagram", "image"}:
             return await self._delegate(order, visual.mode, f"mode_{visual.mode}")
+
+        # A chart declaration is drawn by code straight from the figure's data: no model.
+        chart = visual.chart
+        if chart and (visual.mode == "render" or data_figure):
+            kind = str(chart.get("kind", "")) if isinstance(chart, dict) else ""
+            title = next((lab for lab in visual.labels_required if len(lab) > 25), None)
+            declared = chart_spec_from_declaration(chart, data, title=title)
+            if declared is None:
+                reason = "spec_not_built"
+            else:
+                drawn = await render_figure(order, prebuilt=declared)
+                if isinstance(drawn, Rendered):
+                    return await self._stored(
+                        order,
+                        drawn,
+                        generation_id=generation_id,
+                        route=f"chart_declared:{kind}",
+                        reason="chart_declaration",
+                    )
+                reason = (
+                    f"render_unavailable:{drawn.code}"
+                    if isinstance(drawn, Unavailable)
+                    else str(drawn.reason)
+                )
+            logger.info(
+                "chart_declaration_unusable",
+                extra={
+                    "event": "chart_declaration_unusable",
+                    "figure_id": visual.id,
+                    "work_order_id": order.work_order_id,
+                    "kind": kind,
+                    "reason": reason,
+                },
+            )
 
         # Render path (mode "render", or series data whatever the mode).
         if data_figure:

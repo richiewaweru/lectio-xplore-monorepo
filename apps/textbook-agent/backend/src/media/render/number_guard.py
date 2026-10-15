@@ -64,6 +64,8 @@ def allowed_numbers(order: VisualGeneratorWorkOrder) -> set[Decimal]:
     """Data, must_show, labels_required and approved (non ``context:``) source facts."""
     visual = order.visual
     allowed = numbers_of(visual.data) | numbers_of(list(visual.must_show))
+    # Axis limits a chart declaration sets (min/max/y_max) are plan numbers too.
+    allowed |= numbers_of(visual.chart)
     allowed |= numbers_of(list(visual.labels_required))
     for entry in order.source_of_truth:
         if not entry.key.startswith(_CONTEXT_PREFIX):

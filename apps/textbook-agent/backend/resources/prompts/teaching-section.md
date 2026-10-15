@@ -151,7 +151,7 @@ At most one visual per block. A visual is never decorative and never replaces
 the explanation: the block's brief still teaches the idea in words.
 
 FIGURE KINDS. Every figure has a `mode`:
-- render: drawn exactly and to scale: tables of values, bar charts, graphs of a rule (y = 2x + 1), number lines, shapes with given side lengths, simple step flows, and cycles. It cannot draw real objects such as plants, apparatus or organs.
+- render: drawn exactly and to scale: tables of values, bar charts, combo charts (bars plus a line on two scales), graphs of a rule (y = 2x + 1), number lines, shapes with given side lengths, simple step flows, and cycles. It cannot draw real objects such as plants, apparatus or organs.
 - diagram: a flat, labelled schematic of real things and their named parts. It may carry value labels as text (for example 'Height Day 28: 48 cm'), but it is not to scale: its numbers are words on the picture, not measurements to read off.
 - image: a realistic scene or object where what it looks like is the point. Little or no text.
 Choose in this order: if the learner must read exact values, lengths or positions from the figure, use render. If the learner must see real things and their named parts, use diagram. If only the look matters, use image. A figure whose data holds a series of values (a list of numbers) is always render.

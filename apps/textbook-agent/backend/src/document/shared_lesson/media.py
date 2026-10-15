@@ -547,6 +547,7 @@ def _figure_order_from(
         labels_required=list(spec.labels_required),
         must_not_show=list(spec.must_not_show),
         data=spec.data or None,
+        chart=spec.chart or None,
         # Numbered keys suit named parts; value labels are drawn by the provider so they
         # can sit in rows/columns.
         visual_style=(

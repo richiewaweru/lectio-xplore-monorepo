@@ -38,7 +38,10 @@ def test_scalar_only_returns_none() -> None:
     assert spec_from_data({"day_0_height_cm": 5, "day_28_height_cm": 48}, [], []) is None
 
 
-def test_mixed_scalar_and_list_returns_none() -> None:
+def test_mixed_scalar_and_list_keeps_the_list_column() -> None:
+    spec = spec_from_data({"a": [1, 2], "c": [3, 4], "b": 3}, [], [])
+    assert spec is not None and spec.columns == ["A", "C"]
+    # One list column alone is not a table (TableSpec needs two columns).
     assert spec_from_data({"a": [1, 2], "b": 3}, [], []) is None
 
 
@@ -85,3 +88,10 @@ def test_is_data_figure() -> None:
     assert not is_data_figure({"a": [True, False]})
     assert not is_data_figure({"a": [1, "2"]})
     assert not is_data_figure({"a": ["x", "y"]})
+
+
+def test_scalars_beside_series_are_ignored() -> None:
+    spec = spec_from_data({"days": ["Mon", "Tue"], "rain_mm": [1, 2], "total_mm": 3}, [], [])
+    assert spec is not None
+    assert spec.columns == ["Days", "Rain (mm)"]
+    assert spec.rows == [["Mon", 1], ["Tue", 2]]
