@@ -4,10 +4,19 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from curriculum.teaching_plan.models import LearnerActionId, TeachingPlanSection
 from document.shared_lesson.composer import (
@@ -258,6 +267,12 @@ class SectionWriteResult(_ClosedModel):
     #: paths only and never provider output or learner text. They do not alter
     #: readiness or cause another provider call.
     warnings: tuple[tuple[str, str], ...] = Field(default=(), exclude_if=lambda value: not value)
+    #: Repair modes ("patch" / "full") the bounded loop used, in call order.
+    #: Content-free diagnostics only; empty (and omitted) when the first reply
+    #: was accepted.
+    repair_modes: tuple[Literal["patch", "full"], ...] = Field(
+        default=(), exclude_if=lambda value: not value
+    )
 
     @model_validator(mode="after")
     def _validate_warnings(self) -> SectionWriteResult:
@@ -343,9 +358,12 @@ class SectionWriteValidationError(ValueError):
         *,
         affected_node_ids: Sequence[str] = (),
         issues: Sequence[tuple[str, str]] | None = None,
+        repair_modes: Sequence[str] = (),
     ):
         self.errors = tuple(errors)
         self.affected_node_ids = tuple(affected_node_ids)
+        #: Repair modes used before this final failure (diagnostics only).
+        self.repair_modes = tuple(repair_modes)
         if issues is None:
             issues = tuple(("writer_draft_schema_invalid", "") for _ in self.errors)
         for code, _path in issues:
@@ -772,98 +790,275 @@ def _record_shape_advisories(
         _shape_warning(warnings, "shape_missing", "section/subheading")
 
 
-def validate_and_build_section(
-    *,
-    request: SectionWriterRequest,
-    draft: SectionWriterDraft | Any,
-    accept_soft_issues: bool = False,
-) -> SectionWriteResult:
-    """Validate exact composed shape, then insert immutable TaskAnchors by code.
+#: ``(issue_code, safe_path, short_message)``. Messages are fixed validator text
+#: or pydantic error types, never learner or model text.
+NodeIssue = tuple[str, str, str]
 
-    Shape findings are recorded as advisory warnings on every attempt and
-    never trigger repair. Legacy soft findings in
-    ``SOFT_SECTION_WRITE_ISSUE_CODES`` are recorded only when
-    ``accept_soft_issues=True`` on the final bounded attempt. All other
-    validation errors still fail closed.
+_WRITTEN_NODE_ADAPTER: TypeAdapter[Any] = TypeAdapter(WrittenNode)
+
+
+@dataclass(frozen=True)
+class NodeValidation:
+    """Outcome for one expected ordinary node position."""
+
+    index: int
+    item: CompositionItem
+    node: SharedLessonNode | None = None
+    written: WrittenNode | None = None
+    issues: tuple[NodeIssue, ...] = ()
+
+    @property
+    def ok(self) -> bool:
+        return not self.issues
+
+
+@dataclass(frozen=True)
+class DraftValidation:
+    """Every problem found in one raw writer draft, per node position.
+
+    ``section_issues`` are problems no single node owns (unparseable root, wrong
+    node count); when present ``nodes`` is empty. Otherwise ``nodes`` holds one
+    entry per expected ordinary node, in composition order.
     """
+
+    expected: tuple[CompositionItem, ...]
+    nodes: tuple[NodeValidation, ...] = ()
+    section_issues: tuple[NodeIssue, ...] = ()
+    warnings: tuple[tuple[str, str], ...] = ()
+    #: The draft's raw ``nodes`` list when it had one (else ``None``).
+    raw_nodes: tuple[Any, ...] | None = None
+
+    @property
+    def ok(self) -> bool:
+        return not self.section_issues and all(node.ok for node in self.nodes)
+
+    @property
+    def broken_node_ids(self) -> tuple[str, ...]:
+        return tuple(node.item.id for node in self.nodes if not node.ok)
+
+    @property
+    def kept_node_ids(self) -> tuple[str, ...]:
+        return tuple(node.item.id for node in self.nodes if node.ok)
+
+    @property
+    def repair_mode(self) -> Literal["patch", "full"]:
+        """``patch`` only when every problem belongs to a specific node."""
+        if self.section_issues or self.raw_nodes is None or not self.broken_node_ids:
+            return "full"
+        return "patch"
+
+    def to_error(self) -> SectionWriteValidationError:
+        errors: list[str] = []
+        issues: list[tuple[str, str]] = []
+        for code, path, message in self.section_issues:
+            errors.append(f"{path or 'draft'}: {message}")
+            issues.append((code, path))
+        for node in self.nodes:
+            for code, path, message in node.issues:
+                errors.append(f"{path} ({node.item.id}): {message}")
+                issues.append((code, path))
+        if not self.section_issues:
+            affected: tuple[str, ...] = self.broken_node_ids
+        elif any(code == "node_count_mismatch" for code, _path, _message in self.section_issues):
+            affected = tuple(item.id for item in self.expected)
+        else:
+            affected = ()
+        return SectionWriteValidationError(errors, affected_node_ids=affected, issues=issues)
+
+
+def draft_as_json(draft: Any) -> Any:
+    """Return a writer reply as plain JSON-shaped data (models are dumped)."""
+    if isinstance(draft, BaseModel):
+        return draft.model_dump(mode="json")
+    return draft
+
+
+def _node_schema_issues(raw: Any, index: int) -> tuple[WrittenNode | None, list[NodeIssue]]:
+    node_path = f"nodes[{index}]"
     try:
-        parsed = (
-            draft
-            if isinstance(draft, SectionWriterDraft)
-            else SectionWriterDraft.model_validate(draft)
-        )
+        return _WRITTEN_NODE_ADAPTER.validate_python(raw), []
     except ValidationError as exc:
-        raise SectionWriteValidationError(
-            ("writer output violates the closed node schema",),
-            issues=(("writer_draft_schema_invalid", ""),),
-        ) from exc
+        summary = summarize_output_failure(exc)
+        pairs = summary.issues if summary is not None and summary.issues else (("", "invalid"),)
+        return None, [
+            (
+                "writer_draft_schema_invalid",
+                f"{node_path}.{path}" if path else node_path,
+                error_type,
+            )
+            for path, error_type in pairs
+        ]
 
-    expected = [item for item in request.composition_plan.items if item.kind != "task_anchor"]
-    if len(parsed.nodes) != len(expected):
-        raise SectionWriteValidationError(
-            [f"writer must return exactly {len(expected)} ordinary nodes"],
-            affected_node_ids=tuple(item.id for item in expected),
-            issues=(("node_count_mismatch", "nodes"),),
+
+def _check_node_against_item(
+    written: WrittenNode,
+    request: SectionWriterRequest,
+    expected_item: CompositionItem,
+    *,
+    node_index: int,
+    accept_soft_issues: bool,
+    warnings: list[tuple[str, str]],
+) -> tuple[WrittenNode, SharedLessonNode]:
+    """Check one parsed node against its composed slot; raises on the first problem."""
+    node_path = f"nodes[{node_index}]"
+    if isinstance(written, WrittenFigure) and written.display.asset_id is not None:
+        # The asset is code-owned (media binds it). A model-invented asset_id
+        # would make the figure look bound with empty alt and block media.
+        written = written.model_copy(
+            update={"display": written.display.model_copy(update={"asset_id": None})}
         )
-    node_by_id: dict[str, SharedLessonNode] = {}
-    warnings: list[tuple[str, str]] = []
-    for node_index, (expected_item, written) in enumerate(zip(expected, parsed.nodes, strict=True)):
-        node_path = f"nodes[{node_index}]"
-        if isinstance(written, WrittenFigure) and written.display.asset_id is not None:
-            # The asset is code-owned (media binds it). A model-invented asset_id
-            # would make the figure look bound with empty alt and block media.
-            written = written.model_copy(
-                update={"display": written.display.model_copy(update={"asset_id": None})}
-            )
-        if written.id != expected_item.id:
-            raise _composition_error(
-                "writer changed, omitted, or reordered a node ID",
-                expected_item,
-                code="node_id_mismatch",
-                path=f"{node_path}.id",
-            )
-        if written.kind != expected_item.kind:
-            raise _composition_error(
-                "writer changed a composed node kind",
-                expected_item,
-                code="node_kind_mismatch",
-                path=f"{node_path}.kind",
-            )
-        if written.teaching_block_id != expected_item.teaching_block_id:
-            raise _composition_error(
-                "writer changed teaching block ownership",
-                expected_item,
-                code="node_block_mismatch",
-                path=f"{node_path}.teaching_block_id",
-            )
-        _check_learner_text(
-            written,
-            request,
+    if written.id != expected_item.id:
+        raise _composition_error(
+            "writer changed, omitted, or reordered a node ID",
             expected_item,
-            node_index=node_index,
-            accept_soft_issues=accept_soft_issues,
-            warnings=warnings,
+            code="node_id_mismatch",
+            path=f"{node_path}.id",
         )
-        payload = written.model_dump(mode="json")
-        if isinstance(written, WrittenFigure):
-            # Alt text is pending until media binds the ready result.
-            payload["accessibility"] = {"alt_text": ""}
-        try:
-            node_by_id[written.id] = shared_lesson_node_adapter.validate_python(payload)
-        except ValidationError as exc:
-            raise _composition_error(
-                "writer node failed the shared document schema",
-                expected_item,
-                code="node_shape_mismatch",
-                path=node_path,
-            ) from exc
-
-    _record_shape_advisories(
-        nodes=parsed.nodes,
-        items=expected,
+    if written.kind != expected_item.kind:
+        raise _composition_error(
+            "writer changed a composed node kind",
+            expected_item,
+            code="node_kind_mismatch",
+            path=f"{node_path}.kind",
+        )
+    if written.teaching_block_id != expected_item.teaching_block_id:
+        raise _composition_error(
+            "writer changed teaching block ownership",
+            expected_item,
+            code="node_block_mismatch",
+            path=f"{node_path}.teaching_block_id",
+        )
+    _check_learner_text(
+        written,
+        request,
+        expected_item,
+        node_index=node_index,
+        accept_soft_issues=accept_soft_issues,
         warnings=warnings,
     )
+    payload = written.model_dump(mode="json")
+    if isinstance(written, WrittenFigure):
+        # Alt text is pending until media binds the ready result.
+        payload["accessibility"] = {"alt_text": ""}
+    try:
+        return written, shared_lesson_node_adapter.validate_python(payload)
+    except ValidationError as exc:
+        raise _composition_error(
+            "writer node failed the shared document schema",
+            expected_item,
+            code="node_shape_mismatch",
+            path=node_path,
+        ) from exc
 
+
+def validate_draft_nodes(
+    *,
+    request: SectionWriterRequest,
+    draft: Any,
+    accept_soft_issues: bool = False,
+) -> DraftValidation:
+    """Validate a raw writer draft and report every broken node, not just the first.
+
+    The draft is plain parsed JSON (a ``SectionWriterDraft`` is also accepted).
+    Each expected ordinary node is checked independently with the same closed
+    node schema, identity, learner-text and shared-document checks the section
+    contract has always applied.
+    """
+    expected = tuple(item for item in request.composition_plan.items if item.kind != "task_anchor")
+    data = draft_as_json(draft)
+    if not isinstance(data, Mapping):
+        return DraftValidation(
+            expected=expected,
+            section_issues=(
+                ("writer_draft_schema_invalid", "", "writer output must be a JSON object"),
+            ),
+        )
+    raw_nodes = data.get("nodes")
+    if not isinstance(raw_nodes, (list, tuple)):
+        return DraftValidation(
+            expected=expected,
+            section_issues=(
+                ("writer_draft_schema_invalid", "", "writer output needs a `nodes` list"),
+            ),
+        )
+    raw_nodes = tuple(raw_nodes)
+    if set(data) - {"nodes"}:
+        return DraftValidation(
+            expected=expected,
+            section_issues=(
+                ("writer_draft_schema_invalid", "", "writer output must contain only `nodes`"),
+            ),
+            raw_nodes=raw_nodes,
+        )
+
+    parsed = [_node_schema_issues(raw, index) for index, raw in enumerate(raw_nodes)]
+    if len(raw_nodes) != len(expected):
+        schema_issues = tuple(issue for _written, found in parsed for issue in found)
+        return DraftValidation(
+            expected=expected,
+            section_issues=schema_issues
+            or (
+                (
+                    "node_count_mismatch",
+                    "nodes",
+                    f"writer must return exactly {len(expected)} ordinary nodes",
+                ),
+            ),
+            raw_nodes=raw_nodes,
+        )
+
+    warnings: list[tuple[str, str]] = []
+    results: list[NodeValidation] = []
+    for node_index, (expected_item, (written, schema_issues)) in enumerate(
+        zip(expected, parsed, strict=True)
+    ):
+        if written is None:
+            results.append(NodeValidation(node_index, expected_item, issues=tuple(schema_issues)))
+            continue
+        try:
+            checked, node = _check_node_against_item(
+                written,
+                request,
+                expected_item,
+                node_index=node_index,
+                accept_soft_issues=accept_soft_issues,
+                warnings=warnings,
+            )
+        except SectionWriteValidationError as exc:
+            code, path = exc.issues[0]
+            results.append(
+                NodeValidation(
+                    node_index,
+                    expected_item,
+                    written=written,
+                    issues=((code, path, exc.errors[0]),),
+                )
+            )
+            continue
+        results.append(NodeValidation(node_index, expected_item, node=node, written=checked))
+
+    if all(result.ok for result in results):
+        _record_shape_advisories(
+            nodes=[result.written for result in results if result.written is not None],
+            items=expected,
+            warnings=warnings,
+        )
+    return DraftValidation(
+        expected=expected,
+        nodes=tuple(results),
+        warnings=tuple(warnings),
+        raw_nodes=raw_nodes,
+    )
+
+
+def _build_section(
+    request: SectionWriterRequest,
+    validation: DraftValidation,
+    *,
+    repair_modes: tuple[Literal["patch", "full"], ...] = (),
+) -> SectionWriteResult:
+    """Insert immutable TaskAnchors by code around the validated ordinary nodes."""
+    node_by_id = {result.item.id: result.node for result in validation.nodes}
     final_nodes: list[SharedLessonNode] = []
     for item_index, item in enumerate(request.composition_plan.items):
         if item.kind == "task_anchor":
@@ -894,8 +1089,32 @@ def validate_and_build_section(
         section_slot_id=request.section.slot_id,
         title=request.section.display_title or "",
         nodes=tuple(final_nodes),
-        warnings=tuple(warnings),
+        warnings=validation.warnings,
+        repair_modes=repair_modes,
     )
+
+
+def validate_and_build_section(
+    *,
+    request: SectionWriterRequest,
+    draft: SectionWriterDraft | Any,
+    accept_soft_issues: bool = False,
+) -> SectionWriteResult:
+    """Validate exact composed shape, then insert immutable TaskAnchors by code.
+
+    Shape findings are recorded as advisory warnings on every attempt and
+    never trigger repair. Legacy soft findings in
+    ``SOFT_SECTION_WRITE_ISSUE_CODES`` are recorded only when
+    ``accept_soft_issues=True`` on the final bounded attempt. All other
+    validation errors still fail closed; the raised error lists every broken
+    node (see ``validate_draft_nodes``).
+    """
+    validation = validate_draft_nodes(
+        request=request, draft=draft, accept_soft_issues=accept_soft_issues
+    )
+    if not validation.ok:
+        raise validation.to_error()
+    return _build_section(request, validation)
 
 
 def ordinary_nodes_as_draft(nodes: Sequence[SharedLessonNode]) -> SectionWriterDraft:
@@ -921,7 +1140,29 @@ def _request_payload(
     repair_scope: str,
     errors: Sequence[str],
     affected_node_ids: Sequence[str] = (),
+    repair_mode: Literal["patch", "full"] | None = None,
+    previous_draft: dict[str, Any] | None = None,
+    keep_node_ids: Sequence[str] = (),
 ) -> dict[str, Any]:
+    """Build the writer user prompt.
+
+    Without ``repair_mode`` the repair block keeps its legacy shape (used by
+    boundary repair). With it, the block carries the previous draft:
+    ``patch`` asks for only ``affected_node_ids`` (= the nodes to repair) and
+    lists the read-only ``keep_node_ids``; ``full`` asks for the whole draft.
+    """
+    repair: dict[str, Any] | None = None
+    if errors:
+        repair = {
+            "scope": repair_scope,
+            "issues": list(errors),
+            "affected_node_ids": list(affected_node_ids),
+        }
+        if repair_mode is not None:
+            repair = {"mode": repair_mode, **repair, "previous_draft": previous_draft}
+            if repair_mode == "patch":
+                repair["keep_node_ids"] = list(keep_node_ids)
+                repair["repair_node_ids"] = list(affected_node_ids)
     return {
         "section_contract": {
             "display_title": request.section.display_title,
@@ -1004,16 +1245,42 @@ def _request_payload(
             {"task_spec_id": task.task_spec_id, "expected_evidence": task.expected_evidence}
             for task in request.task_summaries
         ],
-        "repair": (
-            {
-                "scope": repair_scope,
-                "issues": list(errors),
-                "affected_node_ids": list(affected_node_ids),
-            }
-            if errors
-            else None
-        ),
+        "repair": repair,
     }
+
+
+def _inline_json_schema_refs(schema: dict[str, Any]) -> dict[str, Any]:
+    defs = schema.get("$defs", {})
+
+    def walk(node: Any) -> Any:
+        if isinstance(node, dict):
+            if "$ref" in node:
+                return walk(defs[node["$ref"].rsplit("/", 1)[-1]])
+            return {
+                key: walk(value)
+                for key, value in node.items()
+                if key not in {"$defs", "discriminator"}
+            }
+        if isinstance(node, list):
+            return [walk(item) for item in node]
+        return node
+
+    return walk(schema)  # type: ignore[no-any-return]
+
+
+class _RawSectionDraft(BaseModel):
+    """Provider output type: shows the model the closed draft schema, validates nothing.
+
+    Our own validation runs per node (``validate_draft_nodes``) so a reply with
+    one bad node is kept and patched instead of being discarded wholesale. Only
+    a reply that is not a JSON object still fails here.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: Any, handler: Any) -> dict[str, Any]:
+        return _inline_json_schema_refs(SectionWriterDraft.model_json_schema(mode="validation"))
 
 
 async def _default_provider(payload: dict[str, Any]) -> Any:
@@ -1023,13 +1290,13 @@ async def _default_provider(payload: dict[str, Any]) -> Any:
     from infra.authoring.structured_provider import run_structured_agent
     from infra.execution.timeouts import V3_TIMEOUTS
 
-    return await run_structured_agent(
+    reply = await run_structured_agent(
         node_name="shared_section_writer",
         trace_id=None,
         generation_id=None,
         system_prompt=effective_prompt_text("shared-section-writer"),
         user_prompt=json.dumps(payload, sort_keys=True),
-        output_type=SectionWriterDraft,
+        output_type=_RawSectionDraft,
         repair_attempts=0,
         retries={"output": 0},
         retry_policy=RetryPolicy(
@@ -1037,6 +1304,9 @@ async def _default_provider(payload: dict[str, Any]) -> Any:
             call_timeout_seconds=float(V3_TIMEOUTS["section_writer"]),
         ),
     )
+    # The raw parsed JSON, never a validated model: the caller keeps it when a
+    # node is wrong so repair can patch just that node.
+    return draft_as_json(reply)
 
 
 _NODE_PATH_INDEX = re.compile(r"^nodes\[(\d+)\]")
@@ -1079,6 +1349,27 @@ def _provider_output_failure_as_validation_error(
     )
 
 
+def _merge_node_patch(validation: DraftValidation, reply: Any) -> dict[str, Any]:
+    """Return the previous draft with each repaired node swapped for its patch.
+
+    Only nodes whose id was requested are taken from the reply (first one wins);
+    anything else in the reply is ignored. Every node that was not requested
+    stays exactly as the previous draft had it, and positions never move.
+    """
+    repair_ids = set(validation.broken_node_ids)
+    data = draft_as_json(reply)
+    patched: dict[str, Any] = {}
+    if isinstance(data, Mapping) and isinstance(data.get("nodes"), (list, tuple)):
+        for node in data["nodes"]:
+            node_id = node.get("id") if isinstance(node, Mapping) else None
+            if isinstance(node_id, str) and node_id in repair_ids and node_id not in patched:
+                patched[node_id] = node
+    previous = validation.raw_nodes or ()
+    return {
+        "nodes": [patched.get(result.item.id, previous[result.index]) for result in validation.nodes]
+    }
+
+
 async def write_section(
     *, request: SectionWriterRequest, provider: Provider | None = None
 ) -> SectionWriteResult:
@@ -1086,18 +1377,27 @@ async def write_section(
 
     Shape findings are accepted on the initial response and returned as
     advisory warnings. Only hard identity, schema, leakage, and task
-    correctness issues enter the bounded repair loop. A provider reply that
-    fails the structured-output schema (or is empty/non-actionable) is turned
-    into a ``writer_draft_schema_invalid`` error and repaired like any other
-    hard issue; other provider errors propagate unchanged.
+    correctness issues enter the bounded repair loop. The provider returns the
+    raw parsed JSON and every node is validated here, so one reply reports all
+    broken nodes. A repair call then either patches exactly those nodes (every
+    problem is node-level) or rewrites the full draft (unparseable reply, wrong
+    node count); both carry the previous draft. A patch is merged into the
+    previous draft by id and the whole section is re-validated. A provider reply
+    that is empty/non-actionable becomes a ``writer_draft_schema_invalid`` error
+    and is repaired in full mode; other provider errors propagate unchanged.
     """
     dispatch = provider or _default_provider
     repair_scopes = ("initial", "section", "targeted")
     issues: tuple[str, ...] = ()
     affected_node_ids: tuple[str, ...] = ()
+    repair_kwargs: dict[str, Any] = {}
+    prior_validation: DraftValidation | None = None
+    modes: list[Literal["patch", "full"]] = []
     last_error: SectionWriteValidationError | None = None
     for attempt, scope in enumerate(repair_scopes):
         final_attempt = attempt == len(repair_scopes) - 1
+        reply_validation: DraftValidation | None = None
+        reply_draft: Any = None
         try:
             try:
                 raw = await dispatch(
@@ -1106,6 +1406,7 @@ async def write_section(
                         repair_scope=scope,
                         errors=issues,
                         affected_node_ids=affected_node_ids,
+                        **repair_kwargs,
                     )
                 )
             except Exception as provider_exc:
@@ -1113,15 +1414,45 @@ async def write_section(
                 if converted is None:
                     raise
                 raise converted from provider_exc
-            return validate_and_build_section(
-                request=request, draft=raw, accept_soft_issues=final_attempt
+            if repair_kwargs.get("repair_mode") == "patch" and prior_validation is not None:
+                reply_draft = _merge_node_patch(prior_validation, raw)
+            else:
+                reply_draft = draft_as_json(raw)
+            reply_validation = validate_draft_nodes(
+                request=request, draft=reply_draft, accept_soft_issues=final_attempt
             )
+            if not reply_validation.ok:
+                raise reply_validation.to_error()
+            return _build_section(request, reply_validation, repair_modes=tuple(modes))
         except SectionWriteValidationError as exc:
             last_error = exc
+            if final_attempt:
+                exc.repair_modes = tuple(modes)
+                raise
             issues = exc.errors
             affected_node_ids = exc.affected_node_ids
-            if final_attempt:
-                raise
+            if reply_validation is not None:
+                prior_validation = reply_validation
+            elif prior_validation is not None:
+                # An empty/unusable reply must not discard the last usable
+                # draft: keep repairing from it, with its own issues.
+                issues = (*prior_validation.to_error().errors, *exc.errors)
+                if prior_validation.raw_nodes is not None:
+                    reply_draft = {"nodes": list(prior_validation.raw_nodes)}
+            if prior_validation is not None and prior_validation.repair_mode == "patch":
+                modes.append("patch")
+                affected_node_ids = prior_validation.broken_node_ids
+                repair_kwargs = {
+                    "repair_mode": "patch",
+                    "previous_draft": {"nodes": list(prior_validation.raw_nodes or ())},
+                    "keep_node_ids": prior_validation.kept_node_ids,
+                }
+            else:
+                modes.append("full")
+                repair_kwargs = {
+                    "repair_mode": "full",
+                    "previous_draft": reply_draft if isinstance(reply_draft, Mapping) else None,
+                }
     if last_error is None:
         raise AssertionError("bounded writer loop exhausted unexpectedly")
     raise last_error
@@ -1146,5 +1477,6 @@ __all__ = [
     "WrittenTable",
     "ordinary_nodes_as_draft",
     "validate_and_build_section",
+    "validate_draft_nodes",
     "write_section",
 ]

@@ -19,6 +19,7 @@ from document.shared_lesson.writer import (
     SectionWriterRequest,
     SectionWriteValidationError,
     validate_and_build_section,
+    validate_draft_nodes,
     write_section,
 )
 from infra.authoring.model_policy import SHARED_SECTION_WRITER, get_v3_slot
@@ -1040,3 +1041,339 @@ async def test_provider_empty_reply_is_repairable_and_timeout_still_propagates()
     with pytest.raises(TimeoutError):
         await write_section(request=request, provider=timing_out)
     assert timeouts == 1
+
+
+# ---------------------------------------------------------------------------
+# Node-level collection and patch/full repair modes
+# ---------------------------------------------------------------------------
+
+
+def _ordinary_ids(request: SectionWriterRequest) -> list[str]:
+    return [item.id for item in request.composition_plan.items if item.kind != "task_anchor"]
+
+
+def test_validation_collects_every_broken_node_and_keeps_good_ones() -> None:
+    request = _request()
+    ids = _ordinary_ids(request)
+    draft = _draft(request)
+    draft["nodes"][0]["display"]["text"] = "The must_establish field says particles move."
+    draft["nodes"][2]["display"]["rows"] = [["Only one cell"]]
+
+    validation = validate_draft_nodes(request=request, draft=draft)
+
+    assert validation.broken_node_ids == (ids[0], ids[2])
+    assert validation.kept_node_ids == (ids[1], ids[3])
+    assert validation.repair_mode == "patch"
+    assert [node.node is not None for node in validation.nodes] == [False, True, False, True]
+    assert {(code, path) for node in validation.nodes for code, path, _m in node.issues} == {
+        ("metadata_leaked", "nodes[0].text"),
+        ("table_row_width_mismatch", "nodes[2].table.rows"),
+    }
+
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        validate_and_build_section(request=request, draft=draft)
+    assert excinfo.value.issues == (
+        ("metadata_leaked", "nodes[0].text"),
+        ("table_row_width_mismatch", "nodes[2].table.rows"),
+    )
+    assert excinfo.value.affected_node_ids == (ids[0], ids[2])
+
+
+def test_node_schema_failures_report_safe_paths_per_node() -> None:
+    request = _request()
+    draft = _draft(request)
+    del draft["nodes"][3]["display"]["items"]
+    draft["nodes"][0]["display"]["text"] = ""
+    draft["nodes"][2]["display"]["rows"] = "SECRET_SENTINEL text"
+
+    validation = validate_draft_nodes(request=request, draft=draft)
+
+    assert validation.repair_mode == "patch"
+    paths = {path for node in validation.nodes for _c, path, _m in node.issues}
+    assert any(path.startswith("nodes[3]") and path.endswith("items") for path in paths)
+    assert any(path.startswith("nodes[2]") and path.endswith("rows") for path in paths)
+    assert "SENTINEL" not in repr([node.issues for node in validation.nodes])
+
+
+def test_section_level_problems_choose_full_mode() -> None:
+    request = _request()
+    for draft in (None, "nope", {"nodes": "x"}, {"nodes": []}, {"nodes": [], "extra": 1}):
+        assert validate_draft_nodes(request=request, draft=draft).repair_mode == "full"
+    short = _draft(request)
+    short["nodes"].pop()
+    count = validate_draft_nodes(request=request, draft=short)
+    assert count.repair_mode == "full"
+    assert count.to_error().affected_node_ids == tuple(_ordinary_ids(request))
+
+
+@pytest.mark.asyncio
+async def test_patch_repair_returns_only_broken_node_and_keeps_the_rest() -> None:
+    request = _request()
+    ids = _ordinary_ids(request)
+    calls: list[dict[str, Any]] = []
+    first = _draft(request)
+    first["nodes"][2]["display"]["rows"] = [["Only one cell"]]
+    first["nodes"][0]["display"]["text"] = "Original opening paragraph about particles."
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            return deepcopy(first)
+        fixed = _payload_for_item(request.composition_plan.items[2])
+        fixed["display"]["caption"] = "Repaired table"
+        return {"nodes": [fixed]}
+
+    result = await write_section(request=request, provider=provider)
+
+    assert len(calls) == 2
+    repair = calls[1]["repair"]
+    assert repair["mode"] == "patch"
+    assert repair["scope"] == "section"
+    assert repair["repair_node_ids"] == [ids[2]]
+    assert repair["affected_node_ids"] == [ids[2]]
+    assert repair["keep_node_ids"] == [ids[0], ids[1], ids[3]]
+    assert repair["previous_draft"] == {"nodes": first["nodes"]}
+    assert repair["issues"] == [
+        f"nodes[2].table.rows ({ids[2]}): table rows must match the header width"
+    ]
+    assert result.repair_modes == ("patch",)
+    assert result.nodes[0].display.text == "Original opening paragraph about particles."
+    assert result.nodes[2].display.caption == "Repaired table"
+    assert result.nodes[2].display.rows == (("Unheated", "Slower"), ("Heated", "Faster"))
+    assert [node.id for node in result.nodes[:4]] == ids
+    assert result.nodes[-1].kind == "task_anchor"
+    assert result.model_dump(mode="json")["repair_modes"] == ["patch"]
+
+
+@pytest.mark.asyncio
+async def test_empty_reply_after_a_usable_draft_keeps_patching_that_draft() -> None:
+    from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+    request = _request()
+    ids = _ordinary_ids(request)
+    calls: list[dict[str, Any]] = []
+    first = _draft(request)
+    first["nodes"][2]["display"]["rows"] = [["Only one cell"]]
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            return deepcopy(first)
+        if len(calls) == 2:
+            raise UnexpectedModelBehavior("Exceeded maximum output retries (0)")
+        return {"nodes": [_payload_for_item(request.composition_plan.items[2])]}
+
+    result = await write_section(request=request, provider=provider)
+
+    assert len(calls) == 3
+    repair = calls[2]["repair"]
+    assert repair["mode"] == "patch"
+    assert repair["repair_node_ids"] == [ids[2]]
+    assert repair["previous_draft"] == {"nodes": first["nodes"]}
+    assert any("table rows must match the header width" in issue for issue in repair["issues"])
+    assert result.repair_modes == ("patch", "patch")
+
+
+@pytest.mark.asyncio
+async def test_patch_ignores_extra_and_renamed_ids_and_missing_id_stays_broken() -> None:
+    request = _request()
+    ids = _ordinary_ids(request)
+    calls: list[dict[str, Any]] = []
+    first = _draft(request)
+    first["nodes"][2]["display"]["rows"] = [["Only one cell"]]
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            return deepcopy(first)
+        if len(calls) == 2:
+            renamed = _payload_for_item(request.composition_plan.items[2])
+            renamed["id"] = "invented-id"
+            rewrite_other = _payload_for_item(request.composition_plan.items[0])
+            rewrite_other["display"]["text"] = "A paragraph the patch must not change."
+            return {"nodes": [rewrite_other, renamed]}
+        return {"nodes": [_payload_for_item(request.composition_plan.items[2])]}
+
+    result = await write_section(request=request, provider=provider)
+
+    assert len(calls) == 3
+    assert calls[1]["repair"]["mode"] == "patch"
+    # Nothing usable came back, so the second repair patches the same node
+    # against an unchanged previous draft.
+    assert calls[2]["repair"]["mode"] == "patch"
+    assert calls[2]["repair"]["repair_node_ids"] == [ids[2]]
+    assert calls[2]["repair"]["previous_draft"] == {"nodes": first["nodes"]}
+    assert calls[2]["repair"]["scope"] == "targeted"
+    assert result.repair_modes == ("patch", "patch")
+    assert result.nodes[0].display.text == "Heating gives water particles more motion."
+
+
+@pytest.mark.asyncio
+async def test_patch_that_breaks_a_section_rule_is_caught_by_the_full_recheck() -> None:
+    request = _numeric_request()
+    ids = _ordinary_ids(request)
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        draft = _draft(request)
+        if len(calls) == 1:
+            draft["nodes"][0]["display"]["text"] = "TODO write this paragraph."
+            return draft
+        patched = draft["nodes"][0]
+        patched["display"]["text"] = (
+            "Divide both sides by 4 to see that x = 9."
+            if len(calls) == 2
+            else "Divide both sides by the coefficient to isolate x."
+        )
+        return {"nodes": [patched]}
+
+    result = await write_section(request=request, provider=provider)
+
+    assert len(calls) == 3
+    assert calls[1]["repair"]["repair_node_ids"] == [ids[0]]
+    assert calls[2]["repair"]["mode"] == "patch"
+    assert calls[2]["repair"]["repair_node_ids"] == [ids[0]]
+    # The rejected patch is what the next repair is shown as the previous draft.
+    assert "x = 9" in calls[2]["repair"]["previous_draft"]["nodes"][0]["display"]["text"]
+    assert "states the result of an anchored task" in calls[2]["repair"]["issues"][0]
+    assert result.repair_modes == ("patch", "patch")
+
+
+@pytest.mark.asyncio
+async def test_unparseable_reply_repairs_in_full_mode_without_previous_draft() -> None:
+    from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+    request = _request()
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            raise UnexpectedModelBehavior("Exceeded maximum output retries (0)")
+        return _draft(request)
+
+    result = await write_section(request=request, provider=provider)
+
+    assert calls[1]["repair"]["mode"] == "full"
+    assert calls[1]["repair"]["previous_draft"] is None
+    assert "keep_node_ids" not in calls[1]["repair"]
+    assert result.repair_modes == ("full",)
+
+    calls.clear()
+
+    async def non_object(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        return "not json at all" if len(calls) == 1 else _draft(request)
+
+    await write_section(request=request, provider=non_object)
+    assert calls[1]["repair"]["mode"] == "full"
+    assert calls[1]["repair"]["previous_draft"] is None
+
+
+@pytest.mark.asyncio
+async def test_wrong_node_count_repairs_in_full_mode_with_previous_draft() -> None:
+    request = _request()
+    calls: list[dict[str, Any]] = []
+    short = _draft(request)
+    short["nodes"].pop()
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        return deepcopy(short) if len(calls) == 1 else _draft(request)
+
+    result = await write_section(request=request, provider=provider)
+
+    assert calls[1]["repair"]["mode"] == "full"
+    assert calls[1]["repair"]["previous_draft"] == short
+    assert calls[1]["repair"]["affected_node_ids"] == _ordinary_ids(request)
+    assert result.repair_modes == ("full",)
+
+
+@pytest.mark.asyncio
+async def test_three_failed_calls_raise_with_all_issues_and_repair_modes() -> None:
+    request = _request()
+    calls = 0
+
+    async def provider(_payload: dict[str, Any]) -> Any:
+        nonlocal calls
+        calls += 1
+        draft = _draft(request)
+        draft["nodes"][0]["display"]["text"] = "The must_establish field says particles move."
+        draft["nodes"][2]["display"]["rows"] = [["Only one cell"]]
+        return draft
+
+    with pytest.raises(SectionWriteValidationError) as excinfo:
+        await write_section(request=request, provider=provider)
+
+    assert calls == 3
+    assert excinfo.value.issues == (
+        ("metadata_leaked", "nodes[0].text"),
+        ("table_row_width_mismatch", "nodes[2].table.rows"),
+    )
+    assert excinfo.value.repair_modes == ("patch", "patch")
+
+
+@pytest.mark.asyncio
+async def test_timeout_during_a_patch_repair_propagates() -> None:
+    request = _request()
+    calls = 0
+
+    async def provider(_payload: dict[str, Any]) -> Any:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise TimeoutError("section writer timed out")
+        draft = _draft(request)
+        draft["nodes"][2]["display"]["rows"] = [["Only one cell"]]
+        return draft
+
+    with pytest.raises(TimeoutError):
+        await write_section(request=request, provider=provider)
+    assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_default_provider_returns_raw_json_and_keeps_closed_schema_hint(monkeypatch) -> None:
+    from document.shared_lesson import writer as writer_module
+    from infra.authoring import structured_provider
+
+    captured: dict[str, Any] = {}
+
+    async def run_structured_agent(**kwargs):
+        captured.update(kwargs)
+        return kwargs["output_type"].model_validate({"nodes": [{"id": "n", "kind": "bogus"}]})
+
+    monkeypatch.setattr(structured_provider, "run_structured_agent", run_structured_agent)
+    reply = await writer_module._default_provider({"x": 1})
+
+    # Not validated against the closed node schema; our code does that per node.
+    assert reply == {"nodes": [{"id": "n", "kind": "bogus"}]}
+    schema = captured["output_type"].model_json_schema()
+    assert "$defs" not in schema and "$ref" not in str(schema)
+    assert schema["properties"]["nodes"]["minItems"] == 1
+
+
+@pytest.mark.asyncio
+async def test_repair_modes_are_recorded_content_free_even_without_warnings(monkeypatch) -> None:
+    from document.shared_lesson import runtime as runtime_module
+
+    events: list[dict[str, Any]] = []
+
+    async def append_event(_session, **kwargs):
+        events.append(kwargs)
+
+    monkeypatch.setattr(runtime_module, "append_event", append_event)
+    await runtime_module._record_writer_style_warnings(
+        None, run_id="r", work_item_id="w", warnings=(), repair_modes=()
+    )
+    assert events == []
+    await runtime_module._record_writer_style_warnings(
+        None, run_id="r", work_item_id="w", warnings=(), repair_modes=("patch", "full")
+    )
+    assert events[0]["event_type"] == "section_write_warning"
+    assert events[0]["safe_payload"] == {
+        "warning_codes": [],
+        "warning_paths": [],
+        "repair_modes": ["patch", "full"],
+    }
