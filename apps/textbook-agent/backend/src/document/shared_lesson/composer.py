@@ -16,6 +16,8 @@ from curriculum.teaching_plan.models import (
     TeachingPlanSection,
     VisualSpec,
 )
+from document.shared_lesson.schema_refs import inline_json_schema_refs
+from infra.llm.output_failure import OutputFailureSummary, summarize_output_failure
 
 #: Figures are placed by code from the Teaching Plan visual spec; the composer
 #: never chooses one.
@@ -433,7 +435,8 @@ def _evaluate_composition(
             _fail(
                 "kind_role_mismatch",
                 f"choices[{choice_index}].kind",
-                f"{choice.kind} is unsuitable for semantic role {choice.semantic_role!r}",
+                f"{choice.kind} is unsuitable for semantic role {choice.semantic_role!r};"
+                f" {choice.kind} allows {', '.join(sorted(_KIND_ROLES[choice.kind]))}",
             )
         if choice.kind == "heading" and not _has_genuine_subsection_cue(block):
             _fail(
@@ -687,7 +690,14 @@ def _section_prompt_payload(
     section: TeachingPlanSection,
     tasks: Sequence[SharedTaskSpec],
     repair_errors: Sequence[str] = (),
+    previous_draft: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
+    """Build the composer request.
+
+    On repair, ``repair_errors`` holds one ``path: code - message`` line per hard
+    issue and ``previous_draft`` holds the rejected reply's ``items`` (``None``
+    when that reply was empty or not a JSON object).
+    """
     return {
         "section": section.model_dump(mode="json"),
         "shaping_targets": {
@@ -720,7 +730,30 @@ def _section_prompt_payload(
             for task in tasks
         ],
         "repair_errors": list(repair_errors),
+        "previous_draft": {"items": list(previous_draft)} if previous_draft is not None else None,
     }
+
+
+class _RawCompositionDraft(BaseModel):
+    """Provider output type: shows the model the closed draft schema, validates nothing.
+
+    ``compose_section`` validates the reply itself, so a reply that breaks the
+    schema is kept and shown to the repair call instead of being discarded by
+    the provider library. Only a reply that is not a JSON object still fails here.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: Any, handler: Any) -> dict[str, Any]:
+        return inline_json_schema_refs(SectionCompositionDraft.model_json_schema(mode="validation"))
+
+
+def draft_as_json(draft: Any) -> Any:
+    """Return a composer reply as plain JSON-shaped data (models are dumped)."""
+    if isinstance(draft, BaseModel):
+        return draft.model_dump(mode="json")
+    return draft
 
 
 async def _default_provider(payload: dict[str, Any]) -> Any:
@@ -729,23 +762,93 @@ async def _default_provider(payload: dict[str, Any]) -> Any:
     from core.prompts import effective_prompt_text
     from infra.authoring.structured_provider import run_structured_agent
 
-    return await run_structured_agent(
+    reply = await run_structured_agent(
         node_name="section_composer",
         trace_id=None,
         generation_id=None,
         system_prompt=effective_prompt_text("section-composer"),
         user_prompt=json.dumps(payload, sort_keys=True),
-        output_type=SectionCompositionDraft,
+        output_type=_RawCompositionDraft,
         repair_attempts=0,
         retries={"output": 0},
         retry_policy=RetryPolicy(max_attempts=1),
     )
+    # The raw parsed JSON, never a validated model: the caller validates it and
+    # shows it back to the repair call when it is wrong.
+    return draft_as_json(reply)
 
 
-def _draft_contains_figure(raw: Any) -> bool:
-    items = raw.get("items") if isinstance(raw, dict) else None
-    return isinstance(items, list) and any(
-        isinstance(item, dict) and item.get("kind") == "figure" for item in items
+_FIGURE_KIND_MESSAGE = (
+    "figure is not a composer kind: figures are placed by code from the"
+    " Teaching Plan and must not be emitted"
+)
+_EMPTY_REPLY_MESSAGE = (
+    "your previous reply was empty or was not a JSON object matching the closed"
+    " composition schema; return the complete JSON draft"
+)
+_ITEM_INDEX = re.compile(r"^items\[(\d+)\]")
+_SCHEMA_FIELD_HINTS: dict[str, str] = {
+    "kind": "kind must be one of: " + ", ".join(sorted(_KIND_ROLES)),
+    "semantic_role": "semantic_role must be one of: "
+    + ", ".join(sorted(set().union(*_KIND_ROLES.values()))),
+    "teaching_block_id": "teaching_block_id must be a Teaching Plan block id",
+}
+
+
+def _schema_issue_message(data: Any, path: str, error_type: str) -> str:
+    """Repair guidance for one schema issue; never echoes the provider's text."""
+    field = path.rsplit(".", 1)[-1] if "." in path else path
+    match = _ITEM_INDEX.match(path)
+    items = data.get("items") if isinstance(data, dict) else None
+    if field == "kind" and match is not None and isinstance(items, list):
+        index = int(match.group(1))
+        item = items[index] if index < len(items) else None
+        if isinstance(item, dict) and item.get("kind") == "figure":
+            return _FIGURE_KIND_MESSAGE
+    if error_type == "extra_forbidden":
+        return "field is not part of the schema; remove it"
+    if error_type == "missing":
+        return "required field is missing"
+    if path == "items" and error_type == "too_short":
+        return "items must contain at least one choice"
+    return _SCHEMA_FIELD_HINTS.get(field, f"value fails the closed schema ({error_type})")
+
+
+def _schema_error(
+    data: Any, summary: OutputFailureSummary | None
+) -> CompositionValidationError:
+    """Turn a provider schema/empty-reply failure into a repairable composer error.
+
+    Paths are ``loc``-built and messages come from fixed guidance, so neither
+    carries provider output.
+    """
+    if summary is None or not summary.issues:
+        return CompositionValidationError(
+            [_EMPTY_REPLY_MESSAGE], [("provider_draft_schema_invalid", "")]
+        )
+    pairs = summary.issues
+    if any(_ITEM_INDEX.match(path) for path, _error_type in pairs):
+        # Pydantic also reports ``items`` as too short when an entry fails; the
+        # entry-level issue is the real one.
+        pairs = tuple(pair for pair in pairs if pair != ("items", "too_short"))
+    return CompositionValidationError(
+        [_schema_issue_message(data, path, error_type) for path, error_type in pairs],
+        [("provider_draft_schema_invalid", path) for path, _error_type in pairs],
+    )
+
+
+def _validate_raw_draft(data: Any) -> SectionCompositionDraft:
+    try:
+        return SectionCompositionDraft.model_validate(data)
+    except ValidationError as exc:
+        raise _schema_error(data, summarize_output_failure(exc)) from exc
+
+
+def _repair_lines(error: CompositionValidationError) -> tuple[str, ...]:
+    """One ``path: code - message`` line per hard issue, for the repair call."""
+    return tuple(
+        f"{path or 'draft'}: {code} - {message}"
+        for message, (code, path) in zip(error.errors, error.issues, strict=False)
     )
 
 
@@ -760,44 +863,43 @@ async def compose_section(
 
     Shape findings are returned as warnings from the initial response and
     never trigger a repair. Only hard identity/schema/contract findings are
-    sent through the bounded correction call.
+    sent through the bounded correction call, together with the rejected
+    draft's ``items`` so the provider corrects it instead of re-planning. The
+    provider returns raw JSON that is validated here; an empty/non-actionable
+    provider reply becomes a ``provider_draft_schema_invalid`` error and is
+    repaired without a draft. Other provider errors (transport, timeouts)
+    propagate unchanged.
     """
     dispatch = provider or _default_provider
-    previous_errors: tuple[str, ...] = ()
+    repair_errors: tuple[str, ...] = ()
+    previous_draft: list[Any] | None = None
     for attempt in range(2):
-        raw = await dispatch(_section_prompt_payload(section, tasks, previous_errors))
+        data: Any = None
         try:
-            draft = (
-                raw
-                if isinstance(raw, SectionCompositionDraft)
-                else SectionCompositionDraft.model_validate(raw)
-            )
+            try:
+                raw = await dispatch(
+                    _section_prompt_payload(section, tasks, repair_errors, previous_draft)
+                )
+            except Exception as provider_exc:
+                summary = summarize_output_failure(provider_exc)
+                if summary is None:
+                    raise
+                raise _schema_error(None, summary) from provider_exc
+            data = draft_as_json(raw)
             return validate_and_build_composition(
                 section=section,
-                choices=draft,
+                choices=_validate_raw_draft(data),
                 tasks=tasks,
                 policy=policy,
                 accept_soft_issues=(attempt == 1),
                 forbid_table_duplicating_figure=True,
             )
-        except (ValidationError, CompositionValidationError) as exc:
-            if isinstance(exc, CompositionValidationError):
-                previous_errors = exc.errors
-            elif _draft_contains_figure(raw):
-                previous_errors = (
-                    (
-                        "figure is not a composer kind: figures are placed by code from the"
-                        " Teaching Plan and must not be emitted"
-                    ),
-                )
-            else:
-                previous_errors = ("invalid closed schema",)
+        except CompositionValidationError as exc:
             if attempt == 1:
-                raise CompositionValidationError(
-                    previous_errors,
-                    exc.issues if isinstance(exc, CompositionValidationError)
-                    else (("provider_draft_schema_invalid", "items"),),
-                ) from exc
+                raise
+            repair_errors = _repair_lines(exc)
+            items = data.get("items") if isinstance(data, dict) else None
+            previous_draft = list(items) if isinstance(items, list) else None
     raise AssertionError("bounded composer loop exhausted unexpectedly")
 
 
@@ -812,6 +914,7 @@ __all__ = [
     "SectionCompositionDraft",
     "SectionCompositionPlan",
     "EXPLAINING_INTENTS",
+    "draft_as_json",
     "KEY_IDEA_SLOT_PREFIX",
     "compose_section",
     "is_explaining_section",

@@ -41,6 +41,7 @@ from document.shared_lesson.models import (
     QuoteDisplay,
     shared_lesson_node_adapter,
 )
+from document.shared_lesson.schema_refs import inline_json_schema_refs
 from infra.llm.output_failure import summarize_output_failure
 
 
@@ -1249,25 +1250,6 @@ def _request_payload(
     }
 
 
-def _inline_json_schema_refs(schema: dict[str, Any]) -> dict[str, Any]:
-    defs = schema.get("$defs", {})
-
-    def walk(node: Any) -> Any:
-        if isinstance(node, dict):
-            if "$ref" in node:
-                return walk(defs[node["$ref"].rsplit("/", 1)[-1]])
-            return {
-                key: walk(value)
-                for key, value in node.items()
-                if key not in {"$defs", "discriminator"}
-            }
-        if isinstance(node, list):
-            return [walk(item) for item in node]
-        return node
-
-    return walk(schema)  # type: ignore[no-any-return]
-
-
 class _RawSectionDraft(BaseModel):
     """Provider output type: shows the model the closed draft schema, validates nothing.
 
@@ -1280,7 +1262,7 @@ class _RawSectionDraft(BaseModel):
 
     @classmethod
     def __get_pydantic_json_schema__(cls, core_schema: Any, handler: Any) -> dict[str, Any]:
-        return _inline_json_schema_refs(SectionWriterDraft.model_json_schema(mode="validation"))
+        return inline_json_schema_refs(SectionWriterDraft.model_json_schema(mode="validation"))
 
 
 async def _default_provider(payload: dict[str, Any]) -> Any:
