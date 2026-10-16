@@ -34,6 +34,7 @@ from document.shared_lesson.runtime import (
     verify_teaching_plan_source,
 )
 from document.shared_lesson import runtime as shared_runtime
+from document.shared_lesson.writer import SectionWriteValidationError
 from infra.database.models import (
     ConceptModel,
     GenerationEventModel,
@@ -997,7 +998,7 @@ async def test_writer_classifies_unexpected_model_behavior_as_recoverable_output
         provider_calls += 1
         raise UnexpectedModelBehavior("Exceeded maximum output retries (0)")
 
-    with pytest.raises(UnexpectedModelBehavior):
+    with pytest.raises(SectionWriteValidationError):
         await _write_section_work_item(
             db_session,
             work_item_id=target_id,
@@ -1013,7 +1014,7 @@ async def test_writer_classifies_unexpected_model_behavior_as_recoverable_output
         failed = await verify.get(GenerationWorkItemModel, target_id)
         preserved = await verify.get(GenerationWorkItemModel, ready_id)
         failed_run = await verify.get(GenerationRunModel, run.id)
-        assert provider_calls == 1
+        assert provider_calls == 3  # empty replies enter the bounded repair loop
         assert failed is not None
         assert failed.status == "failed_recoverable"
         assert failed.error_code == "invalid_section_output"
@@ -1039,7 +1040,11 @@ async def test_writer_classifies_unexpected_model_behavior_as_recoverable_output
             if event.event_type == "section_writer_failure_diagnostic"
         )
         assert diagnostic.safe_payload_json == {
-            "original_exception_type": "UnexpectedModelBehavior"
+            "original_exception_type": "SectionWriteValidationError",
+            "validation_issue_codes": ["writer_draft_schema_invalid"],
+            "validation_paths": [],
+            "output_failure_kind": "empty_reply",
+            "schema_error_types": [],
         }
 
 

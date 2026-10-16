@@ -32,6 +32,7 @@ from document.shared_lesson.models import (
     QuoteDisplay,
     shared_lesson_node_adapter,
 )
+from infra.llm.output_failure import summarize_output_failure
 
 
 class _ClosedModel(BaseModel):
@@ -1038,6 +1039,46 @@ async def _default_provider(payload: dict[str, Any]) -> Any:
     )
 
 
+_NODE_PATH_INDEX = re.compile(r"^nodes\[(\d+)\]")
+
+
+def _provider_output_failure_as_validation_error(
+    exc: BaseException, request: SectionWriterRequest
+) -> SectionWriteValidationError | None:
+    """Turn a provider-side schema/empty-reply failure into a repairable error.
+
+    The structured provider validates the reply itself and raises
+    ``UnexpectedModelBehavior`` before ``validate_and_build_section`` sees it.
+    Returns ``None`` for anything that is not an output failure (transport
+    errors, timeouts), which must keep propagating. Error strings carry only
+    ``loc``-built paths and pydantic error types, never model output.
+    """
+    summary = summarize_output_failure(exc)
+    if summary is None:
+        return None
+    if not summary.issues:
+        return SectionWriteValidationError(
+            [
+                "your previous reply was empty or was not a JSON object matching the "
+                "closed node schema; return the complete JSON draft"
+            ],
+            issues=(("writer_draft_schema_invalid", ""),),
+        )
+    expected = [item for item in request.composition_plan.items if item.kind != "task_anchor"]
+    affected: list[str] = []
+    for path, _error_type in summary.issues:
+        match = _NODE_PATH_INDEX.match(path)
+        if match is not None and int(match.group(1)) < len(expected):
+            node_id = expected[int(match.group(1))].id
+            if node_id not in affected:
+                affected.append(node_id)
+    return SectionWriteValidationError(
+        [f"{path or 'draft'}: {error_type}" for path, error_type in summary.issues],
+        affected_node_ids=affected,
+        issues=tuple(("writer_draft_schema_invalid", path) for path, _kind in summary.issues),
+    )
+
+
 async def write_section(
     *, request: SectionWriterRequest, provider: Provider | None = None
 ) -> SectionWriteResult:
@@ -1045,7 +1086,10 @@ async def write_section(
 
     Shape findings are accepted on the initial response and returned as
     advisory warnings. Only hard identity, schema, leakage, and task
-    correctness issues enter the bounded repair loop.
+    correctness issues enter the bounded repair loop. A provider reply that
+    fails the structured-output schema (or is empty/non-actionable) is turned
+    into a ``writer_draft_schema_invalid`` error and repaired like any other
+    hard issue; other provider errors propagate unchanged.
     """
     dispatch = provider or _default_provider
     repair_scopes = ("initial", "section", "targeted")
@@ -1053,16 +1097,22 @@ async def write_section(
     affected_node_ids: tuple[str, ...] = ()
     last_error: SectionWriteValidationError | None = None
     for attempt, scope in enumerate(repair_scopes):
-        raw = await dispatch(
-            _request_payload(
-                request,
-                repair_scope=scope,
-                errors=issues,
-                affected_node_ids=affected_node_ids,
-            )
-        )
         final_attempt = attempt == len(repair_scopes) - 1
         try:
+            try:
+                raw = await dispatch(
+                    _request_payload(
+                        request,
+                        repair_scope=scope,
+                        errors=issues,
+                        affected_node_ids=affected_node_ids,
+                    )
+                )
+            except Exception as provider_exc:
+                converted = _provider_output_failure_as_validation_error(provider_exc, request)
+                if converted is None:
+                    raise
+                raise converted from provider_exc
             return validate_and_build_section(
                 request=request, draft=raw, accept_soft_issues=final_attempt
             )

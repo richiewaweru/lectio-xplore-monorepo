@@ -1,4 +1,4 @@
-from __future__ import annotationsimport asyncioimport loggingimport randomimport timefrom collections.abc import Mappingfrom dataclasses import dataclassfrom email.utils import parsedate_to_datetimefrom typing import Anyfrom pydantic import ValidationErrorfrom pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UserErrorimport infra.events as core_eventsfrom infra.llm.cost import compute_cost_usd, extract_thinking_tokens, extract_usagefrom infra.llm.transport import effective_text_spec, endpoint_hostfrom infra.llm.types import ModelFamily, ModelSlot, ModelSpeclogger = logging.getLogger(__name__)
+from __future__ import annotationsimport asyncioimport loggingimport randomimport timefrom collections.abc import Mappingfrom dataclasses import dataclassfrom email.utils import parsedate_to_datetimefrom typing import Anyfrom pydantic import ValidationErrorfrom pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UserErrorimport infra.events as core_eventsfrom infra.llm.cost import compute_cost_usd, extract_thinking_tokens, extract_usagefrom infra.llm.output_failure import summarize_output_failurefrom infra.llm.transport import effective_text_spec, endpoint_hostfrom infra.llm.types import ModelFamily, ModelSlot, ModelSpeclogger = logging.getLogger(__name__)
 
 
 class TruncatedCompletionError(RuntimeError):
@@ -24,6 +24,11 @@ class RetryPolicy:
 
 def _should_publish_events(trace_id: str) -> bool:
     return bool(trace_id and trace_id.strip())
+
+
+def _output_failure_fields(exc: BaseException) -> dict[str, Any]:
+    summary = summarize_output_failure(exc)
+    return summary.as_fields() if summary is not None else {}
 
 
 def _publish_llm_event(trace_id: str, event: Any) -> None:
@@ -411,6 +416,7 @@ async def run_llm(
                     retryable=remaining_repairs > 0,
                     error=str(exc),
                     error_class=type(exc).__name__,
+                    **_output_failure_fields(exc),
                     **structured_fields,
                 ),
             )
@@ -459,6 +465,7 @@ async def run_llm(
                     retryable=retryable,
                     error=str(exc),
                     error_class=type(exc).__name__,
+                    **_output_failure_fields(exc),
                     **structured_fields,
                 ),
             )

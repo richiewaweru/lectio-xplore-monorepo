@@ -1496,3 +1496,54 @@ def test_section_writer_deadline_stays_below_its_lease() -> None:
     # A stalled writer must hit its aggregate deadline while it still holds
     # the lease, so the typed failure is recorded under a live fence.
     assert runtime.SECTION_WRITER_TIMEOUT_SECONDS < runtime.SECTION_WRITER_LEASE_SECONDS
+
+
+@pytest.mark.asyncio
+async def test_diagnostic_includes_output_failure_kind_types_and_paths(monkeypatch) -> None:
+    from pydantic_ai.exceptions import ToolRetryError, UnexpectedModelBehavior
+    from pydantic_ai.messages import RetryPromptPart
+
+    try:
+        try:
+            raise ToolRetryError(
+                RetryPromptPart(
+                    content=[
+                        {
+                            "type": "missing",
+                            "loc": ("nodes", 2, "display", "items"),
+                            "msg": "PROVIDER_SENTINEL_msg",
+                            "input": "PROVIDER_SENTINEL_input",
+                        }
+                    ]
+                )
+            )
+        except ToolRetryError as retry:
+            raise UnexpectedModelBehavior("Exceeded maximum output retries (0)") from retry
+    except UnexpectedModelBehavior as error:
+        provider_error = error
+
+    recorded_events = []
+
+    async def fake_fail(_session, **kwargs):
+        return SimpleNamespace(id=kwargs["work_item_id"], run_id="run-1")
+
+    async def fake_append_event(_session, **kwargs):
+        recorded_events.append(kwargs)
+
+    monkeypatch.setattr("document.shared_lesson.runtime.fail_work_item", fake_fail)
+    monkeypatch.setattr("document.shared_lesson.runtime.append_event", fake_append_event)
+
+    await _record_execution_failure(
+        "session",
+        work_item_id="item-1",
+        worker_id="worker-1",
+        lease_token=1,
+        error=provider_error,
+    )
+
+    payload = recorded_events[0]["safe_payload"]
+    assert payload["original_exception_type"] == "UnexpectedModelBehavior"
+    assert payload["output_failure_kind"] == "schema_mismatch"
+    assert payload["schema_error_types"] == ["missing"]
+    assert payload["validation_paths"] == ["nodes[2].display.items"]
+    assert "SENTINEL" not in repr(payload)

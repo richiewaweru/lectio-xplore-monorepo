@@ -313,3 +313,34 @@ async def test_failed_llm_event_preserves_error_class_when_message_is_empty() ->
     )
 
     assert repo.saved[0]["error"] == "[TimeoutError]"
+
+
+async def test_failed_llm_call_without_user_logs_safe_output_failure_summary(caplog) -> None:
+    import logging
+
+    monitor = TelemetryMonitor()
+
+    with caplog.at_level(logging.WARNING, logger="infra.telemetry.service"):
+        await monitor._handle_event(
+            {
+                "type": "llm_call_failed",
+                "trace_id": "v3-execution",
+                "caller": "shared_section_writer",
+                "node": "shared_section_writer",
+                "attempt": 1,
+                "error": "Exceeded maximum output retries (0)" + "x" * 1000,
+                "error_class": "UnexpectedModelBehavior",
+                "output_failure_kind": "schema_mismatch",
+                "output_failure_error_types": ["missing"],
+                "output_failure_paths": ["nodes[2].display.items"],
+            }
+        )
+
+    messages = [record.getMessage() for record in caplog.records]
+    line = next(m for m in messages if "without user_id" in m)
+    assert "node=shared_section_writer" in line
+    assert "attempt=1" in line
+    assert "error_class=UnexpectedModelBehavior" in line
+    assert "output_failure_kind=schema_mismatch" in line
+    assert "nodes[2].display.items" in line
+    assert "x" * 400 not in line

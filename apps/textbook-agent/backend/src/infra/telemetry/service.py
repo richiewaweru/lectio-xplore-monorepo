@@ -93,6 +93,25 @@ class TelemetryMonitor:
             if user_id is None and generation_id:
                 user_id = await self._user_id_for_generation(generation_id)
             if user_id is None:
+                if event_type == "llm_call_failed":
+                    # Keep the failure diagnosable even though it cannot be
+                    # persisted: safe summary first, hard-truncated error text.
+                    logger.warning(
+                        "Skipping llm_call persistence without user_id trace_id=%s "
+                        "generation_id=%s event_type=%s node=%s attempt=%s error_class=%s "
+                        "output_failure_kind=%s error_types=%s paths=%s error=%.300s",
+                        trace_id,
+                        generation_id,
+                        event_type,
+                        payload.get("node"),
+                        payload.get("attempt"),
+                        payload.get("error_class"),
+                        payload.get("output_failure_kind"),
+                        payload.get("output_failure_error_types"),
+                        payload.get("output_failure_paths"),
+                        payload.get("error") or "",
+                    )
+                    return
                 logger.warning(
                     "Skipping llm_call persistence without user_id trace_id=%s generation_id=%s event_type=%s",
                     trace_id,
