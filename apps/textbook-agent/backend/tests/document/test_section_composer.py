@@ -1220,3 +1220,196 @@ def test_stored_table_plus_table_figure_still_verifies() -> None:
     stored = validate_and_build_composition(section=section, choices=choices, tasks=[])
     assert [item.kind for item in stored.items] == ["table", "figure"]
     validate_composition_plan(plan=stored, section=section, tasks=[])
+
+
+def _composer_output_failure(content: Any) -> Exception:
+    from pydantic_ai.exceptions import ToolRetryError, UnexpectedModelBehavior
+    from pydantic_ai.messages import RetryPromptPart
+
+    try:
+        try:
+            raise ToolRetryError(RetryPromptPart(content=content))
+        except ToolRetryError as retry:
+            raise UnexpectedModelBehavior("Exceeded maximum output retries (0)") from retry
+    except UnexpectedModelBehavior as exc:
+        return exc
+
+
+@pytest.mark.asyncio
+async def test_kind_role_mismatch_repair_carries_previous_draft_and_issue_lines() -> None:
+    section = _section(_block("b0", "explain"), _block("b1", "orient"))
+    calls: list[dict[str, Any]] = []
+    first = [
+        _choice("b0", "paragraph", "explanation"),
+        _choice("b1", "paragraph", "sequence"),
+    ]
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            return {"items": first}
+        return {"items": [first[0], _choice("b1", "paragraph", "bridge")]}
+
+    plan = await compose_section(section=section, tasks=[], provider=provider)
+
+    assert len(calls) == 2
+    assert calls[0]["previous_draft"] is None
+    assert calls[1]["previous_draft"] == {"items": first}
+    [line] = calls[1]["repair_errors"]
+    assert line.startswith("choices[1].kind: kind_role_mismatch - ")
+    assert "paragraph is unsuitable for semantic role 'sequence'" in line
+    assert "paragraph allows" in line and "bridge" in line
+    assert [item.semantic_role for item in plan.items if item.kind == "paragraph"][-1] == "bridge"
+
+
+@pytest.mark.asyncio
+async def test_provider_schema_mismatch_enters_repair_with_safe_paths() -> None:
+    section = _section(_block("b0", "orient"))
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            raise _composer_output_failure(
+                [
+                    {
+                        "type": "literal_error",
+                        "loc": ("items", 0, "kind"),
+                        "msg": "PROVIDER_MSG_SENTINEL",
+                        "input": "PROVIDER_INPUT_SENTINEL",
+                    }
+                ]
+            )
+        return {"items": [_choice("b0", "paragraph", "bridge")]}
+
+    plan = await compose_section(section=section, tasks=[], provider=provider)
+
+    assert len(calls) == 2
+    # The provider library kept no reply, so there is no draft to show.
+    assert calls[1]["previous_draft"] is None
+    [line] = calls[1]["repair_errors"]
+    assert line.startswith("items[0].kind: provider_draft_schema_invalid - kind must be one of")
+    assert "SENTINEL" not in str(calls[1])
+    assert plan.items[0].kind == "paragraph"
+
+
+@pytest.mark.asyncio
+async def test_own_schema_validation_keeps_the_raw_draft_for_repair() -> None:
+    section = _section(_block("b0", "orient"))
+    calls: list[dict[str, Any]] = []
+    bad = [{"teaching_block_id": "b0", "kind": "paragraph", "semantic_role": "bridge", "x": 1}]
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            return {"items": bad}
+        return {"items": [_choice("b0", "paragraph", "bridge")]}
+
+    await compose_section(section=section, tasks=[], provider=provider)
+
+    assert calls[1]["previous_draft"] == {"items": bad}
+    assert calls[1]["repair_errors"] == [
+        "items[0].x: provider_draft_schema_invalid - field is not part of the schema; remove it"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_empty_reply_enters_repair_without_draft() -> None:
+    from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+    section = _section(_block("b0", "orient"))
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            raise UnexpectedModelBehavior("Exceeded maximum output retries (0)")
+        return {"items": [_choice("b0", "paragraph", "bridge")]}
+
+    plan = await compose_section(section=section, tasks=[], provider=provider)
+
+    assert len(calls) == 2
+    assert calls[1]["previous_draft"] is None
+    [line] = calls[1]["repair_errors"]
+    assert line.startswith("draft: provider_draft_schema_invalid - your previous reply was empty")
+    assert plan.items[0].kind == "paragraph"
+
+
+@pytest.mark.asyncio
+async def test_two_failures_raise_with_codes_paths_and_output_failure_kind() -> None:
+    from infra.llm.output_failure import summarize_output_failure
+
+    section = _section(_block("b0", "orient"))
+    calls = 0
+
+    async def provider(_payload: dict[str, Any]) -> Any:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return {"items": [_choice("b0", "paragraph", "sequence")]}
+        raise _composer_output_failure(
+            [{"type": "missing", "loc": ("items", 0, "semantic_role"), "msg": "m", "input": {}}]
+        )
+
+    with pytest.raises(CompositionValidationError) as excinfo:
+        await compose_section(section=section, tasks=[], provider=provider)
+
+    assert calls == 2
+    assert excinfo.value.issues == (("provider_draft_schema_invalid", "items[0].semantic_role"),)
+    summary = summarize_output_failure(excinfo.value)
+    assert summary is not None and summary.kind == "schema_mismatch"
+    assert summary.paths == ("items[0].semantic_role",)
+
+
+@pytest.mark.asyncio
+async def test_two_hard_issue_drafts_raise_with_codes_and_paths() -> None:
+    section = _section(_block("b0", "orient"))
+
+    async def provider(_payload: dict[str, Any]) -> Any:
+        return {"items": [_choice("b0", "paragraph", "sequence")]}
+
+    with pytest.raises(CompositionValidationError) as excinfo:
+        await compose_section(section=section, tasks=[], provider=provider)
+
+    assert excinfo.value.issues == (("kind_role_mismatch", "choices[0].kind"),)
+
+
+@pytest.mark.asyncio
+async def test_composer_timeout_propagates_without_repair() -> None:
+    section = _section(_block("b0", "orient"))
+    calls = 0
+
+    async def provider(_payload: dict[str, Any]) -> Any:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return {"items": [_choice("b0", "paragraph", "sequence")]}
+        raise TimeoutError("section composer timed out")
+
+    with pytest.raises(TimeoutError):
+        await compose_section(section=section, tasks=[], provider=provider)
+    assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_composer_default_provider_returns_raw_json_with_closed_schema_hint(
+    monkeypatch,
+) -> None:
+    from document.shared_lesson import composer as composer_module
+    from infra.authoring import structured_provider
+
+    captured: dict[str, Any] = {}
+
+    async def run_structured_agent(**kwargs):
+        captured.update(kwargs)
+        return kwargs["output_type"].model_validate({"items": [{"kind": "bogus"}]})
+
+    monkeypatch.setattr(structured_provider, "run_structured_agent", run_structured_agent)
+    reply = await composer_module._default_provider({"x": 1})
+
+    assert reply == {"items": [{"kind": "bogus"}]}
+    assert captured["retries"] == {"output": 0}
+    schema = captured["output_type"].model_json_schema()
+    assert "$defs" not in schema and "$ref" not in str(schema)
+    assert schema["properties"]["items"]["minItems"] == 1
+    assert schema["properties"]["items"]["items"]["additionalProperties"] is False

@@ -100,3 +100,11 @@ kind (if any) each is eligible for, and its matched cue word -- switch one of
 those blocks to the named kind using the named cue; for a missing-cue error,
 switch to a kind the message says the block is eligible for, or fall back to a
 paragraph.
+
+Each `repair_errors` line reads `path: code - message`. `choices[i]` and
+`items[i]` both mean the i-th entry of your `items` list; `blocks/<id>` names a
+Teaching Plan block; `draft` means the whole reply. When `previous_draft` is
+present it is your rejected reply: return the complete corrected `items` list,
+changing only the entries the errors name (or adding a missing block's node)
+and keeping every other entry exactly as it was. When `previous_draft` is null,
+your previous reply was empty or unreadable: return a complete draft.
