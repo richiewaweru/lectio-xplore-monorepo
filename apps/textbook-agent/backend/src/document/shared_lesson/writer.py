@@ -268,11 +268,11 @@ class SectionWriteResult(_ClosedModel):
     #: readiness or cause another provider call.
     warnings: tuple[tuple[str, str], ...] = Field(default=(), exclude_if=lambda value: not value)
     #: Repair modes ("patch" / "full") the bounded loop used, in call order.
-    #: Content-free diagnostics only; empty (and omitted) when the first reply
-    #: was accepted.
-    repair_modes: tuple[Literal["patch", "full"], ...] = Field(
-        default=(), exclude_if=lambda value: not value
-    )
+    #: Content-free diagnostics only, recorded as an event. Never serialized:
+    #: the persisted output hash must not depend on how the section was
+    #: reached, or finalization (which rebuilds this model without it) sees
+    #: stale hashes and terminally blocks the run.
+    repair_modes: tuple[Literal["patch", "full"], ...] = Field(default=(), exclude=True)
 
     @model_validator(mode="after")
     def _validate_warnings(self) -> SectionWriteResult:
