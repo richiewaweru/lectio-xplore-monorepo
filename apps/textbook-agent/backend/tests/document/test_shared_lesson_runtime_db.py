@@ -1043,6 +1043,7 @@ async def test_writer_classifies_unexpected_model_behavior_as_recoverable_output
             "original_exception_type": "SectionWriteValidationError",
             "validation_issue_codes": ["writer_draft_schema_invalid"],
             "validation_paths": [],
+            "repair_modes": ["full", "full"],
             "output_failure_kind": "empty_reply",
             "schema_error_types": [],
         }

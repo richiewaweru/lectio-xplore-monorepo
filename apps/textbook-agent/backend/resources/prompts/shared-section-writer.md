@@ -71,6 +71,20 @@ while preserving every valid node and its composed position. A section-aware
 repair should address the full section contract; a targeted repair should fix
 only the named node-level issues.
 
+A repair instruction may carry `repair.previous_draft`, your earlier reply.
+
+- **Patch mode** (`repair.mode` is `patch`): return `{"nodes": [...]}` holding
+  only the nodes listed in `repair.repair_node_ids`, each with its exact `id`,
+  `kind`, and `teaching_block_id`, rewritten to fix the issues listed for it in
+  `repair.issues`. Do not return any other node. The nodes in
+  `repair.keep_node_ids` are already accepted and read-only: use them as
+  context so the fixed nodes stay consistent with them, and do not repeat or
+  contradict what they say.
+- **Full mode** (`repair.mode` is `full`): return the complete draft, every
+  ordinary node once in the supplied order. When `repair.previous_draft` is
+  present, keep every part of it that is not named by `repair.issues` as it is;
+  when it is null, write the whole draft again.
+
 ## Hard rules
 
 - **Resolve every misconception you state.** If prose states a misconception,

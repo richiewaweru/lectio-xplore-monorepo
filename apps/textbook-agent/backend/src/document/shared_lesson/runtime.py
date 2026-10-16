@@ -370,6 +370,9 @@ async def _record_execution_failure(
         safe_payload["validation_paths"] = sorted({path for _code, path in error.issues if path})[
             :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
         ]
+        repair_modes = getattr(error, "repair_modes", ())
+        if repair_modes:
+            safe_payload["repair_modes"] = list(repair_modes)
     output_failure = summarize_output_failure(error)
     if output_failure is not None:
         # Pydantic error types and loc-built paths only; never msg/input text.
@@ -426,14 +429,17 @@ async def _record_writer_style_warnings(
     run_id: str,
     work_item_id: str,
     warnings: Sequence[tuple[str, str]],
+    repair_modes: Sequence[str] = (),
 ) -> None:
     """Persist a safe, bounded event for advisory writer shape issues.
 
     Mirrors ``_record_composition_style_warnings``'s diagnostic shape: only
     accepted writer issue codes and sanitized structural paths, bounded the
-    same way, never provider output or learner text.
+    same way, never provider output or learner text. ``repair_modes`` (the
+    fixed ``patch``/``full`` vocabulary) records how a repaired section got
+    through, even when it has no warnings.
     """
-    if not warnings:
+    if not warnings and not repair_modes:
         return
     safe_payload: dict[str, Any] = {
         "warning_codes": sorted({code for code, _path in warnings})[
@@ -443,6 +449,8 @@ async def _record_writer_style_warnings(
             :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
         ],
     }
+    if repair_modes:
+        safe_payload["repair_modes"] = list(repair_modes)
     await append_event(
         session,
         run_id=run_id,
@@ -830,6 +838,7 @@ async def _write_section_work_item(
         run_id=run_id,
         work_item_id=work_item_id,
         warnings=result.warnings,
+        repair_modes=getattr(result, "repair_modes", ()),
     )
     return result
 
