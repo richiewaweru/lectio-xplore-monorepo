@@ -946,3 +946,97 @@ def test_writer_prompt_carries_compare_versus_table_guidance() -> None:
         in prompt
     )
     assert "comparison nodes keep every card" in prompt
+
+
+def _provider_schema_failure(loc: tuple, error_type: str = "missing") -> Exception:
+    from pydantic_ai.exceptions import ToolRetryError, UnexpectedModelBehavior
+    from pydantic_ai.messages import RetryPromptPart
+
+    try:
+        try:
+            raise ToolRetryError(
+                RetryPromptPart(
+                    content=[
+                        {
+                            "type": error_type,
+                            "loc": loc,
+                            "msg": "PROVIDER_MSG_SENTINEL",
+                            "input": "PROVIDER_INPUT_SENTINEL",
+                        }
+                    ]
+                )
+            )
+        except ToolRetryError as retry:
+            raise UnexpectedModelBehavior("Exceeded maximum output retries (0)") from retry
+    except UnexpectedModelBehavior as exc:
+        return exc
+
+
+@pytest.mark.asyncio
+async def test_provider_schema_mismatch_enters_repair_loop_with_safe_path() -> None:
+    request = _request()
+    calls: list[dict[str, Any]] = []
+
+    async def provider(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            raise _provider_schema_failure(("nodes", 2, "display", "rows"))
+        return _draft(request)
+
+    result = await write_section(request=request, provider=provider)
+
+    assert len(calls) == 2
+    assert result.nodes[-1].kind == "task_anchor"
+    assert calls[1]["repair"]["scope"] == "section"
+    assert calls[1]["repair"]["issues"] == ["nodes[2].display.rows: missing"]
+    table_id = [i for i in request.composition_plan.items if i.kind != "task_anchor"][2].id
+    assert calls[1]["repair"]["affected_node_ids"] == [table_id]
+    assert "SENTINEL" not in repr(calls[1]["repair"])
+
+
+@pytest.mark.asyncio
+async def test_provider_schema_mismatch_every_call_raises_after_three_calls() -> None:
+    request = _request()
+    calls = 0
+
+    async def provider(_payload: dict[str, Any]) -> Any:
+        nonlocal calls
+        calls += 1
+        raise _provider_schema_failure(("nodes", 1, "display", "caption"), "string_too_short")
+
+    with pytest.raises(SectionWriteValidationError) as caught:
+        await write_section(request=request, provider=provider)
+
+    assert calls == 3
+    assert caught.value.issues == (("writer_draft_schema_invalid", "nodes[1].display.caption"),)
+    assert caught.value.errors == ("nodes[1].display.caption: string_too_short",)
+    assert "SENTINEL" not in repr(caught.value.errors)
+
+
+@pytest.mark.asyncio
+async def test_provider_empty_reply_is_repairable_and_timeout_still_propagates() -> None:
+    from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+    request = _request()
+    calls: list[dict[str, Any]] = []
+
+    async def empty_then_valid(payload: dict[str, Any]) -> Any:
+        calls.append(payload)
+        if len(calls) == 1:
+            raise UnexpectedModelBehavior("Exceeded maximum output retries (0)")
+        return _draft(request)
+
+    await write_section(request=request, provider=empty_then_valid)
+    assert len(calls) == 2
+    assert len(calls[1]["repair"]["issues"]) == 1
+
+    timeouts = 0
+
+    async def timing_out(_payload: dict[str, Any]) -> Any:
+        nonlocal timeouts
+        timeouts += 1
+        raise TimeoutError("section writer timed out")
+
+    with pytest.raises(TimeoutError):
+        await write_section(request=request, provider=timing_out)
+    assert timeouts == 1

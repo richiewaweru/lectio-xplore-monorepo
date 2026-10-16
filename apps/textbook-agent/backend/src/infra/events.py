@@ -103,6 +103,10 @@ class LLMCallFailedEvent(_LLMCallEvent):
     retryable: bool = True
     error: str
     error_class: str | None = None
+    # Safe structural summary of a structured-output failure (no model text).
+    output_failure_kind: str | None = None
+    output_failure_error_types: list[str] = []
+    output_failure_paths: list[str] = []
 
 
 class TraceRegisteredEvent(BaseModel):

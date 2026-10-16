@@ -44,6 +44,7 @@ from document.shared_lesson.writer import (
 )
 from infra.execution.checkpoints import content_hash
 from infra.database.models import GenerationWorkItemModel
+from infra.llm.output_failure import summarize_output_failure
 from infra.llm.runner import is_provider_request_rejected, is_retryable_provider_error
 from infra.generation_runtime import (
     CheckpointCompatibilityError,
@@ -369,6 +370,14 @@ async def _record_execution_failure(
         safe_payload["validation_paths"] = sorted({path for _code, path in error.issues if path})[
             :_MAX_DIAGNOSTIC_VALIDATION_ENTRIES
         ]
+    output_failure = summarize_output_failure(error)
+    if output_failure is not None:
+        # Pydantic error types and loc-built paths only; never msg/input text.
+        safe_payload["output_failure_kind"] = output_failure.kind
+        safe_payload["schema_error_types"] = list(output_failure.error_types)
+        safe_payload["validation_paths"] = sorted(
+            {*safe_payload.get("validation_paths", ()), *output_failure.paths}
+        )[:_MAX_DIAGNOSTIC_VALIDATION_ENTRIES]
     await append_event(
         session,
         run_id=failed_item.run_id,
