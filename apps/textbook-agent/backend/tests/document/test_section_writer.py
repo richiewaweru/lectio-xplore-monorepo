@@ -16,6 +16,7 @@ from document.shared_lesson.writer import (
     SECTION_WRITE_ISSUE_CODES,
     SectionSource,
     SectionTaskSummary,
+    SectionWriteResult,
     SectionWriterRequest,
     SectionWriteValidationError,
     validate_and_build_section,
@@ -23,6 +24,7 @@ from document.shared_lesson.writer import (
     write_section,
 )
 from infra.authoring.model_policy import SHARED_SECTION_WRITER, get_v3_slot
+from infra.execution.checkpoints import content_hash
 
 
 def _block(
@@ -1142,7 +1144,17 @@ async def test_patch_repair_returns_only_broken_node_and_keeps_the_rest() -> Non
     assert result.nodes[2].display.rows == (("Unheated", "Slower"), ("Heated", "Faster"))
     assert [node.id for node in result.nodes[:4]] == ids
     assert result.nodes[-1].kind == "task_anchor"
-    assert result.model_dump(mode="json")["repair_modes"] == ["patch"]
+    # Diagnostics only: the persisted output (and its hash) must equal the
+    # finalizer's rebuild, which knows nothing about repair modes.
+    dumped = result.model_dump(mode="json")
+    assert "repair_modes" not in dumped
+    rebuilt = SectionWriteResult(
+        section_slot_id=result.section_slot_id,
+        title=result.title,
+        nodes=result.nodes,
+        warnings=result.warnings,
+    )
+    assert content_hash(rebuilt.model_dump(mode="json")) == content_hash(dumped)
 
 
 @pytest.mark.asyncio
